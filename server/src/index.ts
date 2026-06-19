@@ -25,6 +25,14 @@ function broadcastLobby(code: string): void {
   io.to(code).emit('lobby:update', { players: rooms.listPlayers(code) });
 }
 
+// Broadcast the authoritative game phase to everyone in the room so host +
+// phones render the same state (lobby vs. started).
+function broadcastGameState(code: string): void {
+  const room = rooms.get(code);
+  if (!room) return;
+  io.to(code).emit('game:state', { phase: room.phase, dilemmaCount: room.dilemmaCount });
+}
+
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
 });
@@ -42,8 +50,26 @@ io.on('connection', (socket) => {
     }
     socket.join(code);
     socket.emit('host:roomCreated', { code });
-    // Send the current roster so a re-created/recovered host shows existing players.
+    // Send the current roster + phase so a re-created/recovered host shows
+    // existing players and the right screen (lobby vs. an in-progress game).
     socket.emit('lobby:update', { players: rooms.listPlayers(code) });
+    const room = rooms.get(code);
+    if (room) socket.emit('game:state', { phase: room.phase, dilemmaCount: room.dilemmaCount });
+  });
+
+  // The host starts the game for the room it owns, choosing the dilemma count.
+  socket.on('host:startGame', (payload: { dilemmaCount?: number }) => {
+    const code = hostRooms.get(socket.id);
+    if (!code) {
+      socket.emit('host:startError', { error: 'ROOM_NOT_FOUND' });
+      return;
+    }
+    const result = rooms.startGame(code, Number(payload?.dilemmaCount));
+    if (!result.ok) {
+      socket.emit('host:startError', { error: result.error });
+      return;
+    }
+    broadcastGameState(code);
   });
 
   // A player joins from their phone with a room code + nickname.

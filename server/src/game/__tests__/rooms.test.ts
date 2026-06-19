@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { RoomStore, generateRoomCode, MAX_PLAYERS } from '../rooms';
+import {
+  RoomStore,
+  generateRoomCode,
+  MAX_PLAYERS,
+  MIN_PLAYERS_TO_START,
+  DILEMMA_COUNT_OPTIONS,
+} from '../rooms';
 
 describe('generateRoomCode', () => {
   it('returns a 4-letter uppercase code', () => {
@@ -113,5 +119,70 @@ describe('RoomStore players (lobby)', () => {
     // Leaving an unknown player or room is a no-op.
     expect(store.leave(code, 'sock-1')).toBe(false);
     expect(store.leave('ZZZZ', 'sock-2')).toBe(false);
+  });
+});
+
+describe('RoomStore.startGame', () => {
+  // Fill a fresh room with `n` players and return its code.
+  function roomWith(store: RoomStore, n: number): string {
+    const { code } = store.create();
+    for (let i = 0; i < n; i++) store.join(code, `sock-${i}`, `P${i}`);
+    return code;
+  }
+
+  it('a new room starts in the LOBBY phase', () => {
+    const store = new RoomStore();
+    const room = store.create();
+    expect(room.phase).toBe('LOBBY');
+    expect(room.dilemmaCount).toBeNull();
+  });
+
+  it('starts the game with >= 3 players, moving LOBBY -> PHASE_INTRO', () => {
+    const store = new RoomStore();
+    const code = roomWith(store, MIN_PLAYERS_TO_START);
+    const result = store.startGame(code, 4);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.room.phase).toBe('PHASE_INTRO');
+      expect(result.room.dilemmaCount).toBe(4);
+    }
+    expect(store.get(code)?.phase).toBe('PHASE_INTRO');
+  });
+
+  it('accepts every allowed dilemma count', () => {
+    for (const count of DILEMMA_COUNT_OPTIONS) {
+      const store = new RoomStore();
+      const code = roomWith(store, 3);
+      expect(store.startGame(code, count).ok).toBe(true);
+    }
+  });
+
+  it('rejects starting an unknown room', () => {
+    const store = new RoomStore();
+    expect(store.startGame('ZZZZ', 3)).toEqual({ ok: false, error: 'ROOM_NOT_FOUND' });
+  });
+
+  it('rejects starting with fewer than 3 players', () => {
+    const store = new RoomStore();
+    const code = roomWith(store, MIN_PLAYERS_TO_START - 1);
+    expect(store.startGame(code, 3)).toEqual({ ok: false, error: 'NOT_ENOUGH_PLAYERS' });
+    expect(store.get(code)?.phase).toBe('LOBBY');
+  });
+
+  it('rejects a dilemma count outside 3/4/5', () => {
+    const store = new RoomStore();
+    const code = roomWith(store, 3);
+    expect(store.startGame(code, 2)).toEqual({ ok: false, error: 'INVALID_DILEMMA_COUNT' });
+    expect(store.startGame(code, 6)).toEqual({ ok: false, error: 'INVALID_DILEMMA_COUNT' });
+    expect(store.get(code)?.phase).toBe('LOBBY');
+  });
+
+  it('rejects starting a game that already left the lobby', () => {
+    const store = new RoomStore();
+    const code = roomWith(store, 3);
+    expect(store.startGame(code, 3).ok).toBe(true);
+    expect(store.startGame(code, 5)).toEqual({ ok: false, error: 'ALREADY_STARTED' });
+    // The original choice is preserved.
+    expect(store.get(code)?.dilemmaCount).toBe(3);
   });
 });

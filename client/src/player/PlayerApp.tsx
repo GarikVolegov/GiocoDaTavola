@@ -6,6 +6,8 @@ import {
   type PlayerJoinedPayload,
   type PlayerJoinErrorPayload,
   type LobbyUpdatePayload,
+  type GameStatePayload,
+  type GamePhase,
   type PublicPlayer,
 } from '../shared/events';
 
@@ -23,6 +25,7 @@ export default function PlayerApp() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [players, setPlayers] = useState<PublicPlayer[]>([]);
+  const [phase, setPhase] = useState<GamePhase>('LOBBY');
 
   useEffect(() => {
     const socket = getSocket();
@@ -36,13 +39,16 @@ export default function PlayerApp() {
       setSubmitting(false);
     };
     const onLobbyUpdate = ({ players }: LobbyUpdatePayload) => setPlayers(players);
+    const onGameState = ({ phase }: GameStatePayload) => setPhase(phase);
     socket.on(SocketEvents.PlayerJoined, onJoined);
     socket.on(SocketEvents.PlayerJoinError, onJoinError);
     socket.on(SocketEvents.LobbyUpdate, onLobbyUpdate);
+    socket.on(SocketEvents.GameState, onGameState);
     return () => {
       socket.off(SocketEvents.PlayerJoined, onJoined);
       socket.off(SocketEvents.PlayerJoinError, onJoinError);
       socket.off(SocketEvents.LobbyUpdate, onLobbyUpdate);
+      socket.off(SocketEvents.GameState, onGameState);
     };
   }, []);
 
@@ -69,6 +75,17 @@ export default function PlayerApp() {
     padding: '1.5rem',
     gap: '1rem',
   } as const;
+
+  if (joinedCode && phase !== 'LOBBY') {
+    return (
+      <main style={wrap}>
+        <h1 style={{ fontSize: '1.75rem', margin: 0 }}>La partita è iniziata!</h1>
+        <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
+          Guarda lo schermo condiviso 👀
+        </p>
+      </main>
+    );
+  }
 
   if (joinedCode) {
     return (

@@ -61,8 +61,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Room now carries phase ('LOBBY'|'PHASE_INTRO') + dilemmaCount (null until start) in server/src/game/rooms.ts. RoomStore.startGame(code,count) validates ROOM_NOT_FOUND/ALREADY_STARTED(phase!=LOBBY)/INVALID_DILEMMA_COUNT({3,4,5})/NOT_ENOUGH_PLAYERS(>=3) then moves LOBBY->PHASE_INTRO (TDD, 7 new tests, 21 total). Server host:startGame looks up the code from hostRooms (host owns one room, sends only dilemmaCount) -> broadcastGameState emits game:state {phase,dilemmaCount} to io.to(code); host:createRoom now also emits initial game:state. Shared: HostStartGame/HostStartError/GameState events + DILEMMA_COUNT_OPTIONS/MIN_PLAYERS_TO_START + START_ERROR_MESSAGES in events.ts. Host shows 3/4/5 selector + 'Inizia la partita' (disabled <3 players) + PHASE_INTRO intro screen; phones show 'La partita è iniziata!'. Verified end-to-end over real sockets vs built prod server (10/10: LOBBY init, 2-player block, bad count, PHASE_INTRO broadcast to host+all phones, re-start blocked). Visual browser check still pending real browser tooling."
     },
     {
       "id": "US-005",

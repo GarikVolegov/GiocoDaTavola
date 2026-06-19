@@ -24,6 +24,10 @@ Started: 2026-06-20
 - Client request/response over sockets: emit one event, server replies with a success event OR an error event (e.g. player:join -> player:joined | player:joinError). Map error CODES (not UI text) over the wire; keep a `JOIN_ERROR_MESSAGES` map in client/src/shared/events.ts for the Italian copy.
 - Reading the QR join code: `new URLSearchParams(window.location.search).get('room')` prefills the player form; uppercase it (codes are A-Z).
 - No browser tooling in this env: verify socket stories end-to-end with an ad-hoc `.mjs` script (import bare `socket.io-client` from repo root) run against the BUILT prod server (`PORT=xxxx node server/dist/index.js`). Delete the script after; note visual browser check as pending.
+- Game phase lives on the Room (`phase: GamePhase`, `dilemmaCount`) and starts at 'LOBBY' in `create()`. The state machine is the server's job; clients only render the phase they receive. `GamePhase` is intentionally minimal ('LOBBY'|'PHASE_INTRO') and gets extended by US-005 — keep it in sync in BOTH server/src/game/rooms.ts and client/src/shared/events.ts.
+- Authoritative game state broadcast: `broadcastGameState(code)` emits `game:state {phase, dilemmaCount}` to `io.to(code)` (host + all phones). host:createRoom also emits an initial game:state so a recovered host renders the right screen. US-005 timers should ride on this same event (add an expiry timestamp to the payload).
+- Host-only commands: the host does NOT send the room code — look it up from `hostRooms.get(socket.id)` (the host owns exactly one room). Pattern: `host:startGame {dilemmaCount}` -> success broadcasts game:state, failure emits `host:startError {error}` to just that socket (mirror of player:join/joinError). Reuse this for US-005 force-advance.
+- Constants shared by server + client are DUPLICATED by design (server is CJS rooms.ts, client is ESM events.ts; they can't import each other). MIN_PLAYERS_TO_START / DILEMMA_COUNT_OPTIONS exist in both — keep the values identical.
 ---
 
 ## 2026-06-20 - US-001
@@ -57,4 +61,14 @@ Started: 2026-06-20
   - Both host AND players join the Socket.IO room (socket.join(code)) so io.to(code) reaches everyone; host:createRoom now also re-emits the current roster so a recovered host shows existing players.
   - Player identity = socket.id; join() dedups on it (re-join updates nickname) — StrictMode-safe and a stepping stone for US-015 reconnection (which should swap socket.id for a stable token + preserve scores/votes).
   - Next story US-004: host selects 3/4/5 dilemmas; Start enabled only with >=3 connected players; on start move LOBBY -> PHASE_INTRO. Will need a per-room phase/state field (start of the US-005 state machine) and a host:startGame event guarded by player count.
+---
+
+## 2026-06-20 - US-004
+- Implemented: host picks 3/4/5 dilemmas and starts the game once >=3 players are present; the room state machine moves LOBBY -> PHASE_INTRO and host + phones re-render to the started screen.
+- Files: server/src/game/rooms.ts (Room.phase/dilemmaCount, GamePhase, MIN_PLAYERS_TO_START, DILEMMA_COUNT_OPTIONS, startGame + StartGameError/Result), server/src/game/__tests__/rooms.test.ts (+7 TDD tests, 21 total), server/src/index.ts (host:startGame handler + broadcastGameState + initial game:state on host:createRoom), client/src/shared/events.ts (HostStartGame/HostStartError/GameState events, payload types, START_ERROR_MESSAGES, shared constants), client/src/host/HostApp.tsx (dilemma selector + Start button gated on >=3 + PHASE_INTRO view), client/src/player/PlayerApp.tsx (game:state listener + 'La partita è iniziata!' screen).
+- Verified: typecheck + lint + test (21 passing) + build all green. End-to-end socket round-trip vs built prod server (PORT=3997): 10/10 assertions — LOBBY init, start blocked at 2 players, invalid count rejected, PHASE_INTRO broadcast to host + all phones with dilemmaCount, re-start blocked (ALREADY_STARTED). Visual browser check still pending real browser tooling.
+- **Learnings for future iterations:**
+  - Validation order in startGame: ROOM_NOT_FOUND -> ALREADY_STARTED (phase!=LOBBY) -> INVALID_DILEMMA_COUNT -> NOT_ENOUGH_PLAYERS. ALREADY_STARTED is checked before count so a valid re-start surfaces the right error and the original dilemmaCount is preserved.
+  - `Number(payload?.dilemmaCount)` at the socket boundary + the `isDilemmaCount` type guard keep the wire input honest without `any`.
+  - Next story US-005: full phase state machine (DILEMMA_REVEAL, VOTE_1, SPLIT_REVEAL, DEFENSE, VOTE_2, PHASE_RESULTS, FINAL_AWARDS) + server-side timers. Extend GamePhase in BOTH rooms.ts and events.ts; add an expiry timestamp to the game:state payload; auto-advance on expiry + a host force-advance (reuse the hostRooms.get(socket.id) host-command pattern); unit-test the transitions.
 ---
