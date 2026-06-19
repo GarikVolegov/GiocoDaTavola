@@ -46,8 +46,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Room now holds players: Map<id, {id, nickname}> (server/src/game/rooms.ts). RoomStore.join enforces ROOM_NOT_FOUND / NICKNAME_REQUIRED (trims) / ROOM_FULL (MAX_PLAYERS=8) and dedups by socket.id (re-join updates nickname, StrictMode-safe); leave + listPlayers added (TDD, 8 new tests, 14 total). Server: player:join -> player:joined|player:joinError; host + players socket.join(code); broadcastLobby emits lobby:update {players} to io.to(code) on join/leave/disconnect. Host shows 'Giocatori (n/8)' roster; PlayerApp has join form (code prefilled from ?room=, uppercased) + lobby view, JOIN_ERROR_MESSAGES in shared/events.ts. Verified end-to-end over real Socket.IO against built prod server (12 assertions: realtime to host+all phones, bad code, empty nick, max-8, 9th blocked, disconnect cleanup). Visual phone/host browser check still pending real browser tooling."
     },
     {
       "id": "US-004",

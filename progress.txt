@@ -17,7 +17,13 @@ Started: 2026-06-20
 - Server pattern for per-host state: map socket.id -> roomCode (hostRooms) so a re-emit returns the same room; clean up on 'disconnect'. Rooms themselves persist in the RoomStore for the process lifetime.
 - Game logic modules go in server/src/game/*.ts with tests in server/src/game/__tests__/*.test.ts. Make randomness injectable (e.g. RoomStore(genCode)) so collisions/edge cases are testable deterministically.
 - Adding a client dep: `npm install <pkg> --workspace client`. QR codes use `qrcode.react` (QRCodeSVG); wrap it in a white-background box for scannability in dark mode.
-- `.last-branch` is a Ralph harness artifact; it's gitignored — don't commit it.
+- `.last-branch` is a Ralph harness artifact; it's gitignored — don't commit it. `.vscode/` is also gitignored (editor config).
+- Realtime broadcast: both host AND players `socket.join(code)`; broadcast aggregate state with `io.to(code).emit(event, payload)`. The lobby roster (nicknames) is PUBLIC — only VOTES are secret. A `broadcastLobby(code)` helper centralizes the emit.
+- Player identity is the `socket.id` for now (US-015 reconnection will add a stable token). Player join dedups by socket.id like host rooms, so StrictMode's double-emit is harmless.
+- Disconnect cleanup: keep a `playerRooms` map socket.id->code (mirrors `hostRooms`); on 'disconnect' remove the player and re-broadcast the lobby. Clean up BOTH maps.
+- Client request/response over sockets: emit one event, server replies with a success event OR an error event (e.g. player:join -> player:joined | player:joinError). Map error CODES (not UI text) over the wire; keep a `JOIN_ERROR_MESSAGES` map in client/src/shared/events.ts for the Italian copy.
+- Reading the QR join code: `new URLSearchParams(window.location.search).get('room')` prefills the player form; uppercase it (codes are A-Z).
+- No browser tooling in this env: verify socket stories end-to-end with an ad-hoc `.mjs` script (import bare `socket.io-client` from repo root) run against the BUILT prod server (`PORT=xxxx node server/dist/index.js`). Delete the script after; note visual browser check as pending.
 ---
 
 ## 2026-06-20 - US-001
@@ -40,4 +46,15 @@ Started: 2026-06-20
   - QR join URL is `${window.location.origin}/?room=CODE`; US-003's join form should read the `room` query param to prefill the code.
   - socket.io-client is hoisted to the ROOT node_modules (npm workspaces). For ad-hoc node verification scripts, import the bare specifier `socket.io-client` from the repo root, not from client/node_modules.
   - Next story US-003: join form on / (code + nickname), realtime lobby player list, max 8, error on bad code. Add a players collection to Room and join/leave socket events; broadcast aggregate lobby state to host + all phones.
+---
+
+## 2026-06-20 - US-003
+- Implemented: player joins from / with code + nickname and appears in a realtime lobby on host + all phones; bad code / empty nickname / full room are rejected with clear messages; max 8 players.
+- Files: server/src/game/rooms.ts (Player/Room.players + MAX_PLAYERS + join/leave/listPlayers, JoinResult/JoinError), server/src/game/__tests__/rooms.test.ts (+8 tests, TDD), server/src/index.ts (player:join handler, host+player socket.join(code), broadcastLobby, playerRooms disconnect cleanup), client/src/shared/events.ts (new events + payload types + JOIN_ERROR_MESSAGES), client/src/host/HostApp.tsx (lobby roster), client/src/player/PlayerApp.tsx (join form + lobby view), .gitignore (+.vscode/).
+- Verified: typecheck + lint + test (14 passing) + build all green. End-to-end socket round-trip against the built prod server (PORT=3998): 12/12 assertions — realtime roster to host + all phones, ROOM_NOT_FOUND on bad code, NICKNAME_REQUIRED on empty nick, fills to 8, 9th gets ROOM_FULL, disconnect removes the player from the lobby.
+- **Learnings for future iterations:**
+  - Lobby roster is PUBLIC by design (membership + nicknames); only VOTES are secret. broadcastLobby(code) emits aggregate `lobby:update {players}` to `io.to(code)`.
+  - Both host AND players join the Socket.IO room (socket.join(code)) so io.to(code) reaches everyone; host:createRoom now also re-emits the current roster so a recovered host shows existing players.
+  - Player identity = socket.id; join() dedups on it (re-join updates nickname) — StrictMode-safe and a stepping stone for US-015 reconnection (which should swap socket.id for a stable token + preserve scores/votes).
+  - Next story US-004: host selects 3/4/5 dilemmas; Start enabled only with >=3 connected players; on start move LOBBY -> PHASE_INTRO. Will need a per-room phase/state field (start of the US-005 state machine) and a host:startGame event guarded by player count.
 ---
