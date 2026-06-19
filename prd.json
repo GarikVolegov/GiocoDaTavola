@@ -15,8 +15,8 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Done by hand to de-risk iteration 1. TS npm-workspaces monorepo; server CommonJS (tsx dev, tsc build), client Vite ESM. typecheck+lint+test+build all green; prod server serves client/dist + /api/health verified."
     },
     {
       "id": "US-002",

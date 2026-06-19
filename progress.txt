@@ -7,4 +7,20 @@ Started: 2026-06-20
 - Quality gate: `npm run typecheck && npm run lint && npm test && npm run build` from repo root.
 - Server is authoritative; game state in-memory; votes are SECRET (only aggregate counts leave the server).
 - Timers: server stores an expiry timestamp and broadcasts it; clients render the countdown locally.
+- Server is CommonJS TS (module: CommonJS): use native __dirname, no .js import extensions needed. Client is ESM (Vite). Keep them separate.
+- Quality gate is GREEN as of US-001: `npm run typecheck && npm run lint && npm test && npm run build`. Don't break it.
+- ESLint flat config (eslint.config.js) uses typescript-eslint recommended (non type-checked) + no-unused-vars with ^_ ignore. Avoid `any` (no-explicit-any is an error).
+- vitest config includes only `server/**/*.{test,spec}.ts` and has passWithNoTests. Put game-logic tests under server/src (e.g. server/src/game/__tests__).
+- Client routing is path-based in App.tsx (`/host` -> HostApp, else PlayerApp); no react-router yet.
+---
+
+## 2026-06-20 - US-001
+- Implemented: TypeScript npm-workspaces monorepo scaffold.
+- Files: package.json, eslint.config.js, vitest.config.ts, .gitignore; server/{package.json,tsconfig.json,src/index.ts,src/__tests__/smoke.test.ts}; client/{package.json,tsconfig.json,vite.config.ts,index.html,src/*}; README.md.
+- Server: Express + Socket.IO on PORT (default 3000); /api/health; serves client/dist in prod (single port). Client: React+Vite, host/player views split by path.
+- Verified: npm run typecheck/lint/test/build all pass; `PORT=3999 node server/dist/index.js` returns {"ok":true} on /api/health and serves built index.html.
+- **Learnings for future iterations:**
+  - Run `npm install` once before checks if node_modules missing.
+  - `npm run dev` runs server (tsx watch, :3000) + client (vite, :5173) via concurrently; Vite proxies /socket.io (ws) and /api to :3000.
+  - Next story US-002: room creation on /host with 4-letter code + QR. Add room store under server/src/game/rooms.ts and socket events; reuse client/src/shared/socket.ts.
 ---
