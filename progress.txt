@@ -33,6 +33,7 @@ Started: 2026-06-20
 - Timer wiring: schedulePhase(code) always clears the old timer first, so both expiry-fire AND host force-advance go through advanceAndBroadcast→schedulePhase and reschedule cleanly (no double-advance race). A phase with phaseExpiresAt==null ends the chain (no reschedule).
 - game:state payload is the one authoritative broadcast: now `{phase, dilemmaCount, dilemmaIndex, phaseExpiresAt}` (build via `gameStatePayload(room)` helper, reused by broadcast + the host:createRoom recovery emit). Add future per-phase fields here.
 - Client countdown: `useCountdown(expiresAt)` hook in client/src/shared/useCountdown.ts renders whole seconds from the server expiry (250ms tick, null when no timer). Reuse it on host + phones; the server is authoritative about WHEN — clients only render. Hooks must be called before the component's early returns.
+- Deck (US-006): `server/src/game/deck.ts` — `loadDilemmas()` reads `server/data/dilemmas.json` via `join(__dirname,'..','..','data','dilemmas.json')` (resolves to server/data from BOTH server/src/game in dev and server/dist/game in prod; data is NOT copied into dist). `Dilemma = {id,text,optionA,optionB}`. `Deck` copies its source (never mutates), draws without repeats via injectable `rng` (default Math.random), exposes `remainingCount`, returns null when exhausted. The room owns a Deck per game and stores the drawn dilemma per round (US-007 wires it into DILEMMA_REVEAL + game:state).
 ---
 
 ## 2026-06-20 - US-001
@@ -87,4 +88,14 @@ Started: 2026-06-20
   - schedulePhase clears before scheduling, so timer-expiry and force-advance share one path (advanceAndBroadcast) with no double-advance race; a null phaseExpiresAt naturally ends the timer chain at FINAL_AWARDS.
   - Verification gotcha: when draining a socket-event queue, don't `await` an event that was already consumed (it hangs forever). Race the wait against a timeout to assert "no further event" (used for the FINAL_AWARDS terminal check).
   - Next story US-006: deck loading from server/data/dilemmas.json (>=20 items, text + option A + option B) + no-repeat draw within a game. Add a deck module under server/src/game/ with injectable RNG (mirror RoomStore's genCode pattern) and unit-test no-repeat; the room will need to hold the drawn dilemma per round (wire it into DILEMMA_REVEAL, surfaced via game:state for US-007).
+---
+
+## 2026-06-20 - US-006 (taken over from Ralph; built by hand)
+- Implemented: dilemma deck module — load >=20 dilemmas from server/data/dilemmas.json and draw without repeats within a game.
+- Files: server/src/game/deck.ts (loadDilemmas + Dilemma + Deck with injectable rng), server/data/dilemmas.json (24 dilemmas, unique ids, all fields non-empty), server/src/game/__tests__/deck.test.ts (9 tests — the test was scaffolded TDD-first by the prior loop; verified RED before writing deck.ts, then GREEN).
+- Verified: deck test RED (no deck.ts) -> GREEN (9 passing); full gate `typecheck && lint && test (41 passing) && build` all green. Re-verified on take-over and additionally ran the COMPILED build (`node -e` against server/dist/game/deck.js): loadDilemmas found server/data/dilemmas.json at runtime and drew all 24 with no repeats, exhausting to null — empirically confirms the __dirname path resolves to server/data from dist too (not just tsx tests).
+- **Learnings for future iterations:**
+  - `loadDilemmas()` resolves data via `join(__dirname,'..','..','data','dilemmas.json')` — server/data is shared by dev (server/src/game) and prod (server/dist/game); the build does NOT copy data into dist, and that's fine because the relative path lands on server/data either way.
+  - Deck.draw() splices a random index out of a private copy of the source (never mutates the caller's array) and returns null when exhausted; rng is injectable (default Math.random) for deterministic tests.
+  - Next story US-007: reveal the dilemma on the host. The room should own a Deck for the game (draw on entry to each DILEMMA_REVEAL) and store the current dilemma; surface its text + optionA/optionB through the game:state broadcast (add an optional `dilemma` field) so the host renders it. Keep votes/identities out — this is just the prompt text.
 ---

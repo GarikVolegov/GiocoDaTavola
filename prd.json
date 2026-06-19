@@ -92,8 +92,8 @@
         "Tests pass"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Deck module server/src/game/deck.ts: Dilemma interface {id,text,optionA,optionB}, loadDilemmas() reads server/data/dilemmas.json (24 items >=20, each with non-empty text+optionA+optionB, unique ids) resolving the path from __dirname so it works in both tsx dev (server/src/game) and the tsc build (server/dist/game) — both are 2 levels under server/. Deck class draws without repeats by splicing a private copy of the source (never mutates input), injectable rng (2nd ctor arg, defaults Math.random) mirroring RoomStore.genCode, exposes remainingCount, returns null when exhausted. TDD: 9 tests in server/src/game/__tests__/deck.test.ts (no-repeat full-deck draw, exhaustion->null, deterministic rng order, non-mutation, real-deck no-repeat, >=20 + non-empty fields + unique ids). 41 tests total. typecheck+lint+test+build all green; also ran the COMPILED dist build (node server/dist/game/deck.js) to confirm loadDilemmas finds server/data/dilemmas.json at runtime and drew all 24 with no repeats. Not yet wired into the room/game state — US-007 holds the drawn dilemma per round and surfaces it via game:state for DILEMMA_REVEAL."
     },
     {
       "id": "US-007",
