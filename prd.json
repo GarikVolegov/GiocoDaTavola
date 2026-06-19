@@ -1,0 +1,237 @@
+{
+  "project": "Dibattiti tra amici",
+  "branchName": "ralph/skeleton-dilemma",
+  "description": "Web app stile Jackbox per un gioco da tavolo su business e crescita personale (3-8 amici, dal vivo). Schermo comune (/host) + telefoni (/). Primo build: scheletro comune (lobby con codice stanza, realtime, state-machine, timer) + fase 'Dilemma di gruppo'. Esperienza social, niente vincitore, premi simpatici a fine partita. Stack: Node + Express + Socket.IO (TypeScript), React + Vite (TypeScript), stato in memoria.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Scaffolding monorepo server + client (TypeScript)",
+      "description": "As a developer, I want a runnable server+client base so I can build features on top.",
+      "acceptanceCriteria": [
+        "Repo with server/ (Node + Express + Socket.IO, TypeScript) and client/ (React + Vite, TypeScript)",
+        "npm run dev starts server and client in development",
+        "Production build: server serves the built client on a single port",
+        "Lint configured and passes",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Host crea stanza con codice e QR",
+      "description": "As a host, I open /host and get a room with a shareable code so players can join.",
+      "acceptanceCriteria": [
+        "Opening /host makes the server create a room with a unique 4-letter code",
+        "Host screen shows the code large + a QR code pointing to the join URL",
+        "Room state kept in memory on the server",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Giocatore entra dal telefono + lobby realtime",
+      "description": "As a player, I join from my phone with code + nickname and appear in the lobby.",
+      "acceptanceCriteria": [
+        "View / asks for room code + nickname",
+        "Wrong code shows a clear error; valid code enters the lobby",
+        "Player list updates in realtime on host and all phones via Socket.IO",
+        "Max 8 players; joining beyond that is blocked with a message",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Avvio partita + scelta numero dilemmi (3/4/5)",
+      "description": "As a host, I pick how many dilemmas and start once there are at least 3 players.",
+      "acceptanceCriteria": [
+        "Host has a selector for 3 / 4 / 5 dilemmas",
+        "Start button enabled only with >= 3 connected players",
+        "On start, state machine moves from LOBBY to PHASE_INTRO",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "State-machine di fase + timer lato server",
+      "description": "As the system, I manage phase transitions with authoritative server timers broadcast to everyone.",
+      "acceptanceCriteria": [
+        "States: LOBBY -> PHASE_INTRO -> DILEMMA_REVEAL -> VOTE_1 -> SPLIT_REVEAL -> DEFENSE -> VOTE_2 -> PHASE_RESULTS -> (loop) -> FINAL_AWARDS",
+        "Countdown computed server-side (expiry timestamp) and broadcast to host + phones",
+        "On timer expiry the phase advances automatically; host can also force-advance",
+        "Unit tests for state transitions",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Deck dei dilemmi: caricamento e pesca senza ripetizioni",
+      "description": "As the system, I load the deck and draw dilemmas without repeats within a game.",
+      "acceptanceCriteria": [
+        "Deck read from server/data/dilemmas.json (>=20 items, each with text + option A + option B)",
+        "Random draw without repeats within a single game",
+        "Unit tests for no-repeat draw",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Rivelazione dilemma sull'host",
+      "description": "As a player, I see the dilemma and its two options on the shared screen.",
+      "acceptanceCriteria": [
+        "PHASE_INTRO shows phase name + short rules for a few seconds",
+        "DILEMMA_REVEAL shows the dilemma text + option A / option B on the host",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Primo voto segreto dai telefoni",
+      "description": "As a player, I secretly vote A or B from my phone.",
+      "acceptanceCriteria": [
+        "In VOTE_1 each phone shows A / B and records one choice",
+        "Host shows only how many have voted (e.g. 5/6), never who voted what",
+        "Timer ~20s; advances on expiry or when everyone has voted",
+        "Vote changeable until the timer expires",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Rivelazione split (solo conteggi, niente identita)",
+      "description": "As a player, I see how the room split without learning who voted what.",
+      "acceptanceCriteria": [
+        "SPLIT_REVEAL shows the A vs B count on the host (e.g. 'A: 4 - B: 2')",
+        "No vote identities are revealed",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Auto-selezione difensori + turni di difesa a timer",
+      "description": "As a selected player, I defend my side out loud while the app runs the timer.",
+      "acceptanceCriteria": [
+        "In DEFENSE the server auto-selects 1 defender per side among those who voted that side",
+        "If a side has 0 votes, that side's defender is skipped",
+        "Host shows who is speaking + a 60-90s countdown per turn; turns run in sequence",
+        "Non-defender phones show 'sta parlando {name}'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Secondo voto segreto + calcolo swing",
+      "description": "As a player, after hearing the defenses I vote again and may switch sides.",
+      "acceptanceCriteria": [
+        "In VOTE_2 each phone re-votes A/B (default = previous vote, changeable)",
+        "Server computes for each voter whether they switched side vs VOTE_1",
+        "Server computes net swing toward each side",
+        "Unit tests for vote tally and swing computation",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Risultati del dilemma + punteggio difensori",
+      "description": "As a player, I see how votes changed and who was convincing.",
+      "acceptanceCriteria": [
+        "PHASE_RESULTS shows before -> after on the host (e.g. 'A: 4->2, B: 2->4') and how many changed their mind",
+        "A side's defender earns +1 'convinzione' point per vote gained by their side after the defense",
+        "If the defender defended the minority side at split and gained votes, they also accrue 'provocatore' score",
+        "Unit tests for defender scoring",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Loop dei dilemmi e passaggio ai premi",
+      "description": "As the system, I repeat the phase for N dilemmas then go to final awards.",
+      "acceptanceCriteria": [
+        "After PHASE_RESULTS, if dilemmas remain -> new DILEMMA_REVEAL, otherwise -> FINAL_AWARDS",
+        "Scores (convinzione, provocatore) accumulate across dilemmas",
+        "Unit tests for the loop reaching FINAL_AWARDS",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Premi finali (calcolati + 1 votato)",
+      "description": "As a group, at the end we see fun awards and vote one of them.",
+      "acceptanceCriteria": [
+        "'Il piu convincente' = player with most convinzione points (computed)",
+        "'Il piu provocatore' = player with most provocatore points (computed)",
+        "1 voted award: each phone votes a player (e.g. 'Il piu assurdo'), host shows the winner",
+        "Tie handling defined (e.g. show ex-aequo)",
+        "Celebratory host screen with the awards",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Riconnessione base",
+      "description": "As a player who loses connection, I rejoin with the same code and keep identity and points.",
+      "acceptanceCriteria": [
+        "Rejoining with same code + same nickname (or saved token) re-associates to the existing player",
+        "Scores and vote state are not lost on reconnect",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

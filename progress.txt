@@ -1,0 +1,10 @@
+# Ralph Progress Log
+Started: 2026-06-20
+---
+
+## Codebase Patterns
+- Stack: server/ (Node+Express+Socket.IO, TS) + client/ (React+Vite, TS), npm workspaces monorepo.
+- Quality gate: `npm run typecheck && npm run lint && npm test && npm run build` from repo root.
+- Server is authoritative; game state in-memory; votes are SECRET (only aggregate counts leave the server).
+- Timers: server stores an expiry timestamp and broadcasts it; clients render the countdown locally.
+---
