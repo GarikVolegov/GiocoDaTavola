@@ -30,8 +30,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Server RoomStore (server/src/game/rooms.ts) creates unique 4-letter codes in memory (TDD, 5 tests). /host emits host:createRoom -> server replies host:roomCreated {code}; per-socket dedup keeps the code stable across StrictMode's double-mount. Host shows code large + QRCodeSVG pointing to ${origin}/?room=CODE. socket.ts now a memoized getSocket() singleton; shared event names/types in client/src/shared/events.ts. Verified via socket round-trip against prod server (code valid + dedup) + /host serves built client; visual QR check pending real browser."
     },
     {
       "id": "US-003",

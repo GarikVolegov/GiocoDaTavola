@@ -12,6 +12,12 @@ Started: 2026-06-20
 - ESLint flat config (eslint.config.js) uses typescript-eslint recommended (non type-checked) + no-unused-vars with ^_ ignore. Avoid `any` (no-explicit-any is an error).
 - vitest config includes only `server/**/*.{test,spec}.ts` and has passWithNoTests. Put game-logic tests under server/src (e.g. server/src/game/__tests__).
 - Client routing is path-based in App.tsx (`/host` -> HostApp, else PlayerApp); no react-router yet.
+- Client socket: use `getSocket()` from client/src/shared/socket.ts — it's a memoized singleton, so StrictMode's double-mount and both views share ONE connection. Don't call io() directly.
+- Shared client Socket.IO event names + payload types live in client/src/shared/events.ts (SocketEvents constants + payload interfaces), reused by host + player views. Server uses the same string literals in server/src/index.ts; keep them in sync.
+- Server pattern for per-host state: map socket.id -> roomCode (hostRooms) so a re-emit returns the same room; clean up on 'disconnect'. Rooms themselves persist in the RoomStore for the process lifetime.
+- Game logic modules go in server/src/game/*.ts with tests in server/src/game/__tests__/*.test.ts. Make randomness injectable (e.g. RoomStore(genCode)) so collisions/edge cases are testable deterministically.
+- Adding a client dep: `npm install <pkg> --workspace client`. QR codes use `qrcode.react` (QRCodeSVG); wrap it in a white-background box for scannability in dark mode.
+- `.last-branch` is a Ralph harness artifact; it's gitignored — don't commit it.
 ---
 
 ## 2026-06-20 - US-001
@@ -23,4 +29,15 @@ Started: 2026-06-20
   - Run `npm install` once before checks if node_modules missing.
   - `npm run dev` runs server (tsx watch, :3000) + client (vite, :5173) via concurrently; Vite proxies /socket.io (ws) and /api to :3000.
   - Next story US-002: room creation on /host with 4-letter code + QR. Add room store under server/src/game/rooms.ts and socket events; reuse client/src/shared/socket.ts.
+---
+
+## 2026-06-20 - US-002
+- Implemented: host opens /host -> server creates an in-memory room with a unique 4-letter code; host shows the code large + a QR pointing to the join URL.
+- Files: server/src/game/rooms.ts (RoomStore + generateRoomCode), server/src/game/__tests__/rooms.test.ts (5 tests, TDD), server/src/index.ts (host:createRoom/host:roomCreated handlers + per-socket dedup), client/src/shared/socket.ts (getSocket singleton), client/src/shared/events.ts (new shared event names/types), client/src/host/HostApp.tsx (code + QRCodeSVG), client/package.json (+qrcode.react), .gitignore (+.last-branch).
+- Verified: typecheck + lint + test (6 passing) + build all green. Ran prod server (PORT=3999): /api/health ok, /host serves built client, socket host:createRoom returns a valid /^[A-Z]{4}$/ code and the same socket re-emitting gets the SAME code (StrictMode-safe).
+- **Learnings for future iterations:**
+  - React StrictMode double-invokes effects in dev -> a naive "create room on mount" makes 2 rooms. Solved server-side with a socket.id->code map (dedup) + the getSocket() singleton so the socket id stays stable. Apply the same idea to player join (US-003) to avoid duplicate joins.
+  - QR join URL is `${window.location.origin}/?room=CODE`; US-003's join form should read the `room` query param to prefill the code.
+  - socket.io-client is hoisted to the ROOT node_modules (npm workspaces). For ad-hoc node verification scripts, import the bare specifier `socket.io-client` from the repo root, not from client/node_modules.
+  - Next story US-003: join form on / (code + nickname), realtime lobby player list, max 8, error on bad code. Add a players collection to Room and join/leave socket events; broadcast aggregate lobby state to host + all phones.
 ---
