@@ -1,34 +1,46 @@
 import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getSocket } from '../shared/socket';
+import { useCountdown } from '../shared/useCountdown';
 import {
   SocketEvents,
   DILEMMA_COUNT_OPTIONS,
   MIN_PLAYERS_TO_START,
   START_ERROR_MESSAGES,
+  PHASE_LABELS,
   type RoomCreatedPayload,
   type LobbyUpdatePayload,
   type GameStatePayload,
   type HostStartErrorPayload,
-  type GamePhase,
   type PublicPlayer,
 } from '../shared/events';
+
+const screen = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '100vh',
+  textAlign: 'center',
+  padding: '2rem',
+  gap: '1.5rem',
+} as const;
 
 // Shared screen (TV / tablet / laptop). On open it asks the server for a room
 // and shows the join code large + a QR pointing phones at the join URL.
 export default function HostApp() {
   const [code, setCode] = useState<string | null>(null);
   const [players, setPlayers] = useState<PublicPlayer[]>([]);
-  const [phase, setPhase] = useState<GamePhase>('LOBBY');
-  const [dilemmaCount, setDilemmaCount] = useState<number>(DILEMMA_COUNT_OPTIONS[0]);
+  const [game, setGame] = useState<GameStatePayload | null>(null);
+  const [chosenCount, setChosenCount] = useState<number>(DILEMMA_COUNT_OPTIONS[0]);
   const [startError, setStartError] = useState<string | null>(null);
 
   useEffect(() => {
     const socket = getSocket();
     const onRoomCreated = ({ code }: RoomCreatedPayload) => setCode(code);
     const onLobbyUpdate = ({ players }: LobbyUpdatePayload) => setPlayers(players);
-    const onGameState = ({ phase }: GameStatePayload) => {
-      setPhase(phase);
+    const onGameState = (payload: GameStatePayload) => {
+      setGame(payload);
       setStartError(null);
     };
     const onStartError = ({ error }: HostStartErrorPayload) =>
@@ -46,53 +58,75 @@ export default function HostApp() {
     };
   }, []);
 
+  const phase = game?.phase ?? 'LOBBY';
+  const remaining = useCountdown(game?.phaseExpiresAt ?? null);
+
   const startGame = () => {
     setStartError(null);
-    getSocket().emit(SocketEvents.HostStartGame, { dilemmaCount });
+    getSocket().emit(SocketEvents.HostStartGame, { dilemmaCount: chosenCount });
   };
+
+  const advance = () => getSocket().emit(SocketEvents.HostAdvancePhase);
 
   const canStart = players.length >= MIN_PLAYERS_TO_START;
   const joinUrl = code ? `${window.location.origin}/?room=${code}` : '';
 
-  if (phase === 'PHASE_INTRO') {
+  // In-game: every phase past the lobby shows its label + a server-driven
+  // countdown. Detailed per-phase content (dilemma text, vote tallies, …)
+  // arrives in later stories; the host can always force-advance.
+  if (phase !== 'LOBBY' && game) {
+    const inDilemma = game.dilemmaIndex >= 1 && game.dilemmaCount != null;
     return (
-      <main
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          textAlign: 'center',
-          padding: '2rem',
-          gap: '1.5rem',
-        }}
-      >
-        <h1 style={{ fontSize: '2.5rem', margin: 0 }}>Dilemma di gruppo</h1>
-        <p style={{ fontSize: '1.5rem', opacity: 0.85, margin: 0 }}>
-          Vi mostreremo {dilemmaCount} dilemmi. Votate, ascoltate le difese e cambiate
-          idea… se vi convincono!
-        </p>
-        <p style={{ fontSize: '1.25rem', opacity: 0.7, margin: 0 }}>
-          La partita sta per iniziare…
-        </p>
+      <main style={screen}>
+        {inDilemma && (
+          <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
+            Dilemma {game.dilemmaIndex}/{game.dilemmaCount}
+          </p>
+        )}
+        <h1 style={{ fontSize: '2.5rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
+
+        {phase === 'PHASE_INTRO' && (
+          <p style={{ fontSize: '1.5rem', opacity: 0.85, margin: 0, maxWidth: '40rem' }}>
+            Vi mostreremo {game.dilemmaCount} dilemmi. Votate, ascoltate le difese e
+            cambiate idea… se vi convincono!
+          </p>
+        )}
+
+        {remaining != null && (
+          <div
+            aria-label="Tempo rimanente"
+            style={{
+              fontSize: 'clamp(3rem, 12vw, 6rem)',
+              fontWeight: 800,
+              fontVariantNumeric: 'tabular-nums',
+              lineHeight: 1,
+            }}
+          >
+            {remaining}s
+          </div>
+        )}
+
+        {phase !== 'FINAL_AWARDS' && (
+          <button
+            type="button"
+            onClick={advance}
+            style={{
+              fontSize: '1.2rem',
+              fontWeight: 700,
+              padding: '0.6rem 1.8rem',
+              borderRadius: '0.7rem',
+              cursor: 'pointer',
+            }}
+          >
+            Avanti ⏭
+          </button>
+        )}
       </main>
     );
   }
 
   return (
-    <main
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        textAlign: 'center',
-        padding: '2rem',
-        gap: '1.5rem',
-      }}
-    >
+    <main style={screen}>
       <h1 style={{ fontSize: '2.5rem', margin: 0 }}>Dibattiti tra amici</h1>
 
       {code ? (
@@ -158,8 +192,8 @@ export default function HostApp() {
                 <button
                   key={n}
                   type="button"
-                  onClick={() => setDilemmaCount(n)}
-                  aria-pressed={dilemmaCount === n}
+                  onClick={() => setChosenCount(n)}
+                  aria-pressed={chosenCount === n}
                   style={{
                     fontSize: '1.4rem',
                     fontWeight: 700,
@@ -167,8 +201,8 @@ export default function HostApp() {
                     padding: '0.5rem 0',
                     borderRadius: '0.6rem',
                     cursor: 'pointer',
-                    border: dilemmaCount === n ? '2px solid #4f8cff' : '2px solid transparent',
-                    background: dilemmaCount === n ? 'rgba(79,140,255,0.22)' : 'rgba(127,127,127,0.18)',
+                    border: chosenCount === n ? '2px solid #4f8cff' : '2px solid transparent',
+                    background: chosenCount === n ? 'rgba(79,140,255,0.22)' : 'rgba(127,127,127,0.18)',
                   }}
                 >
                   {n}

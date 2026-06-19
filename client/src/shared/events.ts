@@ -18,6 +18,8 @@ export const SocketEvents = {
   HostStartGame: 'host:startGame',
   /** Server rejects the start (not enough players, bad count, already started). */
   HostStartError: 'host:startError',
+  /** Host force-advances the state machine, skipping the current countdown. */
+  HostAdvancePhase: 'host:advancePhase',
   /** Server broadcasts the current game phase to everyone in the room. */
   GameState: 'game:state',
 } as const;
@@ -29,8 +31,20 @@ export type DilemmaCount = (typeof DILEMMA_COUNT_OPTIONS)[number];
 /** Minimum connected players required before the host can start. */
 export const MIN_PLAYERS_TO_START = 3;
 
-/** Phases of the game state machine (extended in US-005). */
-export type GamePhase = 'LOBBY' | 'PHASE_INTRO';
+/**
+ * Phases of the game state machine. Mirror of the server's `GamePhase` in
+ * server/src/game/rooms.ts — keep them in sync.
+ */
+export type GamePhase =
+  | 'LOBBY'
+  | 'PHASE_INTRO'
+  | 'DILEMMA_REVEAL'
+  | 'VOTE_1'
+  | 'SPLIT_REVEAL'
+  | 'DEFENSE'
+  | 'VOTE_2'
+  | 'PHASE_RESULTS'
+  | 'FINAL_AWARDS';
 
 export interface RoomCreatedPayload {
   code: string;
@@ -76,7 +90,24 @@ export interface StartGamePayload {
 export interface GameStatePayload {
   phase: GamePhase;
   dilemmaCount: number | null;
+  /** Which dilemma (1-based) is in play; 0 before the first reveal. */
+  dilemmaIndex: number;
+  /** Epoch ms when the phase auto-advances; null if it has no timer. */
+  phaseExpiresAt: number | null;
 }
+
+/** User-facing (Italian) short label for each phase, shown on the host. */
+export const PHASE_LABELS: Record<GamePhase, string> = {
+  LOBBY: 'In attesa',
+  PHASE_INTRO: 'Si comincia',
+  DILEMMA_REVEAL: 'Il dilemma',
+  VOTE_1: 'Primo voto',
+  SPLIT_REVEAL: 'Come si è diviso il gruppo',
+  DEFENSE: 'Le difese',
+  VOTE_2: 'Secondo voto',
+  PHASE_RESULTS: 'Risultati',
+  FINAL_AWARDS: 'Premi finali',
+};
 
 export type StartGameError =
   | 'ROOM_NOT_FOUND'

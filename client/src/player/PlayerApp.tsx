@@ -1,13 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { getSocket } from '../shared/socket';
+import { useCountdown } from '../shared/useCountdown';
 import {
   SocketEvents,
   JOIN_ERROR_MESSAGES,
+  PHASE_LABELS,
   type PlayerJoinedPayload,
   type PlayerJoinErrorPayload,
   type LobbyUpdatePayload,
   type GameStatePayload,
-  type GamePhase,
   type PublicPlayer,
 } from '../shared/events';
 
@@ -25,7 +26,7 @@ export default function PlayerApp() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [players, setPlayers] = useState<PublicPlayer[]>([]);
-  const [phase, setPhase] = useState<GamePhase>('LOBBY');
+  const [game, setGame] = useState<GameStatePayload | null>(null);
 
   useEffect(() => {
     const socket = getSocket();
@@ -39,7 +40,7 @@ export default function PlayerApp() {
       setSubmitting(false);
     };
     const onLobbyUpdate = ({ players }: LobbyUpdatePayload) => setPlayers(players);
-    const onGameState = ({ phase }: GameStatePayload) => setPhase(phase);
+    const onGameState = (payload: GameStatePayload) => setGame(payload);
     socket.on(SocketEvents.PlayerJoined, onJoined);
     socket.on(SocketEvents.PlayerJoinError, onJoinError);
     socket.on(SocketEvents.LobbyUpdate, onLobbyUpdate);
@@ -51,6 +52,9 @@ export default function PlayerApp() {
       socket.off(SocketEvents.GameState, onGameState);
     };
   }, []);
+
+  const phase = game?.phase ?? 'LOBBY';
+  const remaining = useCountdown(game?.phaseExpiresAt ?? null);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -79,7 +83,15 @@ export default function PlayerApp() {
   if (joinedCode && phase !== 'LOBBY') {
     return (
       <main style={wrap}>
-        <h1 style={{ fontSize: '1.75rem', margin: 0 }}>La partita è iniziata!</h1>
+        <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
+        {remaining != null && (
+          <div
+            aria-label="Tempo rimanente"
+            style={{ fontSize: '3rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+          >
+            {remaining}s
+          </div>
+        )}
         <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
           Guarda lo schermo condiviso 👀
         </p>

@@ -3,7 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
 import fs from 'fs';
-import { RoomStore } from './game/rooms';
+import { RoomStore, type Room } from './game/rooms';
 
 const app = express();
 const httpServer = createServer(app);
@@ -18,6 +18,8 @@ const rooms = new RoomStore();
 const hostRooms = new Map<string, string>();
 // Which room each player socket is in, so we can clean up on disconnect.
 const playerRooms = new Map<string, string>();
+// Pending auto-advance timer per room, so we can reschedule / cancel it.
+const phaseTimers = new Map<string, NodeJS.Timeout>();
 
 // Broadcast the current (public) lobby roster to everyone in the room — host
 // screen + all phones. Only aggregate, non-secret info leaves the server.
@@ -25,12 +27,55 @@ function broadcastLobby(code: string): void {
   io.to(code).emit('lobby:update', { players: rooms.listPlayers(code) });
 }
 
+// The authoritative game-state payload: phase + dilemma progress + the
+// server-computed expiry timestamp the clients render a countdown from.
+function gameStatePayload(room: Room) {
+  return {
+    phase: room.phase,
+    dilemmaCount: room.dilemmaCount,
+    dilemmaIndex: room.dilemmaIndex,
+    phaseExpiresAt: room.phaseExpiresAt,
+  };
+}
+
 // Broadcast the authoritative game phase to everyone in the room so host +
 // phones render the same state (lobby vs. started).
 function broadcastGameState(code: string): void {
   const room = rooms.get(code);
   if (!room) return;
-  io.to(code).emit('game:state', { phase: room.phase, dilemmaCount: room.dilemmaCount });
+  io.to(code).emit('game:state', gameStatePayload(room));
+}
+
+// Cancel any pending auto-advance timer for a room.
+function clearPhaseTimer(code: string): void {
+  const timer = phaseTimers.get(code);
+  if (timer) {
+    clearTimeout(timer);
+    phaseTimers.delete(code);
+  }
+}
+
+// Schedule the next auto-advance from the room's server-side expiry. Replaces
+// any existing timer; phases with no timer (FINAL_AWARDS) end the chain.
+function schedulePhase(code: string): void {
+  clearPhaseTimer(code);
+  const room = rooms.get(code);
+  if (!room || room.phaseExpiresAt == null) return;
+  const delay = Math.max(0, room.phaseExpiresAt - Date.now());
+  const timer = setTimeout(() => {
+    phaseTimers.delete(code);
+    advanceAndBroadcast(code);
+  }, delay);
+  phaseTimers.set(code, timer);
+}
+
+// Advance the state machine one step, broadcast it, and arm the next timer.
+// Used by both timer expiry and the host's force-advance.
+function advanceAndBroadcast(code: string): void {
+  const result = rooms.advancePhase(code);
+  if (!result.ok) return;
+  broadcastGameState(code);
+  schedulePhase(code);
 }
 
 app.get('/api/health', (_req, res) => {
@@ -54,7 +99,7 @@ io.on('connection', (socket) => {
     // existing players and the right screen (lobby vs. an in-progress game).
     socket.emit('lobby:update', { players: rooms.listPlayers(code) });
     const room = rooms.get(code);
-    if (room) socket.emit('game:state', { phase: room.phase, dilemmaCount: room.dilemmaCount });
+    if (room) socket.emit('game:state', gameStatePayload(room));
   });
 
   // The host starts the game for the room it owns, choosing the dilemma count.
@@ -70,6 +115,16 @@ io.on('connection', (socket) => {
       return;
     }
     broadcastGameState(code);
+    // Arm the server-side timer that auto-advances the state machine.
+    schedulePhase(code);
+  });
+
+  // The host force-advances the state machine for the room it owns (skip the
+  // remaining countdown). Same path the timer uses, so it reschedules cleanly.
+  socket.on('host:advancePhase', () => {
+    const code = hostRooms.get(socket.id);
+    if (!code) return;
+    advanceAndBroadcast(code);
   });
 
   // A player joins from their phone with a room code + nickname.

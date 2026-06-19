@@ -77,8 +77,8 @@
         "Tests pass"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Full phase state machine + authoritative server timers. GamePhase extended to LOBBY|PHASE_INTRO|DILEMMA_REVEAL|VOTE_1|SPLIT_REVEAL|DEFENSE|VOTE_2|PHASE_RESULTS|FINAL_AWARDS in BOTH server/src/game/rooms.ts and client/src/shared/events.ts. rooms.ts adds pure nextPhase(current,dilemmaIndex,dilemmaCount)->{phase,dilemmaIndex} (DILEMMA_SEQUENCE order; PHASE_RESULTS loops to next DILEMMA_REVEAL while dilemmaIndex<dilemmaCount else FINAL_AWARDS), PHASE_DURATIONS_MS (null for LOBBY/FINAL_AWARDS), Room.dilemmaIndex/phaseExpiresAt, injectable clock (2nd ctor arg now()), startGame sets dilemmaIndex=0 + PHASE_INTRO expiry, and advancePhase(code) (rejects LOBBY/FINAL_AWARDS as NO_NEXT_PHASE). TDD: 11 new tests, 32 total. Server index.ts: phaseTimers map + schedulePhase/clearPhaseTimer/advanceAndBroadcast; host:startGame arms the timer; new host:advancePhase force-advance (hostRooms lookup); game:state payload now carries dilemmaIndex+phaseExpiresAt (gameStatePayload helper). Client: shared useCountdown(expiresAt) hook renders whole seconds from the broadcast expiry; PHASE_LABELS map; host shows phase label + Dilemma X/N + countdown + 'Avanti' force-advance button; phones show phase label + countdown. Verified end-to-end vs built prod server (8/8): LOBBY no timer, PHASE_INTRO expiry ~5s, auto-advance fired on the server timer (5003ms), force-advance walked the exact full sequence across 3 dilemmas to FINAL_AWARDS, FINAL_AWARDS terminal. Visual browser check still pending real browser tooling."
     },
     {
       "id": "US-006",
