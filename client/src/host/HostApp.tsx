@@ -16,6 +16,9 @@ import {
   OBJECTIVE,
   JOIN_ERROR_MESSAGES,
   VOTE_ERROR_MESSAGES,
+  GAME_MODES,
+  MODE_LABELS,
+  type GameMode,
   type SessionFormat,
   type ContentRegister,
   type RoomCreatedPayload,
@@ -50,6 +53,7 @@ export default function HostApp() {
   const [game, setGame] = useState<GameStatePayload | null>(null);
   const [format, setFormat] = useState<SessionFormat>('classica');
   const [register, setRegister] = useState<ContentRegister>('misto');
+  const [mode, setMode] = useState<GameMode>('gruppo');
   const [startError, setStartError] = useState<string | null>(null);
   // "Gioca anche tu": the host can also join as a human player on this device.
   // We reuse the existing player:join/player:vote events on the host's socket
@@ -119,6 +123,7 @@ export default function HostApp() {
     getSocket().emit(SocketEvents.HostStartGame, {
       dilemmaCount: FORMAT_DILEMMA_COUNT[format],
       register,
+      mode,
     });
   };
 
@@ -145,10 +150,14 @@ export default function HostApp() {
     getSocket().emit(SocketEvents.PlayerVote, { choice });
   };
 
-  // Solo play is allowed (1 human + bots), but never a bots-only game.
+  // Gruppo: solo play allowed (1 human + bots), never bots-only. Duello: exactly
+  // two humans (no bot opponent).
   const humanCount = players.filter((p) => !p.isBot).length;
-  const canStart = players.length >= MIN_PLAYERS_TO_START && humanCount >= 1;
-  const canAddBot = players.length < 8;
+  const canStart =
+    mode === 'duello'
+      ? players.length === 2 && humanCount === 2
+      : players.length >= MIN_PLAYERS_TO_START && humanCount >= 1;
+  const canAddBot = mode !== 'duello' && players.length < 8;
   const joinUrl = code ? `${window.location.origin}/join?room=${code}` : '';
 
   // In-game: every phase past the lobby shows its label + a server-driven
@@ -163,6 +172,10 @@ export default function HostApp() {
     const defense = game.defense;
     const swing = game.swing;
     const awards = game.awards;
+    const duelReveal = game.duelReveal;
+    const duelTurn = game.duelTurn;
+    const duelResult = game.duelResult;
+    const duelSummary = game.duelSummary;
     return (
       <main style={screen}>
         {inDilemma && (
@@ -231,7 +244,8 @@ export default function HostApp() {
           </p>
         )}
 
-        {(phase === 'VOTE_1' || phase === 'VOTE_2') && myPlayerId && (
+        {(phase === 'VOTE_1' || phase === 'VOTE_2' || phase === 'DUEL_PICK' || phase === 'DUEL_REPICK') &&
+          myPlayerId && (
           <div
             role="group"
             aria-label="Il tuo voto"
@@ -409,6 +423,126 @@ export default function HostApp() {
             <p style={{ fontSize: '1.4rem', opacity: 0.8, margin: 0 }}>Grazie per aver giocato! 🎉</p>
           ))}
 
+        {phase === 'DUEL_PICK' && (
+          <p aria-label="Quanti hanno scelto" style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>
+            Scegliete in segreto ({game.votedCount}/2)
+          </p>
+        )}
+
+        {phase === 'DUEL_REVEAL' && duelReveal && (
+          <section
+            aria-label="Le vostre scelte"
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.9rem' }}
+          >
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {duelReveal.picks.map((p) => {
+                const rgb = p.choice === 'A' ? '79,140,255' : '255,140,79';
+                return (
+                  <div
+                    key={p.id}
+                    style={{
+                      padding: '1rem 1.4rem',
+                      borderRadius: '0.9rem',
+                      background: `rgba(${rgb},0.18)`,
+                      border: `2px solid rgba(${rgb},0.5)`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.2rem',
+                    }}
+                  >
+                    <span style={{ fontWeight: 700 }}>{p.nickname}</span>
+                    <span style={{ fontSize: '1.8rem', fontWeight: 800 }}>{p.choice}</span>
+                    <span style={{ fontSize: '0.95rem', opacity: 0.85 }}>
+                      {p.choice === 'A' ? dilemma?.optionA : dilemma?.optionB}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>
+              {duelReveal.agreed ? '🤝 Siete d’accordo!' : '⚔️ Si va al duello!'}
+            </p>
+          </section>
+        )}
+
+        {phase === 'DUEL_ARGUE' && duelTurn?.speaker && (
+          <section
+            aria-label="Chi argomenta"
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}
+          >
+            <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
+              Turno {duelTurn.turn}/{duelTurn.totalTurns}
+            </p>
+            <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
+              Argomenta <span style={{ color: '#ffd36b' }}>{duelTurn.speaker.nickname}</span> 🎤
+            </p>
+            <div
+              style={{
+                padding: '0.75rem 1.5rem',
+                borderRadius: '0.9rem',
+                fontSize: '1.25rem',
+                fontWeight: 700,
+                background: duelTurn.speaker.side === 'A' ? 'rgba(79,140,255,0.18)' : 'rgba(255,140,79,0.18)',
+                border: `2px solid ${duelTurn.speaker.side === 'A' ? 'rgba(79,140,255,0.5)' : 'rgba(255,140,79,0.5)'}`,
+              }}
+            >
+              Difende {duelTurn.speaker.side} ·{' '}
+              {duelTurn.speaker.side === 'A' ? dilemma?.optionA : dilemma?.optionB}
+            </div>
+          </section>
+        )}
+
+        {phase === 'DUEL_REPICK' && (
+          <p style={{ fontSize: '1.4rem', fontWeight: 600, margin: 0, opacity: 0.9 }}>
+            Ri-scegliete: vi siete convinti? 📱
+          </p>
+        )}
+
+        {phase === 'DUEL_RESULT' && duelResult && (
+          <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+            {duelResult.agreed ? (
+              <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
+                🤝 Eravate d’accordo
+              </p>
+            ) : duelResult.convinced.length > 0 ? (
+              duelResult.convinced.map((c) => (
+                <p key={c.convinced.id} style={{ fontSize: 'clamp(1.5rem, 4.5vw, 2.4rem)', fontWeight: 800, margin: 0 }}>
+                  <span style={{ color: '#ffd36b' }}>{c.persuader.nickname}</span> ha convinto {c.convinced.nickname}! 🎯
+                </p>
+              ))
+            ) : (
+              <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>Teste dure! 🪨</p>
+            )}
+          </section>
+        )}
+
+        {phase === 'FINAL_DUEL' && duelSummary && (
+          <section
+            aria-label="Risultato del duello"
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}
+          >
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {duelSummary.scores.map((s) => (
+                <Card
+                  key={s.id}
+                  glow="accent"
+                  style={{ flex: '1 1 12rem', minWidth: '10rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', alignItems: 'center', textAlign: 'center' }}
+                >
+                  <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{s.nickname}</span>
+                  <span style={{ fontSize: '2.2rem', fontWeight: 800, color: '#ffd36b' }}>{s.persuasions}</span>
+                  <span style={{ fontSize: '0.95rem', opacity: 0.8 }}>
+                    {s.persuasions === 1 ? 'persuasione' : 'persuasioni'}
+                  </span>
+                </Card>
+              ))}
+            </div>
+            <p style={{ fontSize: '1.2rem', opacity: 0.85, margin: 0 }}>
+              Eravate d’accordo {duelSummary.agreements} {duelSummary.agreements === 1 ? 'volta' : 'volte'}
+            </p>
+          </section>
+        )}
+
         {remaining != null && (
           <div
             aria-label="Tempo rimanente"
@@ -423,7 +557,7 @@ export default function HostApp() {
           </div>
         )}
 
-        {phase !== 'FINAL_AWARDS' && (
+        {phase !== 'FINAL_AWARDS' && phase !== 'FINAL_DUEL' && (
           <button
             type="button"
             onClick={advance}
@@ -564,6 +698,25 @@ export default function HostApp() {
             <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Componi la serata</h2>
 
             <div style={{ width: '100%' }}>
+              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità</p>
+              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Modalità">
+                {GAME_MODES.map((m) => (
+                  <Pill
+                    key={m}
+                    selected={mode === m}
+                    onClick={() => setMode(m)}
+                    aria-label={`${MODE_LABELS[m].nome}, ${MODE_LABELS[m].descr}`}
+                  >
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
+                      <span style={{ fontWeight: 700 }}>{MODE_LABELS[m].nome}</span>
+                      <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>{MODE_LABELS[m].descr}</span>
+                    </span>
+                  </Pill>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ width: '100%' }}>
               <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Argomenti</p>
               <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Registro">
                 {CONTENT_REGISTERS.map((r) => (
@@ -605,9 +758,11 @@ export default function HostApp() {
             </Button>
             {!canStart && (
               <p style={{ opacity: 0.6, margin: 0 }}>
-                {humanCount < 1
-                  ? 'Serve almeno una persona (i bot da soli non bastano).'
-                  : `Servono almeno ${MIN_PLAYERS_TO_START} partecipanti: aggiungi giocatori o bot 🤖`}
+                {mode === 'duello'
+                  ? 'Il 1v1 richiede esattamente 2 giocatori.'
+                  : humanCount < 1
+                    ? 'Serve almeno una persona (i bot da soli non bastano).'
+                    : `Servono almeno ${MIN_PLAYERS_TO_START} partecipanti: aggiungi giocatori o bot 🤖`}
               </p>
             )}
             {startError && <Alert>{startError}</Alert>}
