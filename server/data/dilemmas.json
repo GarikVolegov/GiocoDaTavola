@@ -166,5 +166,257 @@
     "optionA": "Punto al successo: poi avrò tempo per tutto",
     "optionB": "Le persone prima: il tempo non torna",
     "register": "vita"
+  },
+  {
+    "id": "d25",
+    "text": "Un amico ti confessa in privato un segreto su un altro amico presente.",
+    "optionA": "Lo tengo per me",
+    "optionB": "Lo dico all'interessato: ha diritto di saperlo",
+    "register": "vita"
+  },
+  {
+    "id": "d26",
+    "text": "Trovi per strada un portafoglio pieno di contanti, senza documenti.",
+    "optionA": "Lo porto alla polizia",
+    "optionB": "Chi trova tiene",
+    "register": "vita"
+  },
+  {
+    "id": "d27",
+    "text": "Il partner vuole le password dei tuoi social «per fiducia».",
+    "optionA": "Gliele do: non ho niente da nascondere",
+    "optionB": "No: la privacy resta sacra",
+    "register": "vita"
+  },
+  {
+    "id": "d28",
+    "text": "Al ristorante il conto è sbagliato a tuo favore di 30€.",
+    "optionA": "Lo faccio notare",
+    "optionB": "Fortuna mia: pago e via",
+    "register": "vita"
+  },
+  {
+    "id": "d29",
+    "text": "Un amico ti chiede un prestito che sai non rivedrai.",
+    "optionA": "Glielo do come fosse un regalo",
+    "optionB": "Dico di no, per il bene di entrambi",
+    "register": "vita"
+  },
+  {
+    "id": "d30",
+    "text": "Hai una foto bruttissima ma esilarante di un amico.",
+    "optionA": "La pubblico, ci ridiamo su",
+    "optionB": "La cancello: prima l'amicizia",
+    "register": "vita"
+  },
+  {
+    "id": "d31",
+    "text": "Per un giorno puoi leggere i pensieri di chiunque.",
+    "optionA": "Lo faccio: voglio sapere tutto",
+    "optionB": "No grazie: certe cose è meglio non saperle",
+    "register": "vita"
+  },
+  {
+    "id": "d32",
+    "text": "Il tuo migliore amico inizia a uscire con il tuo ex.",
+    "optionA": "Ci sto male ma li sostengo",
+    "optionB": "È un tradimento dell'amicizia",
+    "register": "vita"
+  },
+  {
+    "id": "d33",
+    "text": "Cena stellata gratis, ma devi andarci completamente da solo.",
+    "optionA": "Ci vado: che esperienza",
+    "optionB": "Senza compagnia non vale niente",
+    "register": "vita"
+  },
+  {
+    "id": "d34",
+    "text": "Sai una verità che farebbe stare malissimo un amico.",
+    "optionA": "Gliela dico: merita la verità",
+    "optionB": "Lo proteggo col silenzio",
+    "register": "vita"
+  },
+  {
+    "id": "d35",
+    "text": "Vacanza: tutto pianificato o zaino in spalla e improvvisazione?",
+    "optionA": "Pianifico ogni dettaglio",
+    "optionB": "Parto e vada come vada",
+    "register": "vita"
+  },
+  {
+    "id": "d36",
+    "text": "Un'app ti regala 1000€ in cambio di tutti i tuoi dati personali.",
+    "optionA": "Accetto: i dati ce li hanno già",
+    "optionB": "Rifiuto: la privacy non si vende",
+    "register": "vita"
+  },
+  {
+    "id": "d37",
+    "text": "Il gruppo vuole andare nel locale che detesti.",
+    "optionA": "Mi adeguo per stare insieme",
+    "optionB": "Propongo altro, a costo di discutere",
+    "register": "vita"
+  },
+  {
+    "id": "d38",
+    "text": "Puoi rifare una scelta del passato, ma cancelli i ricordi venuti dopo.",
+    "optionA": "La rifaccio: voglio l'altra vita",
+    "optionB": "Tengo tutto: i ricordi valgono troppo",
+    "register": "vita"
+  },
+  {
+    "id": "d39",
+    "text": "Adotteresti un cucciolo che ha bisogno di tantissime cure?",
+    "optionA": "Sì, l'amore vale la fatica",
+    "optionB": "No, non sarei giusto verso di lui",
+    "register": "vita"
+  },
+  {
+    "id": "d40",
+    "text": "Un amico ha l'alito pesante e non se ne accorge.",
+    "optionA": "Glielo dico con tatto",
+    "optionB": "Faccio finta di niente",
+    "register": "vita"
+  },
+  {
+    "id": "d41",
+    "text": "Festa imperdibile stasera o sveglia all'alba per un'occasione unica domani.",
+    "optionA": "Vado alla festa: si vive una volta",
+    "optionB": "A nanna: domani conta di più",
+    "register": "vita"
+  },
+  {
+    "id": "d42",
+    "text": "Un estraneo simpaticissimo ti chiede il numero mentre corri a prendere il treno.",
+    "optionA": "Glielo do e perdo il treno",
+    "optionB": "Prendo il treno: occasione persa",
+    "register": "vita"
+  },
+  {
+    "id": "d43",
+    "text": "Potessi scegliere, preferiresti sapere quando o come morirai?",
+    "optionA": "Quando",
+    "optionB": "Come",
+    "register": "vita"
+  },
+  {
+    "id": "d44",
+    "text": "Il coinquilino non lava mai i piatti.",
+    "optionA": "Glielo dico chiaro e tondo",
+    "optionB": "Li lavo io per quieto vivere",
+    "register": "vita"
+  },
+  {
+    "id": "d45",
+    "text": "Per un regalo importante punti su…",
+    "optionA": "Un'esperienza da ricordare",
+    "optionB": "Un oggetto che dura nel tempo",
+    "register": "vita"
+  },
+  {
+    "id": "d46",
+    "text": "In riunione il capo presenta la tua idea come sua.",
+    "optionA": "Lo correggo davanti a tutti",
+    "optionB": "Mordo il freno e ne parlo dopo in privato",
+    "register": "business"
+  },
+  {
+    "id": "d47",
+    "text": "Stipendio doppio, ma in un'azienda dai metodi discutibili.",
+    "optionA": "Accetto: i soldi sono soldi",
+    "optionB": "Rinuncio: non vendo i miei valori",
+    "register": "business"
+  },
+  {
+    "id": "d48",
+    "text": "Un collega ti chiede di coprire un suo errore grave.",
+    "optionA": "Lo copro: oggi a lui, domani a me",
+    "optionB": "Non mento per nessuno",
+    "register": "business"
+  },
+  {
+    "id": "d49",
+    "text": "Arriva un'email di lavoro nel weekend.",
+    "optionA": "Rispondo: meglio non accumulare",
+    "optionB": "Stacco: il weekend è sacro",
+    "register": "business"
+  },
+  {
+    "id": "d50",
+    "text": "Per sempre: smart working da casa o ufficio coi colleghi?",
+    "optionA": "Casa: libertà e concentrazione",
+    "optionB": "Ufficio: si lavora meglio insieme",
+    "register": "business"
+  },
+  {
+    "id": "d51",
+    "text": "Devi promuovere il più bravo o il più amato dal team?",
+    "optionA": "Il più bravo: vincono i risultati",
+    "optionB": "Il più amato: tiene unito il gruppo",
+    "register": "business"
+  },
+  {
+    "id": "d52",
+    "text": "Un cliente che fattura tanto è maleducato col tuo staff.",
+    "optionA": "Lo perdo: il mio team viene prima",
+    "optionB": "Stringo i denti: quei soldi servono",
+    "register": "business"
+  },
+  {
+    "id": "d53",
+    "text": "Assumi il fenomeno arrogante o il candidato normale ma piacevole?",
+    "optionA": "Il fenomeno: il talento decide",
+    "optionB": "Il piacevole: il clima conta di più",
+    "register": "business"
+  },
+  {
+    "id": "d54",
+    "text": "Comunicheresti un licenziamento via email?",
+    "optionA": "Sì, evito una scena dolorosa",
+    "optionB": "Mai: certe cose si dicono in faccia",
+    "register": "business"
+  },
+  {
+    "id": "d55",
+    "text": "Il tuo prodotto vende benissimo ma inquina.",
+    "optionA": "Lo vendo: è legale e la gente lo vuole",
+    "optionB": "Lo ritiro finché non è pulito",
+    "register": "business"
+  },
+  {
+    "id": "d56",
+    "text": "Devi dare un feedback a un collega.",
+    "optionA": "Durissimo ma davvero utile",
+    "optionB": "Gentile ma un po' vago",
+    "register": "business"
+  },
+  {
+    "id": "d57",
+    "text": "Avviare un progetto rischioso insieme al tuo migliore amico.",
+    "optionA": "Lo faccio: mi fido ciecamente",
+    "optionB": "Lavoro e amicizia non si mischiano",
+    "register": "business"
+  },
+  {
+    "id": "d58",
+    "text": "Anno sabbatico non pagato per un sogno, o stipendio sicuro e niente avventure?",
+    "optionA": "Mollo e inseguo il sogno",
+    "optionB": "Tengo il sicuro: il sogno aspetta",
+    "register": "business"
+  },
+  {
+    "id": "d59",
+    "text": "Un concorrente ti offre tanti soldi per i segreti della tua azienda.",
+    "optionA": "Tradisco: nessuno lo saprà",
+    "optionB": "Resto leale, costi quel che costi",
+    "register": "business"
+  },
+  {
+    "id": "d60",
+    "text": "Convochi una riunione che poteva tranquillamente essere un'email?",
+    "optionA": "Sì, di persona è più chiaro",
+    "optionB": "No, mando l'email e tutti ringraziano",
+    "register": "business"
   }
 ]

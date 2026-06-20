@@ -112,3 +112,27 @@ describe('dilemmasForRegister', () => {
     expect(all.every((d) => d.register === 'vita' || d.register === 'business')).toBe(true);
   });
 });
+
+describe('deck content volume & balance', () => {
+  const all = loadDilemmas();
+
+  it('ha almeno 60 dilemmi per la rigiocabilità', () => {
+    expect(all.length).toBeGreaterThanOrEqual(60);
+  });
+
+  it('è bilanciato: almeno 28 dilemmi per registro', () => {
+    expect(dilemmasForRegister(all, 'vita').length).toBeGreaterThanOrEqual(28);
+    expect(dilemmasForRegister(all, 'business').length).toBeGreaterThanOrEqual(28);
+  });
+
+  it('le due opzioni di ogni dilemma sono diverse tra loro', () => {
+    for (const d of all) {
+      expect(d.optionA.trim()).not.toBe(d.optionB.trim());
+    }
+  });
+
+  it('non ci sono testi di dilemma duplicati', () => {
+    const texts = all.map((d) => d.text.trim().toLowerCase());
+    expect(new Set(texts).size).toBe(texts.length);
+  });
+});
