@@ -1,0 +1,17 @@
+.pill {
+  display: inline-block;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  border: 2px solid transparent;
+  color: var(--text);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+button.pill { cursor: pointer; font-family: var(--font-display); transition: transform var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease); }
+button.pill:hover { transform: translateY(-1px); filter: brightness(1.15); }
+.selected { border-color: var(--faction-a); background: var(--faction-a-soft); box-shadow: var(--glow-a); }
+@media (prefers-reduced-motion: reduce) {
+  button.pill { transition: none; }
+  button.pill:hover { transform: none; }
+}

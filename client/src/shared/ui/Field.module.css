@@ -1,0 +1,17 @@
+.field { display: flex; flex-direction: column; gap: var(--space-2); text-align: left; }
+.label { color: var(--text-muted); font-size: var(--text-sm); }
+.input {
+  font-size: var(--text-md);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+.input:focus { outline: none; border-color: var(--faction-a); box-shadow: var(--glow-a); }
+.mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.3rem;
+  text-align: center;
+  text-transform: uppercase;
+}
