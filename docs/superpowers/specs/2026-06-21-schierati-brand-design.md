@@ -67,3 +67,24 @@ codename in CLAUDE.md — internal only, no user impact. Can follow later.
 - `npm run typecheck` · `npm run lint` · `npm run build` stay green.
 - Visual check: favicon, page title, and both headers render the logo on the
   dark theme without a visible panel seam.
+
+## Update 2026-06-21 — final logo adopted
+
+After comparing a 2×2 matrix (Arial Black vs Space Grotesk × yellow vs orange),
+the **live** logo is **Space Grotesk + orange** — maximum cohesion with the app:
+the wordmark now uses the app's display font (`--font-display`, embedded as a
+base64 woff2 so it renders inside an `<img>`) and the app's faction colours
+(`--faction-a #4F8DFF` / `--faction-b #FF8C4F`).
+
+- Live assets are the three fixed-name files in `client/public/`
+  (`schierati-logo.svg`, `schierati-logo-transparent.svg`, `schierati-icon.svg`),
+  promoted from the `*-grotesk-warm*` / `*-warm*` sources.
+- `brand/` keeps the full variant library for one-line swaps:
+  - `schierati-logo.svg` — Arial Black + yellow (original "classic")
+  - `schierati-logo-warm.svg` — Arial Black + orange
+  - `schierati-logo-grotesk.svg` — Space Grotesk + yellow
+  - `schierati-logo-grotesk-warm.svg` — Space Grotesk + orange (**live**)
+  - matching `-transparent` and `-icon` variants
+
+To switch the live logo, copy the desired `brand/*` variant over the
+corresponding `client/public/*` file.
