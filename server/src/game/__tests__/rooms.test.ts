@@ -13,6 +13,11 @@ import {
 } from '../rooms';
 import { Deck, type Dilemma } from '../deck';
 
+// helper: add n players to an existing room
+function addPlayers(store: RoomStore, code: string, n: number) {
+  for (let i = 0; i < n; i++) store.join(code, `p${i}`, `P${i}`);
+}
+
 // A small deterministic deck for driving dilemma reveals in tests: rng = () => 0
 // always picks index 0, so draws walk the fixture in order (d1, d2, d3, ...).
 const DILEMMA_FIXTURE: Dilemma[] = Array.from({ length: 6 }, (_, i) => ({
@@ -22,7 +27,7 @@ const DILEMMA_FIXTURE: Dilemma[] = Array.from({ length: 6 }, (_, i) => ({
   optionB: `B${i + 1}`,
   register: 'vita' as const,
 }));
-const makeFixtureDeck = () => new Deck(DILEMMA_FIXTURE, () => 0);
+const makeFixtureDeck = (_register: unknown) => new Deck(DILEMMA_FIXTURE, () => 0);
 
 describe('generateRoomCode', () => {
   it('returns a 4-letter uppercase code', () => {
@@ -157,11 +162,11 @@ describe('RoomStore.startGame', () => {
   it('starts the game with >= 3 players, moving LOBBY -> PHASE_INTRO', () => {
     const store = new RoomStore();
     const code = roomWith(store, MIN_PLAYERS_TO_START);
-    const result = store.startGame(code, 4);
+    const result = store.startGame(code, 5);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.room.phase).toBe('PHASE_INTRO');
-      expect(result.room.dilemmaCount).toBe(4);
+      expect(result.room.dilemmaCount).toBe(5);
     }
     expect(store.get(code)?.phase).toBe('PHASE_INTRO');
   });
@@ -186,10 +191,11 @@ describe('RoomStore.startGame', () => {
     expect(store.get(code)?.phase).toBe('LOBBY');
   });
 
-  it('rejects a dilemma count outside 3/4/5', () => {
+  it('rejects a dilemma count outside 3/5/7', () => {
     const store = new RoomStore();
     const code = roomWith(store, 3);
     expect(store.startGame(code, 2)).toEqual({ ok: false, error: 'INVALID_DILEMMA_COUNT' });
+    expect(store.startGame(code, 4)).toEqual({ ok: false, error: 'INVALID_DILEMMA_COUNT' });
     expect(store.startGame(code, 6)).toEqual({ ok: false, error: 'INVALID_DILEMMA_COUNT' });
     expect(store.get(code)?.phase).toBe('LOBBY');
   });
@@ -773,5 +779,63 @@ describe('RoomStore second vote + swing (US-011)', () => {
       switched: 0,
       netSwing: { A: 0, B: 0 },
     });
+  });
+});
+
+describe('startGame con registro', () => {
+  it('default register = misto quando non specificato', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    addPlayers(store, code, 3);
+    const res = store.startGame(code, 5);
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.room.phase).toBe('PHASE_INTRO');
+      expect(res.room.dilemmaCount).toBe(5);
+      expect(res.room.register).toBe('misto');
+    }
+  });
+
+  it('accetta i conteggi dei preset 3 / 5 / 7', () => {
+    for (const n of [3, 5, 7] as const) {
+      const store = new RoomStore();
+      const { code } = store.create();
+      addPlayers(store, code, 3);
+      expect(store.startGame(code, n, 'misto').ok).toBe(true);
+    }
+  });
+
+  it('rifiuta un conteggio non valido (4 non è più un preset)', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    addPlayers(store, code, 3);
+    expect(store.startGame(code, 4, 'misto')).toEqual({ ok: false, error: 'INVALID_DILEMMA_COUNT' });
+  });
+
+  it('rifiuta un registro non valido', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    addPlayers(store, code, 3);
+    expect(store.startGame(code, 5, 'sport')).toEqual({ ok: false, error: 'INVALID_REGISTER' });
+  });
+
+  it('imposta il registro scelto sulla room', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    addPlayers(store, code, 3);
+    const res = store.startGame(code, 3, 'business');
+    expect(res.ok && res.room.register).toBe('business');
+  });
+
+  it('costruisce il deck dal registro scelto', () => {
+    const onlyVita: Dilemma[] = [
+      { id: 'x1', text: 't1', optionA: 'a', optionB: 'b', register: 'vita' },
+    ];
+    const store = new RoomStore(undefined, undefined, (_register) => new Deck(onlyVita, () => 0));
+    const { code } = store.create();
+    addPlayers(store, code, 3);
+    const res = store.startGame(code, 3, 'vita');
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.room.deck?.remainingCount).toBe(1);
   });
 });

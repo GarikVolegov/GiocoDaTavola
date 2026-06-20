@@ -1,7 +1,7 @@
 // In-memory store of game rooms. The server is authoritative; rooms live here
 // only for the lifetime of the process (no DB).
 
-import { Deck, loadDilemmas, type Dilemma } from './deck';
+import { Deck, dilemmasForRegister, loadDilemmas, type Dilemma, type ContentRegister } from './deck';
 
 const CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const CODE_LENGTH = 4;
@@ -13,8 +13,15 @@ export const MAX_PLAYERS = 8;
 export const MIN_PLAYERS_TO_START = 3;
 
 /** How many dilemmas the host may choose to play in one game. */
-export const DILEMMA_COUNT_OPTIONS = [3, 4, 5] as const;
+export const DILEMMA_COUNT_OPTIONS = [3, 5, 7] as const;
 export type DilemmaCount = (typeof DILEMMA_COUNT_OPTIONS)[number];
+
+/** Content registers the host can pick (mirror of deck.ts ContentRegister). */
+export const CONTENT_REGISTERS = ['vita', 'business', 'misto'] as const;
+
+function isContentRegister(v: string): v is ContentRegister {
+  return (CONTENT_REGISTERS as readonly string[]).includes(v);
+}
 
 /**
  * Phases of a game. The state machine runs:
@@ -157,6 +164,8 @@ export interface Room {
   phase: GamePhase;
   /** Number of dilemmas chosen at start; null until the game starts. */
   dilemmaCount: number | null;
+  /** Content register chosen at start; null until the game starts. */
+  register: ContentRegister | null;
   /** Which dilemma (1-based) is being played; 0 before the first reveal. */
   dilemmaIndex: number;
   /** Epoch ms when the current phase auto-advances; null if it has no timer. */
@@ -200,6 +209,7 @@ export type StartGameError =
   | 'ROOM_NOT_FOUND'
   | 'NOT_ENOUGH_PLAYERS'
   | 'INVALID_DILEMMA_COUNT'
+  | 'INVALID_REGISTER'
   | 'ALREADY_STARTED';
 
 export type StartGameResult =
@@ -266,7 +276,8 @@ export class RoomStore {
   constructor(
     private readonly genCode: () => string = generateRoomCode,
     private readonly now: () => number = () => Date.now(),
-    private readonly makeDeck: () => Deck = () => new Deck(loadDilemmas()),
+    private readonly makeDeck: (register: ContentRegister) => Deck =
+      (register) => new Deck(dilemmasForRegister(loadDilemmas(), register)),
     private readonly rng: () => number = Math.random,
   ) {}
 
@@ -307,6 +318,7 @@ export class RoomStore {
       players: new Map(),
       phase: 'LOBBY',
       dilemmaCount: null,
+      register: null,
       dilemmaIndex: 0,
       phaseExpiresAt: null,
       deck: null,
@@ -326,18 +338,20 @@ export class RoomStore {
    * LOBBY to PHASE_INTRO. Idempotency is the caller's concern — starting an
    * already-started room is rejected with ALREADY_STARTED.
    */
-  startGame(code: string, dilemmaCount: number): StartGameResult {
+  startGame(code: string, dilemmaCount: number, register: string = 'misto'): StartGameResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
     if (room.phase !== 'LOBBY') return { ok: false, error: 'ALREADY_STARTED' };
     if (!isDilemmaCount(dilemmaCount)) return { ok: false, error: 'INVALID_DILEMMA_COUNT' };
+    if (!isContentRegister(register)) return { ok: false, error: 'INVALID_REGISTER' };
     if (room.players.size < MIN_PLAYERS_TO_START) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
 
     room.dilemmaCount = dilemmaCount;
+    room.register = register;
     room.dilemmaIndex = 0;
     room.phase = 'PHASE_INTRO';
     room.phaseExpiresAt = this.expiryFor('PHASE_INTRO');
-    room.deck = this.makeDeck();
+    room.deck = this.makeDeck(register);
     room.currentDilemma = null;
     return { ok: true, room };
   }
