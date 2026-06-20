@@ -11,7 +11,7 @@ import {
   type GamePhase,
   type VoteChoice,
 } from '../rooms';
-import { Deck, type Dilemma } from '../deck';
+import { Deck, type Dilemma, type ContentRegister } from '../deck';
 
 // helper: add n players to an existing room
 function addPlayers(store: RoomStore, code: string, n: number) {
@@ -27,7 +27,7 @@ const DILEMMA_FIXTURE: Dilemma[] = Array.from({ length: 6 }, (_, i) => ({
   optionB: `B${i + 1}`,
   register: 'vita' as const,
 }));
-const makeFixtureDeck = (_register: unknown) => new Deck(DILEMMA_FIXTURE, () => 0);
+const makeFixtureDeck = (_register: ContentRegister) => new Deck(DILEMMA_FIXTURE, () => 0);
 
 describe('generateRoomCode', () => {
   it('returns a 4-letter uppercase code', () => {
