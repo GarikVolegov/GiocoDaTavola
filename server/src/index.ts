@@ -61,6 +61,12 @@ function gameStatePayload(room: Room) {
     swing: rooms.publicSwing(room.code),
     // The end-of-game awards, gated to FINAL_AWARDS (null otherwise).
     awards: rooms.publicAwards(room.code),
+    // 1v1 duel: the room's mode + the duel views, each gated to its own phase.
+    mode: room.mode,
+    duelReveal: rooms.publicDuelReveal(room.code),
+    duelTurn: rooms.publicDuelTurn(room.code),
+    duelResult: rooms.publicDuelResult(room.code),
+    duelSummary: rooms.publicDuelSummary(room.code),
   };
 }
 
@@ -148,7 +154,7 @@ io.on('connection', (socket) => {
   });
 
   // The host starts the game for the room it owns, choosing the dilemma count.
-  socket.on('host:startGame', (payload: { dilemmaCount?: number; register?: string }) => {
+  socket.on('host:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string }) => {
     const code = hostRooms.get(socket.id);
     if (!code) {
       socket.emit('host:startError', { error: 'ROOM_NOT_FOUND' });
@@ -158,6 +164,7 @@ io.on('connection', (socket) => {
       code,
       Number(payload?.dilemmaCount),
       String(payload?.register ?? 'misto'),
+      String(payload?.mode ?? 'gruppo'),
     );
     if (!result.ok) {
       socket.emit('host:startError', { error: result.error });
@@ -219,10 +226,12 @@ io.on('connection', (socket) => {
     }
     // Confirm the player's own current choice back to just them.
     socket.emit('player:voted', { choice: result.room.votes.get(socket.id) });
-    // VOTE_1 starts empty and ends early once everyone has voted. VOTE_2 starts
-    // pre-filled with each player's first vote (the default), so "all voted" is
-    // already true — it must run its full timer to give everyone time to change.
-    if (result.room.phase === 'VOTE_1' && rooms.allVoted(code)) {
+    // VOTE_1 / DUEL_PICK start empty and end early once everyone has voted.
+    // VOTE_2 / DUEL_REPICK start pre-filled with the first vote (the default),
+    // so "all voted" is already true — they run their full timer to give everyone
+    // time to change their mind.
+    const phase = result.room.phase;
+    if ((phase === 'VOTE_1' || phase === 'DUEL_PICK') && rooms.allVoted(code)) {
       advanceAndBroadcast(code); // everyone voted -> skip the rest of the timer
     } else {
       broadcastGameState(code); // refresh the voted count for the host
@@ -241,8 +250,11 @@ io.on('connection', (socket) => {
       // runs its full timer (it starts pre-filled), so just refresh the state.
       const room = rooms.get(code);
       if (room && isVotingPhase(room.phase)) {
-        if (room.phase === 'VOTE_1' && rooms.allVoted(code)) advanceAndBroadcast(code);
-        else broadcastGameState(code);
+        if ((room.phase === 'VOTE_1' || room.phase === 'DUEL_PICK') && rooms.allVoted(code)) {
+          advanceAndBroadcast(code);
+        } else {
+          broadcastGameState(code);
+        }
       }
     }
   });

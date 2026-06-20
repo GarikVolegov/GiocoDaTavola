@@ -76,6 +76,16 @@ export const REGISTER_LABELS: Record<ContentRegister, string> = {
 /** Minimum connected players required before the host can start. */
 export const MIN_PLAYERS_TO_START = 3;
 
+/** Game mode (mirror of the server's `GameMode`). */
+export const GAME_MODES = ['gruppo', 'duello'] as const;
+export type GameMode = (typeof GAME_MODES)[number];
+
+/** Host-facing labels for the game modes. */
+export const MODE_LABELS: Record<GameMode, { nome: string; descr: string }> = {
+  gruppo: { nome: 'Gruppo', descr: '3–8 giocatori' },
+  duello: { nome: '1v1 Duello', descr: '2 giocatori' },
+};
+
 /** The game's objective, stated to players (persuasion framing). */
 export const OBJECTIVE =
   'Convinci gli altri a passare dalla tua parte… e resta pronto a cambiare idea tu.';
@@ -100,7 +110,14 @@ export type GamePhase =
   | 'DEFENSE'
   | 'VOTE_2'
   | 'PHASE_RESULTS'
-  | 'FINAL_AWARDS';
+  | 'FINAL_AWARDS'
+  // 1v1 "Duello" mode phases (mirror server rooms.ts).
+  | 'DUEL_PICK'
+  | 'DUEL_REVEAL'
+  | 'DUEL_ARGUE'
+  | 'DUEL_REPICK'
+  | 'DUEL_RESULT'
+  | 'FINAL_DUEL';
 
 export interface RoomCreatedPayload {
   code: string;
@@ -150,6 +167,8 @@ export const JOIN_ERROR_MESSAGES: Record<JoinError, string> = {
 export interface StartGamePayload {
   dilemmaCount: number;
   register: ContentRegister;
+  /** Game mode; defaults to 'gruppo' server-side when omitted. */
+  mode?: GameMode;
 }
 
 /** Public dilemma shown on the shared screen: the prompt + its two options. */
@@ -222,6 +241,34 @@ export interface Award {
   winner: PublicPlayer;
 }
 
+/** Duel reveal (DUEL_REVEAL): both players' picks + whether they agreed. */
+export interface DuelReveal {
+  picks: Array<{ id: string; nickname: string; choice: VoteChoice }>;
+  agreed: boolean;
+}
+
+/** Duel argue turn (DUEL_ARGUE): who is arguing now + turn progress. */
+export interface DuelTurn {
+  speaker: { id: string; nickname: string; side: VoteChoice } | null;
+  turn: number;
+  totalTurns: number;
+}
+
+/** Duel round result (DUEL_RESULT): agreement, or who convinced whom. */
+export interface DuelResult {
+  agreed: boolean;
+  convinced: Array<{
+    persuader: { id: string; nickname: string };
+    convinced: { id: string; nickname: string };
+  }>;
+}
+
+/** Duel end summary (FINAL_DUEL): per-player persuasions + agreements count. */
+export interface DuelSummary {
+  scores: Array<{ id: string; nickname: string; persuasions: number }>;
+  agreements: number;
+}
+
 export interface GameStatePayload {
   phase: GamePhase;
   dilemmaCount: number | null;
@@ -255,6 +302,16 @@ export interface GameStatePayload {
   swing: PublicSwing | null;
   /** The end-of-game awards, shown only in FINAL_AWARDS; null otherwise. */
   awards: Award[] | null;
+  /** Game mode of the room; 'gruppo' until/unless a duel is started. */
+  mode: GameMode;
+  /** Duel: both picks + agreement, shown only in DUEL_REVEAL; null otherwise. */
+  duelReveal: DuelReveal | null;
+  /** Duel: current arguer + turn, shown only in DUEL_ARGUE; null otherwise. */
+  duelTurn: DuelTurn | null;
+  /** Duel: round outcome, shown only in DUEL_RESULT; null otherwise. */
+  duelResult: DuelResult | null;
+  /** Duel: end summary, shown only in FINAL_DUEL; null otherwise. */
+  duelSummary: DuelSummary | null;
 }
 
 /** Which side a player secretly votes for. */
@@ -297,12 +354,19 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   VOTE_2: 'Secondo voto',
   PHASE_RESULTS: 'Risultati',
   FINAL_AWARDS: 'Premi finali',
+  DUEL_PICK: 'Scegliete',
+  DUEL_REVEAL: 'Rivelazione',
+  DUEL_ARGUE: 'Duello',
+  DUEL_REPICK: 'Si ri-sceglie',
+  DUEL_RESULT: 'Esito',
+  FINAL_DUEL: 'Risultato finale',
 };
 
 export type StartGameError =
   | 'ROOM_NOT_FOUND'
   | 'NOT_ENOUGH_PLAYERS'
   | 'NO_HUMAN_PLAYERS'
+  | 'WRONG_PLAYER_COUNT'
   | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
   | 'ALREADY_STARTED';
@@ -316,6 +380,7 @@ export const START_ERROR_MESSAGES: Record<StartGameError, string> = {
   ROOM_NOT_FOUND: 'Stanza non trovata',
   NOT_ENOUGH_PLAYERS: 'Servono almeno 3 partecipanti (anche bot)',
   NO_HUMAN_PLAYERS: 'Serve almeno una persona in carne e ossa',
+  WRONG_PLAYER_COUNT: 'Il 1v1 richiede esattamente 2 giocatori',
   INVALID_DILEMMA_COUNT: 'Numero di dilemmi non valido',
   INVALID_REGISTER: 'Registro non valido',
   ALREADY_STARTED: 'La partita è già iniziata',
