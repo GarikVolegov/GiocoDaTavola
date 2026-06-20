@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
 import fs from 'fs';
+import { randomUUID } from 'crypto';
 import { RoomStore, isVotingPhase, type Room } from './game/rooms';
 import { generateBotDefense, aiDefenseEnabled } from './game/aiDefense';
 
@@ -24,10 +25,49 @@ const rooms = new RoomStore();
 // Which room each host socket owns, so a re-emit (e.g. React StrictMode's
 // double-mount in dev) recovers the same room instead of creating a new one.
 const hostRooms = new Map<string, string>();
-// Which room each player socket is in, so we can clean up on disconnect.
-const playerRooms = new Map<string, string>();
 // Pending auto-advance timer per room, so we can reschedule / cancel it.
 const phaseTimers = new Map<string, NodeJS.Timeout>();
+
+// --- Player sessions & reconnection -----------------------------------------
+// A phone's identity is a stable, public `playerId` (kept in the room) plus a
+// secret `token` (never broadcast) it stores in localStorage. On reconnect the
+// phone re-sends the token to reclaim its seat + secret vote.
+//
+// sessions  : live socket -> its room + playerId (vote/disconnect lookup).
+// tokens    : secret token -> room + playerId (survives socket drops; the
+//             reauth table). Cleared only when the grace period finally removes
+//             the player.
+// playerSocket: playerId -> the CURRENT live socket, so a lingering old socket
+//             disconnecting after a reconnect doesn't evict the present player.
+// graceTimers : playerId -> pending removal; a reconnect cancels it.
+const sessions = new Map<string, { code: string; playerId: string }>();
+const tokens = new Map<string, { code: string; playerId: string }>();
+const playerSocket = new Map<string, string>();
+const graceTimers = new Map<string, NodeJS.Timeout>();
+
+// How long a disconnected phone keeps its seat + secret vote before removal.
+const RECONNECT_GRACE_MS = 45_000;
+
+function cancelGrace(playerId: string): void {
+  const t = graceTimers.get(playerId);
+  if (t) {
+    clearTimeout(t);
+    graceTimers.delete(playerId);
+  }
+}
+
+// After a roster change during a vote: VOTE_1 / DUEL_PICK can complete early
+// once every present player has voted; otherwise just refresh the host's count.
+// (VOTE_2 / DUEL_REPICK always run their full timer — they start pre-filled.)
+function refreshAfterRosterChange(code: string): void {
+  const room = rooms.get(code);
+  if (!room) return;
+  if ((room.phase === 'VOTE_1' || room.phase === 'DUEL_PICK') && rooms.allVoted(code)) {
+    advanceAndBroadcast(code);
+  } else {
+    broadcastGameState(code);
+  }
+}
 
 // Broadcast the current (public) lobby roster to everyone in the room — host
 // screen + all phones. Only aggregate, non-secret info leaves the server.
@@ -198,34 +238,56 @@ io.on('connection', (socket) => {
     if (rooms.removeBot(code, String(payload?.id ?? ''))) broadcastLobby(code);
   });
 
-  // A player joins from their phone with a room code + nickname.
-  socket.on('player:join', (payload: { code?: string; nickname?: string }) => {
+  // A player joins from their phone with a room code + nickname. An optional
+  // `token` from a previous session reclaims the same seat (reconnection).
+  socket.on('player:join', (payload: { code?: string; nickname?: string; token?: string }) => {
     const code = String(payload?.code ?? '').trim().toUpperCase();
     const nickname = String(payload?.nickname ?? '');
-    const result = rooms.join(code, socket.id, nickname);
+    const sentToken = typeof payload?.token === 'string' ? payload.token : undefined;
+
+    // Reconnect path: a known token for THIS room whose seat still exists.
+    const prior = sentToken ? tokens.get(sentToken) : undefined;
+    const reconnecting =
+      prior != null && prior.code === code && rooms.get(code)?.players.has(prior.playerId) === true;
+
+    const playerId = reconnecting ? prior!.playerId : `p_${randomUUID()}`;
+    const token = reconnecting ? sentToken! : randomUUID();
+
+    const result = rooms.join(code, playerId, nickname);
     if (!result.ok) {
       socket.emit('player:joinError', { error: result.error });
       return;
     }
-    playerRooms.set(socket.id, code);
+
+    cancelGrace(playerId); // back in time — don't drop the seat
+    tokens.set(token, { code, playerId });
+    sessions.set(socket.id, { code, playerId });
+    playerSocket.set(playerId, socket.id);
     socket.join(code);
-    socket.emit('player:joined', { code, player: result.player });
+    // The token goes ONLY to this socket (never broadcast) for localStorage.
+    socket.emit('player:joined', { code, player: result.player, token });
+    // A phone reconnecting mid-game needs the current phase to render the right
+    // screen immediately (the lobby broadcast alone wouldn't place it in-game).
+    const room = rooms.get(code);
+    if (room) socket.emit('game:state', gameStatePayload(room));
     broadcastLobby(code);
+    if (reconnecting && room && isVotingPhase(room.phase)) broadcastGameState(code);
   });
 
   // A player casts (or changes) their secret A/B vote during a voting phase.
   // The vote itself never leaves the server; we only broadcast the aggregate
   // count, and auto-advance early once everyone has voted.
   socket.on('player:vote', (payload: { choice?: string }) => {
-    const code = playerRooms.get(socket.id);
-    if (!code) return;
-    const result = rooms.vote(code, socket.id, String(payload?.choice ?? ''));
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.vote(code, playerId, String(payload?.choice ?? ''));
     if (!result.ok) {
       socket.emit('player:voteError', { error: result.error });
       return;
     }
     // Confirm the player's own current choice back to just them.
-    socket.emit('player:voted', { choice: result.room.votes.get(socket.id) });
+    socket.emit('player:voted', { choice: result.room.votes.get(playerId) });
     // VOTE_1 / DUEL_PICK start empty and end early once everyone has voted.
     // VOTE_2 / DUEL_REPICK start pre-filled with the first vote (the default),
     // so "all voted" is already true — they run their full timer to give everyone
@@ -240,23 +302,33 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     hostRooms.delete(socket.id);
-    const code = playerRooms.get(socket.id);
-    if (code) {
-      playerRooms.delete(socket.id);
-      rooms.leave(code, socket.id);
-      broadcastLobby(code);
-      // A leaver during a vote changes the count shown on the host and may
-      // complete VOTE_1 (everyone still present has now voted). VOTE_2 always
-      // runs its full timer (it starts pre-filled), so just refresh the state.
-      const room = rooms.get(code);
-      if (room && isVotingPhase(room.phase)) {
-        if ((room.phase === 'VOTE_1' || room.phase === 'DUEL_PICK') && rooms.allVoted(code)) {
-          advanceAndBroadcast(code);
-        } else {
-          broadcastGameState(code);
-        }
-      }
-    }
+    const session = sessions.get(socket.id);
+    sessions.delete(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    // Ignore a lingering OLD socket whose player already reconnected elsewhere:
+    // only the player's current live socket triggers the absence + grace.
+    if (playerSocket.get(playerId) !== socket.id) return;
+    playerSocket.delete(playerId);
+
+    // Hold the seat + secret vote: flag absent now, schedule removal after the
+    // grace window (a reconnect with the token cancels it).
+    rooms.setConnected(code, playerId, false);
+    broadcastLobby(code);
+    if (rooms.get(code) && isVotingPhase(rooms.get(code)!.phase)) refreshAfterRosterChange(code);
+
+    cancelGrace(playerId);
+    graceTimers.set(
+      playerId,
+      setTimeout(() => {
+        graceTimers.delete(playerId);
+        const tok = [...tokens].find(([, v]) => v.playerId === playerId)?.[0];
+        if (tok) tokens.delete(tok);
+        rooms.leave(code, playerId);
+        broadcastLobby(code);
+        if (rooms.get(code) && isVotingPhase(rooms.get(code)!.phase)) refreshAfterRosterChange(code);
+      }, RECONNECT_GRACE_MS),
+    );
   });
 });
 

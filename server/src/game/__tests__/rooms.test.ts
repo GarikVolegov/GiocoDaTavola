@@ -1356,3 +1356,94 @@ describe('duel public readers', () => {
     expect(store.publicDuelSummary('GGGG')).toBeNull();
   });
 });
+
+describe('RoomStore reconnection / connected state', () => {
+  // Drive a fresh 3-player room into VOTE_1 (mirror of the vote suite helper).
+  function votingRoom(store: RoomStore, count = 3): string {
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, count);
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    return code;
+  }
+
+  it('setConnected marks a player absent without removing them, then restores', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    store.join(code, 'p2', 'Bob');
+
+    expect(store.setConnected(code, 'p1', false)).toBe(true);
+    // Still in the room (slot held during the grace period), just flagged absent.
+    expect(store.listPlayers(code)).toHaveLength(2);
+    expect(store.get(code)?.players.get('p1')?.connected).toBe(false);
+
+    // Reconnecting clears the flag (default = connected).
+    expect(store.setConnected(code, 'p1', true)).toBe(true);
+    expect(store.get(code)?.players.get('p1')?.connected ?? true).toBe(true);
+  });
+
+  it('setConnected returns false for unknown room or player', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    expect(store.setConnected('ZZZZ', 'p1', false)).toBe(false);
+    expect(store.setConnected(code, 'ghost', false)).toBe(false);
+  });
+
+  it('a freshly joined player is connected (no connected field set)', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    const res = store.join(code, 'p1', 'Ann');
+    expect(res.ok).toBe(true);
+    expect(store.get(code)?.players.get('p1')?.connected ?? true).toBe(true);
+  });
+
+  it('allVoted ignores disconnected non-voters', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = votingRoom(store);
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'B');
+    expect(store.allVoted(code)).toBe(false); // sock-2 still connected, hasn't voted
+
+    store.setConnected(code, 'sock-2', false);
+    expect(store.allVoted(code)).toBe(true); // the only non-voter is now absent
+
+    // Reconnecting a non-voter makes the round wait for them again.
+    store.setConnected(code, 'sock-2', true);
+    expect(store.allVoted(code)).toBe(false);
+  });
+
+  it('allVoted is false when every player is disconnected', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = votingRoom(store);
+    for (let i = 0; i < 3; i++) store.setConnected(code, `sock-${i}`, false);
+    expect(store.allVoted(code)).toBe(false);
+  });
+
+  it('a disconnect → reconnect keeps the secret vote intact', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = votingRoom(store);
+    store.vote(code, 'sock-0', 'A');
+    expect(store.voteCount(code)).toBe(1);
+
+    store.setConnected(code, 'sock-0', false);
+    store.setConnected(code, 'sock-0', true);
+    expect(store.voteCount(code)).toBe(1); // vote preserved across the blip
+
+    // Re-joining with the same id (what index.ts does on reconnect) also keeps it.
+    store.join(code, 'sock-0', 'P0');
+    expect(store.voteCount(code)).toBe(1);
+  });
+
+  it('re-joining clears a stale disconnected flag', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    store.setConnected(code, 'p1', false);
+    const again = store.join(code, 'p1', 'Ann');
+    expect(again.ok).toBe(true);
+    expect(store.get(code)?.players.get('p1')?.connected ?? true).toBe(true);
+  });
+});

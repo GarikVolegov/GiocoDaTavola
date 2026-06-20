@@ -212,13 +212,23 @@ export function nextDuelPhase(
 }
 
 export interface Player {
-  /** Stable identity for the lifetime of the connection (socket id for now). */
+  /** Stable, public per-player id (NOT the socket id and NOT the reconnect
+   * token): survives reconnects so votes/stats keyed by it persist, and the
+   * phone compares it to defender ids for "your turn". The secret reconnect
+   * token lives only in index.ts's session table, never on this object. */
   id: string;
   nickname: string;
   /** True for server-driven bot players (Fase B). Absent/false for humans. */
   isBot?: boolean;
   /** The bot's behaviour persona; only set when isBot. */
   persona?: BotPersona;
+  /**
+   * Connection state. Absent/true = present; `false` = temporarily gone (phone
+   * locked/refreshed) during the index.ts grace period, slot + secret vote held
+   * for a reconnect. Kept OPTIONAL so a freshly-joined player is just
+   * `{id, nickname}` (mirrors `isBot?`).
+   */
+  connected?: boolean;
 }
 
 /**
@@ -1068,11 +1078,32 @@ export class RoomStore {
     return this.computeAwards(code);
   }
 
-  /** True once every connected player has voted (and the room is non-empty). */
+  /**
+   * True once every CONNECTED player has voted (and at least one is present).
+   * Disconnected players (mid-grace) are ignored so a locked phone doesn't block
+   * the early-advance — bots count as connected. Used only to short-circuit the
+   * VOTE_1 timer; the phase timer still bounds the round regardless.
+   */
   allVoted(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room || room.players.size === 0) return false;
-    return room.votes.size >= room.players.size;
+    if (!room) return false;
+    const present = [...room.players.values()].filter((p) => p.connected !== false);
+    if (present.length === 0) return false;
+    return present.every((p) => room.votes.has(p.id));
+  }
+
+  /**
+   * Flag a player present/absent without touching their slot or secret vote.
+   * Called by index.ts on socket disconnect (false) and on reconnect (true);
+   * actual removal happens later via `leave` once the grace period expires.
+   * Returns false for an unknown room or player.
+   */
+  setConnected(code: string, playerId: string, connected: boolean): boolean {
+    const player = this.rooms.get(code)?.players.get(playerId);
+    if (!player) return false;
+    if (connected) delete player.connected;
+    else player.connected = false;
+    return true;
   }
 
   /**
@@ -1090,6 +1121,7 @@ export class RoomStore {
     const existing = room.players.get(playerId);
     if (existing) {
       existing.nickname = name;
+      delete existing.connected; // re-joining clears any stale "absent" flag
       return { ok: true, player: existing };
     }
 

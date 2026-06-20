@@ -126,6 +126,8 @@ export interface RoomCreatedPayload {
 export interface PlayerJoinPayload {
   code: string;
   nickname: string;
+  /** Secret reconnect token from a previous session (localStorage); reclaims the seat. */
+  token?: string;
 }
 
 /** Public, non-secret player info safe to show on host + all phones. */
@@ -136,6 +138,8 @@ export interface PublicPlayer {
   isBot?: boolean;
   /** The bot's persona; only present for bots. */
   persona?: BotPersona;
+  /** Connection state: absent/true = present; false = temporarily away (grace period). */
+  connected?: boolean;
 }
 
 export interface RemoveBotPayload {
@@ -145,6 +149,8 @@ export interface RemoveBotPayload {
 export interface PlayerJoinedPayload {
   code: string;
   player: PublicPlayer;
+  /** Secret token to persist (localStorage) for reconnecting to this seat. Sent only to this phone. */
+  token: string;
 }
 
 export type JoinError = 'ROOM_NOT_FOUND' | 'NICKNAME_REQUIRED' | 'ROOM_FULL';

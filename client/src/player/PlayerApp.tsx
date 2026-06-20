@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import {
@@ -6,6 +6,7 @@ import {
   JOIN_ERROR_MESSAGES,
   VOTE_ERROR_MESSAGES,
   PHASE_LABELS,
+  PERSONA_LABELS,
   OBJECTIVE,
   HOW_TO_PLAY,
   type PlayerJoinedPayload,
@@ -20,15 +21,52 @@ import {
 import { Card } from '../shared/ui';
 
 // Read a prefilled room code from the QR join URL (`/join?room=CODE`).
-function initialCode(): string {
+function urlRoom(): string {
   return new URLSearchParams(window.location.search).get('room')?.toUpperCase() ?? '';
+}
+
+// Persisted session so a locked/refreshed phone can reclaim its seat + vote.
+const SESSION_KEY = 'schierati:session';
+interface SavedSession {
+  code: string;
+  nickname: string;
+  token: string;
+}
+function loadSession(): SavedSession | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as Partial<SavedSession>;
+    return s.code && s.nickname && s.token ? (s as SavedSession) : null;
+  } catch {
+    return null;
+  }
+}
+function saveSession(s: SavedSession): void {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+  } catch {
+    /* storage unavailable (private mode) — reconnection just won't persist */
+  }
+}
+function clearSession(): void {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+// The room code to prefill: a QR link wins over any saved session.
+function initialCode(): string {
+  return urlRoom() || loadSession()?.code || '';
 }
 
 // Per-player phone view. Shows a join form (code + nickname); once joined,
 // shows the realtime lobby roster.
 export default function PlayerApp() {
   const [code, setCode] = useState(initialCode);
-  const [nickname, setNickname] = useState('');
+  const [nickname, setNickname] = useState(() => loadSession()?.nickname ?? '');
   const [joinedCode, setJoinedCode] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,18 +75,30 @@ export default function PlayerApp() {
   const [game, setGame] = useState<GameStatePayload | null>(null);
   const [vote, setVote] = useState<VoteChoice | null>(null);
   const [voteError, setVoteError] = useState<string | null>(null);
+  // Current credentials, kept in a ref so the socket 'connect' handler can
+  // re-claim the seat after a network blip without re-subscribing.
+  const credsRef = useRef<SavedSession | null>(null);
 
   useEffect(() => {
     const socket = getSocket();
-    const onJoined = ({ code, player }: PlayerJoinedPayload) => {
+    const onJoined = ({ code, player, token }: PlayerJoinedPayload) => {
       setJoinedCode(code);
       setPlayerId(player.id);
       setError(null);
       setSubmitting(false);
+      const creds: SavedSession = { code, nickname: player.nickname, token };
+      credsRef.current = creds;
+      saveSession(creds); // persist so a refresh/lock can reconnect
     };
     const onJoinError = ({ error }: PlayerJoinErrorPayload) => {
       setError(JOIN_ERROR_MESSAGES[error] ?? 'Errore durante l’accesso');
       setSubmitting(false);
+      // A stale saved room (server restarted, room gone) — drop it so we don't
+      // keep auto-rejoining a dead game.
+      if (error === 'ROOM_NOT_FOUND') {
+        clearSession();
+        credsRef.current = null;
+      }
     };
     const onLobbyUpdate = ({ players }: LobbyUpdatePayload) => setPlayers(players);
     const onGameState = (payload: GameStatePayload) => setGame(payload);
@@ -59,12 +109,29 @@ export default function PlayerApp() {
     };
     const onVoteError = ({ error }: PlayerVoteErrorPayload) =>
       setVoteError(VOTE_ERROR_MESSAGES[error] ?? 'Voto non riuscito');
+    // On every (re)connect, if we hold a token, reclaim the same seat. Covers
+    // socket-level reconnects (network blip) without a page reload.
+    const onConnect = () => {
+      const creds = credsRef.current;
+      if (creds) socket.emit(SocketEvents.PlayerJoin, creds);
+    };
     socket.on(SocketEvents.PlayerJoined, onJoined);
     socket.on(SocketEvents.PlayerJoinError, onJoinError);
     socket.on(SocketEvents.LobbyUpdate, onLobbyUpdate);
     socket.on(SocketEvents.GameState, onGameState);
     socket.on(SocketEvents.PlayerVoted, onVoted);
     socket.on(SocketEvents.PlayerVoteError, onVoteError);
+    socket.on('connect', onConnect);
+
+    // Auto-rejoin on mount (page reload / reopened tab): replay the saved token
+    // unless a QR link points at a different room (then start a fresh join).
+    const saved = loadSession();
+    const fromQr = urlRoom();
+    if (saved && (!fromQr || fromQr === saved.code)) {
+      credsRef.current = saved;
+      setSubmitting(true);
+      socket.emit(SocketEvents.PlayerJoin, saved);
+    }
     return () => {
       socket.off(SocketEvents.PlayerJoined, onJoined);
       socket.off(SocketEvents.PlayerJoinError, onJoinError);
@@ -72,8 +139,20 @@ export default function PlayerApp() {
       socket.off(SocketEvents.GameState, onGameState);
       socket.off(SocketEvents.PlayerVoted, onVoted);
       socket.off(SocketEvents.PlayerVoteError, onVoteError);
+      socket.off('connect', onConnect);
     };
   }, []);
+
+  // Leave the room on purpose: forget the saved seat and reset to the join form.
+  const leaveRoom = () => {
+    clearSession();
+    credsRef.current = null;
+    setJoinedCode(null);
+    setPlayerId(null);
+    setGame(null);
+    setPlayers([]);
+    setVote(null);
+  };
 
   const phase = game?.phase ?? 'LOBBY';
   const remaining = useCountdown(game?.phaseExpiresAt ?? null);
@@ -345,19 +424,30 @@ export default function PlayerApp() {
             width: 'min(90vw, 22rem)',
           }}
         >
-          {players.map((p) => (
-            <li
-              key={p.id}
-              style={{
-                padding: '0.5rem 0.9rem',
-                borderRadius: '0.6rem',
-                background: p.isBot ? 'rgba(192,79,255,0.18)' : 'rgba(127,127,127,0.18)',
-                fontWeight: 600,
-              }}
-            >
-              {p.isBot ? '🤖 ' : ''}{p.nickname}
-            </li>
-          ))}
+          {players.map((p) => {
+            const absent = p.connected === false;
+            return (
+              <li
+                key={p.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.5rem 0.9rem',
+                  borderRadius: '0.6rem',
+                  background: p.isBot ? 'rgba(192,79,255,0.18)' : 'rgba(127,127,127,0.18)',
+                  fontWeight: 600,
+                  opacity: absent ? 0.5 : 1,
+                }}
+              >
+                <span>{p.isBot ? '🤖 ' : ''}{p.nickname}</span>
+                {p.isBot && p.persona && (
+                  <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{PERSONA_LABELS[p.persona]}</span>
+                )}
+                {absent && <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>· assente 📵</span>}
+              </li>
+            );
+          })}
         </ul>
 
         <Card
@@ -382,6 +472,21 @@ export default function PlayerApp() {
         </Card>
 
         <p style={{ opacity: 0.7, margin: 0 }}>In attesa che l’host avvii la partita…</p>
+        <button
+          type="button"
+          onClick={leaveRoom}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'inherit',
+            opacity: 0.55,
+            fontSize: '0.85rem',
+            textDecoration: 'underline',
+            cursor: 'pointer',
+          }}
+        >
+          Esci dalla stanza
+        </button>
       </main>
     );
   }

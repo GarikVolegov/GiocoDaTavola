@@ -634,12 +634,16 @@ export default function HostApp() {
                       borderRadius: '999px',
                       background: p.isBot ? 'rgba(192,79,255,0.18)' : 'rgba(127,127,127,0.18)',
                       fontWeight: 600,
+                      opacity: p.connected === false ? 0.5 : 1,
                     }}
                   >
                     {p.isBot && <span aria-label="bot">🤖</span>}
                     {p.nickname}
                     {p.isBot && p.persona && (
                       <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{PERSONA_LABELS[p.persona]}</span>
+                    )}
+                    {p.connected === false && (
+                      <span style={{ fontSize: '0.75rem', opacity: 0.8 }} aria-label="assente">📵</span>
                     )}
                     {p.isBot && (
                       <button
