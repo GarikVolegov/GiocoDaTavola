@@ -1217,3 +1217,29 @@ describe('startGame con registro', () => {
     if (res.ok) expect(res.room.deck?.remainingCount).toBe(1);
   });
 });
+
+describe('RoomStore duel mode', () => {
+  it('create() defaults mode to gruppo', () => {
+    const store = new RoomStore(() => 'AAAA');
+    expect(store.create().mode).toBe('gruppo');
+  });
+
+  it('startGame duello requires exactly 2 human players', () => {
+    const store = new RoomStore(() => 'BBBB');
+    store.create();
+    store.join('BBBB', 'p1', 'Ann');
+    expect(store.startGame('BBBB', 3, 'misto', 'duello')).toEqual({ ok: false, error: 'WRONG_PLAYER_COUNT' });
+    store.join('BBBB', 'p2', 'Bob');
+    const ok = store.startGame('BBBB', 3, 'misto', 'duello');
+    expect(ok.ok).toBe(true);
+    expect(store.get('BBBB')!.mode).toBe('duello');
+    expect(store.get('BBBB')!.phase).toBe('PHASE_INTRO');
+  });
+
+  it('startGame duello rejects 3 players', () => {
+    const store = new RoomStore(() => 'CCCC');
+    store.create();
+    for (const id of ['a', 'b', 'c']) store.join('CCCC', id, id);
+    expect(store.startGame('CCCC', 3, 'misto', 'duello')).toEqual({ ok: false, error: 'WRONG_PLAYER_COUNT' });
+  });
+});

@@ -53,7 +53,14 @@ export type GamePhase =
   | 'DEFENSE'
   | 'VOTE_2'
   | 'PHASE_RESULTS'
-  | 'FINAL_AWARDS';
+  | 'FINAL_AWARDS'
+  // 1v1 "Duello" mode phases (run instead of the group sequence when mode==='duello').
+  | 'DUEL_PICK'
+  | 'DUEL_REVEAL'
+  | 'DUEL_ARGUE'
+  | 'DUEL_REPICK'
+  | 'DUEL_RESULT'
+  | 'FINAL_DUEL';
 
 /**
  * How long each phase lasts before the server auto-advances, in ms. `null`
@@ -71,10 +78,23 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   VOTE_2: 20_000,
   PHASE_RESULTS: 8_000,
   FINAL_AWARDS: null,
+  DUEL_PICK: 20_000,
+  DUEL_REVEAL: 5_000,
+  DUEL_ARGUE: 45_000,
+  DUEL_REPICK: 20_000,
+  DUEL_RESULT: 8_000,
+  FINAL_DUEL: null,
 };
 
 /** A single secret vote: which side a player chose. */
 export type VoteChoice = 'A' | 'B';
+
+/** Game mode: the classic group game, or the 2-player duel. */
+export type GameMode = 'gruppo' | 'duello';
+export const GAME_MODES = ['gruppo', 'duello'] as const;
+function isGameMode(v: string): v is GameMode {
+  return v === 'gruppo' || v === 'duello';
+}
 
 /** Phases in which phones may cast/change a secret vote (the first + second). */
 export function isVotingPhase(phase: GamePhase): boolean {
@@ -233,6 +253,14 @@ export interface Room {
   stats: Map<string, PlayerStats>;
   /** Monotonic counter for generating unique bot ids/names within the room. */
   botSeq: number;
+  /** Game mode: 'gruppo' (classic) or 'duello' (2-player). Default 'gruppo'. */
+  mode: GameMode;
+  /** Which duel argue turn (0-based) is speaking during DUEL_ARGUE. */
+  duelTurnIndex: number;
+  /** Duel score: persuasions per player id (times they flipped the other). */
+  duelScore: Map<string, number>;
+  /** Duel: how many rounds the two players already agreed (no duel needed). */
+  duelAgreements: number;
 }
 
 export type JoinError = 'ROOM_NOT_FOUND' | 'NICKNAME_REQUIRED' | 'ROOM_FULL';
@@ -245,6 +273,7 @@ export type StartGameError =
   | 'ROOM_NOT_FOUND'
   | 'NOT_ENOUGH_PLAYERS'
   | 'NO_HUMAN_PLAYERS'
+  | 'WRONG_PLAYER_COUNT'
   | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
   | 'ALREADY_STARTED';
@@ -501,6 +530,10 @@ export class RoomStore {
       defenseArgument: null,
       stats: new Map(),
       botSeq: 0,
+      mode: 'gruppo',
+      duelTurnIndex: 0,
+      duelScore: new Map(),
+      duelAgreements: 0,
     };
     this.rooms.set(code, room);
     return room;
@@ -512,17 +545,31 @@ export class RoomStore {
    * LOBBY to PHASE_INTRO. Idempotency is the caller's concern — starting an
    * already-started room is rejected with ALREADY_STARTED.
    */
-  startGame(code: string, dilemmaCount: number, register: string = 'misto'): StartGameResult {
+  startGame(
+    code: string,
+    dilemmaCount: number,
+    register: string = 'misto',
+    mode: string = 'gruppo',
+  ): StartGameResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
     if (room.phase !== 'LOBBY') return { ok: false, error: 'ALREADY_STARTED' };
     if (!isDilemmaCount(dilemmaCount)) return { ok: false, error: 'INVALID_DILEMMA_COUNT' };
     if (!isContentRegister(register)) return { ok: false, error: 'INVALID_REGISTER' };
-    if (room.players.size < MIN_PLAYERS_TO_START) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
-    // Solo play is allowed (1 human + bots), but never a bots-only game.
+    if (!isGameMode(mode)) return { ok: false, error: 'INVALID_REGISTER' };
     const humanCount = [...room.players.values()].filter((p) => !p.isBot).length;
-    if (humanCount < 1) return { ok: false, error: 'NO_HUMAN_PLAYERS' };
+    if (mode === 'duello') {
+      // The duel is strictly two humans (no bot opponent in this slice).
+      if (room.players.size !== 2 || humanCount !== 2) {
+        return { ok: false, error: 'WRONG_PLAYER_COUNT' };
+      }
+    } else {
+      if (room.players.size < MIN_PLAYERS_TO_START) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
+      // Solo play is allowed (1 human + bots), but never a bots-only game.
+      if (humanCount < 1) return { ok: false, error: 'NO_HUMAN_PLAYERS' };
+    }
 
+    room.mode = mode;
     room.dilemmaCount = dilemmaCount;
     room.register = register;
     room.dilemmaIndex = 0;
@@ -531,6 +578,9 @@ export class RoomStore {
     room.deck = this.makeDeck(register);
     room.currentDilemma = null;
     room.stats = new Map();
+    room.duelScore = new Map();
+    room.duelAgreements = 0;
+    room.duelTurnIndex = 0;
     return { ok: true, room };
   }
 
