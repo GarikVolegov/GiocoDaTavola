@@ -52,6 +52,18 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   FINAL_AWARDS: null,
 };
 
+/** A single secret vote: which side a player chose. */
+export type VoteChoice = 'A' | 'B';
+
+/** Phases in which phones may cast/change a secret vote. */
+export function isVotingPhase(phase: GamePhase): boolean {
+  return phase === 'VOTE_1';
+}
+
+function isVoteChoice(c: string): c is VoteChoice {
+  return c === 'A' || c === 'B';
+}
+
 /** Ordered phases that make up a single dilemma round. */
 const DILEMMA_SEQUENCE: GamePhase[] = [
   'DILEMMA_REVEAL',
@@ -119,6 +131,13 @@ export interface Room {
   deck: Deck | null;
   /** The dilemma in play this round; null in the lobby/intro and after the game. */
   currentDilemma: Dilemma | null;
+  /**
+   * Secret first-round votes for the current dilemma, keyed by player id. Stays
+   * server-side — only aggregate counts ever leave the server. Cleared at the
+   * start of each dilemma round (on DILEMMA_REVEAL); holds only present players'
+   * votes (a leaving player's vote is dropped).
+   */
+  votes: Map<string, VoteChoice>;
 }
 
 export type JoinError = 'ROOM_NOT_FOUND' | 'NICKNAME_REQUIRED' | 'ROOM_FULL';
@@ -142,6 +161,16 @@ export type AdvancePhaseError = 'ROOM_NOT_FOUND' | 'NO_NEXT_PHASE';
 export type AdvancePhaseResult =
   | { ok: true; room: Room }
   | { ok: false; error: AdvancePhaseError };
+
+export type VoteError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_VOTING_PHASE'
+  | 'NOT_IN_ROOM'
+  | 'INVALID_CHOICE';
+
+export type VoteResult =
+  | { ok: true; room: Room }
+  | { ok: false; error: VoteError };
 
 function isDilemmaCount(n: number): n is DilemmaCount {
   return (DILEMMA_COUNT_OPTIONS as readonly number[]).includes(n);
@@ -190,6 +219,7 @@ export class RoomStore {
       phaseExpiresAt: null,
       deck: null,
       currentDilemma: null,
+      votes: new Map(),
     };
     this.rooms.set(code, room);
     return room;
@@ -234,11 +264,49 @@ export class RoomStore {
     room.phase = transition.phase;
     room.dilemmaIndex = transition.dilemmaIndex;
     room.phaseExpiresAt = this.expiryFor(transition.phase);
-    // Entering a new dilemma reveal draws the next (non-repeating) dilemma.
+    // Entering a new dilemma reveal draws the next (non-repeating) dilemma and
+    // resets the round's secret votes so each dilemma starts from a clean tally.
     if (transition.phase === 'DILEMMA_REVEAL') {
       room.currentDilemma = room.deck?.draw() ?? null;
+      room.votes.clear();
     }
     return { ok: true, room };
+  }
+
+  /**
+   * Record (or change) a player's secret vote for the current dilemma. The vote
+   * is overwritable until the phase ends, so re-voting just replaces the choice.
+   * Votes never leave the server individually — only aggregate counts do.
+   */
+  vote(code: string, playerId: string, choice: string): VoteResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (!isVotingPhase(room.phase)) return { ok: false, error: 'NOT_VOTING_PHASE' };
+    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
+    if (!isVoteChoice(choice)) return { ok: false, error: 'INVALID_CHOICE' };
+
+    room.votes.set(playerId, choice);
+    return { ok: true, room };
+  }
+
+  /** How many connected players have cast a vote this round (aggregate only). */
+  voteCount(code: string): number {
+    return this.rooms.get(code)?.votes.size ?? 0;
+  }
+
+  /** Aggregate A vs B tally for the current round (no identities). */
+  voteTally(code: string): { A: number; B: number } {
+    const tally = { A: 0, B: 0 };
+    const room = this.rooms.get(code);
+    if (room) for (const choice of room.votes.values()) tally[choice]++;
+    return tally;
+  }
+
+  /** True once every connected player has voted (and the room is non-empty). */
+  allVoted(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room || room.players.size === 0) return false;
+    return room.votes.size >= room.players.size;
   }
 
   /**
@@ -270,6 +338,8 @@ export class RoomStore {
   leave(code: string, playerId: string): boolean {
     const room = this.rooms.get(code);
     if (!room) return false;
+    // Drop any vote so the tally + allVoted only count present players.
+    room.votes.delete(playerId);
     return room.players.delete(playerId);
   }
 

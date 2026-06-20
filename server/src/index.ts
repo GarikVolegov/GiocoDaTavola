@@ -3,7 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
 import fs from 'fs';
-import { RoomStore, type Room } from './game/rooms';
+import { RoomStore, isVotingPhase, type Room } from './game/rooms';
 
 const app = express();
 const httpServer = createServer(app);
@@ -38,6 +38,9 @@ function gameStatePayload(room: Room) {
     // The dilemma in play this round (text + the two options); null outside a
     // dilemma. Public prompt text only — no votes/identities here.
     dilemma: room.currentDilemma,
+    // How many players have voted this round. Aggregate count only — the per-
+    // choice split stays secret until SPLIT_REVEAL.
+    votedCount: room.votes.size,
   };
 }
 
@@ -145,6 +148,26 @@ io.on('connection', (socket) => {
     broadcastLobby(code);
   });
 
+  // A player casts (or changes) their secret A/B vote during a voting phase.
+  // The vote itself never leaves the server; we only broadcast the aggregate
+  // count, and auto-advance early once everyone has voted.
+  socket.on('player:vote', (payload: { choice?: string }) => {
+    const code = playerRooms.get(socket.id);
+    if (!code) return;
+    const result = rooms.vote(code, socket.id, String(payload?.choice ?? ''));
+    if (!result.ok) {
+      socket.emit('player:voteError', { error: result.error });
+      return;
+    }
+    // Confirm the player's own current choice back to just them.
+    socket.emit('player:voted', { choice: result.room.votes.get(socket.id) });
+    if (rooms.allVoted(code)) {
+      advanceAndBroadcast(code); // everyone voted -> skip the rest of the timer
+    } else {
+      broadcastGameState(code); // refresh the voted count for the host
+    }
+  });
+
   socket.on('disconnect', () => {
     hostRooms.delete(socket.id);
     const code = playerRooms.get(socket.id);
@@ -152,6 +175,13 @@ io.on('connection', (socket) => {
       playerRooms.delete(socket.id);
       rooms.leave(code, socket.id);
       broadcastLobby(code);
+      // A leaver during a vote changes the count shown on the host and may
+      // complete the round (everyone still present has now voted).
+      const room = rooms.get(code);
+      if (room && isVotingPhase(room.phase)) {
+        if (rooms.allVoted(code)) advanceAndBroadcast(code);
+        else broadcastGameState(code);
+      }
     }
   });
 });

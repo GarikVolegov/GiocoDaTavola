@@ -369,3 +369,116 @@ describe('RoomStore dilemma reveal (US-007)', () => {
     expect(new Set(revealed).size).toBe(3);
   });
 });
+
+describe('RoomStore voting (US-008)', () => {
+  // Drive a fresh 3-player room into the VOTE_1 phase.
+  function votingRoom(store: RoomStore, count = 3): string {
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, count); // PHASE_INTRO
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    return code;
+  }
+
+  it('a fresh room has no votes', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    expect(store.voteCount(code)).toBe(0);
+    expect(store.voteTally(code)).toEqual({ A: 0, B: 0 });
+    expect(store.allVoted(code)).toBe(false);
+  });
+
+  it('records a player vote during VOTE_1', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = votingRoom(store);
+    expect(store.get(code)?.phase).toBe('VOTE_1');
+    const result = store.vote(code, 'sock-0', 'A');
+    expect(result.ok).toBe(true);
+    expect(store.voteCount(code)).toBe(1);
+    expect(store.voteTally(code)).toEqual({ A: 1, B: 0 });
+  });
+
+  it('rejects voting outside a voting phase', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3); // PHASE_INTRO
+    expect(store.vote(code, 'sock-0', 'A')).toEqual({ ok: false, error: 'NOT_VOTING_PHASE' });
+    store.advancePhase(code); // DILEMMA_REVEAL
+    expect(store.vote(code, 'sock-0', 'A')).toEqual({ ok: false, error: 'NOT_VOTING_PHASE' });
+  });
+
+  it('rejects voting in an unknown room', () => {
+    const store = new RoomStore();
+    expect(store.vote('ZZZZ', 'sock-0', 'A')).toEqual({ ok: false, error: 'ROOM_NOT_FOUND' });
+  });
+
+  it('rejects a vote from someone not in the room', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = votingRoom(store);
+    expect(store.vote(code, 'intruder', 'A')).toEqual({ ok: false, error: 'NOT_IN_ROOM' });
+  });
+
+  it('rejects an invalid choice', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = votingRoom(store);
+    expect(store.vote(code, 'sock-0', 'C')).toEqual({ ok: false, error: 'INVALID_CHOICE' });
+  });
+
+  it('lets a player change their vote, keeping a single vote', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = votingRoom(store);
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-0', 'B');
+    expect(store.voteCount(code)).toBe(1);
+    expect(store.voteTally(code)).toEqual({ A: 0, B: 1 });
+  });
+
+  it('allVoted is false until every connected player has voted', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = votingRoom(store); // 3 players
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'B');
+    expect(store.allVoted(code)).toBe(false);
+    store.vote(code, 'sock-2', 'A');
+    expect(store.allVoted(code)).toBe(true);
+  });
+
+  it('a leaving non-voter lets the remaining voters complete the round', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = votingRoom(store); // 3 players
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'B');
+    expect(store.allVoted(code)).toBe(false);
+    // The only non-voter leaves -> the two remaining have both voted.
+    store.leave(code, 'sock-2');
+    expect(store.voteCount(code)).toBe(2);
+    expect(store.allVoted(code)).toBe(true);
+  });
+
+  it("drops a leaving voter's vote from the tally", () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = votingRoom(store);
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'B');
+    store.leave(code, 'sock-0');
+    expect(store.voteCount(code)).toBe(1);
+    expect(store.voteTally(code)).toEqual({ A: 0, B: 1 });
+  });
+
+  it('keeps votes through the round but clears them for the next dilemma', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = votingRoom(store);
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'B');
+    store.advancePhase(code); // SPLIT_REVEAL
+    expect(store.voteCount(code)).toBe(2); // votes persist through the round
+    store.advancePhase(code); // DEFENSE
+    store.advancePhase(code); // VOTE_2
+    store.advancePhase(code); // PHASE_RESULTS
+    store.advancePhase(code); // DILEMMA_REVEAL (round 2)
+    expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL');
+    expect(store.voteCount(code)).toBe(0);
+  });
+});

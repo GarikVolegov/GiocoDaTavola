@@ -127,6 +127,15 @@ export default function HostApp() {
           </section>
         )}
 
+        {phase === 'VOTE_1' && (
+          <p
+            aria-label="Quanti hanno votato"
+            style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}
+          >
+            Hanno votato {game.votedCount}/{players.length}
+          </p>
+        )}
+
         {remaining != null && (
           <div
             aria-label="Tempo rimanente"

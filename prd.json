@@ -122,8 +122,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Room owns secret first-round votes: votes Map<playerId,'A'|'B'> (server/src/game/rooms.ts), cleared on each DILEMMA_REVEAL so it persists VOTE_1->PHASE_RESULTS then resets per round. New VoteChoice type + isVotingPhase(phase) (only VOTE_1 for now; US-011 adds VOTE_2) + isVoteChoice guard. RoomStore.vote(code,playerId,choice) validates ROOM_NOT_FOUND->NOT_VOTING_PHASE->NOT_IN_ROOM->INVALID_CHOICE then sets/overwrites the vote (changeable). Aggregate-only readers voteCount/voteTally/allVoted; leave() now also drops the player's vote so the tally/allVoted track only present players. VOTE_1 timer already 20s (PHASE_DURATIONS_MS). TDD: 11 new tests, 46 in rooms / 56 total. Server index.ts: player:vote handler (lookup code via playerRooms) -> player:voteError on failure, else player:voted {choice} to JUST the voter + allVoted? advanceAndBroadcast (early advance) : broadcastGameState (refresh count); disconnect during a voting phase recomputes allVoted/count. gameStatePayload adds votedCount (aggregate ONLY — no per-choice tally/identities leave the server). Client: events.ts adds PlayerVote/PlayerVoted/PlayerVoteError, VoteChoice, VOTE_ERROR_MESSAGES, GameStatePayload.votedCount; HostApp shows 'Hanno votato X/Y' in VOTE_1 (X=game.votedCount, Y=players.length); PlayerApp VOTE_1 view = A/B buttons (optimistic select, reverts via player:voted/voteError, reset on dilemmaIndex change) + 'puoi cambiare' hint. Verified end-to-end vs built prod server (PORT=3995, 16/16): vote-before-VOTE_1 rejected, invalid choice rejected, votedCount 0->1, change A->B keeps count 1, 2/3 no early advance, 3/3 auto-advances to SPLIT_REVEAL before the 20s timer, and game:state keys carry only votedCount (no vote details). Visual browser check still pending real browser tooling."
     },
     {
       "id": "US-009",

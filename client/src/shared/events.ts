@@ -22,6 +22,12 @@ export const SocketEvents = {
   HostAdvancePhase: 'host:advancePhase',
   /** Server broadcasts the current game phase to everyone in the room. */
   GameState: 'game:state',
+  /** Player casts (or changes) a secret A/B vote from their phone. */
+  PlayerVote: 'player:vote',
+  /** Server confirms the player's current vote back to them only. */
+  PlayerVoted: 'player:voted',
+  /** Server rejects the vote (wrong phase, not in room, bad choice). */
+  PlayerVoteError: 'player:voteError',
 } as const;
 
 /** Number of dilemmas the host can choose to play in a game. */
@@ -104,7 +110,41 @@ export interface GameStatePayload {
   phaseExpiresAt: number | null;
   /** The dilemma in play this round; null outside a dilemma round. */
   dilemma: PublicDilemma | null;
+  /**
+   * How many players have voted this round. Aggregate count only — never who
+   * voted what (votes are secret). The A/B split is revealed later (SPLIT_REVEAL).
+   */
+  votedCount: number;
 }
+
+/** Which side a player secretly votes for. */
+export type VoteChoice = 'A' | 'B';
+
+export interface PlayerVotePayload {
+  choice: VoteChoice;
+}
+
+export interface PlayerVotedPayload {
+  choice: VoteChoice;
+}
+
+export type VoteError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_VOTING_PHASE'
+  | 'NOT_IN_ROOM'
+  | 'INVALID_CHOICE';
+
+export interface PlayerVoteErrorPayload {
+  error: VoteError;
+}
+
+/** User-facing (Italian) messages for vote errors. */
+export const VOTE_ERROR_MESSAGES: Record<VoteError, string> = {
+  ROOM_NOT_FOUND: 'Stanza non trovata',
+  NOT_VOTING_PHASE: 'Non è il momento di votare',
+  NOT_IN_ROOM: 'Non sei in questa stanza',
+  INVALID_CHOICE: 'Scelta non valida',
+};
 
 /** User-facing (Italian) short label for each phase, shown on the host. */
 export const PHASE_LABELS: Record<GamePhase, string> = {
