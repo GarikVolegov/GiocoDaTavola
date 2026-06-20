@@ -19,7 +19,7 @@ import {
 } from '../shared/events';
 import { Card } from '../shared/ui';
 
-// Read a prefilled room code from the QR join URL (`/?room=CODE`).
+// Read a prefilled room code from the QR join URL (`/join?room=CODE`).
 function initialCode(): string {
   return new URLSearchParams(window.location.search).get('room')?.toUpperCase() ?? '';
 }
