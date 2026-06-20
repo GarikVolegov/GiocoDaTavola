@@ -69,6 +69,11 @@ export function isSplitRevealed(phase: GamePhase): boolean {
   return phase === 'SPLIT_REVEAL';
 }
 
+/** Phase in which players defend their side out loud, one turn per defender. */
+export function isDefensePhase(phase: GamePhase): boolean {
+  return phase === 'DEFENSE';
+}
+
 function isVoteChoice(c: string): c is VoteChoice {
   return c === 'A' || c === 'B';
 }
@@ -123,6 +128,26 @@ export interface Player {
   nickname: string;
 }
 
+/**
+ * A player auto-selected to defend a side in DEFENSE. Their identity + side
+ * become public during the defense (inherent to speaking) — no OTHER votes leak.
+ */
+export interface Defender {
+  id: string;
+  nickname: string;
+  side: VoteChoice;
+}
+
+/** Public view of the defense phase: who is speaking + turn progress. */
+export interface DefenseState {
+  /** The defender currently speaking; null if nobody voted (no defenders). */
+  speaker: Defender | null;
+  /** 1-based index of the current turn (0 when there are no defenders). */
+  turn: number;
+  /** Total number of defense turns this round (0, 1, or 2). */
+  totalTurns: number;
+}
+
 export interface Room {
   code: string;
   createdAt: number;
@@ -147,6 +172,14 @@ export interface Room {
    * votes (a leaving player's vote is dropped).
    */
   votes: Map<string, VoteChoice>;
+  /**
+   * The auto-selected defenders for the current round (one per side that got
+   * votes, side A before B). Recomputed on entry to DEFENSE from the secret
+   * votes; only these chosen identities are ever made public.
+   */
+  defenders: Defender[];
+  /** Which defender (0-based) is currently speaking during DEFENSE. */
+  defenseTurnIndex: number;
 }
 
 export type JoinError = 'ROOM_NOT_FOUND' | 'NICKNAME_REQUIRED' | 'ROOM_FULL';
@@ -197,19 +230,39 @@ export function generateRoomCode(): string {
 export class RoomStore {
   private readonly rooms = new Map<string, Room>();
 
-  // `genCode`, `now` and `makeDeck` are injectable so tests can force code
-  // collisions, drive phase timers deterministically, and supply a small
-  // deterministic dilemma deck.
+  // `genCode`, `now`, `makeDeck` and `rng` are injectable so tests can force
+  // code collisions, drive phase timers deterministically, supply a small
+  // deterministic dilemma deck, and pin defender selection.
   constructor(
     private readonly genCode: () => string = generateRoomCode,
     private readonly now: () => number = () => Date.now(),
     private readonly makeDeck: () => Deck = () => new Deck(loadDilemmas()),
+    private readonly rng: () => number = Math.random,
   ) {}
 
   /** Compute the auto-advance expiry for a phase, or null if it has no timer. */
   private expiryFor(phase: GamePhase): number | null {
     const duration = PHASE_DURATIONS_MS[phase];
     return duration == null ? null : this.now() + duration;
+  }
+
+  /**
+   * Auto-select one defender per side from that side's secret voters (side A
+   * before B). A side with 0 votes is skipped. Which of a side's voters speaks
+   * is chosen via the injectable rng, so tests can pin the pick.
+   */
+  private selectDefenders(room: Room): Defender[] {
+    const defenders: Defender[] = [];
+    for (const side of ['A', 'B'] as const) {
+      const voters = [...room.votes.entries()]
+        .filter(([, choice]) => choice === side)
+        .map(([id]) => id);
+      if (voters.length === 0) continue; // side with no votes -> no defender
+      const chosen = voters[Math.floor(this.rng() * voters.length)];
+      const player = room.players.get(chosen);
+      if (player) defenders.push({ id: player.id, nickname: player.nickname, side });
+    }
+    return defenders;
   }
 
   /** Create a room with a code unique among the rooms currently in memory. */
@@ -229,6 +282,8 @@ export class RoomStore {
       deck: null,
       currentDilemma: null,
       votes: new Map(),
+      defenders: [],
+      defenseTurnIndex: 0,
     };
     this.rooms.set(code, room);
     return room;
@@ -269,6 +324,15 @@ export class RoomStore {
       return { ok: false, error: 'NO_NEXT_PHASE' };
     }
 
+    // DEFENSE runs one timed turn per defender. While turns remain, advance to
+    // the next speaker (re-arming the per-turn timer) instead of leaving the
+    // phase; only once every defender has spoken do we fall through to VOTE_2.
+    if (room.phase === 'DEFENSE' && room.defenseTurnIndex < room.defenders.length - 1) {
+      room.defenseTurnIndex++;
+      room.phaseExpiresAt = this.expiryFor('DEFENSE');
+      return { ok: true, room };
+    }
+
     const transition = nextPhase(room.phase, room.dilemmaIndex, room.dilemmaCount ?? 0);
     room.phase = transition.phase;
     room.dilemmaIndex = transition.dilemmaIndex;
@@ -278,6 +342,12 @@ export class RoomStore {
     if (transition.phase === 'DILEMMA_REVEAL') {
       room.currentDilemma = room.deck?.draw() ?? null;
       room.votes.clear();
+    }
+    // Entering DEFENSE picks the defenders from this round's votes and starts at
+    // the first turn (the per-turn timer was set by expiryFor above).
+    if (transition.phase === 'DEFENSE') {
+      room.defenders = this.selectDefenders(room);
+      room.defenseTurnIndex = 0;
     }
     return { ok: true, room };
   }
@@ -320,6 +390,23 @@ export class RoomStore {
     const room = this.rooms.get(code);
     if (!room || !isSplitRevealed(room.phase)) return null;
     return this.voteTally(code);
+  }
+
+  /**
+   * Public defense view (who's speaking + turn progress), only during DEFENSE;
+   * null otherwise. The defenders' identities/side are intentionally public —
+   * no other secret votes are revealed.
+   */
+  publicDefense(code: string): DefenseState | null {
+    const room = this.rooms.get(code);
+    if (!room || !isDefensePhase(room.phase)) return null;
+    const totalTurns = room.defenders.length;
+    const speaker = room.defenders[room.defenseTurnIndex] ?? null;
+    return {
+      speaker,
+      turn: totalTurns === 0 ? 0 : room.defenseTurnIndex + 1,
+      totalTurns,
+    };
   }
 
   /** True once every connected player has voted (and the room is non-empty). */

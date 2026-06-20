@@ -8,6 +8,7 @@ import {
   MIN_PLAYERS_TO_START,
   DILEMMA_COUNT_OPTIONS,
   type GamePhase,
+  type VoteChoice,
 } from '../rooms';
 import { Deck, type Dilemma } from '../deck';
 
@@ -474,10 +475,11 @@ describe('RoomStore voting (US-008)', () => {
     store.vote(code, 'sock-1', 'B');
     store.advancePhase(code); // SPLIT_REVEAL
     expect(store.voteCount(code)).toBe(2); // votes persist through the round
-    store.advancePhase(code); // DEFENSE
-    store.advancePhase(code); // VOTE_2
-    store.advancePhase(code); // PHASE_RESULTS
-    store.advancePhase(code); // DILEMMA_REVEAL (round 2)
+    // Walk the rest of the round (DEFENSE turns -> VOTE_2 -> PHASE_RESULTS) to
+    // the next dilemma's reveal; the per-side defender turns make the number of
+    // steps variable, so loop on the dilemma index rather than hardcoding it.
+    let guard = 0;
+    while (store.get(code)?.dilemmaIndex !== 2 && guard++ < 100) store.advancePhase(code);
     expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL');
     expect(store.voteCount(code)).toBe(0);
   });
@@ -526,5 +528,129 @@ describe('RoomStore split reveal (US-009)', () => {
   it('returns null for an unknown room', () => {
     const store = new RoomStore();
     expect(store.publicSplit('ZZZZ')).toBeNull();
+  });
+});
+
+describe('RoomStore defense (US-010)', () => {
+  // Drive a fresh room into DEFENSE with a known split. Each entry of `sides`
+  // is one player's secret vote; rng is injected so defender selection is
+  // deterministic (the store's 4th ctor arg).
+  function defenseRoom(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B']): string {
+    const { code } = store.create();
+    for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3); // PHASE_INTRO
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
+    store.advancePhase(code); // SPLIT_REVEAL
+    store.advancePhase(code); // DEFENSE
+    return code;
+  }
+
+  it("auto-selects one defender per side from that side's voters", () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']);
+    const room = store.get(code);
+    expect(room?.phase).toBe('DEFENSE');
+    // rng=()=>0 picks the first voter of each side: A -> sock-0, B -> sock-1.
+    expect(room?.defenders).toEqual([
+      { id: 'sock-0', nickname: 'P0', side: 'A' },
+      { id: 'sock-1', nickname: 'P1', side: 'B' },
+    ]);
+  });
+
+  it('skips a side with 0 votes (single defender)', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'A', 'A']); // nobody picked B
+    expect(store.get(code)?.defenders).toEqual([{ id: 'sock-0', nickname: 'P0', side: 'A' }]);
+  });
+
+  it('uses rng to choose which voter defends a multi-voter side', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0.99);
+    const code = defenseRoom(store, ['A', 'B', 'B']);
+    // rng ~> 1 picks the LAST voter of side B: sock-2 (not sock-1).
+    const bDefender = store.get(code)?.defenders.find((d) => d.side === 'B');
+    expect(bDefender?.id).toBe('sock-2');
+  });
+
+  it('runs defender turns in sequence before moving to VOTE_2', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']); // 2 defenders
+    expect(store.get(code)?.defenseTurnIndex).toBe(0);
+    store.advancePhase(code); // next defender turn, still DEFENSE
+    expect(store.get(code)?.phase).toBe('DEFENSE');
+    expect(store.get(code)?.defenseTurnIndex).toBe(1);
+    store.advancePhase(code); // turns exhausted -> VOTE_2
+    expect(store.get(code)?.phase).toBe('VOTE_2');
+  });
+
+  it('a single defender means a single turn then VOTE_2', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'A', 'A']); // 1 defender
+    expect(store.get(code)?.defenseTurnIndex).toBe(0);
+    store.advancePhase(code);
+    expect(store.get(code)?.phase).toBe('VOTE_2');
+  });
+
+  it('resets the per-turn timer when moving to the next defender', () => {
+    let now = 1_000;
+    const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']);
+    expect(store.get(code)?.phaseExpiresAt).toBe(1_000 + PHASE_DURATIONS_MS.DEFENSE!);
+    now = 50_000;
+    store.advancePhase(code); // next turn
+    expect(store.get(code)?.phaseExpiresAt).toBe(50_000 + PHASE_DURATIONS_MS.DEFENSE!);
+  });
+
+  it('exposes the current speaker + turn progress during DEFENSE', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']);
+    expect(store.publicDefense(code)).toEqual({
+      speaker: { id: 'sock-0', nickname: 'P0', side: 'A' },
+      turn: 1,
+      totalTurns: 2,
+    });
+    store.advancePhase(code); // next turn -> side B speaker
+    expect(store.publicDefense(code)).toEqual({
+      speaker: { id: 'sock-1', nickname: 'P1', side: 'B' },
+      turn: 2,
+      totalTurns: 2,
+    });
+    store.advancePhase(code); // VOTE_2 -> defense no longer public
+    expect(store.publicDefense(code)).toBeNull();
+  });
+
+  it('does not expose defense info before DEFENSE (SPLIT_REVEAL)', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3);
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'B');
+    store.vote(code, 'sock-2', 'B');
+    store.advancePhase(code); // SPLIT_REVEAL
+    expect(store.publicDefense(code)).toBeNull();
+  });
+
+  it('returns null defense for an unknown room', () => {
+    const store = new RoomStore();
+    expect(store.publicDefense('ZZZZ')).toBeNull();
+  });
+
+  it('handles a round with no votes (no defenders -> straight to VOTE_2)', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3);
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1 (nobody votes)
+    store.advancePhase(code); // SPLIT_REVEAL
+    store.advancePhase(code); // DEFENSE (no defenders)
+    expect(store.get(code)?.phase).toBe('DEFENSE');
+    expect(store.publicDefense(code)).toEqual({ speaker: null, turn: 0, totalTurns: 0 });
+    store.advancePhase(code); // -> VOTE_2
+    expect(store.get(code)?.phase).toBe('VOTE_2');
   });
 });

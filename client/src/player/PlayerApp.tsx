@@ -27,6 +27,7 @@ export default function PlayerApp() {
   const [code, setCode] = useState(initialCode);
   const [nickname, setNickname] = useState('');
   const [joinedCode, setJoinedCode] = useState<string | null>(null);
+  const [playerId, setPlayerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [players, setPlayers] = useState<PublicPlayer[]>([]);
@@ -36,8 +37,9 @@ export default function PlayerApp() {
 
   useEffect(() => {
     const socket = getSocket();
-    const onJoined = ({ code }: PlayerJoinedPayload) => {
+    const onJoined = ({ code, player }: PlayerJoinedPayload) => {
       setJoinedCode(code);
+      setPlayerId(player.id);
       setError(null);
       setSubmitting(false);
     };
@@ -171,6 +173,46 @@ export default function PlayerApp() {
           </p>
         ) : (
           <p style={{ opacity: 0.7, margin: 0 }}>Tocca A o B per votare.</p>
+        )}
+      </main>
+    );
+  }
+
+  if (joinedCode && phase === 'DEFENSE') {
+    const speaker = game?.defense?.speaker ?? null;
+    const myTurn = speaker != null && speaker.id === playerId;
+    const sideOption = speaker
+      ? speaker.side === 'A'
+        ? game?.dilemma?.optionA
+        : game?.dilemma?.optionB
+      : undefined;
+    return (
+      <main style={wrap}>
+        <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS.DEFENSE}</h1>
+        {remaining != null && (
+          <div
+            aria-label="Tempo rimanente"
+            style={{ fontSize: '3rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+          >
+            {remaining}s
+          </div>
+        )}
+        {speaker == null ? (
+          <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
+            Nessuna difesa per questo dilemma.
+          </p>
+        ) : myTurn ? (
+          <>
+            <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te! 🎤</p>
+            <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
+              Difendi <strong>{speaker.side}</strong>
+              {sideOption ? `: ${sideOption}` : ''}
+            </p>
+          </>
+        ) : (
+          <p style={{ fontSize: '1.3rem', margin: 0 }}>
+            Sta parlando <strong>{speaker.nickname}</strong> 🎤
+          </p>
         )}
       </main>
     );

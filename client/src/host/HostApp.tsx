@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+ import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
@@ -80,6 +80,7 @@ export default function HostApp() {
     // option-mapping closures below (TS drops it for the mutable game fields).
     const dilemma = game.dilemma;
     const split = game.split;
+    const defense = game.defense;
     return (
       <main style={screen}>
         {inDilemma && (
@@ -175,6 +176,44 @@ export default function HostApp() {
               </div>
             ))}
           </div>
+        )}
+
+        {phase === 'DEFENSE' && defense && (
+          defense.speaker ? (
+            <section
+              aria-label="Chi sta difendendo"
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}
+            >
+              {defense.totalTurns > 1 && (
+                <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
+                  Turno {defense.turn}/{defense.totalTurns}
+                </p>
+              )}
+              <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
+                Sta parlando <span style={{ color: '#ffd36b' }}>{defense.speaker.nickname}</span> 🎤
+              </p>
+              <div
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '0.9rem',
+                  fontSize: '1.25rem',
+                  fontWeight: 700,
+                  background:
+                    defense.speaker.side === 'A' ? 'rgba(79,140,255,0.18)' : 'rgba(255,140,79,0.18)',
+                  border: `2px solid ${
+                    defense.speaker.side === 'A' ? 'rgba(79,140,255,0.5)' : 'rgba(255,140,79,0.5)'
+                  }`,
+                }}
+              >
+                Difende {defense.speaker.side} ·{' '}
+                {defense.speaker.side === 'A' ? dilemma?.optionA : dilemma?.optionB}
+              </div>
+            </section>
+          ) : (
+            <p style={{ fontSize: '1.4rem', opacity: 0.8, margin: 0 }}>
+              Nessuno ha votato: niente difese per questo dilemma.
+            </p>
+          )
         )}
 
         {remaining != null && (

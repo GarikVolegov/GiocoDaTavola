@@ -44,6 +44,9 @@ function gameStatePayload(room: Room) {
     // The aggregate A/B split, gated to SPLIT_REVEAL (null otherwise). Counts
     // only — never who voted what.
     split: rooms.publicSplit(room.code),
+    // Who is defending + turn progress, gated to DEFENSE (null otherwise). Only
+    // the chosen defenders' identities/side are public; no other votes leak.
+    defense: rooms.publicDefense(room.code),
   };
 }
 

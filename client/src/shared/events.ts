@@ -107,6 +107,26 @@ export interface VoteSplit {
   B: number;
 }
 
+/**
+ * A player defending a side in DEFENSE. Their identity + side are public during
+ * the defense (inherent to speaking aloud) — no other votes are revealed.
+ */
+export interface Defender {
+  id: string;
+  nickname: string;
+  side: VoteChoice;
+}
+
+/** Public defense view: who is currently speaking + the turn progress. */
+export interface DefenseState {
+  /** The defender currently speaking; null when nobody voted (no defenders). */
+  speaker: Defender | null;
+  /** 1-based index of the current turn (0 when there are no defenders). */
+  turn: number;
+  /** Total number of defense turns this round (0, 1, or 2). */
+  totalTurns: number;
+}
+
 export interface GameStatePayload {
   phase: GamePhase;
   dilemmaCount: number | null;
@@ -126,6 +146,11 @@ export interface GameStatePayload {
    * during VOTE_1 so the live vote isn't spoiled). Counts only, no identities.
    */
   split: VoteSplit | null;
+  /**
+   * Who is speaking + turn progress, shown only in DEFENSE; null otherwise.
+   * Only the chosen defenders' identities/side are public.
+   */
+  defense: DefenseState | null;
 }
 
 /** Which side a player secretly votes for. */
