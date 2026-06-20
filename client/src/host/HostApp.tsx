@@ -20,6 +20,7 @@ import {
   type HostStartErrorPayload,
   type PublicPlayer,
 } from '../shared/events';
+import { Card, Pill, Button, Alert } from '../shared/ui';
 
 const screen = {
   display: 'flex',
@@ -325,92 +326,59 @@ export default function HostApp() {
             )}
           </section>
 
-          <section style={{ width: 'min(90vw, 36rem)', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+          <Card
+            glow="accent"
+            style={{ width: 'min(90vw, 36rem)', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}
+          >
             <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Componi la serata</h2>
 
             <div style={{ width: '100%' }}>
               <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Argomenti</p>
-              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center' }} role="group" aria-label="Registro">
+              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Registro">
                 {CONTENT_REGISTERS.map((r) => (
-                  <button
+                  <Pill
                     key={r}
-                    type="button"
+                    selected={register === r}
                     onClick={() => setRegister(r)}
-                    aria-pressed={register === r}
-                    style={{
-                      flex: '1 1 0',
-                      fontSize: '1.1rem',
-                      fontWeight: 700,
-                      padding: '0.6rem 0.4rem',
-                      borderRadius: '0.6rem',
-                      cursor: 'pointer',
-                      border: register === r ? '2px solid #4f8cff' : '2px solid transparent',
-                      background: register === r ? 'rgba(79,140,255,0.22)' : 'rgba(127,127,127,0.18)',
-                    }}
+                    aria-label={REGISTER_LABELS[r]}
                   >
                     {REGISTER_LABELS[r]}
-                  </button>
+                  </Pill>
                 ))}
               </div>
             </div>
 
             <div style={{ width: '100%' }}>
               <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Durata</p>
-              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center' }} role="group" aria-label="Formato">
+              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Formato">
                 {SESSION_FORMATS.map((f) => (
-                  <button
+                  <Pill
                     key={f}
-                    type="button"
+                    selected={format === f}
                     onClick={() => setFormat(f)}
-                    aria-pressed={format === f}
-                    style={{
-                      flex: '1 1 0',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.15rem',
-                      fontWeight: 700,
-                      padding: '0.6rem 0.4rem',
-                      borderRadius: '0.6rem',
-                      cursor: 'pointer',
-                      border: format === f ? '2px solid #4f8cff' : '2px solid transparent',
-                      background: format === f ? 'rgba(79,140,255,0.22)' : 'rgba(127,127,127,0.18)',
-                    }}
+                    aria-label={`${FORMAT_LABELS[f].nome}, ${FORMAT_LABELS[f].round} round, ${FORMAT_LABELS[f].durata}`}
                   >
-                    <span style={{ fontSize: '1.05rem' }}>{FORMAT_LABELS[f].nome}</span>
-                    <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
-                      {FORMAT_LABELS[f].round} round · {FORMAT_LABELS[f].durata}
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
+                      <span style={{ fontWeight: 700 }}>{FORMAT_LABELS[f].nome}</span>
+                      <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+                        {FORMAT_LABELS[f].round} round · {FORMAT_LABELS[f].durata}
+                      </span>
                     </span>
-                  </button>
+                  </Pill>
                 ))}
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={startGame}
-              disabled={!canStart}
-              style={{
-                fontSize: '1.4rem',
-                fontWeight: 800,
-                padding: '0.7rem 2.5rem',
-                borderRadius: '0.7rem',
-                cursor: canStart ? 'pointer' : 'not-allowed',
-                opacity: canStart ? 1 : 0.5,
-              }}
-            >
+            <Button variant="primary" size="lg" onClick={startGame} disabled={!canStart}>
               Inizia la partita
-            </button>
+            </Button>
             {!canStart && (
               <p style={{ opacity: 0.6, margin: 0 }}>
                 Servono almeno {MIN_PLAYERS_TO_START} giocatori per iniziare.
               </p>
             )}
-            {startError && (
-              <p role="alert" style={{ color: '#ff6b6b', margin: 0, fontWeight: 600 }}>
-                {startError}
-              </p>
-            )}
-          </section>
+            {startError && <Alert>{startError}</Alert>}
+          </Card>
         </>
       ) : (
         <p style={{ opacity: 0.7 }}>Creazione stanza…</p>
