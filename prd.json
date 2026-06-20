@@ -136,8 +136,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "SPLIT_REVEAL shows the aggregate A/B split on the host (counts only, no identities). New pure predicate isSplitRevealed(phase) (only SPLIT_REVEAL) + RoomStore.publicSplit(code) — the GATED public version of the already-existing voteTally: returns {A,B} only in SPLIT_REVEAL, null otherwise (so VOTE_1 — and the future VOTE_2 re-vote — never leak a live split). TDD: 4 new tests (hidden in VOTE_1 though voteTally computes it, revealed in SPLIT_REVEAL, hidden again in DEFENSE, null for unknown room), 50 in rooms / 60 total. gameStatePayload adds `split: rooms.publicSplit(room.code)`; events.ts adds VoteSplit + GameStatePayload.split. HostApp renders two A/B count cards in SPLIT_REVEAL (bound `const split = game.split` like the dilemma to keep the non-null narrowing inside the .map closure). Players keep the 'guarda lo schermo condiviso' screen (split is host-only per AC). Verified end-to-end vs built prod server (PORT=3994, 10/10): split null in VOTE_1 and mid-vote, auto-advance to SPLIT_REVEAL on all-voted exposes {A:1,B:2}, game:state keys exactly {phase,dilemmaCount,dilemmaIndex,phaseExpiresAt,dilemma,votedCount,split} with no ids/nicknames in the payload, split null again in DEFENSE. Visual browser check still pending real browser tooling."
     },
     {
       "id": "US-010",

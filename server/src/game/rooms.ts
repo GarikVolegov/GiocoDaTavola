@@ -60,6 +60,15 @@ export function isVotingPhase(phase: GamePhase): boolean {
   return phase === 'VOTE_1';
 }
 
+/**
+ * Phases in which the aggregate A/B split may be shown publicly. Only
+ * SPLIT_REVEAL: never during a voting phase (it would spoil/skew the vote) —
+ * still only counts, never identities.
+ */
+export function isSplitRevealed(phase: GamePhase): boolean {
+  return phase === 'SPLIT_REVEAL';
+}
+
 function isVoteChoice(c: string): c is VoteChoice {
   return c === 'A' || c === 'B';
 }
@@ -300,6 +309,17 @@ export class RoomStore {
     const room = this.rooms.get(code);
     if (room) for (const choice of room.votes.values()) tally[choice]++;
     return tally;
+  }
+
+  /**
+   * The aggregate A/B split when the current phase reveals it (SPLIT_REVEAL),
+   * otherwise null — the gated, public-facing version of voteTally that the
+   * server broadcasts. Counts only; never identities.
+   */
+  publicSplit(code: string): { A: number; B: number } | null {
+    const room = this.rooms.get(code);
+    if (!room || !isSplitRevealed(room.phase)) return null;
+    return this.voteTally(code);
   }
 
   /** True once every connected player has voted (and the room is non-empty). */

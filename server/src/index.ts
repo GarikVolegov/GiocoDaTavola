@@ -41,6 +41,9 @@ function gameStatePayload(room: Room) {
     // How many players have voted this round. Aggregate count only — the per-
     // choice split stays secret until SPLIT_REVEAL.
     votedCount: room.votes.size,
+    // The aggregate A/B split, gated to SPLIT_REVEAL (null otherwise). Counts
+    // only — never who voted what.
+    split: rooms.publicSplit(room.code),
   };
 }
 

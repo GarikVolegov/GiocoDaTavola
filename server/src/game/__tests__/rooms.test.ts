@@ -482,3 +482,49 @@ describe('RoomStore voting (US-008)', () => {
     expect(store.voteCount(code)).toBe(0);
   });
 });
+
+describe('RoomStore split reveal (US-009)', () => {
+  // Drive a fresh 3-player room into VOTE_1 with a known A:1 / B:2 split.
+  function splitRoom(store: RoomStore): string {
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3); // PHASE_INTRO
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'B');
+    store.vote(code, 'sock-2', 'B');
+    return code;
+  }
+
+  it('hides the A/B split while still voting (VOTE_1)', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = splitRoom(store);
+    expect(store.get(code)?.phase).toBe('VOTE_1');
+    // The tally is computed internally but must NOT be public during the vote.
+    expect(store.voteTally(code)).toEqual({ A: 1, B: 2 });
+    expect(store.publicSplit(code)).toBeNull();
+  });
+
+  it('reveals the aggregate A/B split in SPLIT_REVEAL', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = splitRoom(store);
+    store.advancePhase(code); // SPLIT_REVEAL
+    expect(store.get(code)?.phase).toBe('SPLIT_REVEAL');
+    expect(store.publicSplit(code)).toEqual({ A: 1, B: 2 });
+  });
+
+  it('hides the split again once the reveal is over (DEFENSE)', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = splitRoom(store);
+    store.advancePhase(code); // SPLIT_REVEAL
+    store.advancePhase(code); // DEFENSE
+    expect(store.get(code)?.phase).toBe('DEFENSE');
+    expect(store.publicSplit(code)).toBeNull();
+  });
+
+  it('returns null for an unknown room', () => {
+    const store = new RoomStore();
+    expect(store.publicSplit('ZZZZ')).toBeNull();
+  });
+});

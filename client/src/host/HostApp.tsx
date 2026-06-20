@@ -76,9 +76,10 @@ export default function HostApp() {
   // arrives in later stories; the host can always force-advance.
   if (phase !== 'LOBBY' && game) {
     const inDilemma = game.dilemmaIndex >= 1 && game.dilemmaCount != null;
-    // Bind to a local const so the non-null narrowing survives inside the
-    // option-mapping closure below (TS drops it for the mutable game.dilemma).
+    // Bind to local consts so the non-null narrowing survives inside the
+    // option-mapping closures below (TS drops it for the mutable game fields).
     const dilemma = game.dilemma;
+    const split = game.split;
     return (
       <main style={screen}>
         {inDilemma && (
@@ -134,6 +135,46 @@ export default function HostApp() {
           >
             Hanno votato {game.votedCount}/{players.length}
           </p>
+        )}
+
+        {phase === 'SPLIT_REVEAL' && split && (
+          <div
+            aria-label="Come si è diviso il gruppo"
+            style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}
+          >
+            {(['A', 'B'] as const).map((letter) => (
+              <div
+                key={letter}
+                style={{
+                  flex: '1 1 10rem',
+                  minWidth: '8rem',
+                  padding: '1.25rem 1.5rem',
+                  borderRadius: '0.9rem',
+                  background: letter === 'A' ? 'rgba(79,140,255,0.18)' : 'rgba(255,140,79,0.18)',
+                  border: `2px solid ${letter === 'A' ? 'rgba(79,140,255,0.5)' : 'rgba(255,140,79,0.5)'}`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+              >
+                <span style={{ fontSize: '1.6rem', fontWeight: 800, opacity: 0.85 }}>{letter}</span>
+                <span
+                  style={{
+                    fontSize: 'clamp(2.5rem, 9vw, 4.5rem)',
+                    fontWeight: 800,
+                    lineHeight: 1,
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {letter === 'A' ? split.A : split.B}
+                </span>
+                <span style={{ fontSize: '1rem', opacity: 0.75 }}>
+                  {(letter === 'A' ? split.A : split.B) === 1 ? 'voto' : 'voti'}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
 
         {remaining != null && (

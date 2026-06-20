@@ -101,6 +101,12 @@ export interface PublicDilemma {
   optionB: string;
 }
 
+/** Aggregate A vs B vote counts. No identities — counts only. */
+export interface VoteSplit {
+  A: number;
+  B: number;
+}
+
 export interface GameStatePayload {
   phase: GamePhase;
   dilemmaCount: number | null;
@@ -115,6 +121,11 @@ export interface GameStatePayload {
    * voted what (votes are secret). The A/B split is revealed later (SPLIT_REVEAL).
    */
   votedCount: number;
+  /**
+   * The aggregate A/B split, shown only in SPLIT_REVEAL; null otherwise (e.g.
+   * during VOTE_1 so the live vote isn't spoiled). Counts only, no identities.
+   */
+  split: VoteSplit | null;
 }
 
 /** Which side a player secretly votes for. */
