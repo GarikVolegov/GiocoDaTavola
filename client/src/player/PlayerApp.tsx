@@ -114,17 +114,27 @@ export default function PlayerApp() {
     gap: '1rem',
   } as const;
 
-  if (joinedCode && (phase === 'VOTE_1' || phase === 'VOTE_2')) {
+  if (
+    joinedCode &&
+    (phase === 'VOTE_1' || phase === 'VOTE_2' || phase === 'DUEL_PICK' || phase === 'DUEL_REPICK')
+  ) {
     const dilemma = game?.dilemma;
-    // VOTE_2 is the re-vote after the defenses: the phone keeps the player's
-    // first choice selected as the default, which they can keep or change.
-    const isSecondVote = phase === 'VOTE_2';
+    // VOTE_2 / DUEL_REPICK keep the player's first choice as the default they can
+    // keep or change; the sub-line nudges them per phase.
+    const subtitle =
+      phase === 'VOTE_2'
+        ? 'Hai sentito le difese: confermi o cambi idea?'
+        : phase === 'DUEL_PICK'
+          ? 'Scegli la tua posizione.'
+          : phase === 'DUEL_REPICK'
+            ? 'Ti ha convinto? Conferma o cambia.'
+            : null;
     return (
       <main style={wrap}>
         <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
-        {isSecondVote && (
+        {subtitle && (
           <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0 }}>
-            Hai sentito le difese: confermi o cambi idea?
+            {subtitle}
           </p>
         )}
         {remaining != null && (
@@ -229,6 +239,44 @@ export default function PlayerApp() {
     );
   }
 
+  if (joinedCode && phase === 'DUEL_ARGUE') {
+    const speaker = game?.duelTurn?.speaker ?? null;
+    const myTurn = speaker != null && speaker.id === playerId;
+    const sideOption = speaker
+      ? speaker.side === 'A'
+        ? game?.dilemma?.optionA
+        : game?.dilemma?.optionB
+      : undefined;
+    return (
+      <main style={wrap}>
+        <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS.DUEL_ARGUE}</h1>
+        {remaining != null && (
+          <div
+            aria-label="Tempo rimanente"
+            style={{ fontSize: '3rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+          >
+            {remaining}s
+          </div>
+        )}
+        {myTurn ? (
+          <>
+            <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te! 🎤</p>
+            <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
+              Argomenta <strong>{speaker.side}</strong>
+              {sideOption ? `: ${sideOption}` : ''}
+            </p>
+          </>
+        ) : speaker ? (
+          <p style={{ fontSize: '1.3rem', margin: 0 }}>
+            Sta argomentando <strong>{speaker.nickname}</strong> 🎤
+          </p>
+        ) : (
+          <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>Guarda lo schermo condiviso 👀</p>
+        )}
+      </main>
+    );
+  }
+
   if (joinedCode && phase !== 'LOBBY') {
     const switched = game?.swing?.switched ?? 0;
     return (
@@ -255,6 +303,10 @@ export default function PlayerApp() {
         ) : phase === 'FINAL_AWARDS' ? (
           <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
             🏆 Guarda i premi sullo schermo!
+          </p>
+        ) : phase === 'FINAL_DUEL' ? (
+          <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
+            🏆 Guarda il risultato sullo schermo!
           </p>
         ) : (
           <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
