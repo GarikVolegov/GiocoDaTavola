@@ -3,6 +3,7 @@ import {
   RoomStore,
   generateRoomCode,
   nextPhase,
+  isVotingPhase,
   PHASE_DURATIONS_MS,
   MAX_PLAYERS,
   MIN_PLAYERS_TO_START,
@@ -19,6 +20,7 @@ const DILEMMA_FIXTURE: Dilemma[] = Array.from({ length: 6 }, (_, i) => ({
   text: `Dilemma ${i + 1}?`,
   optionA: `A${i + 1}`,
   optionB: `B${i + 1}`,
+  register: 'vita' as const,
 }));
 const makeFixtureDeck = () => new Deck(DILEMMA_FIXTURE, () => 0);
 
@@ -652,5 +654,124 @@ describe('RoomStore defense (US-010)', () => {
     expect(store.publicDefense(code)).toEqual({ speaker: null, turn: 0, totalTurns: 0 });
     store.advancePhase(code); // -> VOTE_2
     expect(store.get(code)?.phase).toBe('VOTE_2');
+  });
+});
+
+describe('RoomStore second vote + swing (US-011)', () => {
+  // Drive a fresh room from the lobby all the way into VOTE_2 with a known
+  // VOTE_1 split. rng=()=>0 makes defender selection deterministic so the
+  // DEFENSE turn loop terminates predictably; loop on the phase to VOTE_2 since
+  // the number of defense turns varies with how the side split.
+  function vote2Room(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B']): string {
+    const { code } = store.create();
+    for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3); // PHASE_INTRO
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
+    store.advancePhase(code); // SPLIT_REVEAL
+    let guard = 0;
+    while (store.get(code)?.phase !== 'VOTE_2' && guard++ < 10) store.advancePhase(code);
+    return code;
+  }
+
+  it('treats VOTE_2 as a voting phase (but not the reveal phases)', () => {
+    expect(isVotingPhase('VOTE_1')).toBe(true);
+    expect(isVotingPhase('VOTE_2')).toBe(true);
+    expect(isVotingPhase('SPLIT_REVEAL')).toBe(false);
+    expect(isVotingPhase('DEFENSE')).toBe(false);
+  });
+
+  it('carries each first vote into VOTE_2 as the (changeable) default', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = vote2Room(store, ['A', 'B', 'B']);
+    expect(store.get(code)?.phase).toBe('VOTE_2');
+    // The live tally equals the first vote until someone changes it.
+    expect(store.voteTally(code)).toEqual({ A: 1, B: 2 });
+    // A player can re-vote during VOTE_2.
+    expect(store.vote(code, 'sock-1', 'A').ok).toBe(true);
+    expect(store.voteTally(code)).toEqual({ A: 2, B: 1 });
+  });
+
+  it('begins VOTE_2 with every default vote already present', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = vote2Room(store, ['A', 'B', 'B']);
+    expect(store.voteCount(code)).toBe(3);
+    expect(store.allVoted(code)).toBe(true);
+  });
+
+  it('computes zero swing when nobody changes their vote', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = vote2Room(store, ['A', 'B', 'B']);
+    const swing = store.computeSwing(code);
+    expect(swing.first).toEqual({ A: 1, B: 2 });
+    expect(swing.second).toEqual({ A: 1, B: 2 });
+    expect(swing.switched).toBe(0);
+    expect(swing.netSwing).toEqual({ A: 0, B: 0 });
+  });
+
+  it('counts a voter switching sides and the net swing toward each side', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = vote2Room(store, ['A', 'B', 'B']); // first: A=1 B=2
+    store.vote(code, 'sock-1', 'A'); // sock-1 switches B -> A
+    const swing = store.computeSwing(code);
+    expect(swing.first).toEqual({ A: 1, B: 2 });
+    expect(swing.second).toEqual({ A: 2, B: 1 });
+    expect(swing.switched).toBe(1);
+    expect(swing.netSwing).toEqual({ A: 1, B: -1 });
+  });
+
+  it('nets opposing switches so the swing cancels out', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = vote2Room(store, ['A', 'A', 'B', 'B']); // first: A=2 B=2
+    store.vote(code, 'sock-0', 'B'); // A -> B
+    store.vote(code, 'sock-2', 'A'); // B -> A
+    const swing = store.computeSwing(code);
+    expect(swing.first).toEqual({ A: 2, B: 2 });
+    expect(swing.second).toEqual({ A: 2, B: 2 });
+    expect(swing.switched).toBe(2);
+    expect(swing.netSwing).toEqual({ A: 0, B: 0 });
+  });
+
+  it('keeps the first-vote snapshot immutable while VOTE_2 changes', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = vote2Room(store, ['A', 'B', 'B']);
+    store.vote(code, 'sock-2', 'A'); // change one VOTE_2 vote
+    // `first` still reflects the original VOTE_1 split.
+    expect(store.computeSwing(code).first).toEqual({ A: 1, B: 2 });
+  });
+
+  it('drops a leaving voter from both the first and second tallies', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = vote2Room(store, ['A', 'B', 'B']);
+    store.leave(code, 'sock-2'); // a B voter leaves during VOTE_2
+    const swing = store.computeSwing(code);
+    expect(swing.first).toEqual({ A: 1, B: 1 });
+    expect(swing.second).toEqual({ A: 1, B: 1 });
+    expect(swing.switched).toBe(0);
+  });
+
+  it('resets the first-vote snapshot for the next dilemma', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = vote2Room(store, ['A', 'B', 'B']);
+    let guard = 0;
+    while (store.get(code)?.dilemmaIndex !== 2 && guard++ < 20) store.advancePhase(code);
+    expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL');
+    expect(store.computeSwing(code)).toEqual({
+      first: { A: 0, B: 0 },
+      second: { A: 0, B: 0 },
+      switched: 0,
+      netSwing: { A: 0, B: 0 },
+    });
+  });
+
+  it('returns zeros for an unknown room', () => {
+    const store = new RoomStore();
+    expect(store.computeSwing('ZZZZ')).toEqual({
+      first: { A: 0, B: 0 },
+      second: { A: 0, B: 0 },
+      switched: 0,
+      netSwing: { A: 0, B: 0 },
+    });
   });
 });

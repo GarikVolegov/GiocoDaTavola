@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { Deck, loadDilemmas, type Dilemma } from '../deck';
+import { Deck, loadDilemmas, dilemmasForRegister, type Dilemma } from '../deck';
 
 // A small fixed deck for exercising draw behavior without depending on the
 // real data file.
 const fixture: Dilemma[] = [
-  { id: 'a', text: 'A?', optionA: 'a1', optionB: 'a2' },
-  { id: 'b', text: 'B?', optionA: 'b1', optionB: 'b2' },
-  { id: 'c', text: 'C?', optionA: 'c1', optionB: 'c2' },
+  { id: 'a', text: 'A?', optionA: 'a1', optionB: 'a2', register: 'vita' },
+  { id: 'b', text: 'B?', optionA: 'b1', optionB: 'b2', register: 'business' },
+  { id: 'c', text: 'C?', optionA: 'c1', optionB: 'c2', register: 'vita' },
 ];
 
 describe('loadDilemmas (server/data/dilemmas.json)', () => {
@@ -81,5 +81,34 @@ describe('Deck', () => {
       seen.add(d!.id);
     }
     expect(deck.draw()).toBeNull();
+  });
+});
+
+describe('dilemmasForRegister', () => {
+  const all = loadDilemmas();
+
+  it('misto restituisce tutti i dilemmi', () => {
+    expect(dilemmasForRegister(all, 'misto')).toHaveLength(all.length);
+  });
+
+  it('vita restituisce solo i dilemmi taggati vita', () => {
+    const vita = dilemmasForRegister(all, 'vita');
+    expect(vita.length).toBeGreaterThan(0);
+    expect(vita.every((d) => d.register === 'vita')).toBe(true);
+  });
+
+  it('business restituisce solo i dilemmi taggati business', () => {
+    const biz = dilemmasForRegister(all, 'business');
+    expect(biz.length).toBeGreaterThan(0);
+    expect(biz.every((d) => d.register === 'business')).toBe(true);
+  });
+
+  it('ogni registro ha abbastanza dilemmi per il formato più lungo (Maratona = 7)', () => {
+    expect(dilemmasForRegister(all, 'vita').length).toBeGreaterThanOrEqual(8);
+    expect(dilemmasForRegister(all, 'business').length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('ogni dilemma è taggato vita o business', () => {
+    expect(all.every((d) => d.register === 'vita' || d.register === 'business')).toBe(true);
   });
 });

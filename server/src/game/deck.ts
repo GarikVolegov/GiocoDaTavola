@@ -5,11 +5,22 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+/** Content register: 'misto' is a filter meaning "any". */
+export type ContentRegister = 'vita' | 'business' | 'misto';
+
 export interface Dilemma {
   id: string;
   text: string;
   optionA: string;
   optionB: string;
+  /** Which content register this dilemma belongs to. */
+  register: 'vita' | 'business';
+}
+
+/** Dilemmas matching a register; 'misto' returns the whole pool. */
+export function dilemmasForRegister(all: Dilemma[], register: ContentRegister): Dilemma[] {
+  if (register === 'misto') return all;
+  return all.filter((d) => d.register === register);
 }
 
 /**

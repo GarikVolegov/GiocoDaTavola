@@ -3,144 +3,168 @@
     "id": "d01",
     "text": "Hai un'idea geniale ma rischiosa. Cosa fai?",
     "optionA": "Mollo tutto e ci punto al 100%",
-    "optionB": "La porto avanti la sera, tenendo il lavoro sicuro"
+    "optionB": "La porto avanti la sera, tenendo il lavoro sicuro",
+    "register": "vita"
   },
   {
     "id": "d02",
     "text": "Un socio ti propone di gonfiare i numeri per chiudere un investimento.",
     "optionA": "Lo faccio: i soldi servono ora",
-    "optionB": "Mai: la reputazione vale più dei soldi"
+    "optionB": "Mai: la reputazione vale più dei soldi",
+    "register": "business"
   },
   {
     "id": "d03",
     "text": "Hai 10.000€ inattesi da gestire.",
     "optionA": "Li investo tutti per farli crescere",
-    "optionB": "Li tengo da parte per dormire tranquillo"
+    "optionB": "Li tengo da parte per dormire tranquillo",
+    "register": "vita"
   },
   {
     "id": "d04",
     "text": "Il tuo miglior dipendente vuole il doppio dello stipendio.",
     "optionA": "Glielo do: trattenerlo conviene",
-    "optionB": "Lo lascio andare: nessuno è insostituibile"
+    "optionB": "Lo lascio andare: nessuno è insostituibile",
+    "register": "business"
   },
   {
     "id": "d05",
     "text": "Come si costruisce davvero il successo?",
     "optionA": "Lavorando più di tutti gli altri",
-    "optionB": "Lavorando più furbo, non più ore"
+    "optionB": "Lavorando più furbo, non più ore",
+    "register": "business"
   },
   {
     "id": "d06",
     "text": "Un cliente ti chiede uno sconto enorme o se ne va.",
     "optionA": "Cedo: meglio poco che niente",
-    "optionB": "Tengo il prezzo: il mio lavoro vale"
+    "optionB": "Tengo il prezzo: il mio lavoro vale",
+    "register": "business"
   },
   {
     "id": "d07",
     "text": "Hai fallito un progetto importante in pubblico.",
     "optionA": "Mi prendo tutta la colpa, anche degli altri",
-    "optionB": "Spiego cos'è andato storto, senza scusarmi troppo"
+    "optionB": "Spiego cos'è andato storto, senza scusarmi troppo",
+    "register": "business"
   },
   {
     "id": "d08",
     "text": "Lavoro che ami ma povero, o noioso ma ricco?",
     "optionA": "Faccio ciò che amo, costi quel che costi",
-    "optionB": "Prima la sicurezza economica, la passione poi"
+    "optionB": "Prima la sicurezza economica, la passione poi",
+    "register": "vita"
   },
   {
     "id": "d09",
     "text": "Un amico ti chiede di entrare in affari insieme.",
     "optionA": "Accetto: ci si fida tra amici",
-    "optionB": "Rifiuto: gli affari rovinano le amicizie"
+    "optionB": "Rifiuto: gli affari rovinano le amicizie",
+    "register": "vita"
   },
   {
     "id": "d10",
     "text": "Per crescere devi licenziare il primo dipendente che hai assunto.",
     "optionA": "Lo faccio: l'azienda viene prima",
-    "optionB": "Trovo un altro modo, costi quel che costi"
+    "optionB": "Trovo un altro modo, costi quel che costi",
+    "register": "business"
   },
   {
     "id": "d11",
     "text": "Copiare un'idea che funziona o inventarne una nuova?",
     "optionA": "Copio e miglioro: perché reinventare la ruota",
-    "optionB": "Creo qualcosa di originale, anche se più dura"
+    "optionB": "Creo qualcosa di originale, anche se più dura",
+    "register": "business"
   },
   {
     "id": "d12",
     "text": "Ti offrono fama immediata o crescita lenta e solida.",
     "optionA": "Fama subito: l'occasione non torna",
-    "optionB": "Crescita lenta: voglio basi solide"
+    "optionB": "Crescita lenta: voglio basi solide",
+    "register": "vita"
   },
   {
     "id": "d13",
     "text": "Scopri che un collega ruba piccole somme all'azienda.",
     "optionA": "Lo denuncio subito",
-    "optionB": "Gli parlo prima in privato"
+    "optionB": "Gli parlo prima in privato",
+    "register": "business"
   },
   {
     "id": "d14",
     "text": "Meglio essere temuti o amati da chi lavora con te?",
     "optionA": "Amati: la fiducia muove le persone",
-    "optionB": "Temuti: il rispetto tiene tutto in ordine"
+    "optionB": "Temuti: il rispetto tiene tutto in ordine",
+    "register": "business"
   },
   {
     "id": "d15",
     "text": "Hai poco tempo libero. Come lo usi?",
     "optionA": "Mi formo e miglioro le mie competenze",
-    "optionB": "Stacco totalmente per ricaricarmi"
+    "optionB": "Stacco totalmente per ricaricarmi",
+    "register": "vita"
   },
   {
     "id": "d16",
     "text": "Un investitore vuole il 60% della tua azienda.",
     "optionA": "Accetto: meglio una fetta piccola di una torta grande",
-    "optionB": "Rifiuto: voglio restare padrone in casa mia"
+    "optionB": "Rifiuto: voglio restare padrone in casa mia",
+    "register": "business"
   },
   {
     "id": "d17",
     "text": "Dire una bugia bianca può chiudere l'affare della vita.",
     "optionA": "La dico: nessuno si fa male davvero",
-    "optionB": "Resto onesto, anche se perdo l'affare"
+    "optionB": "Resto onesto, anche se perdo l'affare",
+    "register": "business"
   },
   {
     "id": "d18",
     "text": "Il mercato cambia e il tuo prodotto è superato.",
     "optionA": "Cambio tutto e mi reinvento",
-    "optionB": "Resisto e punto su chi mi è rimasto fedele"
+    "optionB": "Resisto e punto su chi mi è rimasto fedele",
+    "register": "business"
   },
   {
     "id": "d19",
     "text": "Come si prendono le decisioni importanti?",
     "optionA": "Di pancia: l'istinto raramente sbaglia",
-    "optionB": "Coi dati: i numeri non mentono"
+    "optionB": "Coi dati: i numeri non mentono",
+    "register": "business"
   },
   {
     "id": "d20",
     "text": "Un concorrente ti propone un'alleanza scomoda.",
     "optionA": "Mi alleo: insieme siamo più forti",
-    "optionB": "Vado da solo: meglio nemico che falso amico"
+    "optionB": "Vado da solo: meglio nemico che falso amico",
+    "register": "business"
   },
   {
     "id": "d21",
     "text": "Il tuo team propone un'idea che secondo te fallirà.",
     "optionA": "Li lascio provare e sbagliare",
-    "optionB": "Blocco tutto: non posso permettere l'errore"
+    "optionB": "Blocco tutto: non posso permettere l'errore",
+    "register": "business"
   },
   {
     "id": "d22",
     "text": "Vorresti di più ma rischieresti ciò che hai costruito.",
     "optionA": "Rischio: chi non risica non rosica",
-    "optionB": "Mi godo ciò che ho: l'avidità rovina"
+    "optionB": "Mi godo ciò che ho: l'avidità rovina",
+    "register": "vita"
   },
   {
     "id": "d23",
     "text": "Un mentore famoso ti offre consigli che senti sbagliati.",
     "optionA": "Lo seguo: ne sa più di me",
-    "optionB": "Seguo la mia strada, anche se rischio"
+    "optionB": "Seguo la mia strada, anche se rischio",
+    "register": "vita"
   },
   {
     "id": "d24",
     "text": "Successo personale o tempo con le persone che ami?",
     "optionA": "Punto al successo: poi avrò tempo per tutto",
-    "optionB": "Le persone prima: il tempo non torna"
+    "optionB": "Le persone prima: il tempo non torna",
+    "register": "vita"
   }
 ]
