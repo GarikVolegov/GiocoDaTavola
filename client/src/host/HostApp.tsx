@@ -12,6 +12,7 @@ import {
   MIN_PLAYERS_TO_START,
   START_ERROR_MESSAGES,
   PHASE_LABELS,
+  PERSONA_LABELS,
   OBJECTIVE,
   type SessionFormat,
   type ContentRegister,
@@ -79,8 +80,13 @@ export default function HostApp() {
   };
 
   const advance = () => getSocket().emit(SocketEvents.HostAdvancePhase);
+  const addBot = () => getSocket().emit(SocketEvents.HostAddBot);
+  const removeBot = (id: string) => getSocket().emit(SocketEvents.HostRemoveBot, { id });
 
-  const canStart = players.length >= MIN_PLAYERS_TO_START;
+  // Solo play is allowed (1 human + bots), but never a bots-only game.
+  const humanCount = players.filter((p) => !p.isBot).length;
+  const canStart = players.length >= MIN_PLAYERS_TO_START && humanCount >= 1;
+  const canAddBot = players.length < 8;
   const joinUrl = code ? `${window.location.origin}/join?room=${code}` : '';
 
   // In-game: every phase past the lobby shows its label + a server-driven
@@ -215,7 +221,8 @@ export default function HostApp() {
                 </p>
               )}
               <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
-                Sta parlando <span style={{ color: '#ffd36b' }}>{defense.speaker.nickname}</span> 🎤
+                {defense.argument ? '🤖' : 'Sta parlando'}{' '}
+                <span style={{ color: '#ffd36b' }}>{defense.speaker.nickname}</span> {defense.argument ? '' : '🎤'}
               </p>
               <div
                 style={{
@@ -233,6 +240,11 @@ export default function HostApp() {
                 Difende {defense.speaker.side} ·{' '}
                 {defense.speaker.side === 'A' ? dilemma?.optionA : dilemma?.optionB}
               </div>
+              {defense.argument && (
+                <p style={{ fontSize: '1.4rem', fontStyle: 'italic', margin: 0, maxWidth: 'min(90vw, 44rem)', opacity: 0.95 }}>
+                  “{defense.argument}”
+                </p>
+              )}
             </section>
           ) : (
             <p style={{ fontSize: '1.4rem', opacity: 0.8, margin: 0 }}>
@@ -368,17 +380,47 @@ export default function HostApp() {
                   <li
                     key={p.id}
                     style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
                       padding: '0.4rem 0.9rem',
                       borderRadius: '999px',
-                      background: 'rgba(127,127,127,0.18)',
+                      background: p.isBot ? 'rgba(192,79,255,0.18)' : 'rgba(127,127,127,0.18)',
                       fontWeight: 600,
                     }}
                   >
+                    {p.isBot && <span aria-label="bot">🤖</span>}
                     {p.nickname}
+                    {p.isBot && p.persona && (
+                      <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{PERSONA_LABELS[p.persona]}</span>
+                    )}
+                    {p.isBot && (
+                      <button
+                        type="button"
+                        onClick={() => removeBot(p.id)}
+                        aria-label={`Rimuovi ${p.nickname}`}
+                        style={{
+                          marginLeft: '0.1rem',
+                          border: 'none',
+                          background: 'transparent',
+                          color: 'inherit',
+                          cursor: 'pointer',
+                          fontWeight: 800,
+                          opacity: 0.7,
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
             )}
+            <div style={{ marginTop: '0.75rem' }}>
+              <Button variant="ghost" onClick={addBot} disabled={!canAddBot}>
+                + Aggiungi bot 🤖
+              </Button>
+            </div>
           </section>
 
           <Card
@@ -429,7 +471,9 @@ export default function HostApp() {
             </Button>
             {!canStart && (
               <p style={{ opacity: 0.6, margin: 0 }}>
-                Servono almeno {MIN_PLAYERS_TO_START} giocatori per iniziare.
+                {humanCount < 1
+                  ? 'Serve almeno una persona (i bot da soli non bastano).'
+                  : `Servono almeno ${MIN_PLAYERS_TO_START} partecipanti: aggiungi giocatori o bot 🤖`}
               </p>
             )}
             {startError && <Alert>{startError}</Alert>}

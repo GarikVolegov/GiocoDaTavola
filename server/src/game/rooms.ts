@@ -2,6 +2,7 @@
 // only for the lifetime of the process (no DB).
 
 import { Deck, dilemmasForRegister, loadDilemmas, type Dilemma, type ContentRegister } from './deck';
+import { botDefenseArgument } from './botDefense';
 
 const CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const CODE_LENGTH = 4;
@@ -18,6 +19,19 @@ export type DilemmaCount = (typeof DILEMMA_COUNT_OPTIONS)[number];
 
 /** Content registers the host can pick (mirror of deck.ts ContentRegister). */
 export const CONTENT_REGISTERS = ['vita', 'business', 'misto'] as const;
+
+/**
+ * Behaviour-based bot personalities (Fase B). The persona doesn't pick a *side*
+ * (the first vote is random) — it governs how the bot changes its mind at VOTE_2:
+ *  - roccione: never changes; indeciso: changes often; gregge: drifts to the
+ *    majority; bastian: drifts to the minority; equilibrato: changes sometimes.
+ * Content-aware personas (prudente/spericolato) come in Fase C with the LLM.
+ */
+export const BOT_PERSONAS = ['roccione', 'indeciso', 'gregge', 'bastian', 'equilibrato'] as const;
+export type BotPersona = (typeof BOT_PERSONAS)[number];
+
+/** Display names cycled through when adding bots to a room. */
+const BOT_NAMES = ['Robo', 'Bipbo', 'Circù', 'Dado', 'Echo', 'Fulmine', 'Giro', 'Hal'] as const;
 
 function isContentRegister(v: string): v is ContentRegister {
   return (CONTENT_REGISTERS as readonly string[]).includes(v);
@@ -133,6 +147,10 @@ export interface Player {
   /** Stable identity for the lifetime of the connection (socket id for now). */
   id: string;
   nickname: string;
+  /** True for server-driven bot players (Fase B). Absent/false for humans. */
+  isBot?: boolean;
+  /** The bot's behaviour persona; only set when isBot. */
+  persona?: BotPersona;
 }
 
 /**
@@ -153,6 +171,11 @@ export interface DefenseState {
   turn: number;
   /** Total number of defense turns this round (0, 1, or 2). */
   totalTurns: number;
+  /**
+   * The current speaker's canned argument when they are a bot (Fase B), shown on
+   * the host screen since a bot can't speak aloud; null when a human is speaking.
+   */
+  argument: string | null;
 }
 
 export interface Room {
@@ -197,6 +220,19 @@ export interface Room {
   defenders: Defender[];
   /** Which defender (0-based) is currently speaking during DEFENSE. */
   defenseTurnIndex: number;
+  /**
+   * The current defender's canned argument when they are a bot (Fase B), recomputed
+   * on each DEFENSE turn so the host shows a stable line; null for human speakers.
+   */
+  defenseArgument: string | null;
+  /**
+   * Per-player tallies accumulated across the game (keyed by player id), updated
+   * once per round on entry to PHASE_RESULTS and read at FINAL_AWARDS. Empty
+   * until the first round's results; reset when a new game starts.
+   */
+  stats: Map<string, PlayerStats>;
+  /** Monotonic counter for generating unique bot ids/names within the room. */
+  botSeq: number;
 }
 
 export type JoinError = 'ROOM_NOT_FOUND' | 'NICKNAME_REQUIRED' | 'ROOM_FULL';
@@ -208,6 +244,7 @@ export type JoinResult =
 export type StartGameError =
   | 'ROOM_NOT_FOUND'
   | 'NOT_ENOUGH_PLAYERS'
+  | 'NO_HUMAN_PLAYERS'
   | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
   | 'ALREADY_STARTED';
@@ -215,6 +252,12 @@ export type StartGameError =
 export type StartGameResult =
   | { ok: true; room: Room }
   | { ok: false; error: StartGameError };
+
+export type AddBotError = 'ROOM_NOT_FOUND' | 'ROOM_FULL' | 'ALREADY_STARTED';
+
+export type AddBotResult =
+  | { ok: true; player: Player }
+  | { ok: false; error: AddBotError };
 
 export type AdvancePhaseError = 'ROOM_NOT_FOUND' | 'NO_NEXT_PHASE';
 
@@ -252,6 +295,52 @@ export interface SwingResult {
   switched: number;
   /** Net change in each side's count, second minus first. */
   netSwing: VoteTally;
+}
+
+/** How many votes a defender's side gained between the first and second vote. */
+export interface DefenseImpact {
+  defender: Defender;
+  votes: number;
+}
+
+/**
+ * Public results view (gated to PHASE_RESULTS): the swing plus, for each defender
+ * whose side gained votes, how many votes moved their way. Drives the "the
+ * defense of X moved N votes" narration. Aggregate only — no identities beyond
+ * the (already public) defenders.
+ */
+export interface PublicSwing extends SwingResult {
+  attribution: DefenseImpact[];
+}
+
+/**
+ * Per-player tallies accumulated across the whole game, used to compute the
+ * end-of-game awards. Recorded once per round on entry to PHASE_RESULTS — never
+ * sent to clients during play (only the final awards superlatives are public).
+ */
+export interface PlayerStats {
+  /** Rounds the player took part in (voted in both VOTE_1 and VOTE_2). */
+  rounds: number;
+  /** Rounds where the second vote differed from the first. */
+  changedCount: number;
+  /** Rounds the player ended on the majority side of the second vote. */
+  majorityCount: number;
+  /** Rounds the player ended on the minority side of the second vote. */
+  minorityCount: number;
+  /** Net votes that swung toward sides this player defended. */
+  persuasion: number;
+}
+
+/** The fun end-of-game superlatives (persuasion-themed). */
+export type AwardId = 'persuasore' | 'banderuola' | 'roccione' | 'sintonia' | 'bastian';
+
+/** An award and who won it. Only awards with a real winner are ever returned. */
+export interface Award {
+  id: AwardId;
+  title: string;
+  emoji: string;
+  description: string;
+  winner: Player;
 }
 
 function isDilemmaCount(n: number): n is DilemmaCount {
@@ -306,6 +395,88 @@ export class RoomStore {
     return defenders;
   }
 
+  /** Cast each bot's (random) first vote on entry to VOTE_1. */
+  private castBotFirstVotes(room: Room): void {
+    for (const p of room.players.values()) {
+      if (p.isBot) room.votes.set(p.id, this.rng() < 0.5 ? 'A' : 'B');
+    }
+  }
+
+  /**
+   * Apply each bot's VOTE_2 swing based on its persona and the revealed first-vote
+   * split (votes1): roccione holds; gregge drifts to the majority; bastian to the
+   * minority; indeciso/equilibrato flip with a persona-specific probability. On a
+   * tied split, gregge/bastian hold (no clear majority to chase).
+   */
+  private applyBotSecondVotes(room: Room): void {
+    const tally = RoomStore.tally(room.votes1);
+    const majority: VoteChoice | null = tally.A > tally.B ? 'A' : tally.B > tally.A ? 'B' : null;
+    const minority: VoteChoice | null = majority ? (majority === 'A' ? 'B' : 'A') : null;
+    for (const p of room.players.values()) {
+      if (!p.isBot || !p.persona) continue;
+      const current = room.votes.get(p.id);
+      if (!current) continue;
+      const other: VoteChoice = current === 'A' ? 'B' : 'A';
+      let next: VoteChoice = current;
+      switch (p.persona) {
+        case 'roccione': break;
+        case 'indeciso': next = this.rng() < 0.7 ? other : current; break;
+        case 'equilibrato': next = this.rng() < 0.35 ? other : current; break;
+        case 'gregge': if (minority && current === minority) next = majority as VoteChoice; break;
+        case 'bastian': if (majority && current === majority) next = minority as VoteChoice; break;
+      }
+      room.votes.set(p.id, next);
+    }
+  }
+
+  /** The canned argument for the current defender if a bot, else null (Fase B). */
+  private argumentForCurrentDefender(room: Room): string | null {
+    const defender = room.defenders[room.defenseTurnIndex];
+    if (!defender) return null;
+    const player = room.players.get(defender.id);
+    if (!player?.isBot || !player.persona || !room.currentDilemma) return null;
+    return botDefenseArgument(player.persona, room.currentDilemma, defender.side, this.rng);
+  }
+
+  /** Get (creating if needed) the accumulating stats record for a player. */
+  private static ensureStats(room: Room, id: string): PlayerStats {
+    let s = room.stats.get(id);
+    if (!s) {
+      s = { rounds: 0, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0 };
+      room.stats.set(id, s);
+    }
+    return s;
+  }
+
+  /**
+   * Fold the just-finished round into each player's accumulating stats: who took
+   * part, who changed their mind, who ended on the majority/minority side, and
+   * how many votes each defender's side gained (persuasion). Called once on entry
+   * to PHASE_RESULTS, while votes1 (first vote), votes (second) and defenders are
+   * still intact for this round.
+   */
+  private recordRoundStats(room: Room): void {
+    const first = RoomStore.tally(room.votes1);
+    const second = RoomStore.tally(room.votes);
+    const majoritySide: VoteChoice | null =
+      second.A > second.B ? 'A' : second.B > second.A ? 'B' : null;
+    for (const [id, firstChoice] of room.votes1) {
+      const secondChoice = room.votes.get(id);
+      if (!secondChoice) continue; // left before the second vote -> skip this round
+      const s = RoomStore.ensureStats(room, id);
+      s.rounds++;
+      if (secondChoice !== firstChoice) s.changedCount++;
+      if (majoritySide) {
+        if (secondChoice === majoritySide) s.majorityCount++;
+        else s.minorityCount++;
+      }
+    }
+    const netSwing: VoteTally = { A: second.A - first.A, B: second.B - first.B };
+    for (const d of room.defenders) {
+      if (netSwing[d.side] > 0) RoomStore.ensureStats(room, d.id).persuasion += netSwing[d.side];
+    }
+  }
+
   /** Create a room with a code unique among the rooms currently in memory. */
   create(): Room {
     let code = this.genCode();
@@ -327,6 +498,9 @@ export class RoomStore {
       votes1: new Map(),
       defenders: [],
       defenseTurnIndex: 0,
+      defenseArgument: null,
+      stats: new Map(),
+      botSeq: 0,
     };
     this.rooms.set(code, room);
     return room;
@@ -345,6 +519,9 @@ export class RoomStore {
     if (!isDilemmaCount(dilemmaCount)) return { ok: false, error: 'INVALID_DILEMMA_COUNT' };
     if (!isContentRegister(register)) return { ok: false, error: 'INVALID_REGISTER' };
     if (room.players.size < MIN_PLAYERS_TO_START) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
+    // Solo play is allowed (1 human + bots), but never a bots-only game.
+    const humanCount = [...room.players.values()].filter((p) => !p.isBot).length;
+    if (humanCount < 1) return { ok: false, error: 'NO_HUMAN_PLAYERS' };
 
     room.dilemmaCount = dilemmaCount;
     room.register = register;
@@ -353,6 +530,7 @@ export class RoomStore {
     room.phaseExpiresAt = this.expiryFor('PHASE_INTRO');
     room.deck = this.makeDeck(register);
     room.currentDilemma = null;
+    room.stats = new Map();
     return { ok: true, room };
   }
 
@@ -375,6 +553,7 @@ export class RoomStore {
     if (room.phase === 'DEFENSE' && room.defenseTurnIndex < room.defenders.length - 1) {
       room.defenseTurnIndex++;
       room.phaseExpiresAt = this.expiryFor('DEFENSE');
+      room.defenseArgument = this.argumentForCurrentDefender(room);
       return { ok: true, room };
     }
 
@@ -394,12 +573,25 @@ export class RoomStore {
     if (transition.phase === 'DEFENSE') {
       room.defenders = this.selectDefenders(room);
       room.defenseTurnIndex = 0;
+      room.defenseArgument = this.argumentForCurrentDefender(room);
+    }
+    // Entering VOTE_1: bots cast their (random) first vote so the human(s) only
+    // wait on themselves; the per-choice split stays secret until SPLIT_REVEAL.
+    if (transition.phase === 'VOTE_1') {
+      this.castBotFirstVotes(room);
     }
     // Entering VOTE_2: snapshot the first vote so the live re-vote can be
     // compared against it (swing). `votes` is left intact, so each player's
-    // first vote becomes the default they can keep or change.
+    // first vote becomes the default they can keep or change; then bots apply
+    // their persona-driven swing on top of that default.
     if (transition.phase === 'VOTE_2') {
       room.votes1 = new Map(room.votes);
+      this.applyBotSecondVotes(room);
+    }
+    // Entering PHASE_RESULTS: fold this round's outcome into the per-player stats
+    // while the votes/votes1/defenders are still intact (cleared next reveal).
+    if (transition.phase === 'PHASE_RESULTS') {
+      this.recordRoundStats(room);
     }
     return { ok: true, room };
   }
@@ -464,6 +656,23 @@ export class RoomStore {
   }
 
   /**
+   * Public results view, only during PHASE_RESULTS (null otherwise): the swing
+   * plus, for each defender whose side gained votes, how many votes moved their
+   * way. Aggregate only; the only identities are the (already public) defenders.
+   */
+  publicSwing(code: string): PublicSwing | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'PHASE_RESULTS') return null;
+    const swing = this.computeSwing(code);
+    const attribution: DefenseImpact[] = [];
+    for (const d of room.defenders) {
+      const gained = swing.netSwing[d.side];
+      if (gained > 0) attribution.push({ defender: d, votes: gained });
+    }
+    return { ...swing, attribution };
+  }
+
+  /**
    * The aggregate A/B split when the current phase reveals it (SPLIT_REVEAL),
    * otherwise null — the gated, public-facing version of voteTally that the
    * server broadcasts. Counts only; never identities.
@@ -488,7 +697,62 @@ export class RoomStore {
       speaker,
       turn: totalTurns === 0 ? 0 : room.defenseTurnIndex + 1,
       totalTurns,
+      argument: room.defenseArgument,
     };
+  }
+
+  /**
+   * Compute the end-of-game awards from the accumulated per-player stats. Each
+   * superlative goes to its leader; ties break by join order (insertion order of
+   * the stats map). Awards with no meaningful winner (e.g. nobody changed their
+   * mind) are omitted. Ungated — see publicAwards for the FINAL_AWARDS gate.
+   */
+  computeAwards(code: string): Award[] {
+    const room = this.rooms.get(code);
+    if (!room) return [];
+    const entries = [...room.stats.entries()]; // insertion order == join order
+    const winnerBy = (
+      score: (s: PlayerStats) => number,
+      eligible: (s: PlayerStats) => boolean,
+    ): Player | null => {
+      let best: { id: string; score: number } | null = null;
+      for (const [id, s] of entries) {
+        if (!eligible(s)) continue;
+        const value = score(s);
+        if (best === null || value > best.score) best = { id, score: value };
+      }
+      if (!best) return null;
+      const nickname = room.players.get(best.id)?.nickname ?? '';
+      return { id: best.id, nickname };
+    };
+    const defs: Array<Omit<Award, 'winner'> & { winner: Player | null }> = [
+      { id: 'persuasore', title: 'Il Persuasore', emoji: '🏆',
+        description: 'Le sue difese hanno spostato più voti.',
+        winner: winnerBy((s) => s.persuasion, (s) => s.persuasion > 0) },
+      { id: 'banderuola', title: 'La Banderuola', emoji: '🎏',
+        description: 'Ha cambiato idea più spesso.',
+        winner: winnerBy((s) => s.changedCount, (s) => s.changedCount > 0) },
+      { id: 'roccione', title: 'Il Roccione', emoji: '🪨',
+        description: 'Non ha mai cambiato idea.',
+        winner: winnerBy((s) => s.rounds, (s) => s.rounds > 0 && s.changedCount === 0) },
+      { id: 'sintonia', title: 'In sintonia col gruppo', emoji: '🔮',
+        description: 'Più spesso dalla parte della maggioranza.',
+        winner: winnerBy((s) => s.majorityCount, (s) => s.majorityCount > 0) },
+      { id: 'bastian', title: 'Bastian Contrario', emoji: '🦓',
+        description: 'Più spesso in minoranza.',
+        winner: winnerBy((s) => s.minorityCount, (s) => s.minorityCount > 0) },
+    ];
+    return defs.filter((d): d is Award => d.winner !== null);
+  }
+
+  /**
+   * The end-of-game awards, only at FINAL_AWARDS (null otherwise) — the gated,
+   * public-facing version the server broadcasts at the end of the game.
+   */
+  publicAwards(code: string): Award[] | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'FINAL_AWARDS') return null;
+    return this.computeAwards(code);
   }
 
   /** True once every connected player has voted (and the room is non-empty). */
@@ -531,6 +795,37 @@ export class RoomStore {
     room.votes.delete(playerId);
     room.votes1.delete(playerId);
     return room.players.delete(playerId);
+  }
+
+  /**
+   * Add a server-driven bot to a room's lobby (Fase B). Bots count toward the
+   * roster (and MAX_PLAYERS) but have no socket; the server casts their votes.
+   * Only allowed in the LOBBY. A persona may be forced (tests); otherwise it
+   * round-robins through BOT_PERSONAS for variety.
+   */
+  addBot(code: string, persona?: BotPersona): AddBotResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.phase !== 'LOBBY') return { ok: false, error: 'ALREADY_STARTED' };
+    if (room.players.size >= MAX_PLAYERS) return { ok: false, error: 'ROOM_FULL' };
+    const seq = room.botSeq++;
+    const player: Player = {
+      id: `bot:${room.code}:${seq}`,
+      nickname: BOT_NAMES[seq % BOT_NAMES.length],
+      isBot: true,
+      persona: persona ?? BOT_PERSONAS[seq % BOT_PERSONAS.length],
+    };
+    room.players.set(player.id, player);
+    return { ok: true, player };
+  }
+
+  /** Remove a bot by id. Returns false for unknown rooms/ids or a human player. */
+  removeBot(code: string, id: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room) return false;
+    const player = room.players.get(id);
+    if (!player?.isBot) return false;
+    return room.players.delete(id);
   }
 
   /** Public lobby view: ordered list of players (no secret state). */

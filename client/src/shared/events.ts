@@ -20,6 +20,10 @@ export const SocketEvents = {
   HostStartError: 'host:startError',
   /** Host force-advances the state machine, skipping the current countdown. */
   HostAdvancePhase: 'host:advancePhase',
+  /** Host adds a server-driven bot to fill a seat (Fase B). */
+  HostAddBot: 'host:addBot',
+  /** Host removes a bot by id (Fase B). */
+  HostRemoveBot: 'host:removeBot',
   /** Server broadcasts the current game phase to everyone in the room. */
   GameState: 'game:state',
   /** Player casts (or changes) a secret A/B vote from their phone. */
@@ -43,6 +47,19 @@ export const FORMAT_DILEMMA_COUNT: Record<SessionFormat, number> = {
 export const CONTENT_REGISTERS = ['vita', 'business', 'misto'] as const;
 export type ContentRegister = (typeof CONTENT_REGISTERS)[number];
 
+/** Behaviour-based bot personalities (mirror of the server's `BotPersona`). */
+export const BOT_PERSONAS = ['roccione', 'indeciso', 'gregge', 'bastian', 'equilibrato'] as const;
+export type BotPersona = (typeof BOT_PERSONAS)[number];
+
+/** Short host-facing labels for each bot persona (with an emoji). */
+export const PERSONA_LABELS: Record<BotPersona, string> = {
+  roccione: '🧊 Roccione',
+  indeciso: '🤔 Indeciso',
+  gregge: '🐑 Gregge',
+  bastian: '😈 Bastian',
+  equilibrato: '⚖️ Equilibrato',
+};
+
 /** Host-facing labels for the menu presets. */
 export const FORMAT_LABELS: Record<SessionFormat, { nome: string; durata: string; round: number }> = {
   assaggio: { nome: 'Assaggio', durata: '~15 min', round: 3 },
@@ -58,6 +75,17 @@ export const REGISTER_LABELS: Record<ContentRegister, string> = {
 
 /** Minimum connected players required before the host can start. */
 export const MIN_PLAYERS_TO_START = 3;
+
+/** The game's objective, stated to players (persuasion framing). */
+export const OBJECTIVE =
+  'Convinci gli altri a passare dalla tua parte… e resta pronto a cambiare idea tu.';
+
+/** Three-step "how to play", shown to players on their phone before the game. */
+export const HOW_TO_PLAY: readonly string[] = [
+  'Voti A o B sul tuo telefono.',
+  'Ascolti chi difende la propria scelta.',
+  'Voti di nuovo: confermi o cambi idea.',
+];
 
 /**
  * Phases of the game state machine. Mirror of the server's `GamePhase` in
@@ -87,6 +115,14 @@ export interface PlayerJoinPayload {
 export interface PublicPlayer {
   id: string;
   nickname: string;
+  /** True for bot players (Fase B); absent/false for humans. */
+  isBot?: boolean;
+  /** The bot's persona; only present for bots. */
+  persona?: BotPersona;
+}
+
+export interface RemoveBotPayload {
+  id: string;
 }
 
 export interface PlayerJoinedPayload {
@@ -148,6 +184,42 @@ export interface DefenseState {
   turn: number;
   /** Total number of defense turns this round (0, 1, or 2). */
   totalTurns: number;
+  /** The bot defender's canned argument (Fase B); null for human speakers. */
+  argument: string | null;
+}
+
+/**
+ * The swing between the two votes (aggregate counts only). Mirror of the
+ * server's `SwingResult` in server/src/game/rooms.ts.
+ */
+export interface SwingResult {
+  first: VoteSplit;
+  second: VoteSplit;
+  switched: number;
+  netSwing: VoteSplit;
+}
+
+/** How many votes a defender's side gained between the first and second vote. */
+export interface DefenseImpact {
+  defender: Defender;
+  votes: number;
+}
+
+/** Public results view (PHASE_RESULTS): the swing + per-defender attribution. */
+export interface PublicSwing extends SwingResult {
+  attribution: DefenseImpact[];
+}
+
+/** The fun end-of-game superlatives (mirror of the server's `AwardId`). */
+export type AwardId = 'persuasore' | 'banderuola' | 'roccione' | 'sintonia' | 'bastian';
+
+/** An award and who won it. */
+export interface Award {
+  id: AwardId;
+  title: string;
+  emoji: string;
+  description: string;
+  winner: PublicPlayer;
 }
 
 export interface GameStatePayload {
@@ -176,6 +248,13 @@ export interface GameStatePayload {
    * Only the chosen defenders' identities/side are public.
    */
   defense: DefenseState | null;
+  /**
+   * The swing + per-defender attribution, shown only in PHASE_RESULTS; null
+   * otherwise. Aggregate counts only — never who voted what.
+   */
+  swing: PublicSwing | null;
+  /** The end-of-game awards, shown only in FINAL_AWARDS; null otherwise. */
+  awards: Award[] | null;
 }
 
 /** Which side a player secretly votes for. */
@@ -223,6 +302,7 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
 export type StartGameError =
   | 'ROOM_NOT_FOUND'
   | 'NOT_ENOUGH_PLAYERS'
+  | 'NO_HUMAN_PLAYERS'
   | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
   | 'ALREADY_STARTED';
@@ -234,7 +314,8 @@ export interface HostStartErrorPayload {
 /** User-facing (Italian) messages for start-game errors. */
 export const START_ERROR_MESSAGES: Record<StartGameError, string> = {
   ROOM_NOT_FOUND: 'Stanza non trovata',
-  NOT_ENOUGH_PLAYERS: 'Servono almeno 3 giocatori',
+  NOT_ENOUGH_PLAYERS: 'Servono almeno 3 partecipanti (anche bot)',
+  NO_HUMAN_PLAYERS: 'Serve almeno una persona in carne e ossa',
   INVALID_DILEMMA_COUNT: 'Numero di dilemmi non valido',
   INVALID_REGISTER: 'Registro non valido',
   ALREADY_STARTED: 'La partita è già iniziata',

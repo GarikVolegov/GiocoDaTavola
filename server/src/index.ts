@@ -48,6 +48,11 @@ function gameStatePayload(room: Room) {
     // Who is defending + turn progress, gated to DEFENSE (null otherwise). Only
     // the chosen defenders' identities/side are public; no other votes leak.
     defense: rooms.publicDefense(room.code),
+    // The swing + per-defender attribution, gated to PHASE_RESULTS (null
+    // otherwise). Aggregate counts only — never who voted what.
+    swing: rooms.publicSwing(room.code),
+    // The end-of-game awards, gated to FINAL_AWARDS (null otherwise).
+    awards: rooms.publicAwards(room.code),
   };
 }
 
@@ -142,6 +147,21 @@ io.on('connection', (socket) => {
     const code = hostRooms.get(socket.id);
     if (!code) return;
     advanceAndBroadcast(code);
+  });
+
+  // The host adds a bot to fill a seat (enables solo play). Bots have no socket;
+  // the server drives their votes. Broadcast the updated roster on success.
+  socket.on('host:addBot', () => {
+    const code = hostRooms.get(socket.id);
+    if (!code) return;
+    if (rooms.addBot(code).ok) broadcastLobby(code);
+  });
+
+  // The host removes a bot by id from the room it owns.
+  socket.on('host:removeBot', (payload: { id?: string }) => {
+    const code = hostRooms.get(socket.id);
+    if (!code) return;
+    if (rooms.removeBot(code, String(payload?.id ?? ''))) broadcastLobby(code);
   });
 
   // A player joins from their phone with a room code + nickname.

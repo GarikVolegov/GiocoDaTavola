@@ -299,11 +299,11 @@ export default function PlayerApp() {
               style={{
                 padding: '0.5rem 0.9rem',
                 borderRadius: '0.6rem',
-                background: 'rgba(127,127,127,0.18)',
+                background: p.isBot ? 'rgba(192,79,255,0.18)' : 'rgba(127,127,127,0.18)',
                 fontWeight: 600,
               }}
             >
-              {p.nickname}
+              {p.isBot ? '🤖 ' : ''}{p.nickname}
             </li>
           ))}
         </ul>
