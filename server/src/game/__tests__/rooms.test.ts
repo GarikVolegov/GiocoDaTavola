@@ -1096,6 +1096,70 @@ describe('RoomStore bots (Fase B)', () => {
   });
 });
 
+describe('RoomStore bot defender AI hooks (Fase C)', () => {
+  // 2 humans on A, 1 bot on B -> defenders [A: sock-0 (human), B: bot]. Lands on
+  // DEFENSE turn 0 (the human); advance once to reach the bot's turn.
+  function botDefenseRoom(store: RoomStore): { code: string; botId: string } {
+    const { code } = store.create();
+    store.join(code, 'sock-0', 'H0');
+    store.join(code, 'sock-1', 'H1');
+    const bot = store.addBot(code, 'roccione');
+    const botId = bot.ok ? bot.player.id : '';
+    store.startGame(code, 3);
+    let g = 0;
+    while (store.get(code)?.phase !== 'VOTE_1' && g++ < 10) store.advancePhase(code);
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'A');
+    store.vote(code, botId, 'B');
+    store.advancePhase(code); // SPLIT_REVEAL
+    store.advancePhase(code); // DEFENSE (turn 0 = human on A)
+    return { code, botId };
+  }
+
+  it('exposes the current bot defender context only at the bot turn', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code, botId } = botDefenseRoom(store);
+    expect(store.publicDefense(code)?.speaker?.id).toBe('sock-0');
+    expect(store.botDefenderContext(code)).toBeNull(); // human turn
+    store.advancePhase(code); // bot's turn
+    expect(store.publicDefense(code)?.speaker?.id).toBe(botId);
+    const ctx = store.botDefenderContext(code);
+    expect(ctx?.persona).toBe('roccione');
+    expect(ctx?.side).toBe('B');
+    expect(ctx?.dilemma.id).toBe('d1');
+    expect(ctx?.dilemmaIndex).toBe(1);
+    expect(ctx?.defenseTurnIndex).toBe(1);
+  });
+
+  it('has no bot defender context outside DEFENSE or for unknown rooms', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = botDefenseRoom(store);
+    store.advancePhase(code); // bot turn
+    store.advancePhase(code); // -> VOTE_2
+    expect(store.botDefenderContext(code)).toBeNull();
+    expect(store.botDefenderContext('ZZZZ')).toBeNull();
+  });
+
+  it('applies the AI argument only for the matching DEFENSE turn', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = botDefenseRoom(store);
+    store.advancePhase(code); // bot turn (dilemmaIndex 1, defenseTurnIndex 1)
+    expect(store.setBotDefenseArgument(code, 1, 0, 'stale turn')).toBe(false);
+    expect(store.setBotDefenseArgument(code, 2, 1, 'wrong dilemma')).toBe(false);
+    expect(store.setBotDefenseArgument(code, 1, 1, 'Argomento AI')).toBe(true);
+    expect(store.publicDefense(code)?.argument).toBe('Argomento AI');
+  });
+
+  it('rejects the AI argument outside DEFENSE / unknown room', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = botDefenseRoom(store);
+    store.advancePhase(code); // bot turn
+    store.advancePhase(code); // -> VOTE_2
+    expect(store.setBotDefenseArgument(code, 1, 1, 'nope')).toBe(false);
+    expect(store.setBotDefenseArgument('ZZZZ', 1, 1, 'nope')).toBe(false);
+  });
+});
+
 describe('startGame con registro', () => {
   it('default register = misto quando non specificato', () => {
     const store = new RoomStore();

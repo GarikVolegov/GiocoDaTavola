@@ -4,3 +4,6 @@ dist/
 *.log
 .last-branch
 .vscode/
+.env
+.env.*
+!.env.example

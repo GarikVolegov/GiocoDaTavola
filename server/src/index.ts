@@ -4,6 +4,14 @@ import { Server } from 'socket.io';
 import path from 'path';
 import fs from 'fs';
 import { RoomStore, isVotingPhase, type Room } from './game/rooms';
+import { generateBotDefense, aiDefenseEnabled } from './game/aiDefense';
+
+// Load server/.env (e.g. AI_BASE_URL / AI_MODEL for self-hosted LLM defenses) if
+// present. Zero-dependency: uses Node's built-in env-file loader (Node 20.12+).
+const envFile = path.resolve(__dirname, '../.env');
+if (fs.existsSync(envFile)) {
+  (process as NodeJS.Process & { loadEnvFile?: (p: string) => void }).loadEnvFile?.(envFile);
+}
 
 const app = express();
 const httpServer = createServer(app);
@@ -87,6 +95,24 @@ function schedulePhase(code: string): void {
   phaseTimers.set(code, timer);
 }
 
+// When a bot is the current DEFENSE speaker, ask the self-hosted LLM for its
+// argument and, once it returns, upgrade the (already-broadcast) templated line
+// in place and re-broadcast. Fire-and-forget: if AI is disabled or the call
+// fails, the template stands; stale results (turn advanced) are dropped by the store.
+function maybeGenerateAiDefense(code: string): void {
+  const ctx = rooms.botDefenderContext(code);
+  if (!ctx) return;
+  generateBotDefense(ctx.persona, ctx.dilemma, ctx.side)
+    .then((text) => {
+      if (text && rooms.setBotDefenseArgument(code, ctx.dilemmaIndex, ctx.defenseTurnIndex, text)) {
+        broadcastGameState(code);
+      }
+    })
+    .catch(() => {
+      /* keep the templated fallback */
+    });
+}
+
 // Advance the state machine one step, broadcast it, and arm the next timer.
 // Used by both timer expiry and the host's force-advance.
 function advanceAndBroadcast(code: string): void {
@@ -94,6 +120,7 @@ function advanceAndBroadcast(code: string): void {
   if (!result.ok) return;
   broadcastGameState(code);
   schedulePhase(code);
+  maybeGenerateAiDefense(code);
 }
 
 app.get('/api/health', (_req, res) => {
@@ -233,4 +260,7 @@ if (fs.existsSync(clientDist)) {
 const PORT = Number(process.env.PORT) || 3000;
 httpServer.listen(PORT, () => {
   console.log(`[server] listening on http://localhost:${PORT}`);
+  console.log(
+    `[server] AI bot defenses: ${aiDefenseEnabled() ? `on (${process.env.AI_MODEL || 'gemma3:4b'} @ ${process.env.AI_BASE_URL})` : 'off (templated fallback)'}`,
+  );
 });

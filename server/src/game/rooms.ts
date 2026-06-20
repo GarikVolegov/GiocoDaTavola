@@ -702,6 +702,46 @@ export class RoomStore {
   }
 
   /**
+   * Context for generating an AI defense (Fase C): non-null only when the current
+   * DEFENSE speaker is a bot. Carries the persona, the dilemma, the side, and the
+   * turn coordinates so a late AI result can be matched back to the right turn.
+   */
+  botDefenderContext(code: string): {
+    persona: BotPersona;
+    dilemma: Dilemma;
+    side: VoteChoice;
+    dilemmaIndex: number;
+    defenseTurnIndex: number;
+  } | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'DEFENSE' || !room.currentDilemma) return null;
+    const defender = room.defenders[room.defenseTurnIndex];
+    if (!defender) return null;
+    const player = room.players.get(defender.id);
+    if (!player?.isBot || !player.persona) return null;
+    return {
+      persona: player.persona,
+      dilemma: room.currentDilemma,
+      side: defender.side,
+      dilemmaIndex: room.dilemmaIndex,
+      defenseTurnIndex: room.defenseTurnIndex,
+    };
+  }
+
+  /**
+   * Apply an AI-generated argument to the current DEFENSE turn (Fase C). No-op
+   * (returns false) unless still on the exact turn it was requested for — async
+   * results that arrive after the turn advanced are safely dropped.
+   */
+  setBotDefenseArgument(code: string, dilemmaIndex: number, defenseTurnIndex: number, text: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'DEFENSE') return false;
+    if (room.dilemmaIndex !== dilemmaIndex || room.defenseTurnIndex !== defenseTurnIndex) return false;
+    room.defenseArgument = text;
+    return true;
+  }
+
+  /**
    * Compute the end-of-game awards from the accumulated per-player stats. Each
    * superlative goes to its leader; ties break by join order (insertion order of
    * the stats map). Awards with no meaningful winner (e.g. nobody changed their
