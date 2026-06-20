@@ -32,7 +32,7 @@
 | `server/data/dilemmas.json` | Contenuti, ora taggati per registro | Modify |
 | `server/src/game/deck.ts` | `Dilemma` (+`register`), `loadDilemmas`, **`dilemmasForRegister`**, `Deck` | Modify |
 | `server/src/game/__tests__/deck.test.ts` | Test filtro registro + minimo contenuti per registro | Modify |
-| `server/src/game/rooms.ts` | Tipi/costanti registro+formato, `Room.register`, `startGame(code, format, register)` | Modify |
+| `server/src/game/rooms.ts` | Registro+guardia, `Room.register`, preset 3/5/7, `startGame(code, dilemmaCount, register)` | Modify |
 | `server/src/game/__tests__/rooms.test.ts` | Aggiorna i test `startGame`; aggiunge registro/formato | Modify |
 | `client/src/shared/events.ts` | Tipi/costanti/label registro+formato, `StartGamePayload`, errori, `GameStatePayload.register` | Modify |
 | `server/src/index.ts` | Handler `host:startGame` legge `{format, register}`; `gameStatePayload` +`register` | Modify |
@@ -154,7 +154,7 @@ git commit -m "feat: tag dilemmas by register + dilemmasForRegister filter"
 
 ---
 
-### Task 2: Registro + formato in `startGame` (rooms)
+### Task 2: Registro in `startGame` + conteggi preset 3/5/7 (rooms)
 
 **Files:**
 - Modify: `server/src/game/rooms.ts`
@@ -163,17 +163,17 @@ git commit -m "feat: tag dilemmas by register + dilemmasForRegister filter"
 **Interfaces:**
 - Consumes: `ContentRegister`, `dilemmasForRegister`, `Deck`, `loadDilemmas` da `./deck`.
 - Produces:
-  - `const SESSION_FORMATS = ['assaggio', 'classica', 'maratona'] as const`; `type SessionFormat`.
-  - `const FORMAT_DILEMMA_COUNT: Record<SessionFormat, number> = { assaggio: 3, classica: 5, maratona: 7 }`.
-  - `const CONTENT_REGISTERS = ['vita', 'business', 'misto'] as const` (mirror del tipo in `deck.ts`).
+  - `const DILEMMA_COUNT_OPTIONS = [3, 5, 7] as const` (era `[3, 4, 5]`; ora sono i conteggi prodotti dai preset Assaggio/Classica/Maratona). `type DilemmaCount` + `isDilemmaCount` restano (derivano dalla costante).
+  - `const CONTENT_REGISTERS = ['vita', 'business', 'misto'] as const` (mirror del tipo in `deck.ts`) + guardia `isContentRegister`.
   - `Room.register: ContentRegister | null`.
-  - `startGame(code: string, format: string, register: string): StartGameResult` — nuova firma (sostituisce `dilemmaCount`).
-  - `StartGameError` = `'ROOM_NOT_FOUND' | 'NOT_ENOUGH_PLAYERS' | 'INVALID_FORMAT' | 'INVALID_REGISTER' | 'ALREADY_STARTED'`.
+  - `startGame(code: string, dilemmaCount: number, register?: string): StartGameResult` — **stessa forma di prima** con un 3° parametro `register` opzionale (default `'misto'`). NON cambia in firma `(format, …)`: il "formato" è un concetto solo client.
+  - `StartGameError` = `'ROOM_NOT_FOUND' | 'NOT_ENOUGH_PLAYERS' | 'INVALID_DILEMMA_COUNT' | 'INVALID_REGISTER' | 'ALREADY_STARTED'` (aggiunge solo `INVALID_REGISTER`).
   - Il costruttore di `RoomStore` cambia il 3° argomento in `makeDeck: (register: ContentRegister) => Deck` (default `(register) => new Deck(dilemmasForRegister(loadDilemmas(), register))`).
+- **Ripple minimo sui test esistenti:** `register` ha default `'misto'`, quindi le ~14 chiamate di setup `startGame(code, 3|5)` restano valide e NON vanno toccate. Vanno aggiornati solo: la call `startGame(code, 4)` (4 non è più un preset → `5`) e i test di validazione del count (insieme valido ora `{3,5,7}`; `4` invalido, `2`/`6` restano invalidi).
 
 - [ ] **Step 1: Scrivere/aggiornare i test (falliscono)**
 
-In `server/src/game/__tests__/rooms.test.ts`: **sostituire** i test che usano `startGame(code, 3)` / `INVALID_DILEMMA_COUNT` con la nuova firma e aggiungere i casi registro/formato. Test da avere:
+In `server/src/game/__tests__/rooms.test.ts`: AGGIUNGERE il blocco registro qui sotto e AGGIORNARE solo i test di validazione del count per il nuovo insieme `{3,5,7}` (la call setup `startGame(code, 4)` → `5`; `4` ora è invalido). Le altre ~14 call di setup `startGame(code, 3|5)` restano valide (register ha default `'misto'`). Test da avere:
 
 ```ts
 import { Deck, type Dilemma } from '../deck';
@@ -183,67 +183,59 @@ function addPlayers(store: RoomStore, code: string, n: number) {
   for (let i = 0; i < n; i++) store.join(code, `p${i}`, `P${i}`);
 }
 
-describe('startGame con formato + registro', () => {
-  it('avvia con formato valido e imposta dilemmaCount dal formato', () => {
+describe('startGame con registro', () => {
+  it('default register = misto quando non specificato', () => {
     const store = new RoomStore();
     const { code } = store.create();
     addPlayers(store, code, 3);
-    const res = store.startGame(code, 'classica', 'misto');
+    const res = store.startGame(code, 5);
     expect(res.ok).toBe(true);
     if (res.ok) {
       expect(res.room.phase).toBe('PHASE_INTRO');
-      expect(res.room.dilemmaCount).toBe(5); // classica
+      expect(res.room.dilemmaCount).toBe(5);
       expect(res.room.register).toBe('misto');
     }
   });
 
-  it('assaggio = 3, maratona = 7', () => {
-    const store = new RoomStore();
-    const a = store.create(); addPlayers(store, a.code, 3);
-    const m = store.create(); addPlayers(store, m.code, 3);
-    const ra = store.startGame(a.code, 'assaggio', 'vita');
-    const rm = store.startGame(m.code, 'maratona', 'business');
-    expect(ra.ok && ra.room.dilemmaCount).toBe(3);
-    expect(rm.ok && rm.room.dilemmaCount).toBe(7);
+  it('accetta i conteggi dei preset 3 / 5 / 7', () => {
+    for (const n of [3, 5, 7] as const) {
+      const store = new RoomStore();
+      const { code } = store.create();
+      addPlayers(store, code, 3);
+      expect(store.startGame(code, n, 'misto').ok).toBe(true);
+    }
   });
 
-  it('rifiuta un formato non valido', () => {
+  it('rifiuta un conteggio non valido (4 non è più un preset)', () => {
     const store = new RoomStore();
     const { code } = store.create();
     addPlayers(store, code, 3);
-    expect(store.startGame(code, 'gigante', 'misto')).toEqual({ ok: false, error: 'INVALID_FORMAT' });
+    expect(store.startGame(code, 4, 'misto')).toEqual({ ok: false, error: 'INVALID_DILEMMA_COUNT' });
   });
 
   it('rifiuta un registro non valido', () => {
     const store = new RoomStore();
     const { code } = store.create();
     addPlayers(store, code, 3);
-    expect(store.startGame(code, 'classica', 'sport')).toEqual({ ok: false, error: 'INVALID_REGISTER' });
+    expect(store.startGame(code, 5, 'sport')).toEqual({ ok: false, error: 'INVALID_REGISTER' });
   });
 
-  it('rifiuta con meno di 3 giocatori', () => {
-    const store = new RoomStore();
-    const { code } = store.create();
-    addPlayers(store, code, 2);
-    expect(store.startGame(code, 'classica', 'misto')).toEqual({ ok: false, error: 'NOT_ENOUGH_PLAYERS' });
-  });
-
-  it('rifiuta un avvio ripetuto', () => {
+  it('imposta il registro scelto sulla room', () => {
     const store = new RoomStore();
     const { code } = store.create();
     addPlayers(store, code, 3);
-    store.startGame(code, 'classica', 'misto');
-    expect(store.startGame(code, 'classica', 'misto')).toEqual({ ok: false, error: 'ALREADY_STARTED' });
+    const res = store.startGame(code, 3, 'business');
+    expect(res.ok && res.room.register).toBe('business');
   });
 
   it('costruisce il deck dal registro scelto', () => {
     const onlyVita: Dilemma[] = [
       { id: 'x1', text: 't1', optionA: 'a', optionB: 'b', register: 'vita' },
     ];
-    const store = new RoomStore(undefined, undefined, () => new Deck(onlyVita, () => 0));
+    const store = new RoomStore(undefined, undefined, (_register) => new Deck(onlyVita, () => 0));
     const { code } = store.create();
     addPlayers(store, code, 3);
-    const res = store.startGame(code, 'assaggio', 'vita');
+    const res = store.startGame(code, 3, 'vita');
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.room.deck?.remainingCount).toBe(1);
   });
@@ -253,41 +245,29 @@ describe('startGame con formato + registro', () => {
 - [ ] **Step 2: Verificare che falliscano**
 
 Run: `npx vitest run server/src/game/__tests__/rooms.test.ts`
-Expected: FAIL — `startGame` ha ancora la firma `(code, dilemmaCount)` e non esistono `register`/formati.
+Expected: FAIL — `startGame` non accetta ancora `register`, `4` è ancora valido e non esiste `INVALID_REGISTER`.
 
 - [ ] **Step 3: Aggiornare `rooms.ts`**
 
 1. Import: `import { Deck, dilemmasForRegister, loadDilemmas, type Dilemma, type ContentRegister } from './deck';`
-2. Rimuovere `DILEMMA_COUNT_OPTIONS` / `DilemmaCount` / `isDilemmaCount` (sostituiti). Aggiungere:
+2. Cambiare `DILEMMA_COUNT_OPTIONS` da `[3, 4, 5]` a `[3, 5, 7]` (lasciare `DilemmaCount`/`isDilemmaCount` come sono — derivano dalla costante). Aggiungere i registri:
 
 ```ts
-/** Session formats the host can pick; each maps to a number of dilemmas. */
-export const SESSION_FORMATS = ['assaggio', 'classica', 'maratona'] as const;
-export type SessionFormat = (typeof SESSION_FORMATS)[number];
-export const FORMAT_DILEMMA_COUNT: Record<SessionFormat, number> = {
-  assaggio: 3,
-  classica: 5,
-  maratona: 7,
-};
-
 /** Content registers the host can pick (mirror of deck.ts ContentRegister). */
 export const CONTENT_REGISTERS = ['vita', 'business', 'misto'] as const;
 
-function isSessionFormat(v: string): v is SessionFormat {
-  return (SESSION_FORMATS as readonly string[]).includes(v);
-}
 function isContentRegister(v: string): v is ContentRegister {
   return (CONTENT_REGISTERS as readonly string[]).includes(v);
 }
 ```
 
-3. `StartGameError`:
+3. `StartGameError` — aggiungere solo `INVALID_REGISTER`:
 
 ```ts
 export type StartGameError =
   | 'ROOM_NOT_FOUND'
   | 'NOT_ENOUGH_PLAYERS'
-  | 'INVALID_FORMAT'
+  | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
   | 'ALREADY_STARTED';
 ```
@@ -305,18 +285,18 @@ constructor(
 ```
 
 6. `create()`: aggiungere `register: null,` accanto agli altri campi.
-7. Riscrivere `startGame`:
+7. Aggiornare `startGame` (aggiunge `register`, mantiene il count; ordine di validazione invariato + registro dopo il count):
 
 ```ts
-startGame(code: string, format: string, register: string): StartGameResult {
+startGame(code: string, dilemmaCount: number, register: string = 'misto'): StartGameResult {
   const room = this.rooms.get(code);
   if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
   if (room.phase !== 'LOBBY') return { ok: false, error: 'ALREADY_STARTED' };
-  if (!isSessionFormat(format)) return { ok: false, error: 'INVALID_FORMAT' };
+  if (!isDilemmaCount(dilemmaCount)) return { ok: false, error: 'INVALID_DILEMMA_COUNT' };
   if (!isContentRegister(register)) return { ok: false, error: 'INVALID_REGISTER' };
   if (room.players.size < MIN_PLAYERS_TO_START) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
 
-  room.dilemmaCount = FORMAT_DILEMMA_COUNT[format];
+  room.dilemmaCount = dilemmaCount;
   room.register = register;
   room.dilemmaIndex = 0;
   room.phase = 'PHASE_INTRO';
@@ -330,18 +310,18 @@ startGame(code: string, format: string, register: string): StartGameResult {
 - [ ] **Step 4: Verificare che i test passino**
 
 Run: `npx vitest run server/src/game/__tests__/rooms.test.ts`
-Expected: PASS. Poi `npm test` per l'intera suite — rimuovere/aggiornare eventuali residui che ancora chiamavano `startGame(code, 3)` o citavano `INVALID_DILEMMA_COUNT`/`DILEMMA_COUNT_OPTIONS`.
+Expected: PASS. Poi `npm test` per l'intera suite — l'unico residuo da aggiornare è la call `startGame(code, 4)` (→ `5`) e i test che asserivano `4` valido. `INVALID_DILEMMA_COUNT` resta (cambia solo l'insieme valido a `{3,5,7}`); le call con `3`/`5` non si toccano.
 
 - [ ] **Step 5: Typecheck server**
 
 Run: `npm run typecheck`
-Expected: PASS (nessun riferimento residuo ai simboli rimossi).
+Expected: PASS.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add server/src/game/rooms.ts server/src/game/__tests__/rooms.test.ts
-git commit -m "feat: startGame takes session format + content register"
+git commit -m "feat: startGame accepts content register; presets 3/5/7"
 ```
 
 ---
@@ -352,14 +332,15 @@ git commit -m "feat: startGame takes session format + content register"
 - Modify: `client/src/shared/events.ts`
 
 **Interfaces:**
-- Produces (duplicati lato client, identici ai valori server):
-  - `SESSION_FORMATS`, `type SessionFormat`, `FORMAT_DILEMMA_COUNT`.
-  - `CONTENT_REGISTERS`, `type ContentRegister`.
+- Produces (lato client):
+  - `SESSION_FORMATS`, `type SessionFormat`, `FORMAT_DILEMMA_COUNT` (mappa formato→count, **solo client**).
+  - `CONTENT_REGISTERS`, `type ContentRegister` (mirror dei valori server).
   - `FORMAT_LABELS: Record<SessionFormat, { nome: string; durata: string; round: number }>`.
   - `REGISTER_LABELS: Record<ContentRegister, string>`.
-  - `StartGamePayload = { format: SessionFormat; register: ContentRegister }` (sostituisce `{ dilemmaCount }`).
-  - `StartGameError` aggiornato + `START_ERROR_MESSAGES` aggiornato.
+  - `StartGamePayload = { dilemmaCount: number; register: ContentRegister }` (aggiunge `register`; il client invia il count derivato dal formato).
+  - `StartGameError` aggiornato (aggiunge `INVALID_REGISTER`) + `START_ERROR_MESSAGES`.
   - `GameStatePayload.register: ContentRegister | null`.
+  - Rimuovere `DILEMMA_COUNT_OPTIONS`/`DilemmaCount` dal client (l'host ora usa i formati).
 
 - [ ] **Step 1: Aggiornare `events.ts`**
 
@@ -393,29 +374,29 @@ export const REGISTER_LABELS: Record<ContentRegister, string> = {
 };
 ```
 
-Aggiornare `StartGamePayload`:
+Aggiornare `StartGamePayload` (il client invia il count derivato dal formato):
 
 ```ts
 export interface StartGamePayload {
-  format: SessionFormat;
+  dilemmaCount: number;
   register: ContentRegister;
 }
 ```
 
-Aggiornare `StartGameError` + messaggi:
+Aggiornare `StartGameError` + messaggi (aggiunge solo `INVALID_REGISTER`):
 
 ```ts
 export type StartGameError =
   | 'ROOM_NOT_FOUND'
   | 'NOT_ENOUGH_PLAYERS'
-  | 'INVALID_FORMAT'
+  | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
   | 'ALREADY_STARTED';
 
 export const START_ERROR_MESSAGES: Record<StartGameError, string> = {
   ROOM_NOT_FOUND: 'Stanza non trovata',
   NOT_ENOUGH_PLAYERS: 'Servono almeno 3 giocatori',
-  INVALID_FORMAT: 'Formato non valido',
+  INVALID_DILEMMA_COUNT: 'Numero di dilemmi non valido',
   INVALID_REGISTER: 'Registro non valido',
   ALREADY_STARTED: 'La partita è già iniziata',
 };
@@ -443,7 +424,7 @@ Expected: errori SOLO in `HostApp.tsx` (usa `DILEMMA_COUNT_OPTIONS` e invia `dil
 - Modify: `server/src/index.ts`
 
 **Interfaces:**
-- Consumes: `RoomStore.startGame(code, format, register)`; `Room.register`.
+- Consumes: `RoomStore.startGame(code, dilemmaCount, register)`; `Room.register`.
 
 - [ ] **Step 1: Aggiornare `gameStatePayload`**
 
@@ -457,7 +438,7 @@ Aggiungere `register` (dopo `dilemmaCount`):
 - [ ] **Step 2: Aggiornare l'handler `host:startGame`**
 
 ```ts
-  socket.on('host:startGame', (payload: { format?: string; register?: string }) => {
+  socket.on('host:startGame', (payload: { dilemmaCount?: number; register?: string }) => {
     const code = hostRooms.get(socket.id);
     if (!code) {
       socket.emit('host:startError', { error: 'ROOM_NOT_FOUND' });
@@ -465,8 +446,8 @@ Aggiungere `register` (dopo `dilemmaCount`):
     }
     const result = rooms.startGame(
       code,
-      String(payload?.format ?? ''),
-      String(payload?.register ?? ''),
+      Number(payload?.dilemmaCount),
+      String(payload?.register ?? 'misto'),
     );
     if (!result.ok) {
       socket.emit('host:startError', { error: result.error });
@@ -490,12 +471,12 @@ Expected: lato server PASS (gli errori restanti sono solo in `HostApp.tsx`, Task
 - Modify: `client/src/host/HostApp.tsx`
 
 **Interfaces:**
-- Consumes: `SESSION_FORMATS`, `FORMAT_LABELS`, `CONTENT_REGISTERS`, `REGISTER_LABELS`, `SessionFormat`, `ContentRegister`, `StartGamePayload`.
+- Consumes: `SESSION_FORMATS`, `FORMAT_LABELS`, `FORMAT_DILEMMA_COUNT`, `CONTENT_REGISTERS`, `REGISTER_LABELS`, `SessionFormat`, `ContentRegister`, `StartGamePayload`.
 
 - [ ] **Step 1: Aggiornare import e stato**
 
 In `client/src/host/HostApp.tsx`:
-- Negli import da `'../shared/events'`: rimuovere `DILEMMA_COUNT_OPTIONS`; aggiungere `SESSION_FORMATS, FORMAT_LABELS, CONTENT_REGISTERS, REGISTER_LABELS, type SessionFormat, type ContentRegister`.
+- Negli import da `'../shared/events'`: rimuovere `DILEMMA_COUNT_OPTIONS`; aggiungere `SESSION_FORMATS, FORMAT_LABELS, FORMAT_DILEMMA_COUNT, CONTENT_REGISTERS, REGISTER_LABELS, type SessionFormat, type ContentRegister`.
 - Sostituire lo stato `chosenCount`:
 
 ```tsx
@@ -508,7 +489,10 @@ In `client/src/host/HostApp.tsx`:
 ```tsx
   const startGame = () => {
     setStartError(null);
-    getSocket().emit(SocketEvents.HostStartGame, { format, register });
+    getSocket().emit(SocketEvents.HostStartGame, {
+      dilemmaCount: FORMAT_DILEMMA_COUNT[format],
+      register,
+    });
   };
 ```
 
@@ -655,14 +639,14 @@ await mkPlayer(code, 'A');
 await mkPlayer(code, 'B');
 await mkPlayer(code, 'C');
 
-// Avvio con menù: Maratona + Business
-host.emit('host:startGame', { format: 'maratona', register: 'business' });
+// Avvio con menù: Maratona (count 7) + Business
+host.emit('host:startGame', { dilemmaCount: 7, register: 'business' });
 const state = await wait(host, 'game:state');
 console.assert(state.phase === 'PHASE_INTRO', 'phase PHASE_INTRO');
 console.assert(state.dilemmaCount === 7, 'maratona => 7 dilemmi, got ' + state.dilemmaCount);
 console.assert(state.register === 'business', 'register business, got ' + state.register);
 
-// Formato non valido => errore
+// Registro non valido => errore
 const host2 = io(URL, { transports: ['websocket'] });
 await wait(host2, 'connect');
 host2.emit('host:createRoom');
@@ -670,11 +654,11 @@ const r2 = await wait(host2, 'host:roomCreated');
 await mkPlayer(r2.code, 'X');
 await mkPlayer(r2.code, 'Y');
 await mkPlayer(r2.code, 'Z');
-host2.emit('host:startGame', { format: 'gigante', register: 'misto' });
+host2.emit('host:startGame', { dilemmaCount: 5, register: 'sport' });
 const err = await wait(host2, 'host:startError');
-console.assert(err.error === 'INVALID_FORMAT', 'INVALID_FORMAT, got ' + err.error);
+console.assert(err.error === 'INVALID_REGISTER', 'INVALID_REGISTER, got ' + err.error);
 
-console.log('OK: menù serata verificato (maratona=7, register=business, formato non valido respinto)');
+console.log('OK: menù serata verificato (count=7, register=business, registro non valido respinto)');
 process.exit(0);
 ```
 
@@ -711,7 +695,7 @@ git commit -m "test: verifica e2e menù serata (formato+registro su socket)" --a
 
 **2. Placeholder scan:** nessun "TBD/TODO"; ogni step ha codice/comando concreto. Il tagging di `dilemmas.json` è guidato da una regola esplicita + un test che ne impone il minimo (≥8 per registro) + un pool pronto da incollare. ✓
 
-**3. Type consistency:** `SessionFormat`/`ContentRegister`/`FORMAT_DILEMMA_COUNT`/`StartGameError` definiti identici in `rooms.ts` (Task 2) e `events.ts` (Task 3); `startGame(code, format, register)` usato coerentemente in rooms (Task 2), index (Task 4), host (Task 5) e nello script di verifica (Task 6). `makeDeck(register)` coerente tra costruttore e `startGame`. ✓
+**3. Type consistency:** `ContentRegister`/`CONTENT_REGISTERS` identici in `deck.ts`/`rooms.ts` (Task 1-2) ed `events.ts` (Task 3); `startGame(code, dilemmaCount, register?)` usato coerentemente in rooms (Task 2), index (Task 4) e nello script di verifica (Task 6); il client invia `{ dilemmaCount: FORMAT_DILEMMA_COUNT[format], register }` (Task 5). `DILEMMA_COUNT_OPTIONS=[3,5,7]` allineato server/client. `makeDeck(register)` coerente tra costruttore e `startGame`. ✓
 
 ## Note di coordinamento con Ralph
 
