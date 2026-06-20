@@ -163,6 +163,46 @@ export function nextPhase(
   return { phase: current, dilemmaIndex };
 }
 
+/** Ordered phases of a single 1v1 duel round. */
+const DUEL_SEQUENCE: GamePhase[] = [
+  'DUEL_PICK',
+  'DUEL_REVEAL',
+  'DUEL_ARGUE',
+  'DUEL_REPICK',
+  'DUEL_RESULT',
+];
+
+/**
+ * Pure duel state-machine transition (the 1v1 analogue of nextPhase). PHASE_INTRO
+ * opens the first pick; from DUEL_REVEAL we skip straight to DUEL_RESULT when the
+ * two players already `agreed` (otherwise argue → repick → result); DUEL_RESULT
+ * loops to the next dilemma's DUEL_PICK or ends at FINAL_DUEL. `agreed` is only
+ * consulted leaving DUEL_REVEAL.
+ */
+export function nextDuelPhase(
+  current: GamePhase,
+  dilemmaIndex: number,
+  dilemmaCount: number,
+  agreed: boolean,
+): PhaseTransition {
+  if (current === 'PHASE_INTRO') return { phase: 'DUEL_PICK', dilemmaIndex: 1 };
+  if (current === 'DUEL_REVEAL') {
+    return agreed
+      ? { phase: 'DUEL_RESULT', dilemmaIndex }
+      : { phase: 'DUEL_ARGUE', dilemmaIndex };
+  }
+  if (current === 'DUEL_RESULT') {
+    return dilemmaIndex < dilemmaCount
+      ? { phase: 'DUEL_PICK', dilemmaIndex: dilemmaIndex + 1 }
+      : { phase: 'FINAL_DUEL', dilemmaIndex };
+  }
+  const i = DUEL_SEQUENCE.indexOf(current);
+  if (i >= 0 && i < DUEL_SEQUENCE.length - 1) {
+    return { phase: DUEL_SEQUENCE[i + 1], dilemmaIndex };
+  }
+  return { phase: current, dilemmaIndex };
+}
+
 export interface Player {
   /** Stable identity for the lifetime of the connection (socket id for now). */
   id: string;

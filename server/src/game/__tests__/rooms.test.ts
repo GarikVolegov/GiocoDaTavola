@@ -3,6 +3,7 @@ import {
   RoomStore,
   generateRoomCode,
   nextPhase,
+  nextDuelPhase,
   isVotingPhase,
   PHASE_DURATIONS_MS,
   MAX_PLAYERS,
@@ -1241,5 +1242,24 @@ describe('RoomStore duel mode', () => {
     store.create();
     for (const id of ['a', 'b', 'c']) store.join('CCCC', id, id);
     expect(store.startGame('CCCC', 3, 'misto', 'duello')).toEqual({ ok: false, error: 'WRONG_PLAYER_COUNT' });
+  });
+});
+
+describe('nextDuelPhase', () => {
+  it('walks the duel sequence (differ path)', () => {
+    expect(nextDuelPhase('PHASE_INTRO', 0, 3, false)).toEqual({ phase: 'DUEL_PICK', dilemmaIndex: 1 });
+    expect(nextDuelPhase('DUEL_PICK', 1, 3, false)).toEqual({ phase: 'DUEL_REVEAL', dilemmaIndex: 1 });
+    expect(nextDuelPhase('DUEL_REVEAL', 1, 3, false)).toEqual({ phase: 'DUEL_ARGUE', dilemmaIndex: 1 });
+    expect(nextDuelPhase('DUEL_ARGUE', 1, 3, false)).toEqual({ phase: 'DUEL_REPICK', dilemmaIndex: 1 });
+    expect(nextDuelPhase('DUEL_REPICK', 1, 3, false)).toEqual({ phase: 'DUEL_RESULT', dilemmaIndex: 1 });
+  });
+
+  it('skips argue/repick when agreed', () => {
+    expect(nextDuelPhase('DUEL_REVEAL', 1, 3, true)).toEqual({ phase: 'DUEL_RESULT', dilemmaIndex: 1 });
+  });
+
+  it('loops then ends at FINAL_DUEL', () => {
+    expect(nextDuelPhase('DUEL_RESULT', 1, 3, false)).toEqual({ phase: 'DUEL_PICK', dilemmaIndex: 2 });
+    expect(nextDuelPhase('DUEL_RESULT', 3, 3, false)).toEqual({ phase: 'FINAL_DUEL', dilemmaIndex: 3 });
   });
 });
