@@ -12,6 +12,7 @@ import {
   MIN_PLAYERS_TO_START,
   START_ERROR_MESSAGES,
   PHASE_LABELS,
+  OBJECTIVE,
   type SessionFormat,
   type ContentRegister,
   type RoomCreatedPayload,
@@ -80,7 +81,7 @@ export default function HostApp() {
   const advance = () => getSocket().emit(SocketEvents.HostAdvancePhase);
 
   const canStart = players.length >= MIN_PLAYERS_TO_START;
-  const joinUrl = code ? `${window.location.origin}/?room=${code}` : '';
+  const joinUrl = code ? `${window.location.origin}/join?room=${code}` : '';
 
   // In-game: every phase past the lobby shows its label + a server-driven
   // countdown. Detailed per-phase content (dilemma text, vote tallies, …)
@@ -92,6 +93,8 @@ export default function HostApp() {
     const dilemma = game.dilemma;
     const split = game.split;
     const defense = game.defense;
+    const swing = game.swing;
+    const awards = game.awards;
     return (
       <main style={screen}>
         {inDilemma && (
@@ -102,10 +105,15 @@ export default function HostApp() {
         <h1 style={{ fontSize: '2.5rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
 
         {phase === 'PHASE_INTRO' && (
-          <p style={{ fontSize: '1.5rem', opacity: 0.85, margin: 0, maxWidth: '40rem' }}>
-            Vi mostreremo {game.dilemmaCount} dilemmi. Votate, ascoltate le difese e
-            cambiate idea… se vi convincono!
-          </p>
+          <>
+            <p style={{ fontSize: '1.5rem', opacity: 0.85, margin: 0, maxWidth: '40rem' }}>
+              Vi mostreremo {game.dilemmaCount} dilemmi. Votate, ascoltate le difese e
+              cambiate idea… se vi convincono!
+            </p>
+            <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, maxWidth: '40rem' }}>
+              🎯 {OBJECTIVE}
+            </p>
+          </>
         )}
 
         {dilemma && (
@@ -232,6 +240,53 @@ export default function HostApp() {
             </p>
           )
         )}
+
+        {phase === 'PHASE_RESULTS' && swing && (
+          <section
+            aria-label="Risultati della persuasione"
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', maxWidth: 'min(92vw, 50rem)' }}
+          >
+            <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
+              {swing.switched === 0
+                ? 'Nessuno ha cambiato idea 🪨'
+                : `${swing.switched} ${swing.switched === 1 ? 'persona ha' : 'persone hanno'} cambiato idea! 🔄`}
+            </p>
+            {swing.attribution.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {swing.attribution.map((imp) => (
+                  <p key={imp.defender.id} style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>
+                    Le difese di <span style={{ color: '#ffd36b' }}>{imp.defender.nickname}</span> hanno
+                    spostato {imp.votes} {imp.votes === 1 ? 'voto' : 'voti'} verso {imp.defender.side} ·{' '}
+                    {imp.defender.side === 'A' ? dilemma?.optionA : dilemma?.optionB}
+                  </p>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {phase === 'FINAL_AWARDS' &&
+          (awards && awards.length > 0 ? (
+            <section
+              aria-label="Premi finali"
+              style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'center', maxWidth: 'min(92vw, 60rem)' }}
+            >
+              {awards.map((a) => (
+                <Card
+                  key={a.id}
+                  glow="accent"
+                  style={{ flex: '1 1 16rem', minWidth: '14rem', maxWidth: '18rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'center', textAlign: 'center' }}
+                >
+                  <span style={{ fontSize: '2.5rem' }}>{a.emoji}</span>
+                  <span style={{ fontSize: '1.3rem', fontWeight: 800 }}>{a.title}</span>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ffd36b' }}>{a.winner.nickname}</span>
+                  <span style={{ fontSize: '0.95rem', opacity: 0.8 }}>{a.description}</span>
+                </Card>
+              ))}
+            </section>
+          ) : (
+            <p style={{ fontSize: '1.4rem', opacity: 0.8, margin: 0 }}>Grazie per aver giocato! 🎉</p>
+          ))}
 
         {remaining != null && (
           <div

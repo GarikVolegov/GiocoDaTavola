@@ -6,6 +6,8 @@ import {
   JOIN_ERROR_MESSAGES,
   VOTE_ERROR_MESSAGES,
   PHASE_LABELS,
+  OBJECTIVE,
+  HOW_TO_PLAY,
   type PlayerJoinedPayload,
   type PlayerJoinErrorPayload,
   type LobbyUpdatePayload,
@@ -15,6 +17,7 @@ import {
   type PlayerVotedPayload,
   type PlayerVoteErrorPayload,
 } from '../shared/events';
+import { Card } from '../shared/ui';
 
 // Read a prefilled room code from the QR join URL (`/?room=CODE`).
 function initialCode(): string {
@@ -227,6 +230,7 @@ export default function PlayerApp() {
   }
 
   if (joinedCode && phase !== 'LOBBY') {
+    const switched = game?.swing?.switched ?? 0;
     return (
       <main style={wrap}>
         <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
@@ -238,9 +242,25 @@ export default function PlayerApp() {
             {remaining}s
           </div>
         )}
-        <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
-          Guarda lo schermo condiviso 👀
-        </p>
+        {phase === 'PHASE_INTRO' ? (
+          <p style={{ fontSize: '1.15rem', fontWeight: 600, margin: 0, maxWidth: '22rem' }}>
+            🎯 {OBJECTIVE}
+          </p>
+        ) : phase === 'PHASE_RESULTS' ? (
+          <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
+            {switched === 0
+              ? 'Nessuno ha cambiato idea dopo le difese.'
+              : `${switched} ${switched === 1 ? 'persona ha' : 'persone hanno'} cambiato idea dopo le difese!`}
+          </p>
+        ) : phase === 'FINAL_AWARDS' ? (
+          <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
+            🏆 Guarda i premi sullo schermo!
+          </p>
+        ) : (
+          <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
+            Guarda lo schermo condiviso 👀
+          </p>
+        )}
       </main>
     );
   }
@@ -287,6 +307,28 @@ export default function PlayerApp() {
             </li>
           ))}
         </ul>
+
+        <Card
+          glow="accent"
+          style={{
+            width: 'min(90vw, 22rem)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.6rem',
+            textAlign: 'left',
+          }}
+        >
+          <h3 style={{ margin: 0, fontSize: '1.05rem' }}>Come funziona</h3>
+          <ol style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            {HOW_TO_PLAY.map((step) => (
+              <li key={step} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{step}</li>
+            ))}
+          </ol>
+          <p style={{ margin: '0.2rem 0 0', fontSize: '0.95rem', fontWeight: 700 }}>
+            🎯 {OBJECTIVE}
+          </p>
+        </Card>
+
         <p style={{ opacity: 0.7, margin: 0 }}>In attesa che l’host avvii la partita…</p>
       </main>
     );
@@ -294,8 +336,8 @@ export default function PlayerApp() {
 
   return (
     <main style={wrap}>
-      <h1 style={{ fontSize: '1.75rem', margin: 0 }}>Dibattiti tra amici</h1>
-      <p style={{ opacity: 0.7, margin: 0 }}>Entra nella stanza dal tuo telefono.</p>
+      <h1 style={{ fontSize: '1.75rem', margin: 0 }}>Entra nella partita</h1>
+      <p style={{ opacity: 0.7, margin: 0 }}>Inserisci il codice e il tuo nome.</p>
       <form
         onSubmit={handleSubmit}
         style={{
