@@ -578,7 +578,11 @@ export default function HostApp() {
 
   return (
     <main style={screen}>
-      <h1 style={{ fontSize: '2.5rem', margin: 0 }}>Dibattiti tra amici</h1>
+      <img
+        src="/schierati-logo.svg"
+        alt="SCHIERATI — il gioco dei dilemmi tra amici"
+        style={{ width: 'min(82vw, 34rem)', height: 'auto' }}
+      />
 
       {code ? (
         <>

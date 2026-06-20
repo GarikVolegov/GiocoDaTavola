@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 380" role="img" aria-label="SCHIERATI">
+  <defs>
+    <clipPath id="leftHalfT">
+      <path d="M0,0 L660,-40 L600,90 L680,150 L590,240 L640,340 L0,380 Z"/>
+    </clipPath>
+    <clipPath id="rightHalfT">
+      <path d="M660,-40 L1280,-60 L1280,380 L640,340 L590,240 L680,150 L600,90 Z"/>
+    </clipPath>
+    <style>
+      .wmt{font-family:'Arial Black','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:900;font-size:196px;letter-spacing:1px;}
+    </style>
+  </defs>
+
+  <!-- transparent background: place on dark surfaces -->
+  <g clip-path="url(#leftHalfT)">
+    <text class="wmt" x="640" y="236" text-anchor="middle" fill="#4F8DFF">SCHIERATI</text>
+  </g>
+  <g clip-path="url(#rightHalfT)">
+    <text class="wmt" x="640" y="236" text-anchor="middle" fill="#FFD23F">SCHIERATI</text>
+  </g>
+
+  <path d="M660,-40 L600,90 L680,150 L590,240 L640,340" fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

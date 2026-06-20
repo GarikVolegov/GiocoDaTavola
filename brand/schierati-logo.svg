@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 500" role="img" aria-label="SCHIERATI — il gioco dei dilemmi tra amici">
+  <defs>
+    <clipPath id="leftHalf">
+      <path d="M0,0 L660,20 L600,150 L680,210 L590,300 L640,400 L0,440 Z"/>
+    </clipPath>
+    <clipPath id="rightHalf">
+      <path d="M660,20 L1280,0 L1280,440 L640,400 L590,300 L680,210 L600,150 Z"/>
+    </clipPath>
+    <style>
+      .wm{font-family:'Arial Black','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:900;font-size:196px;letter-spacing:1px;}
+      .pay{font-family:'Helvetica Neue',Arial,sans-serif;font-weight:700;font-size:32px;letter-spacing:11px;fill:#9FB2D8;}
+    </style>
+  </defs>
+
+  <!-- dark panel (matches app --bg so it blends into any screen) -->
+  <rect width="1280" height="500" rx="52" fill="#0E1020"/>
+
+  <!-- blue side -->
+  <g clip-path="url(#leftHalf)">
+    <text class="wm" x="640" y="296" text-anchor="middle" fill="#4F8DFF">SCHIERATI</text>
+  </g>
+  <!-- yellow side -->
+  <g clip-path="url(#rightHalf)">
+    <text class="wm" x="640" y="296" text-anchor="middle" fill="#FFD23F">SCHIERATI</text>
+  </g>
+
+  <!-- lightning seam: dark underlay + white bolt -->
+  <path d="M660,20 L600,150 L680,210 L590,300 L640,400" fill="none" stroke="#0E1020" stroke-width="24" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M660,20 L600,150 L680,210 L590,300 L640,400" fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- payoff -->
+  <text class="pay" x="648" y="452" text-anchor="middle">IL GIOCO DEI DILEMMI TRA AMICI</text>
+</svg>

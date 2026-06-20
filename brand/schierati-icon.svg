@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SCHIERATI icon">
+  <defs>
+    <clipPath id="rounded"><rect width="512" height="512" rx="112"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#rounded)">
+    <!-- two sides -->
+    <rect x="0" y="0" width="256" height="512" fill="#4F8DFF"/>
+    <rect x="256" y="0" width="256" height="512" fill="#FFD23F"/>
+
+    <!-- lightning divider: dark gap + white bolt -->
+    <path d="M300,52 L196,250 L256,250 L212,460 L330,232 L268,232 Z"
+          fill="#0E1224"/>
+    <path d="M292,64 L208,256 L262,256 L226,448 L324,238 L272,238 Z"
+          fill="#FFFFFF"/>
+  </g>
+</svg>

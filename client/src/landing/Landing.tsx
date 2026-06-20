@@ -10,9 +10,11 @@ export default function Landing() {
   const navigate = useNavigate();
   return (
     <Stage variant="player">
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)', margin: 0 }}>
-        Dibattiti tra amici
-      </h1>
+      <img
+        src="/schierati-logo-transparent.svg"
+        alt="SCHIERATI"
+        style={{ width: 'min(78vw, 26rem)', height: 'auto' }}
+      />
       <p
         style={{
           color: 'var(--text-muted)',
