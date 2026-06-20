@@ -12,10 +12,13 @@ import {
   nextPhase,
   nextDuelPhase,
 } from './phases';
+import { ensureStats, computeAwards as computeAwardsFor, type Award, type PlayerStats } from './awards';
 
 // Re-export the phase state machine so existing importers (tests, index.ts)
 // keep importing GamePhase / PHASE_DURATIONS_MS / nextPhase / … from './rooms'.
 export * from './phases';
+// Re-export the scoring types so consumers keep importing them from './rooms'.
+export type { Award, AwardId, PlayerStats } from './awards';
 
 const CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const CODE_LENGTH = 4;
@@ -258,31 +261,6 @@ export interface PublicSwing extends SwingResult {
  * end-of-game awards. Recorded once per round on entry to PHASE_RESULTS — never
  * sent to clients during play (only the final awards superlatives are public).
  */
-export interface PlayerStats {
-  /** Rounds the player took part in (voted in both VOTE_1 and VOTE_2). */
-  rounds: number;
-  /** Rounds where the second vote differed from the first. */
-  changedCount: number;
-  /** Rounds the player ended on the majority side of the second vote. */
-  majorityCount: number;
-  /** Rounds the player ended on the minority side of the second vote. */
-  minorityCount: number;
-  /** Net votes that swung toward sides this player defended. */
-  persuasion: number;
-}
-
-/** The fun end-of-game superlatives (persuasion-themed). */
-export type AwardId = 'persuasore' | 'banderuola' | 'roccione' | 'sintonia' | 'bastian';
-
-/** An award and who won it. Only awards with a real winner are ever returned. */
-export interface Award {
-  id: AwardId;
-  title: string;
-  emoji: string;
-  description: string;
-  winner: Player;
-}
-
 function isDilemmaCount(n: number): n is DilemmaCount {
   return (DILEMMA_COUNT_OPTIONS as readonly number[]).includes(n);
 }
@@ -378,16 +356,6 @@ export class RoomStore {
     return botDefenseArgument(player.persona, room.currentDilemma, defender.side, this.rng);
   }
 
-  /** Get (creating if needed) the accumulating stats record for a player. */
-  private static ensureStats(room: Room, id: string): PlayerStats {
-    let s = room.stats.get(id);
-    if (!s) {
-      s = { rounds: 0, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0 };
-      room.stats.set(id, s);
-    }
-    return s;
-  }
-
   /**
    * Fold the just-finished round into each player's accumulating stats: who took
    * part, who changed their mind, who ended on the majority/minority side, and
@@ -403,7 +371,7 @@ export class RoomStore {
     for (const [id, firstChoice] of room.votes1) {
       const secondChoice = room.votes.get(id);
       if (!secondChoice) continue; // left before the second vote -> skip this round
-      const s = RoomStore.ensureStats(room, id);
+      const s = ensureStats(room, id);
       s.rounds++;
       if (secondChoice !== firstChoice) s.changedCount++;
       if (majoritySide) {
@@ -413,7 +381,7 @@ export class RoomStore {
     }
     const netSwing: VoteTally = { A: second.A - first.A, B: second.B - first.B };
     for (const d of room.defenders) {
-      if (netSwing[d.side] > 0) RoomStore.ensureStats(room, d.id).persuasion += netSwing[d.side];
+      if (netSwing[d.side] > 0) ensureStats(room, d.id).persuasion += netSwing[d.side];
     }
   }
 
@@ -885,40 +853,7 @@ export class RoomStore {
    */
   computeAwards(code: string): Award[] {
     const room = this.rooms.get(code);
-    if (!room) return [];
-    const entries = [...room.stats.entries()]; // insertion order == join order
-    const winnerBy = (
-      score: (s: PlayerStats) => number,
-      eligible: (s: PlayerStats) => boolean,
-    ): Player | null => {
-      let best: { id: string; score: number } | null = null;
-      for (const [id, s] of entries) {
-        if (!eligible(s)) continue;
-        const value = score(s);
-        if (best === null || value > best.score) best = { id, score: value };
-      }
-      if (!best) return null;
-      const nickname = room.players.get(best.id)?.nickname ?? '';
-      return { id: best.id, nickname };
-    };
-    const defs: Array<Omit<Award, 'winner'> & { winner: Player | null }> = [
-      { id: 'persuasore', title: 'Il Persuasore', emoji: '🏆',
-        description: 'Le sue difese hanno spostato più voti.',
-        winner: winnerBy((s) => s.persuasion, (s) => s.persuasion > 0) },
-      { id: 'banderuola', title: 'La Banderuola', emoji: '🎏',
-        description: 'Ha cambiato idea più spesso.',
-        winner: winnerBy((s) => s.changedCount, (s) => s.changedCount > 0) },
-      { id: 'roccione', title: 'Il Roccione', emoji: '🪨',
-        description: 'Non ha mai cambiato idea.',
-        winner: winnerBy((s) => s.rounds, (s) => s.rounds > 0 && s.changedCount === 0) },
-      { id: 'sintonia', title: 'In sintonia col gruppo', emoji: '🔮',
-        description: 'Più spesso dalla parte della maggioranza.',
-        winner: winnerBy((s) => s.majorityCount, (s) => s.majorityCount > 0) },
-      { id: 'bastian', title: 'Bastian Contrario', emoji: '🦓',
-        description: 'Più spesso in minoranza.',
-        winner: winnerBy((s) => s.minorityCount, (s) => s.minorityCount > 0) },
-    ];
-    return defs.filter((d): d is Award => d.winner !== null);
+    return room ? computeAwardsFor(room) : [];
   }
 
   /**
