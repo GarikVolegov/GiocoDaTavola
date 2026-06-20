@@ -879,6 +879,102 @@ export class RoomStore {
   }
 
   /**
+   * Public duel reveal (only DUEL_REVEAL, null otherwise): both players' picks +
+   * whether they agreed. The picks are intentionally public here — that's the
+   * point of the reveal; no other state leaks.
+   */
+  publicDuelReveal(code: string): {
+    picks: Array<{ id: string; nickname: string; choice: VoteChoice }>;
+    agreed: boolean;
+  } | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'DUEL_REVEAL') return null;
+    const picks = this.duelPlayers(room)
+      .map((p) => ({ id: p.id, nickname: p.nickname, choice: room.votes.get(p.id) }))
+      .filter((p): p is { id: string; nickname: string; choice: VoteChoice } => p.choice != null);
+    return { picks, agreed: this.duelAgreed(room) };
+  }
+
+  /**
+   * Public duel argue turn (only DUEL_ARGUE, null otherwise): who is arguing now
+   * (the current player + their picked side) and the turn progress.
+   */
+  publicDuelTurn(code: string): {
+    speaker: { id: string; nickname: string; side: VoteChoice } | null;
+    turn: number;
+    totalTurns: number;
+  } | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'DUEL_ARGUE') return null;
+    const players = this.duelPlayers(room);
+    const total = players.length;
+    const cur = players[room.duelTurnIndex];
+    const side = cur ? room.votes.get(cur.id) ?? null : null;
+    return {
+      speaker: cur && side ? { id: cur.id, nickname: cur.nickname, side } : null,
+      turn: total === 0 ? 0 : room.duelTurnIndex + 1,
+      totalTurns: total,
+    };
+  }
+
+  /**
+   * Public duel result (only DUEL_RESULT, null otherwise): whether they agreed,
+   * and—if not—who convinced whom (a player whose re-pick changed was convinced
+   * by the other). Derived from votes1 (first pick) vs votes (re-pick).
+   */
+  publicDuelResult(code: string): {
+    agreed: boolean;
+    convinced: Array<{
+      persuader: { id: string; nickname: string };
+      convinced: { id: string; nickname: string };
+    }>;
+  } | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'DUEL_RESULT') return null;
+    const players = this.duelPlayers(room);
+    const first0 = players[0] ? room.votes1.get(players[0].id) : undefined;
+    const first1 = players[1] ? room.votes1.get(players[1].id) : undefined;
+    const agreed = players.length === 2 && first0 != null && first0 === first1;
+    const convinced: Array<{
+      persuader: { id: string; nickname: string };
+      convinced: { id: string; nickname: string };
+    }> = [];
+    if (!agreed) {
+      for (let i = 0; i < players.length; i++) {
+        const me = players[i];
+        const other = players[1 - i];
+        const before = room.votes1.get(me.id);
+        const after = room.votes.get(me.id);
+        if (other && before && after && before !== after) {
+          convinced.push({
+            persuader: { id: other.id, nickname: other.nickname },
+            convinced: { id: me.id, nickname: me.nickname },
+          });
+        }
+      }
+    }
+    return { agreed, convinced };
+  }
+
+  /**
+   * Public duel summary (only FINAL_DUEL, null otherwise): each player's total
+   * persuasions and how many rounds the two agreed.
+   */
+  publicDuelSummary(code: string): {
+    scores: Array<{ id: string; nickname: string; persuasions: number }>;
+    agreements: number;
+  } | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'FINAL_DUEL') return null;
+    const scores = this.duelPlayers(room).map((p) => ({
+      id: p.id,
+      nickname: p.nickname,
+      persuasions: room.duelScore.get(p.id) ?? 0,
+    }));
+    return { scores, agreements: room.duelAgreements };
+  }
+
+  /**
    * Context for generating an AI defense (Fase C): non-null only when the current
    * DEFENSE speaker is a bot. Carries the persona, the dilemma, the side, and the
    * turn coordinates so a late AI result can be matched back to the right turn.

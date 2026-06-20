@@ -1308,3 +1308,51 @@ describe('duel round (advancePhase)', () => {
     expect(store.get('EEEE')!.duelAgreements).toBe(1);
   });
 });
+
+describe('duel public readers', () => {
+  it('vote() accepts picks in DUEL_PICK and DUEL_REPICK', () => {
+    expect(isVotingPhase('DUEL_PICK')).toBe(true);
+    expect(isVotingPhase('DUEL_REPICK')).toBe(true);
+  });
+
+  it('publicDuelReveal exposes both picks only in DUEL_REVEAL; turn in DUEL_ARGUE', () => {
+    const store = new RoomStore(() => 'FFFF', () => 1000, makeFixtureDeck, () => 0);
+    startDuel(store, 'FFFF');
+    store.vote('FFFF', 'p1', 'A');
+    store.vote('FFFF', 'p2', 'B');
+    expect(store.publicDuelReveal('FFFF')).toBeNull(); // still DUEL_PICK
+    store.advancePhase('FFFF'); // DUEL_REVEAL
+    const rev = store.publicDuelReveal('FFFF')!;
+    expect(rev.agreed).toBe(false);
+    expect(rev.picks).toHaveLength(2);
+    store.advancePhase('FFFF'); // DUEL_ARGUE
+    expect(store.publicDuelReveal('FFFF')).toBeNull();
+    const turn = store.publicDuelTurn('FFFF')!;
+    expect(turn.totalTurns).toBe(2);
+    expect(turn.speaker?.side).toBe('A'); // first player picked A
+  });
+
+  it('publicDuelResult lists who convinced whom only in DUEL_RESULT', () => {
+    const store = new RoomStore(() => 'HHHH', () => 1000, makeFixtureDeck, () => 0);
+    startDuel(store, 'HHHH');
+    store.vote('HHHH', 'p1', 'A');
+    store.vote('HHHH', 'p2', 'B');
+    store.advancePhase('HHHH'); // REVEAL
+    store.advancePhase('HHHH'); // ARGUE t0
+    store.advancePhase('HHHH'); // ARGUE t1
+    store.advancePhase('HHHH'); // REPICK
+    store.vote('HHHH', 'p1', 'B'); // p1 flips
+    store.advancePhase('HHHH'); // RESULT
+    const res = store.publicDuelResult('HHHH')!;
+    expect(res.agreed).toBe(false);
+    expect(res.convinced).toHaveLength(1);
+    expect(res.convinced[0].persuader.id).toBe('p2');
+    expect(res.convinced[0].convinced.id).toBe('p1');
+  });
+
+  it('publicDuelSummary only at FINAL_DUEL', () => {
+    const store = new RoomStore(() => 'GGGG', () => 1000, makeFixtureDeck, () => 0);
+    startDuel(store, 'GGGG');
+    expect(store.publicDuelSummary('GGGG')).toBeNull();
+  });
+});
