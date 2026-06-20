@@ -14,6 +14,8 @@ import {
   PHASE_LABELS,
   PERSONA_LABELS,
   OBJECTIVE,
+  JOIN_ERROR_MESSAGES,
+  VOTE_ERROR_MESSAGES,
   type SessionFormat,
   type ContentRegister,
   type RoomCreatedPayload,
@@ -21,6 +23,11 @@ import {
   type GameStatePayload,
   type HostStartErrorPayload,
   type PublicPlayer,
+  type PlayerJoinedPayload,
+  type PlayerJoinErrorPayload,
+  type PlayerVotedPayload,
+  type PlayerVoteErrorPayload,
+  type VoteChoice,
 } from '../shared/events';
 import { Card, Pill, Button, Alert } from '../shared/ui';
 
@@ -44,6 +51,15 @@ export default function HostApp() {
   const [format, setFormat] = useState<SessionFormat>('classica');
   const [register, setRegister] = useState<ContentRegister>('misto');
   const [startError, setStartError] = useState<string | null>(null);
+  // "Gioca anche tu": the host can also join as a human player on this device.
+  // We reuse the existing player:join/player:vote events on the host's socket
+  // (one socket can be both host and player server-side), so the host counts as
+  // the 1 human that enables solo play with bots — no phone / QR needed.
+  const [myNickname, setMyNickname] = useState('Tu');
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [myVote, setMyVote] = useState<VoteChoice | null>(null);
+  const [voteError, setVoteError] = useState<string | null>(null);
 
   useEffect(() => {
     const socket = getSocket();
@@ -55,21 +71,48 @@ export default function HostApp() {
     };
     const onStartError = ({ error }: HostStartErrorPayload) =>
       setStartError(START_ERROR_MESSAGES[error] ?? 'Impossibile avviare la partita');
+    // The host playing on this device joins/votes as a player too (same socket).
+    const onJoined = ({ player }: PlayerJoinedPayload) => {
+      setMyPlayerId(player.id);
+      setJoinError(null);
+    };
+    const onJoinError = ({ error }: PlayerJoinErrorPayload) =>
+      setJoinError(JOIN_ERROR_MESSAGES[error] ?? 'Errore durante l’accesso');
+    const onVoted = ({ choice }: PlayerVotedPayload) => {
+      setMyVote(choice);
+      setVoteError(null);
+    };
+    const onVoteError = ({ error }: PlayerVoteErrorPayload) =>
+      setVoteError(VOTE_ERROR_MESSAGES[error] ?? 'Voto non riuscito');
     socket.on(SocketEvents.HostRoomCreated, onRoomCreated);
     socket.on(SocketEvents.LobbyUpdate, onLobbyUpdate);
     socket.on(SocketEvents.GameState, onGameState);
     socket.on(SocketEvents.HostStartError, onStartError);
+    socket.on(SocketEvents.PlayerJoined, onJoined);
+    socket.on(SocketEvents.PlayerJoinError, onJoinError);
+    socket.on(SocketEvents.PlayerVoted, onVoted);
+    socket.on(SocketEvents.PlayerVoteError, onVoteError);
     socket.emit(SocketEvents.HostCreateRoom);
     return () => {
       socket.off(SocketEvents.HostRoomCreated, onRoomCreated);
       socket.off(SocketEvents.LobbyUpdate, onLobbyUpdate);
       socket.off(SocketEvents.GameState, onGameState);
       socket.off(SocketEvents.HostStartError, onStartError);
+      socket.off(SocketEvents.PlayerJoined, onJoined);
+      socket.off(SocketEvents.PlayerJoinError, onJoinError);
+      socket.off(SocketEvents.PlayerVoted, onVoted);
+      socket.off(SocketEvents.PlayerVoteError, onVoteError);
     };
   }, []);
 
   const phase = game?.phase ?? 'LOBBY';
   const remaining = useCountdown(game?.phaseExpiresAt ?? null);
+
+  // Each new dilemma round starts with a clean (unselected) vote for the host.
+  useEffect(() => {
+    setMyVote(null);
+    setVoteError(null);
+  }, [game?.dilemmaIndex]);
 
   const startGame = () => {
     setStartError(null);
@@ -82,6 +125,25 @@ export default function HostApp() {
   const advance = () => getSocket().emit(SocketEvents.HostAdvancePhase);
   const addBot = () => getSocket().emit(SocketEvents.HostAddBot);
   const removeBot = (id: string) => getSocket().emit(SocketEvents.HostRemoveBot, { id });
+
+  // Join this room as a human player from the host device (reuses player:join).
+  const joinAsPlayer = () => {
+    const nick = myNickname.trim();
+    if (!nick) {
+      setJoinError(JOIN_ERROR_MESSAGES.NICKNAME_REQUIRED);
+      return;
+    }
+    if (!code) return;
+    setJoinError(null);
+    getSocket().emit(SocketEvents.PlayerJoin, { code, nickname: nick });
+  };
+  // Cast (or change) the host-player's secret vote — optimistic, reconciled by
+  // player:voted / player:voteError (same flow as the phone).
+  const castVote = (choice: VoteChoice) => {
+    setMyVote(choice);
+    setVoteError(null);
+    getSocket().emit(SocketEvents.PlayerVote, { choice });
+  };
 
   // Solo play is allowed (1 human + bots), but never a bots-only game.
   const humanCount = players.filter((p) => !p.isBot).length;
@@ -167,6 +229,53 @@ export default function HostApp() {
           <p style={{ fontSize: '1.4rem', fontWeight: 600, margin: 0, opacity: 0.9 }}>
             Si vota di nuovo: confermate o cambiate idea dopo le difese 📱
           </p>
+        )}
+
+        {(phase === 'VOTE_1' || phase === 'VOTE_2') && myPlayerId && (
+          <div
+            role="group"
+            aria-label="Il tuo voto"
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {(['A', 'B'] as const).map((letter) => {
+                const selected = myVote === letter;
+                const rgb = letter === 'A' ? '79,140,255' : '255,140,79';
+                return (
+                  <button
+                    key={letter}
+                    type="button"
+                    onClick={() => castVote(letter)}
+                    aria-pressed={selected}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.7rem 1.4rem',
+                      borderRadius: '0.8rem',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      color: 'inherit',
+                      background: selected ? `rgba(${rgb},0.32)` : `rgba(${rgb},0.12)`,
+                      border: `2px solid rgba(${rgb},${selected ? 0.9 : 0.4})`,
+                    }}
+                  >
+                    <span style={{ fontSize: '1.4rem', fontWeight: 800, opacity: 0.85 }}>{letter}</span>
+                    <span>{letter === 'A' ? dilemma?.optionA : dilemma?.optionB}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {voteError ? (
+              <p role="alert" style={{ color: '#ff6b6b', margin: 0, fontWeight: 600 }}>
+                {voteError}
+              </p>
+            ) : (
+              <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
+                Il tuo voto (visibile sullo schermo) — {myVote ? `hai scelto ${myVote}` : 'tocca A o B'}
+              </p>
+            )}
+          </div>
         )}
 
         {phase === 'SPLIT_REVEAL' && split && (
@@ -420,6 +529,31 @@ export default function HostApp() {
               <Button variant="ghost" onClick={addBot} disabled={!canAddBot}>
                 + Aggiungi bot 🤖
               </Button>
+            </div>
+            <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
+              {myPlayerId ? (
+                <p style={{ margin: 0, fontWeight: 600 }}>🙋 Stai giocando anche tu su questo schermo</p>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <input
+                      value={myNickname}
+                      onChange={(e) => setMyNickname(e.target.value)}
+                      placeholder="Il tuo nome"
+                      maxLength={20}
+                      aria-label="Il tuo nickname"
+                      style={{ fontSize: '1rem', padding: '0.5rem 0.7rem', borderRadius: '0.6rem' }}
+                    />
+                    <Button variant="ghost" onClick={joinAsPlayer}>
+                      Gioca anche tu 🙋
+                    </Button>
+                  </div>
+                  <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem' }}>
+                    Gioca da questo dispositivo, senza telefono (il tuo voto sarà visibile sullo schermo).
+                  </p>
+                </>
+              )}
+              {joinError && <Alert>{joinError}</Alert>}
             </div>
           </section>
 
