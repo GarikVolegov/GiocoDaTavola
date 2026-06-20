@@ -30,9 +30,31 @@ export const SocketEvents = {
   PlayerVoteError: 'player:voteError',
 } as const;
 
-/** Number of dilemmas the host can choose to play in a game. */
-export const DILEMMA_COUNT_OPTIONS = [3, 4, 5] as const;
-export type DilemmaCount = (typeof DILEMMA_COUNT_OPTIONS)[number];
+/** Session formats and their dilemma counts (mirror server rooms.ts). */
+export const SESSION_FORMATS = ['assaggio', 'classica', 'maratona'] as const;
+export type SessionFormat = (typeof SESSION_FORMATS)[number];
+export const FORMAT_DILEMMA_COUNT: Record<SessionFormat, number> = {
+  assaggio: 3,
+  classica: 5,
+  maratona: 7,
+};
+
+/** Content registers (mirror server deck.ts / rooms.ts). */
+export const CONTENT_REGISTERS = ['vita', 'business', 'misto'] as const;
+export type ContentRegister = (typeof CONTENT_REGISTERS)[number];
+
+/** Host-facing labels for the menu presets. */
+export const FORMAT_LABELS: Record<SessionFormat, { nome: string; durata: string; round: number }> = {
+  assaggio: { nome: 'Assaggio', durata: '~15 min', round: 3 },
+  classica: { nome: 'Classica', durata: '~30 min', round: 5 },
+  maratona: { nome: 'Maratona', durata: '~45 min', round: 7 },
+};
+
+export const REGISTER_LABELS: Record<ContentRegister, string> = {
+  vita: 'Vita',
+  business: 'Business pro',
+  misto: 'Misto',
+};
 
 /** Minimum connected players required before the host can start. */
 export const MIN_PLAYERS_TO_START = 3;
@@ -91,6 +113,7 @@ export const JOIN_ERROR_MESSAGES: Record<JoinError, string> = {
 
 export interface StartGamePayload {
   dilemmaCount: number;
+  register: ContentRegister;
 }
 
 /** Public dilemma shown on the shared screen: the prompt + its two options. */
@@ -130,6 +153,8 @@ export interface DefenseState {
 export interface GameStatePayload {
   phase: GamePhase;
   dilemmaCount: number | null;
+  /** Content register chosen at start; null in the lobby. */
+  register: ContentRegister | null;
   /** Which dilemma (1-based) is in play; 0 before the first reveal. */
   dilemmaIndex: number;
   /** Epoch ms when the phase auto-advances; null if it has no timer. */
@@ -199,6 +224,7 @@ export type StartGameError =
   | 'ROOM_NOT_FOUND'
   | 'NOT_ENOUGH_PLAYERS'
   | 'INVALID_DILEMMA_COUNT'
+  | 'INVALID_REGISTER'
   | 'ALREADY_STARTED';
 
 export interface HostStartErrorPayload {
@@ -210,5 +236,6 @@ export const START_ERROR_MESSAGES: Record<StartGameError, string> = {
   ROOM_NOT_FOUND: 'Stanza non trovata',
   NOT_ENOUGH_PLAYERS: 'Servono almeno 3 giocatori',
   INVALID_DILEMMA_COUNT: 'Numero di dilemmi non valido',
+  INVALID_REGISTER: 'Registro non valido',
   ALREADY_STARTED: 'La partita è già iniziata',
 };

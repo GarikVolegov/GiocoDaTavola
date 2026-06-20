@@ -4,10 +4,16 @@ import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import {
   SocketEvents,
-  DILEMMA_COUNT_OPTIONS,
+  SESSION_FORMATS,
+  FORMAT_LABELS,
+  FORMAT_DILEMMA_COUNT,
+  CONTENT_REGISTERS,
+  REGISTER_LABELS,
   MIN_PLAYERS_TO_START,
   START_ERROR_MESSAGES,
   PHASE_LABELS,
+  type SessionFormat,
+  type ContentRegister,
   type RoomCreatedPayload,
   type LobbyUpdatePayload,
   type GameStatePayload,
@@ -32,7 +38,8 @@ export default function HostApp() {
   const [code, setCode] = useState<string | null>(null);
   const [players, setPlayers] = useState<PublicPlayer[]>([]);
   const [game, setGame] = useState<GameStatePayload | null>(null);
-  const [chosenCount, setChosenCount] = useState<number>(DILEMMA_COUNT_OPTIONS[0]);
+  const [format, setFormat] = useState<SessionFormat>('classica');
+  const [register, setRegister] = useState<ContentRegister>('misto');
   const [startError, setStartError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -63,7 +70,10 @@ export default function HostApp() {
 
   const startGame = () => {
     setStartError(null);
-    getSocket().emit(SocketEvents.HostStartGame, { dilemmaCount: chosenCount });
+    getSocket().emit(SocketEvents.HostStartGame, {
+      dilemmaCount: FORMAT_DILEMMA_COUNT[format],
+      register,
+    });
   };
 
   const advance = () => getSocket().emit(SocketEvents.HostAdvancePhase);
@@ -315,30 +325,66 @@ export default function HostApp() {
             )}
           </section>
 
-          <section style={{ width: 'min(90vw, 36rem)', display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
-            <p style={{ opacity: 0.8, margin: 0 }}>Quanti dilemmi?</p>
-            <div style={{ display: 'flex', gap: '0.6rem' }} role="group" aria-label="Numero di dilemmi">
-              {DILEMMA_COUNT_OPTIONS.map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setChosenCount(n)}
-                  aria-pressed={chosenCount === n}
-                  style={{
-                    fontSize: '1.4rem',
-                    fontWeight: 700,
-                    width: '3.2rem',
-                    padding: '0.5rem 0',
-                    borderRadius: '0.6rem',
-                    cursor: 'pointer',
-                    border: chosenCount === n ? '2px solid #4f8cff' : '2px solid transparent',
-                    background: chosenCount === n ? 'rgba(79,140,255,0.22)' : 'rgba(127,127,127,0.18)',
-                  }}
-                >
-                  {n}
-                </button>
-              ))}
+          <section style={{ width: 'min(90vw, 36rem)', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+            <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Componi la serata</h2>
+
+            <div style={{ width: '100%' }}>
+              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Argomenti</p>
+              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center' }} role="group" aria-label="Registro">
+                {CONTENT_REGISTERS.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRegister(r)}
+                    aria-pressed={register === r}
+                    style={{
+                      flex: '1 1 0',
+                      fontSize: '1.1rem',
+                      fontWeight: 700,
+                      padding: '0.6rem 0.4rem',
+                      borderRadius: '0.6rem',
+                      cursor: 'pointer',
+                      border: register === r ? '2px solid #4f8cff' : '2px solid transparent',
+                      background: register === r ? 'rgba(79,140,255,0.22)' : 'rgba(127,127,127,0.18)',
+                    }}
+                  >
+                    {REGISTER_LABELS[r]}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            <div style={{ width: '100%' }}>
+              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Durata</p>
+              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center' }} role="group" aria-label="Formato">
+                {SESSION_FORMATS.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setFormat(f)}
+                    aria-pressed={format === f}
+                    style={{
+                      flex: '1 1 0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.15rem',
+                      fontWeight: 700,
+                      padding: '0.6rem 0.4rem',
+                      borderRadius: '0.6rem',
+                      cursor: 'pointer',
+                      border: format === f ? '2px solid #4f8cff' : '2px solid transparent',
+                      background: format === f ? 'rgba(79,140,255,0.22)' : 'rgba(127,127,127,0.18)',
+                    }}
+                  >
+                    <span style={{ fontSize: '1.05rem' }}>{FORMAT_LABELS[f].nome}</span>
+                    <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+                      {FORMAT_LABELS[f].round} round · {FORMAT_LABELS[f].durata}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <button
               type="button"
               onClick={startGame}

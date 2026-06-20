@@ -33,6 +33,7 @@ function gameStatePayload(room: Room) {
   return {
     phase: room.phase,
     dilemmaCount: room.dilemmaCount,
+    register: room.register,
     dilemmaIndex: room.dilemmaIndex,
     phaseExpiresAt: room.phaseExpiresAt,
     // The dilemma in play this round (text + the two options); null outside a
@@ -115,13 +116,17 @@ io.on('connection', (socket) => {
   });
 
   // The host starts the game for the room it owns, choosing the dilemma count.
-  socket.on('host:startGame', (payload: { dilemmaCount?: number }) => {
+  socket.on('host:startGame', (payload: { dilemmaCount?: number; register?: string }) => {
     const code = hostRooms.get(socket.id);
     if (!code) {
       socket.emit('host:startError', { error: 'ROOM_NOT_FOUND' });
       return;
     }
-    const result = rooms.startGame(code, Number(payload?.dilemmaCount));
+    const result = rooms.startGame(
+      code,
+      Number(payload?.dilemmaCount),
+      String(payload?.register ?? 'misto'),
+    );
     if (!result.ok) {
       socket.emit('host:startError', { error: result.error });
       return;
