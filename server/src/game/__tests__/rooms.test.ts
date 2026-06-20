@@ -30,6 +30,15 @@ const DILEMMA_FIXTURE: Dilemma[] = Array.from({ length: 6 }, (_, i) => ({
 }));
 const makeFixtureDeck = (_register: ContentRegister) => new Deck(DILEMMA_FIXTURE, () => 0);
 
+// helper: spin up a 2-human duel and advance to the first DUEL_PICK.
+function startDuel(store: RoomStore, code: string) {
+  store.create();
+  store.join(code, 'p1', 'Ann');
+  store.join(code, 'p2', 'Bob');
+  store.startGame(code, 3, 'misto', 'duello'); // PHASE_INTRO
+  store.advancePhase(code); // -> DUEL_PICK (idx 1, dilemma drawn)
+}
+
 describe('generateRoomCode', () => {
   it('returns a 4-letter uppercase code', () => {
     for (let i = 0; i < 50; i++) {
@@ -1261,5 +1270,41 @@ describe('nextDuelPhase', () => {
   it('loops then ends at FINAL_DUEL', () => {
     expect(nextDuelPhase('DUEL_RESULT', 1, 3, false)).toEqual({ phase: 'DUEL_PICK', dilemmaIndex: 2 });
     expect(nextDuelPhase('DUEL_RESULT', 3, 3, false)).toEqual({ phase: 'FINAL_DUEL', dilemmaIndex: 3 });
+  });
+});
+
+describe('duel round (advancePhase)', () => {
+  it('differ -> argue (2 turns) -> repick flip credits the persuader', () => {
+    const store = new RoomStore(() => 'DDDD', () => 1000, makeFixtureDeck, () => 0);
+    startDuel(store, 'DDDD');
+    expect(store.get('DDDD')!.phase).toBe('DUEL_PICK');
+    store.vote('DDDD', 'p1', 'A');
+    store.vote('DDDD', 'p2', 'B');
+    store.advancePhase('DDDD'); // -> DUEL_REVEAL
+    expect(store.get('DDDD')!.phase).toBe('DUEL_REVEAL');
+    store.advancePhase('DDDD'); // differ -> DUEL_ARGUE turn 0
+    expect(store.get('DDDD')!.phase).toBe('DUEL_ARGUE');
+    expect(store.get('DDDD')!.duelTurnIndex).toBe(0);
+    store.advancePhase('DDDD'); // DUEL_ARGUE turn 1
+    expect(store.get('DDDD')!.phase).toBe('DUEL_ARGUE');
+    expect(store.get('DDDD')!.duelTurnIndex).toBe(1);
+    store.advancePhase('DDDD'); // -> DUEL_REPICK (votes1 snapshot)
+    expect(store.get('DDDD')!.phase).toBe('DUEL_REPICK');
+    store.vote('DDDD', 'p1', 'B'); // p1 flips -> Bob (p2) convinced p1
+    store.advancePhase('DDDD'); // -> DUEL_RESULT (record)
+    expect(store.get('DDDD')!.phase).toBe('DUEL_RESULT');
+    expect(store.get('DDDD')!.duelScore.get('p2')).toBe(1);
+    expect(store.get('DDDD')!.duelScore.get('p1') ?? 0).toBe(0);
+  });
+
+  it('agree -> skip argue/repick, agreements incremented', () => {
+    const store = new RoomStore(() => 'EEEE', () => 1000, makeFixtureDeck, () => 0);
+    startDuel(store, 'EEEE');
+    store.vote('EEEE', 'p1', 'A');
+    store.vote('EEEE', 'p2', 'A'); // agree
+    store.advancePhase('EEEE'); // -> DUEL_REVEAL
+    store.advancePhase('EEEE'); // agreed -> DUEL_RESULT
+    expect(store.get('EEEE')!.phase).toBe('DUEL_RESULT');
+    expect(store.get('EEEE')!.duelAgreements).toBe(1);
   });
 });

@@ -96,9 +96,17 @@ function isGameMode(v: string): v is GameMode {
   return v === 'gruppo' || v === 'duello';
 }
 
-/** Phases in which phones may cast/change a secret vote (the first + second). */
+/**
+ * Phases in which phones may cast/change a secret vote: the group first/second
+ * votes, and the duel pick/re-pick (which reuse the same vote() path).
+ */
 export function isVotingPhase(phase: GamePhase): boolean {
-  return phase === 'VOTE_1' || phase === 'VOTE_2';
+  return (
+    phase === 'VOTE_1' ||
+    phase === 'VOTE_2' ||
+    phase === 'DUEL_PICK' ||
+    phase === 'DUEL_REPICK'
+  );
 }
 
 /**
@@ -546,6 +554,82 @@ export class RoomStore {
     }
   }
 
+  /** The (up to two) human players of a duel room, in insertion order. */
+  private duelPlayers(room: Room): Player[] {
+    return [...room.players.values()].filter((p) => !p.isBot);
+  }
+
+  /** True when both duel players picked the same side this round (current votes). */
+  private duelAgreed(room: Room): boolean {
+    const players = this.duelPlayers(room);
+    if (players.length !== 2) return false;
+    const a = room.votes.get(players[0].id);
+    const b = room.votes.get(players[1].id);
+    return a != null && a === b;
+  }
+
+  /**
+   * Fold a finished duel round into the score: if the two first picks (votes1)
+   * already agreed, count one agreement; otherwise a player whose re-pick changed
+   * side was convinced, so the OTHER player earns +1 persuasion. Called on entry to
+   * DUEL_RESULT, while votes1 (first pick) and votes (re-pick) are still intact.
+   */
+  private recordDuelResult(room: Room): void {
+    const players = this.duelPlayers(room);
+    if (players.length !== 2) return;
+    const first0 = room.votes1.get(players[0].id);
+    const first1 = room.votes1.get(players[1].id);
+    if (first0 != null && first0 === first1) {
+      room.duelAgreements++;
+      return;
+    }
+    for (let i = 0; i < players.length; i++) {
+      const me = players[i];
+      const other = players[1 - i];
+      const before = room.votes1.get(me.id);
+      const after = room.votes.get(me.id);
+      if (before && after && before !== after) {
+        room.duelScore.set(other.id, (room.duelScore.get(other.id) ?? 0) + 1);
+      }
+    }
+  }
+
+  /**
+   * Advance the 1v1 duel state machine one step (the duello analogue of the group
+   * logic in advancePhase). DUEL_ARGUE runs one timed turn per player (mirror of
+   * DEFENSE); DUEL_REVEAL branches on whether the two picks agree; entering a new
+   * round (DUEL_PICK) draws a dilemma and clears the picks; DUEL_REPICK snapshots
+   * the first pick; DUEL_RESULT records the round's outcome.
+   */
+  private advanceDuelPhase(room: Room): AdvancePhaseResult {
+    if (room.phase === 'DUEL_ARGUE' && room.duelTurnIndex < this.duelPlayers(room).length - 1) {
+      room.duelTurnIndex++;
+      room.phaseExpiresAt = this.expiryFor('DUEL_ARGUE');
+      return { ok: true, room };
+    }
+    const agreed = room.phase === 'DUEL_REVEAL' ? this.duelAgreed(room) : false;
+    const t = nextDuelPhase(room.phase, room.dilemmaIndex, room.dilemmaCount ?? 0, agreed);
+    room.phase = t.phase;
+    room.dilemmaIndex = t.dilemmaIndex;
+    room.phaseExpiresAt = this.expiryFor(t.phase);
+    if (t.phase === 'DUEL_PICK') {
+      room.currentDilemma = room.deck?.draw() ?? null;
+      room.votes.clear();
+      room.votes1.clear();
+      room.duelTurnIndex = 0;
+    }
+    if (t.phase === 'DUEL_REPICK') {
+      room.votes1 = new Map(room.votes);
+    }
+    if (t.phase === 'DUEL_RESULT') {
+      // Agreed path skips DUEL_REPICK, so votes1 was never snapshotted — take it
+      // now so recordDuelResult sees first==second (no flips) and counts the agree.
+      if (room.votes1.size === 0) room.votes1 = new Map(room.votes);
+      this.recordDuelResult(room);
+    }
+    return { ok: true, room };
+  }
+
   /** Create a room with a code unique among the rooms currently in memory. */
   create(): Room {
     let code = this.genCode();
@@ -633,9 +717,12 @@ export class RoomStore {
   advancePhase(code: string): AdvancePhaseResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase === 'LOBBY' || room.phase === 'FINAL_AWARDS') {
+    if (room.phase === 'LOBBY' || room.phase === 'FINAL_AWARDS' || room.phase === 'FINAL_DUEL') {
       return { ok: false, error: 'NO_NEXT_PHASE' };
     }
+
+    // The 1v1 duel runs its own state machine, separate from the group sequence.
+    if (room.mode === 'duello') return this.advanceDuelPhase(room);
 
     // DEFENSE runs one timed turn per defender. While turns remain, advance to
     // the next speaker (re-arming the per-turn timer) instead of leaving the
