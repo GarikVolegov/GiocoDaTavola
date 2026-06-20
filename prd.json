@@ -1,5 +1,5 @@
 {
-  "project": "Dibattiti tra amici",
+  "project": "SCHIERATI",
   "branchName": "ralph/skeleton-dilemma",
   "description": "Web app stile Jackbox per un gioco da tavolo su business e crescita personale (3-8 amici, dal vivo). Schermo comune (/host) + telefoni (/). Primo build: scheletro comune (lobby con codice stanza, realtime, state-machine, timer) + fase 'Dilemma di gruppo'. Esperienza social, niente vincitore, premi simpatici a fine partita. Stack: Node + Express + Socket.IO (TypeScript), React + Vite (TypeScript), stato in memoria.",
   "userStories": [

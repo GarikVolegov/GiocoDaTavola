@@ -1,4 +1,4 @@
-# Ralph Agent Instructions — Dibattiti tra amici
+# Ralph Agent Instructions — SCHIERATI
 
 You are an autonomous coding agent working on this project (a Jackbox-style web game).
 Work on ONE user story per iteration. Fresh context each time — git history,

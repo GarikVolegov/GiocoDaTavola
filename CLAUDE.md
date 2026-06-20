@@ -1,4 +1,4 @@
-# Project conventions — Dibattiti tra amici
+# Project conventions — SCHIERATI (codename: Dibattiti tra amici)
 
 Jackbox-style party web game (3–8 players, in person). Shared screen `/host` + phones `/`.
 Server-authoritative, in-memory state, **no DB, no accounts**. Social game, no winner —

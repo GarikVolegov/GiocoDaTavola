@@ -1,4 +1,6 @@
-# Dibattiti tra amici
+# SCHIERATI
+
+> *il gioco dei dilemmi tra amici* — codename interno: "Dibattiti tra amici"
 
 Web app stile Jackbox per un gioco da tavolo su **business e crescita personale**, da
 giocare dal vivo con 3–8 amici. Uno **schermo comune** (`/host`) mostra tabellone, dilemmi
