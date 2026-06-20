@@ -1,0 +1,10 @@
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5);
+}
+.glowA { box-shadow: var(--shadow-card), var(--glow-a); }
+.glowB { box-shadow: var(--shadow-card), var(--glow-b); }
+.glowAccent { box-shadow: var(--shadow-card), var(--glow-accent); }

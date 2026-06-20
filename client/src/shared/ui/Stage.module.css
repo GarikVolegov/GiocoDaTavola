@@ -1,0 +1,10 @@
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  text-align: center;
+}
+.player { padding: var(--space-5); gap: var(--space-4); }
+.host { padding: var(--space-6); gap: var(--space-5); }
