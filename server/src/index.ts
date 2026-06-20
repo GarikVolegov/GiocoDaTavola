@@ -35,6 +35,9 @@ function gameStatePayload(room: Room) {
     dilemmaCount: room.dilemmaCount,
     dilemmaIndex: room.dilemmaIndex,
     phaseExpiresAt: room.phaseExpiresAt,
+    // The dilemma in play this round (text + the two options); null outside a
+    // dilemma. Public prompt text only — no votes/identities here.
+    dilemma: room.currentDilemma,
   };
 }
 

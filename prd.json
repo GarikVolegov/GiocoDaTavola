@@ -106,8 +106,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Room owns a Deck per game (server/src/game/rooms.ts): makeDeck injected into RoomStore (3rd ctor arg, default () => new Deck(loadDilemmas())) mirroring genCode/now; startGame creates room.deck + nulls currentDilemma; advancePhase draws room.deck.draw() ONLY on entering DILEMMA_REVEAL so the dilemma persists across VOTE_1/SPLIT_REVEAL/DEFENSE/VOTE_2/PHASE_RESULTS and a fresh non-repeating one is drawn for each dilemma of the game (TDD, 4 new tests, 35 in rooms / 45 total). game:state payload now carries `dilemma` (gameStatePayload in index.ts surfaces room.currentDilemma — public prompt text only, no votes/identities). Client: shared PublicDilemma {id,text,optionA,optionB} + GameStatePayload.dilemma in events.ts; HostApp DILEMMA_REVEAL renders the dilemma text + A/B option cards (bind game.dilemma to a local const so TS keeps the non-null narrowing inside the option-map closure); PHASE_INTRO already showed phase label + short rules for ~5s. Verified end-to-end vs built prod server (PORT=3996, 15/15): real deck loaded, PHASE_INTRO has no dilemma, DILEMMA_REVEAL surfaces real text+optionA+optionB, dilemma id stable through the round, 2nd dilemma differs (no repeat). Visual browser check still pending real browser tooling."
     },
     {
       "id": "US-008",

@@ -9,6 +9,17 @@ import {
   DILEMMA_COUNT_OPTIONS,
   type GamePhase,
 } from '../rooms';
+import { Deck, type Dilemma } from '../deck';
+
+// A small deterministic deck for driving dilemma reveals in tests: rng = () => 0
+// always picks index 0, so draws walk the fixture in order (d1, d2, d3, ...).
+const DILEMMA_FIXTURE: Dilemma[] = Array.from({ length: 6 }, (_, i) => ({
+  id: `d${i + 1}`,
+  text: `Dilemma ${i + 1}?`,
+  optionA: `A${i + 1}`,
+  optionB: `B${i + 1}`,
+}));
+const makeFixtureDeck = () => new Deck(DILEMMA_FIXTURE, () => 0);
 
 describe('generateRoomCode', () => {
   it('returns a 4-letter uppercase code', () => {
@@ -304,5 +315,57 @@ describe('RoomStore.advancePhase', () => {
     // Exactly 3 dilemmas revealed, indexed 1..3.
     expect(reveals).toEqual([1, 2, 3]);
     expect(store.get(code)?.phase).toBe('FINAL_AWARDS');
+  });
+});
+
+describe('RoomStore dilemma reveal (US-007)', () => {
+  function startedDeckRoom(store: RoomStore, count = 3): string {
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, count);
+    return code;
+  }
+
+  it('does not reveal a dilemma until DILEMMA_REVEAL', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = startedDeckRoom(store);
+    // Just started -> PHASE_INTRO, nothing revealed yet.
+    expect(store.get(code)?.phase).toBe('PHASE_INTRO');
+    expect(store.get(code)?.currentDilemma).toBeNull();
+  });
+
+  it('draws a dilemma when entering DILEMMA_REVEAL', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = startedDeckRoom(store);
+    store.advancePhase(code); // PHASE_INTRO -> DILEMMA_REVEAL
+    const room = store.get(code);
+    expect(room?.phase).toBe('DILEMMA_REVEAL');
+    expect(room?.currentDilemma).toEqual(DILEMMA_FIXTURE[0]);
+  });
+
+  it('keeps the same dilemma for the rest of the round (vote/split/defense)', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = startedDeckRoom(store);
+    store.advancePhase(code); // DILEMMA_REVEAL (d1)
+    const d = store.get(code)?.currentDilemma;
+    store.advancePhase(code); // VOTE_1
+    store.advancePhase(code); // SPLIT_REVEAL
+    expect(store.get(code)?.currentDilemma).toEqual(d);
+  });
+
+  it('draws a fresh, non-repeating dilemma for each dilemma of the game', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = startedDeckRoom(store, 3);
+    const revealed: string[] = [];
+    let guard = 0;
+    while (store.get(code)?.phase !== 'FINAL_AWARDS' && guard++ < 100) {
+      store.advancePhase(code);
+      const room = store.get(code);
+      if (room?.phase === 'DILEMMA_REVEAL' && room.currentDilemma) {
+        revealed.push(room.currentDilemma.id);
+      }
+    }
+    expect(revealed).toEqual(['d1', 'd2', 'd3']);
+    expect(new Set(revealed).size).toBe(3);
   });
 });

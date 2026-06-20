@@ -1,6 +1,8 @@
 // In-memory store of game rooms. The server is authoritative; rooms live here
 // only for the lifetime of the process (no DB).
 
+import { Deck, loadDilemmas, type Dilemma } from './deck';
+
 const CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const CODE_LENGTH = 4;
 
@@ -113,6 +115,10 @@ export interface Room {
   dilemmaIndex: number;
   /** Epoch ms when the current phase auto-advances; null if it has no timer. */
   phaseExpiresAt: number | null;
+  /** The deck for this game; created at start, drawn once per DILEMMA_REVEAL. */
+  deck: Deck | null;
+  /** The dilemma in play this round; null in the lobby/intro and after the game. */
+  currentDilemma: Dilemma | null;
 }
 
 export type JoinError = 'ROOM_NOT_FOUND' | 'NICKNAME_REQUIRED' | 'ROOM_FULL';
@@ -153,11 +159,13 @@ export function generateRoomCode(): string {
 export class RoomStore {
   private readonly rooms = new Map<string, Room>();
 
-  // `genCode` and `now` are injectable so tests can force collisions and drive
-  // phase timers deterministically.
+  // `genCode`, `now` and `makeDeck` are injectable so tests can force code
+  // collisions, drive phase timers deterministically, and supply a small
+  // deterministic dilemma deck.
   constructor(
     private readonly genCode: () => string = generateRoomCode,
     private readonly now: () => number = () => Date.now(),
+    private readonly makeDeck: () => Deck = () => new Deck(loadDilemmas()),
   ) {}
 
   /** Compute the auto-advance expiry for a phase, or null if it has no timer. */
@@ -180,6 +188,8 @@ export class RoomStore {
       dilemmaCount: null,
       dilemmaIndex: 0,
       phaseExpiresAt: null,
+      deck: null,
+      currentDilemma: null,
     };
     this.rooms.set(code, room);
     return room;
@@ -202,6 +212,8 @@ export class RoomStore {
     room.dilemmaIndex = 0;
     room.phase = 'PHASE_INTRO';
     room.phaseExpiresAt = this.expiryFor('PHASE_INTRO');
+    room.deck = this.makeDeck();
+    room.currentDilemma = null;
     return { ok: true, room };
   }
 
@@ -222,6 +234,10 @@ export class RoomStore {
     room.phase = transition.phase;
     room.dilemmaIndex = transition.dilemmaIndex;
     room.phaseExpiresAt = this.expiryFor(transition.phase);
+    // Entering a new dilemma reveal draws the next (non-repeating) dilemma.
+    if (transition.phase === 'DILEMMA_REVEAL') {
+      room.currentDilemma = room.deck?.draw() ?? null;
+    }
     return { ok: true, room };
   }
 

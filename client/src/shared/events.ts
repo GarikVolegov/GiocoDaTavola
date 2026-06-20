@@ -87,6 +87,14 @@ export interface StartGamePayload {
   dilemmaCount: number;
 }
 
+/** Public dilemma shown on the shared screen: the prompt + its two options. */
+export interface PublicDilemma {
+  id: string;
+  text: string;
+  optionA: string;
+  optionB: string;
+}
+
 export interface GameStatePayload {
   phase: GamePhase;
   dilemmaCount: number | null;
@@ -94,6 +102,8 @@ export interface GameStatePayload {
   dilemmaIndex: number;
   /** Epoch ms when the phase auto-advances; null if it has no timer. */
   phaseExpiresAt: number | null;
+  /** The dilemma in play this round; null outside a dilemma round. */
+  dilemma: PublicDilemma | null;
 }
 
 /** User-facing (Italian) short label for each phase, shown on the host. */

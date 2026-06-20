@@ -76,6 +76,9 @@ export default function HostApp() {
   // arrives in later stories; the host can always force-advance.
   if (phase !== 'LOBBY' && game) {
     const inDilemma = game.dilemmaIndex >= 1 && game.dilemmaCount != null;
+    // Bind to a local const so the non-null narrowing survives inside the
+    // option-mapping closure below (TS drops it for the mutable game.dilemma).
+    const dilemma = game.dilemma;
     return (
       <main style={screen}>
         {inDilemma && (
@@ -90,6 +93,38 @@ export default function HostApp() {
             Vi mostreremo {game.dilemmaCount} dilemmi. Votate, ascoltate le difese e
             cambiate idea… se vi convincono!
           </p>
+        )}
+
+        {dilemma && (
+          <section style={{ width: 'min(92vw, 50rem)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <p style={{ fontSize: 'clamp(1.5rem, 4vw, 2.4rem)', fontWeight: 700, margin: 0, lineHeight: 1.25 }}>
+              {dilemma.text}
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {(['A', 'B'] as const).map((letter) => (
+                <div
+                  key={letter}
+                  style={{
+                    flex: '1 1 14rem',
+                    minWidth: '12rem',
+                    padding: '1rem 1.25rem',
+                    borderRadius: '0.9rem',
+                    background: letter === 'A' ? 'rgba(79,140,255,0.18)' : 'rgba(255,140,79,0.18)',
+                    border: `2px solid ${letter === 'A' ? 'rgba(79,140,255,0.5)' : 'rgba(255,140,79,0.5)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    textAlign: 'left',
+                  }}
+                >
+                  <span style={{ fontSize: '1.8rem', fontWeight: 800, opacity: 0.85 }}>{letter}</span>
+                  <span style={{ fontSize: '1.2rem', fontWeight: 600 }}>
+                    {letter === 'A' ? dilemma.optionA : dilemma.optionB}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {remaining != null && (
