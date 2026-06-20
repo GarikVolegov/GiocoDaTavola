@@ -168,8 +168,8 @@
         "Tests pass"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "VOTE_2 re-vote + swing computation. isVotingPhase now matches VOTE_1 OR VOTE_2 (gates vote()). Room gains votes1: Map<playerId,VoteChoice> — a snapshot of the first vote taken when advancePhase enters VOTE_2 (room.votes is left intact, so each player's first vote becomes the changeable default; the live re-vote overwrites it). DILEMMA_REVEAL clears BOTH votes + votes1; leave() prunes both. New pure-ish RoomStore.computeSwing(code): SwingResult {first,second:{A,B}, switched, netSwing:{A,B}} — first=tally(votes1), second=tally(votes), switched=voters present in both whose side changed, netSwing=second-first per side; unknown room => all zeros. Refactored voteTally to share a private static tally(map) helper now reused by computeSwing. TDD: 10 new tests (70 in rooms.test / 85 total). KEY: VOTE_2 starts pre-filled with defaults so allVoted is already true — index.ts now gates the all-voted EARLY-ADVANCE to VOTE_1 ONLY (player:vote handler checks result.room.phase==='VOTE_1'; disconnect mirrors it), so VOTE_2 always runs its full 20s timer (or host force-advance). publicSplit stays gated to SPLIT_REVEAL only so the live VOTE_2 re-vote never leaks; swing is NOT broadcast yet (US-012 PHASE_RESULTS surfaces before->after). Client: PlayerApp voting view now matches VOTE_1||VOTE_2 (the phone keeps its first-vote local state as the pre-selected default since dilemmaIndex is stable across the round) + 'confermi o cambi idea?' copy; HostApp VOTE_2 shows a 'si vota di nuovo' hint. Full gate green (typecheck+lint+test+build). NOTE: a concurrent agent's `git add -A` commit dae1fde ('feat: tag dilemmas by register...') swept this story's rooms.test.ts into ITS commit, so the US-011 tests landed there and only the impl (rooms.ts/index.ts/clients) + this prd/progress are in the US-011 commit. Visual browser check still pending real browser tooling."
     },
     {
       "id": "US-012",

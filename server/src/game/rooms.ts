@@ -55,9 +55,9 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
 /** A single secret vote: which side a player chose. */
 export type VoteChoice = 'A' | 'B';
 
-/** Phases in which phones may cast/change a secret vote. */
+/** Phases in which phones may cast/change a secret vote (the first + second). */
 export function isVotingPhase(phase: GamePhase): boolean {
-  return phase === 'VOTE_1';
+  return phase === 'VOTE_1' || phase === 'VOTE_2';
 }
 
 /**
@@ -166,12 +166,20 @@ export interface Room {
   /** The dilemma in play this round; null in the lobby/intro and after the game. */
   currentDilemma: Dilemma | null;
   /**
-   * Secret first-round votes for the current dilemma, keyed by player id. Stays
-   * server-side — only aggregate counts ever leave the server. Cleared at the
-   * start of each dilemma round (on DILEMMA_REVEAL); holds only present players'
-   * votes (a leaving player's vote is dropped).
+   * Secret votes for the current dilemma, keyed by player id. Holds the first
+   * vote during VOTE_1 and the (live, changeable) second vote during VOTE_2 —
+   * each VOTE_2 entry starts equal to the player's first vote (the default).
+   * Stays server-side — only aggregate counts ever leave the server. Cleared at
+   * the start of each dilemma round (on DILEMMA_REVEAL); holds only present
+   * players' votes (a leaving player's vote is dropped).
    */
   votes: Map<string, VoteChoice>;
+  /**
+   * Snapshot of the first-round (VOTE_1) votes, taken when VOTE_2 begins, so the
+   * second vote can be compared against it (swing computation) without losing
+   * the original. Also cleared on DILEMMA_REVEAL and pruned when a player leaves.
+   */
+  votes1: Map<string, VoteChoice>;
   /**
    * The auto-selected defenders for the current round (one per side that got
    * votes, side A before B). Recomputed on entry to DEFENSE from the secret
@@ -213,6 +221,28 @@ export type VoteError =
 export type VoteResult =
   | { ok: true; room: Room }
   | { ok: false; error: VoteError };
+
+/** Aggregate A/B tally for one round of voting. Counts only — no identities. */
+export interface VoteTally {
+  A: number;
+  B: number;
+}
+
+/**
+ * The result of comparing the first vote (VOTE_1) to the second (VOTE_2):
+ * the two aggregate tallies, how many voters changed side, and the net change
+ * in each side's count. All aggregate — individual votes never leave the server.
+ */
+export interface SwingResult {
+  /** A/B counts from the first vote (the VOTE_1 snapshot). */
+  first: VoteTally;
+  /** A/B counts from the second vote (the live VOTE_2 votes). */
+  second: VoteTally;
+  /** How many voters present in both rounds changed side. */
+  switched: number;
+  /** Net change in each side's count, second minus first. */
+  netSwing: VoteTally;
+}
 
 function isDilemmaCount(n: number): n is DilemmaCount {
   return (DILEMMA_COUNT_OPTIONS as readonly number[]).includes(n);
@@ -282,6 +312,7 @@ export class RoomStore {
       deck: null,
       currentDilemma: null,
       votes: new Map(),
+      votes1: new Map(),
       defenders: [],
       defenseTurnIndex: 0,
     };
@@ -342,12 +373,19 @@ export class RoomStore {
     if (transition.phase === 'DILEMMA_REVEAL') {
       room.currentDilemma = room.deck?.draw() ?? null;
       room.votes.clear();
+      room.votes1.clear();
     }
     // Entering DEFENSE picks the defenders from this round's votes and starts at
     // the first turn (the per-turn timer was set by expiryFor above).
     if (transition.phase === 'DEFENSE') {
       room.defenders = this.selectDefenders(room);
       room.defenseTurnIndex = 0;
+    }
+    // Entering VOTE_2: snapshot the first vote so the live re-vote can be
+    // compared against it (swing). `votes` is left intact, so each player's
+    // first vote becomes the default they can keep or change.
+    if (transition.phase === 'VOTE_2') {
+      room.votes1 = new Map(room.votes);
     }
     return { ok: true, room };
   }
@@ -373,12 +411,42 @@ export class RoomStore {
     return this.rooms.get(code)?.votes.size ?? 0;
   }
 
-  /** Aggregate A vs B tally for the current round (no identities). */
-  voteTally(code: string): { A: number; B: number } {
-    const tally = { A: 0, B: 0 };
-    const room = this.rooms.get(code);
-    if (room) for (const choice of room.votes.values()) tally[choice]++;
+  /** Aggregate A vs B counts of a votes map (no identities). */
+  private static tally(votes: Map<string, VoteChoice>): VoteTally {
+    const tally: VoteTally = { A: 0, B: 0 };
+    for (const choice of votes.values()) tally[choice]++;
     return tally;
+  }
+
+  /** Aggregate A vs B tally for the current round (no identities). */
+  voteTally(code: string): VoteTally {
+    const room = this.rooms.get(code);
+    return room ? RoomStore.tally(room.votes) : { A: 0, B: 0 };
+  }
+
+  /**
+   * Compare the second vote (VOTE_2, the live `votes`) against the first
+   * (the `votes1` snapshot taken when VOTE_2 began): the two aggregate tallies,
+   * how many voters changed side, and the net swing toward each side. Counts
+   * only — individual votes never leave the server. An unknown room yields zeros.
+   */
+  computeSwing(code: string): SwingResult {
+    const room = this.rooms.get(code);
+    const first = room ? RoomStore.tally(room.votes1) : { A: 0, B: 0 };
+    const second = room ? RoomStore.tally(room.votes) : { A: 0, B: 0 };
+    let switched = 0;
+    if (room) {
+      for (const [id, firstChoice] of room.votes1) {
+        const secondChoice = room.votes.get(id);
+        if (secondChoice && secondChoice !== firstChoice) switched++;
+      }
+    }
+    return {
+      first,
+      second,
+      switched,
+      netSwing: { A: second.A - first.A, B: second.B - first.B },
+    };
   }
 
   /**
@@ -445,8 +513,9 @@ export class RoomStore {
   leave(code: string, playerId: string): boolean {
     const room = this.rooms.get(code);
     if (!room) return false;
-    // Drop any vote so the tally + allVoted only count present players.
+    // Drop any votes so the tally + allVoted + swing only count present players.
     room.votes.delete(playerId);
+    room.votes1.delete(playerId);
     return room.players.delete(playerId);
   }
 

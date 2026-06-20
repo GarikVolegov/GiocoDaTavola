@@ -167,7 +167,10 @@ io.on('connection', (socket) => {
     }
     // Confirm the player's own current choice back to just them.
     socket.emit('player:voted', { choice: result.room.votes.get(socket.id) });
-    if (rooms.allVoted(code)) {
+    // VOTE_1 starts empty and ends early once everyone has voted. VOTE_2 starts
+    // pre-filled with each player's first vote (the default), so "all voted" is
+    // already true — it must run its full timer to give everyone time to change.
+    if (result.room.phase === 'VOTE_1' && rooms.allVoted(code)) {
       advanceAndBroadcast(code); // everyone voted -> skip the rest of the timer
     } else {
       broadcastGameState(code); // refresh the voted count for the host
@@ -182,10 +185,11 @@ io.on('connection', (socket) => {
       rooms.leave(code, socket.id);
       broadcastLobby(code);
       // A leaver during a vote changes the count shown on the host and may
-      // complete the round (everyone still present has now voted).
+      // complete VOTE_1 (everyone still present has now voted). VOTE_2 always
+      // runs its full timer (it starts pre-filled), so just refresh the state.
       const room = rooms.get(code);
       if (room && isVotingPhase(room.phase)) {
-        if (rooms.allVoted(code)) advanceAndBroadcast(code);
+        if (room.phase === 'VOTE_1' && rooms.allVoted(code)) advanceAndBroadcast(code);
         else broadcastGameState(code);
       }
     }

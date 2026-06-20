@@ -138,6 +138,12 @@ export default function HostApp() {
           </p>
         )}
 
+        {phase === 'VOTE_2' && (
+          <p style={{ fontSize: '1.4rem', fontWeight: 600, margin: 0, opacity: 0.9 }}>
+            Si vota di nuovo: confermate o cambiate idea dopo le difese 📱
+          </p>
+        )}
+
         {phase === 'SPLIT_REVEAL' && split && (
           <div
             aria-label="Come si è diviso il gruppo"

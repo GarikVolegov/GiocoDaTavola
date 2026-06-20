@@ -111,11 +111,19 @@ export default function PlayerApp() {
     gap: '1rem',
   } as const;
 
-  if (joinedCode && phase === 'VOTE_1') {
+  if (joinedCode && (phase === 'VOTE_1' || phase === 'VOTE_2')) {
     const dilemma = game?.dilemma;
+    // VOTE_2 is the re-vote after the defenses: the phone keeps the player's
+    // first choice selected as the default, which they can keep or change.
+    const isSecondVote = phase === 'VOTE_2';
     return (
       <main style={wrap}>
-        <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.VOTE_1}</h1>
+        <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
+        {isSecondVote && (
+          <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0 }}>
+            Hai sentito le difese: confermi o cambi idea?
+          </p>
+        )}
         {remaining != null && (
           <div
             aria-label="Tempo rimanente"
