@@ -1,0 +1,4 @@
+Space Grotesk — SIL Open Font License 1.1 (OFL-1.1)
+Source: https://github.com/floriankarsten/space-grotesk
+Distributed via Fontsource (https://fontsource.org/fonts/space-grotesk).
+Bundled here as a self-hosted variable woff2 to avoid a runtime CDN dependency.

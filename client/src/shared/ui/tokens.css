@@ -1,0 +1,68 @@
+/* Self-hosted display font (omit this block if the woff2 wasn't downloaded). */
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../../assets/fonts/space-grotesk-variable.woff2') format('woff2');
+  font-weight: 300 700;
+  font-display: swap;
+  font-style: normal;
+}
+
+:root {
+  /* Color */
+  --bg: #0E1020;
+  --surface: #1A1D33;
+  --surface-2: #242846;
+  --border: rgba(242, 243, 255, 0.12);
+
+  --text: #F2F3FF;
+  --text-muted: rgba(242, 243, 255, 0.65);
+  --text-faint: rgba(242, 243, 255, 0.45);
+
+  --faction-a: #4F8CFF;
+  --faction-a-soft: rgba(79, 140, 255, 0.18);
+  --faction-b: #FF8C4F;
+  --faction-b-soft: rgba(255, 140, 79, 0.18);
+
+  --accent: #C04FFF;
+  --danger: #FF6B6B;
+  --success: #52E0A0;
+
+  /* Spacing (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.9rem;
+  --radius-lg: 1.25rem;
+  --radius-pill: 999px;
+
+  /* Shadow / glow */
+  --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.45);
+  --glow-a: 0 0 0 2px rgba(79, 140, 255, 0.5), 0 0 24px rgba(79, 140, 255, 0.35);
+  --glow-b: 0 0 0 2px rgba(255, 140, 79, 0.5), 0 0 24px rgba(255, 140, 79, 0.35);
+  --glow-accent: 0 0 24px rgba(192, 79, 255, 0.45);
+
+  /* Typography */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-xs: 0.85rem;
+  --text-sm: 1rem;
+  --text-md: 1.25rem;
+  --text-lg: clamp(1.5rem, 4vw, 2.4rem);
+  --text-xl: clamp(2rem, 8vw, 3rem);
+  --text-2xl: clamp(3rem, 12vw, 6rem);
+
+  /* Motion */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 120ms;
+  --dur-med: 260ms;
+}
