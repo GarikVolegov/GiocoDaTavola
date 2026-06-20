@@ -62,6 +62,15 @@ function initialCode(): string {
   return urlRoom() || loadSession()?.code || '';
 }
 
+// Light haptic feedback where supported (no-op on desktop / unsupported phones).
+function buzz(pattern: number | number[]): void {
+  try {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(pattern);
+  } catch {
+    /* ignore */
+  }
+}
+
 // Per-player phone view. Shows a join form (code + nickname); once joined,
 // shows the realtime lobby roster.
 export default function PlayerApp() {
@@ -163,9 +172,23 @@ export default function PlayerApp() {
     setVoteError(null);
   }, [game?.dilemmaIndex]);
 
+  // Buzz the phone the moment it becomes this player's turn to speak (defense or
+  // duel) so they look up from the screen — easy to miss on a shared TV.
+  const turnSpeakerId =
+    phase === 'DEFENSE'
+      ? game?.defense?.speaker?.id ?? null
+      : phase === 'DUEL_ARGUE'
+        ? game?.duelTurn?.speaker?.id ?? null
+        : null;
+  const myTurnToSpeak = turnSpeakerId != null && turnSpeakerId === playerId;
+  useEffect(() => {
+    if (myTurnToSpeak) buzz([60, 40, 60]);
+  }, [myTurnToSpeak]);
+
   const castVote = (choice: VoteChoice) => {
     setVote(choice); // optimistic; reverts via player:voted/voteError
     setVoteError(null);
+    buzz(25); // tactile confirm the tap registered
     getSocket().emit(SocketEvents.PlayerVote, { choice });
   };
 
@@ -304,6 +327,11 @@ export default function PlayerApp() {
         ) : myTurn ? (
           <>
             <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te! 🎤</p>
+            {game?.dilemma && (
+              <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0, maxWidth: '22rem' }}>
+                {game.dilemma.text}
+              </p>
+            )}
             <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
               Difendi <strong>{speaker.side}</strong>
               {sideOption ? `: ${sideOption}` : ''}
@@ -340,6 +368,11 @@ export default function PlayerApp() {
         {myTurn ? (
           <>
             <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te! 🎤</p>
+            {game?.dilemma && (
+              <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0, maxWidth: '22rem' }}>
+                {game.dilemma.text}
+              </p>
+            )}
             <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
               Argomenta <strong>{speaker.side}</strong>
               {sideOption ? `: ${sideOption}` : ''}
