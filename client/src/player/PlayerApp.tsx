@@ -42,6 +42,7 @@ import {
   type BlindSpot,
   MAX_SUBMISSIONS_PER_PLAYER,
   MIN_INFILTRATO_HUMANS,
+  MIN_SQUADRE_PLAYERS,
   SUBMIT_DILEMMA_ERROR_MESSAGES,
   type PlayerDilemmaSubmittedPayload,
   type PlayerSubmitDilemmaErrorPayload,
@@ -177,6 +178,7 @@ export default function PlayerApp() {
   const [register, setRegister] = useState<ContentRegister>('misto');
   const [gameMode, setGameMode] = useState<GameMode>('gruppo');
   const [infiltratoOn, setInfiltratoOn] = useState(false);
+  const [squadreOn, setSquadreOn] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   // Current credentials, kept in a ref so the socket 'connect' handler can
   // re-claim the seat after a network blip without re-subscribing.
@@ -431,6 +433,7 @@ export default function PlayerApp() {
       register,
       mode: gameMode,
       infiltrato: gameMode === 'gruppo' && infiltratoOn,
+      squadre: gameMode === 'gruppo' && squadreOn,
     });
   };
   const castAccuse = (accusedId: string) => {
@@ -1036,6 +1039,14 @@ export default function PlayerApp() {
                 <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.9 }}>{infiltratoRole.mission}</p>
               </Card>
             )}
+            {(() => {
+              const myTeam = game?.teams?.assignments.find((a) => a.playerId === playerId)?.team;
+              return myTeam ? (
+                <p style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>
+                  {myTeam === 'blu' ? '🔵 Sei nel Team Blu' : '🟠 Sei nel Team Arancio'}
+                </p>
+              ) : null;
+            })()}
             <p style={{ fontSize: '1.15rem', fontWeight: 600, margin: 0, maxWidth: '22rem' }}>
               🎯 {OBJECTIVE}
             </p>
@@ -1074,6 +1085,23 @@ export default function PlayerApp() {
           </>
         ) : phase === 'FINAL_AWARDS' ? (
           <>
+            {game?.teams && (
+              <Card
+                glow="accent"
+                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.3rem', textAlign: 'center' }}
+              >
+                <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>
+                  🔵 {game.teams.scores.blu} — {game.teams.scores.arancio} 🟠
+                </p>
+                <p style={{ margin: 0, fontSize: '1rem', opacity: 0.95 }}>
+                  {game.teams.scores.blu === game.teams.scores.arancio
+                    ? 'Pareggio fra le squadre!'
+                    : game.teams.scores.blu > game.teams.scores.arancio
+                      ? 'Vince il Team Blu! 🔵'
+                      : 'Vince il Team Arancio! 🟠'}
+                </p>
+              </Card>
+            )}
             {game?.infiltratoResult && (
               <Card
                 glow={game.infiltratoResult.won ? 'a' : 'accent'}
@@ -1331,17 +1359,32 @@ export default function PlayerApp() {
             {gameMode === 'gruppo' && (
               <div style={{ width: '100%' }}>
                 <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità speciale</p>
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                   <Pill
                     selected={infiltratoOn}
-                    onClick={() => setInfiltratoOn((v) => !v)}
+                    onClick={() => {
+                      setInfiltratoOn((v) => !v);
+                      setSquadreOn(false);
+                    }}
                     aria-label="L'Infiltrato (un giocatore segreto)"
                   >
                     🕵️ L'Infiltrato {infiltratoOn ? 'ON' : 'OFF'}
                   </Pill>
+                  <Pill
+                    selected={squadreOn}
+                    onClick={() => {
+                      setSquadreOn((v) => !v);
+                      setInfiltratoOn(false);
+                    }}
+                    aria-label="Squadre (Blu contro Arancio)"
+                  >
+                    🔵🟠 Squadre {squadreOn ? 'ON' : 'OFF'}
+                  </Pill>
                 </div>
                 <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
-                  Un giocatore segreto deve ribaltare il gruppo · servono ≥{MIN_INFILTRATO_HUMANS} persone
+                  {squadreOn
+                    ? `Blu contro Arancio: vince chi convince di più · servono ≥${MIN_SQUADRE_PLAYERS} giocatori`
+                    : `Un giocatore segreto deve ribaltare il gruppo · servono ≥${MIN_INFILTRATO_HUMANS} persone`}
                 </p>
               </div>
             )}

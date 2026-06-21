@@ -307,6 +307,29 @@ export default function HostApp() {
           </div>
         )}
 
+        {phase === 'FINAL_AWARDS' && game.teams && (
+          <div
+            style={{
+              padding: '1rem 1.6rem',
+              borderRadius: '1rem',
+              textAlign: 'center',
+              background: 'rgba(79,140,255,0.12)',
+              border: '2px solid rgba(79,140,255,0.4)',
+            }}
+          >
+            <p style={{ margin: 0, fontSize: '2rem', fontWeight: 800 }}>
+              🔵 {game.teams.scores.blu} — {game.teams.scores.arancio} 🟠
+            </p>
+            <p style={{ margin: '0.3rem 0 0', fontSize: '1.4rem' }}>
+              {game.teams.scores.blu === game.teams.scores.arancio
+                ? 'Pareggio fra le squadre!'
+                : game.teams.scores.blu > game.teams.scores.arancio
+                  ? 'Vince il Team Blu! 🔵'
+                  : 'Vince il Team Arancio! 🟠'}
+            </p>
+          </div>
+        )}
+
         {phase === 'FINAL_AWARDS' && awards && <AwardsPanel awards={awards} />}
 
         {phase === 'DUEL_PICK' && (
