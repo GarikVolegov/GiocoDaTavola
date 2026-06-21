@@ -396,6 +396,11 @@ export default function HostApp() {
               aria-label="Chi sta difendendo"
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}
             >
+              {game.isDevilRound && (
+                <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#ffd36b' }}>
+                  🎭 Avvocato del Diavolo — si difende il lato OPPOSTO al proprio voto!
+                </p>
+              )}
               {defense.totalTurns > 1 && (
                 <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
                   Turno {defense.turn}/{defense.totalTurns}
@@ -418,7 +423,7 @@ export default function HostApp() {
                   }`,
                 }}
               >
-                Difende {defense.speaker.side} ·{' '}
+                {defense.speaker.devil ? '🎭 ' : ''}Difende {defense.speaker.side} ·{' '}
                 {defense.speaker.side === 'A' ? dilemma?.optionA : dilemma?.optionB}
               </div>
               {defense.argument && (

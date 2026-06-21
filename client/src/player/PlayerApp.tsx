@@ -417,19 +417,38 @@ export default function PlayerApp() {
           </p>
         ) : myTurn ? (
           <>
-            <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te! 🎤</p>
+            {speaker.devil ? (
+              <p style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#ffd36b' }}>
+                🎭 Avvocato del Diavolo!
+              </p>
+            ) : (
+              <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te! 🎤</p>
+            )}
             {game?.dilemma && (
               <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0, maxWidth: '22rem' }}>
                 {game.dilemma.text}
               </p>
             )}
-            <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
-              Difendi <strong>{speaker.side}</strong>
-              {sideOption ? `: ${sideOption}` : ''}
-            </p>
+            {speaker.devil ? (
+              <p style={{ fontSize: '1.1rem', opacity: 0.95, margin: 0, maxWidth: '22rem' }}>
+                Hai votato <strong>{speaker.side === 'A' ? 'B' : 'A'}</strong>, ma ora convinci tutti
+                che <strong>{speaker.side}</strong>
+                {sideOption ? ` (${sideOption})` : ''} è la scelta giusta!
+              </p>
+            ) : (
+              <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
+                Difendi <strong>{speaker.side}</strong>
+                {sideOption ? `: ${sideOption}` : ''}
+              </p>
+            )}
           </>
         ) : (
           <>
+            {game?.isDevilRound && (
+              <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#ffd36b' }}>
+                🎭 Round Avvocato del Diavolo — difende il contrario!
+              </p>
+            )}
             <p style={{ fontSize: '1.3rem', margin: 0 }}>
               Sta parlando <strong>{speaker.nickname}</strong> 🎤
             </p>
