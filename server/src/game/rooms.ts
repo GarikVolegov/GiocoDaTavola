@@ -37,6 +37,12 @@ const CODE_LENGTH = 4;
 /** Max players allowed in a single room (in-person party game). */
 export const MAX_PLAYERS = 8;
 
+/** Max player-submitted dilemmas a single player may add in the lobby. */
+export const MAX_SUBMISSIONS_PER_PLAYER = 2;
+/** Length caps for a player-submitted dilemma (prompt / each option). */
+const SUBMISSION_TEXT_MAX = 200;
+const SUBMISSION_OPTION_MAX = 100;
+
 /** Minimum connected players required before the host can start the game. */
 export const MIN_PLAYERS_TO_START = 3;
 
@@ -175,6 +181,16 @@ export interface Room {
   deck: Deck | null;
   /** The dilemma in play this round; null in the lobby/intro and after the game. */
   currentDilemma: Dilemma | null;
+  /**
+   * Dilemmas written by the players themselves in the LOBBY (max 2/player). Mixed
+   * into the game ahead of the official deck so the group's own dilemmas are sure
+   * to be played. Grows as `player:submitDilemma` arrives; read at `startGame`.
+   */
+  submittedDilemmas: Dilemma[];
+  /** Map of a submitted dilemma's id -> the player id who authored it (for the ✍️ award + per-player cap). */
+  dilemmaAuthors: Map<string, string>;
+  /** The shuffled player-submitted dilemmas still to play, drawn (in order) BEFORE the deck. Built at `startGame`. */
+  submittedQueue: Dilemma[];
   /**
    * The 1-based dilemma index chosen at start to be the surprise "Avvocato del
    * Diavolo" round, where defenders argue the side they did NOT vote. null when
@@ -350,6 +366,19 @@ export interface SwingBetOutcome {
   flipped: boolean;
   correct: boolean;
 }
+
+export type SubmitDilemmaError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_LOBBY'
+  | 'NOT_IN_ROOM'
+  | 'EMPTY'
+  | 'TOO_LONG'
+  | 'SAME_OPTIONS'
+  | 'LIMIT_REACHED';
+
+export type SubmitDilemmaResult =
+  | { ok: true; room: Room; count: number }
+  | { ok: false; error: SubmitDilemmaError };
 
 export type SpeakerVoteError =
   | 'ROOM_NOT_FOUND'
@@ -536,12 +565,16 @@ export class RoomStore {
     const second = RoomStore.tally(room.votes);
     const majoritySide: VoteChoice | null =
       second.A > second.B ? 'A' : second.B > second.A ? 'B' : null;
+    let roundSwitched = 0;
     for (const [id, firstChoice] of room.votes1) {
       const secondChoice = room.votes.get(id);
       if (!secondChoice) continue; // left before the second vote -> skip this round
       const s = ensureStats(room, id);
       s.rounds++;
-      if (secondChoice !== firstChoice) s.changedCount++;
+      if (secondChoice !== firstChoice) {
+        s.changedCount++;
+        roundSwitched++;
+      }
       if (majoritySide) {
         if (secondChoice === majoritySide) s.majorityCount++;
         else s.minorityCount++;
@@ -578,6 +611,16 @@ export class RoomStore {
     for (const defenderId of room.speakerVotes.values()) {
       const s = ensureStats(room, defenderId);
       s.oratorVotes = (s.oratorVotes ?? 0) + 1;
+    }
+    // Credit the author of a player-written dilemma with the minds it changed
+    // this round (the ✍️ L'Autore award).
+    const dilemmaId = room.currentDilemma?.id;
+    if (dilemmaId && roundSwitched > 0) {
+      const authorId = room.dilemmaAuthors.get(dilemmaId);
+      if (authorId) {
+        const s = ensureStats(room, authorId);
+        s.authoredSwing = (s.authoredSwing ?? 0) + roundSwitched;
+      }
     }
   }
 
@@ -635,6 +678,9 @@ export class RoomStore {
       phaseExpiresAt: null,
       deck: null,
       currentDilemma: null,
+      submittedDilemmas: [],
+      dilemmaAuthors: new Map(),
+      submittedQueue: [],
       devilRoundIndex: null,
       votes: new Map(),
       votes1: new Map(),
@@ -694,6 +740,9 @@ export class RoomStore {
     room.phaseExpiresAt = this.expiryFor('PHASE_INTRO');
     room.deck = this.makeDeck(register);
     room.currentDilemma = null;
+    // Play the group's own dilemmas first (shuffled), then the official deck fills
+    // the rest — so a submitted dilemma is sure to appear (within dilemmaCount).
+    room.submittedQueue = this.shuffle(room.submittedDilemmas);
     // Pick the surprise "Avvocato del Diavolo" round up front (group mode only).
     room.devilRoundIndex = mode === 'gruppo' ? this.pickDevilRound(dilemmaCount) : null;
     room.stats = new Map();
@@ -741,7 +790,8 @@ export class RoomStore {
     // Entering a new dilemma reveal draws the next (non-repeating) dilemma and
     // resets the round's secret votes so each dilemma starts from a clean tally.
     if (transition.phase === 'DILEMMA_REVEAL') {
-      room.currentDilemma = room.deck?.draw() ?? null;
+      // Player-submitted dilemmas (shuffled at start) come first; then the deck.
+      room.currentDilemma = room.submittedQueue.shift() ?? room.deck?.draw() ?? null;
       room.votes.clear();
       room.votes1.clear();
       room.predictions.clear();
@@ -935,6 +985,62 @@ export class RoomStore {
     const lead = (t: VoteTally): VoteChoice | null =>
       t.A > t.B ? 'A' : t.B > t.A ? 'B' : null;
     return lead(RoomStore.tally(room.votes1)) !== lead(RoomStore.tally(room.votes));
+  }
+
+  /** A fresh shuffled copy of `arr` using the injectable rng (Fisher–Yates). */
+  private shuffle<T>(arr: T[]): T[] {
+    const out = [...arr];
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(this.rng() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+  }
+
+  /**
+   * Record a player-written dilemma during LOBBY (max 2/player). Trims + length-
+   * caps the text, rejects empty/duplicate options, and tags authorship for the
+   * ✍️ L'Autore award. Returns the player's own running count on success.
+   */
+  submitDilemma(
+    code: string,
+    playerId: string,
+    text: string,
+    optionA: string,
+    optionB: string,
+  ): SubmitDilemmaResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.phase !== 'LOBBY') return { ok: false, error: 'NOT_LOBBY' };
+    const player = room.players.get(playerId);
+    if (!player || player.isBot) return { ok: false, error: 'NOT_IN_ROOM' };
+    const t = text.trim();
+    const a = optionA.trim();
+    const b = optionB.trim();
+    if (!t || !a || !b) return { ok: false, error: 'EMPTY' };
+    if (t.length > SUBMISSION_TEXT_MAX || a.length > SUBMISSION_OPTION_MAX || b.length > SUBMISSION_OPTION_MAX) {
+      return { ok: false, error: 'TOO_LONG' };
+    }
+    if (a.toLowerCase() === b.toLowerCase()) return { ok: false, error: 'SAME_OPTIONS' };
+    const mine = [...room.dilemmaAuthors.values()].filter((v) => v === playerId).length;
+    if (mine >= MAX_SUBMISSIONS_PER_PLAYER) return { ok: false, error: 'LIMIT_REACHED' };
+    const id = `usr-${playerId}-${mine + 1}`;
+    room.submittedDilemmas.push({
+      id,
+      text: t,
+      optionA: a,
+      optionB: b,
+      register: 'vita',
+      spuntiA: [],
+      spuntiB: [],
+    });
+    room.dilemmaAuthors.set(id, playerId);
+    return { ok: true, room, count: mine + 1 };
+  }
+
+  /** How many player-written dilemmas the room has collected (aggregate, lobby UI). */
+  submittedCount(code: string): number {
+    return this.rooms.get(code)?.submittedDilemmas.length ?? 0;
   }
 
   /**

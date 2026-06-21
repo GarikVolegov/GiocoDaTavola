@@ -44,6 +44,11 @@ export interface PlayerStats {
    * the defenses (PREDICT phase swing bet). Optional + only set once non-zero.
    */
   correctSwingBets?: number;
+  /**
+   * Total "minds changed" across rounds that played a dilemma THIS player wrote
+   * (player-submitted dilemmas). Optional + only set once non-zero.
+   */
+  authoredSwing?: number;
 }
 
 /** The fun end-of-game superlatives (persuasion-themed). */
@@ -57,7 +62,8 @@ export type AwardId =
   | 'oracolo'
   | 'oratore'
   | 'voltagabbana'
-  | 'sensitivo';
+  | 'sensitivo'
+  | 'autore';
 
 /** An award and who won it. Only awards with a real winner are ever returned. */
 export interface Award {
@@ -131,6 +137,9 @@ export function computeAwards(room: Room): Award[] {
     { id: 'sensitivo', title: 'Il Sensitivo', emoji: '🎰',
       description: 'Ha indovinato più spesso se il gruppo si sarebbe ribaltato.',
       winner: winnerBy((s) => s.correctSwingBets ?? 0, (s) => (s.correctSwingBets ?? 0) > 0) },
+    { id: 'autore', title: "L'Autore", emoji: '✍️',
+      description: 'Il suo dilemma ha fatto cambiare più idee.',
+      winner: winnerBy((s) => s.authoredSwing ?? 0, (s) => (s.authoredSwing ?? 0) > 0) },
   ];
   return defs.filter((d): d is Award => d.winner !== null);
 }
