@@ -49,6 +49,11 @@ export interface PlayerStats {
    * (player-submitted dilemmas). Optional + only set once non-zero.
    */
   authoredSwing?: number;
+  /**
+   * How many times this player correctly guessed a friend's vote in a "Quanto mi
+   * conosci" round. Optional + only set once non-zero.
+   */
+  knowCorrect?: number;
 }
 
 /** The fun end-of-game superlatives (persuasion-themed). */
@@ -63,7 +68,8 @@ export type AwardId =
   | 'oratore'
   | 'voltagabbana'
   | 'sensitivo'
-  | 'autore';
+  | 'autore'
+  | 'telepate';
 
 /** An award and who won it. Only awards with a real winner are ever returned. */
 export interface Award {
@@ -140,6 +146,9 @@ export function computeAwards(room: Room): Award[] {
     { id: 'autore', title: "L'Autore", emoji: '✍️',
       description: 'Il suo dilemma ha fatto cambiare più idee.',
       winner: winnerBy((s) => s.authoredSwing ?? 0, (s) => (s.authoredSwing ?? 0) > 0) },
+    { id: 'telepate', title: 'Il Telepate', emoji: '🔮',
+      description: 'Ha indovinato più spesso come avevano votato gli amici.',
+      winner: winnerBy((s) => s.knowCorrect ?? 0, (s) => (s.knowCorrect ?? 0) > 0) },
   ];
   return defs.filter((d): d is Award => d.winner !== null);
 }

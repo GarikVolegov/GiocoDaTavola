@@ -198,6 +198,15 @@ export interface Room {
    */
   devilRoundIndex: number | null;
   /**
+   * The 1-based round chosen to be the surprise "Quanto mi conosci" round (guess
+   * how a friend voted), or null when it doesn't apply (short games / duello).
+   */
+  knowRoundIndex: number | null;
+  /** Quanto mi conosci: guesser id -> target id (the ring), set on PREDICT entry of the know round. */
+  knowTargets: Map<string, string>;
+  /** Quanto mi conosci: guesser id -> their secret guess of the target's first vote. */
+  knowGuesses: Map<string, VoteChoice>;
+  /**
    * Secret votes for the current dilemma, keyed by player id. Holds the first
    * vote during VOTE_1 and the (live, changeable) second vote during VOTE_2 —
    * each VOTE_2 entry starts equal to the player's first vote (the default).
@@ -380,6 +389,30 @@ export type SubmitDilemmaResult =
   | { ok: true; room: Room; count: number }
   | { ok: false; error: SubmitDilemmaError };
 
+export type KnowGuessError = 'ROOM_NOT_FOUND' | 'NOT_KNOW_PHASE' | 'NO_TARGET' | 'INVALID_CHOICE';
+
+export type KnowGuessResult =
+  | { ok: true; room: Room }
+  | { ok: false; error: KnowGuessError };
+
+/** One guesser's outcome at PHASE_RESULTS of the "Quanto mi conosci" round. */
+export interface KnowGuessOutcome {
+  guesserId: string;
+  targetId: string;
+  guess: VoteChoice;
+  /** The target's first vote, or null if unknown (e.g. they left). */
+  actual: VoteChoice | null;
+  correct: boolean;
+}
+
+/** A guesser→target pair, made public during the know round so phones know whom to read. */
+export interface KnowPair {
+  guesserId: string;
+  guesserNickname: string;
+  targetId: string;
+  targetNickname: string;
+}
+
 export type SpeakerVoteError =
   | 'ROOM_NOT_FOUND'
   | 'NOT_SPEAKER_VOTE_PHASE'
@@ -510,6 +543,39 @@ export class RoomStore {
     return room.devilRoundIndex !== null && room.dilemmaIndex === room.devilRoundIndex;
   }
 
+  /**
+   * Pick the surprise "Quanto mi conosci" round: a random round in [2..count]
+   * distinct from the devil round. Only for longer games (>=5 dilemmas) so short
+   * sessions aren't over-twisted; null otherwise.
+   */
+  private pickKnowRound(dilemmaCount: number, devilRound: number | null): number | null {
+    if (dilemmaCount < 5) return null;
+    const options: number[] = [];
+    for (let i = 2; i <= dilemmaCount; i++) if (i !== devilRound) options.push(i);
+    if (options.length === 0) return null;
+    return options[Math.floor(this.rng() * options.length)];
+  }
+
+  /** True when the round in play is the "Quanto mi conosci" round. */
+  private isKnowRound(room: Room): boolean {
+    return room.knowRoundIndex !== null && room.dilemmaIndex === room.knowRoundIndex;
+  }
+
+  /**
+   * Assign each connected human a target to guess (a ring: everyone guesses the
+   * next player), clearing any stale guesses. Called on entry to PREDICT in the
+   * "Quanto mi conosci" round. With fewer than 2 humans nobody gets a target.
+   */
+  private assignKnowTargets(room: Room): void {
+    room.knowTargets.clear();
+    room.knowGuesses.clear();
+    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+    if (humans.length < 2) return;
+    for (let i = 0; i < humans.length; i++) {
+      room.knowTargets.set(humans[i].id, humans[(i + 1) % humans.length].id);
+    }
+  }
+
   /** Cast each bot's (random) first vote on entry to VOTE_1. */
   private castBotFirstVotes(room: Room): void {
     for (const p of room.players.values()) {
@@ -612,6 +678,16 @@ export class RoomStore {
       const s = ensureStats(room, defenderId);
       s.oratorVotes = (s.oratorVotes ?? 0) + 1;
     }
+    // Credit each "Quanto mi conosci" guesser who read their target's first vote
+    // right (the 🔮 Il Telepate award).
+    for (const [guesserId, guess] of room.knowGuesses) {
+      const targetId = room.knowTargets.get(guesserId);
+      const actual = targetId ? room.votes1.get(targetId) : undefined;
+      if (actual && guess === actual) {
+        const s = ensureStats(room, guesserId);
+        s.knowCorrect = (s.knowCorrect ?? 0) + 1;
+      }
+    }
     // Credit the author of a player-written dilemma with the minds it changed
     // this round (the ✍️ L'Autore award).
     const dilemmaId = room.currentDilemma?.id;
@@ -682,6 +758,9 @@ export class RoomStore {
       dilemmaAuthors: new Map(),
       submittedQueue: [],
       devilRoundIndex: null,
+      knowRoundIndex: null,
+      knowTargets: new Map(),
+      knowGuesses: new Map(),
       votes: new Map(),
       votes1: new Map(),
       defenders: [],
@@ -745,6 +824,8 @@ export class RoomStore {
     room.submittedQueue = this.shuffle(room.submittedDilemmas);
     // Pick the surprise "Avvocato del Diavolo" round up front (group mode only).
     room.devilRoundIndex = mode === 'gruppo' ? this.pickDevilRound(dilemmaCount) : null;
+    // …and (longer games only) a "Quanto mi conosci" round, distinct from the devil one.
+    room.knowRoundIndex = mode === 'gruppo' ? this.pickKnowRound(dilemmaCount, room.devilRoundIndex) : null;
     room.stats = new Map();
     room.duelScore = new Map();
     room.duelAgreements = 0;
@@ -796,7 +877,13 @@ export class RoomStore {
       room.votes1.clear();
       room.predictions.clear();
       room.swingBets.clear();
+      room.knowTargets.clear();
+      room.knowGuesses.clear();
       room.speakerVotes.clear();
+    }
+    // Entering PREDICT in the "Quanto mi conosci" round assigns the guessing ring.
+    if (transition.phase === 'PREDICT' && this.isKnowRound(room)) {
+      this.assignKnowTargets(room);
     }
     // Entering DEFENSE picks the defenders from this round's votes and starts at
     // the first turn (the per-turn timer was set by expiryFor above).
@@ -1041,6 +1128,70 @@ export class RoomStore {
   /** How many player-written dilemmas the room has collected (aggregate, lobby UI). */
   submittedCount(code: string): number {
     return this.rooms.get(code)?.submittedDilemmas.length ?? 0;
+  }
+
+  /**
+   * Record (or change) a player's secret guess of their target's first vote during
+   * the "Quanto mi conosci" round (the PREDICT phase). Overwritable until the phase
+   * ends; never leaves the server as an identity (only the aggregate count, plus
+   * each guesser's own result at PHASE_RESULTS).
+   */
+  knowGuess(code: string, guesserId: string, choice: string): KnowGuessResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.phase !== 'PREDICT' || !this.isKnowRound(room)) return { ok: false, error: 'NOT_KNOW_PHASE' };
+    if (!room.knowTargets.has(guesserId)) return { ok: false, error: 'NO_TARGET' };
+    if (!isVoteChoice(choice)) return { ok: false, error: 'INVALID_CHOICE' };
+    room.knowGuesses.set(guesserId, choice);
+    return { ok: true, room };
+  }
+
+  /** How many guessers have guessed this round (aggregate only). */
+  knowGuessedCount(code: string): number {
+    return this.rooms.get(code)?.knowGuesses.size ?? 0;
+  }
+
+  /** True once every guesser in the ring has guessed (used to end PREDICT early). */
+  allKnowGuessed(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room) return false;
+    const guessers = [...room.knowTargets.keys()];
+    if (guessers.length === 0) return false;
+    return guessers.every((id) => room.knowGuesses.has(id));
+  }
+
+  /**
+   * The public guesser→target ring, revealed only during the "Quanto mi conosci"
+   * round (PREDICT → PHASE_RESULTS) so phones know whom to read; null otherwise.
+   * The ring itself is not secret (only the guesses + the actual votes are).
+   */
+  publicKnowPairs(code: string): KnowPair[] | null {
+    const room = this.rooms.get(code);
+    if (!room || !this.isKnowRound(room)) return null;
+    const phaseOk =
+      room.phase === 'PREDICT' || room.phase === 'DEFENSE' ||
+      room.phase === 'VOTE_2' || room.phase === 'SPEAKER_VOTE' || room.phase === 'PHASE_RESULTS';
+    if (!phaseOk) return null;
+    return [...room.knowTargets].map(([guesserId, targetId]) => ({
+      guesserId,
+      guesserNickname: room.players.get(guesserId)?.nickname ?? '',
+      targetId,
+      targetNickname: room.players.get(targetId)?.nickname ?? '',
+    }));
+  }
+
+  /**
+   * Each guesser's own outcome for the just-finished know round, for the private
+   * `player:knowGuessResult` emit at PHASE_RESULTS.
+   */
+  knowGuessResults(code: string): KnowGuessOutcome[] {
+    const room = this.rooms.get(code);
+    if (!room) return [];
+    return [...room.knowGuesses].map(([guesserId, guess]) => {
+      const targetId = room.knowTargets.get(guesserId) ?? '';
+      const actual = room.votes1.get(targetId) ?? null;
+      return { guesserId, targetId, guess, actual, correct: actual != null && guess === actual };
+    });
   }
 
   /**
@@ -1377,6 +1528,8 @@ export class RoomStore {
     room.votes1.delete(playerId);
     room.predictions.delete(playerId);
     room.swingBets.delete(playerId);
+    room.knowGuesses.delete(playerId);
+    room.knowTargets.delete(playerId);
     room.speakerVotes.delete(playerId);
     const removed = room.players.delete(playerId);
     if (removed && room.leaderId === playerId) {
