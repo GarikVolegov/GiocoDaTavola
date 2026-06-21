@@ -17,6 +17,10 @@
 .brandA { color: var(--faction-a); } .brandB { color: var(--faction-b); }
 .navLinks { display: flex; gap: var(--space-5); align-items: center; }
 .navLinks a { color: var(--text-muted); text-decoration: none; font-size: .95rem; }
+.navAuth { background: transparent; border: 1px solid var(--border); color: var(--text);
+  border-radius: var(--radius-md); padding: .5rem .9rem; font-size: .9rem; font-weight: 600;
+  font-family: var(--font-body); cursor: pointer; }
+.navAuth:hover { border-color: var(--faction-a); }
 
 /* hero */
 .hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: var(--space-7);

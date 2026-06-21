@@ -1,3 +1,4 @@
+import { Show, SignInButton, UserButton } from '@clerk/react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../shared/ui';
 import Hero from './sections/Hero';
@@ -24,6 +25,14 @@ export default function Landing() {
         <div className={styles.navLinks}>
           <a href="#come">Come si gioca</a>
           <a href="#modalita">Modalità</a>
+          <Show when="signed-out">
+            <SignInButton mode="modal">
+              <button type="button" className={styles.navAuth}>Accedi</button>
+            </SignInButton>
+          </Show>
+          <Show when="signed-in">
+            <UserButton />
+          </Show>
           <Button variant="primary" size="md" onClick={create}>Crea una partita</Button>
         </div>
       </nav>
