@@ -261,6 +261,9 @@ export default function HostApp() {
             <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
               🔮 Pronosticate: chi avrà più voti <em>dopo</em> le difese? · {game.predictedCount}/{players.length}
             </p>
+            <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: '#c9b3ff' }}>
+              🎰 …e scommettete: ci sarà un ribaltone? · {game.swingBetCount}/{players.length}
+            </p>
             {myPlayerId && (
               <div
                 role="group"

@@ -22,6 +22,9 @@ import {
   type PlayerVoteErrorPayload,
   type PlayerPredictedPayload,
   type PlayerPredictionResultPayload,
+  type SwingBet,
+  type PlayerSwingBettedPayload,
+  type PlayerSwingBetResultPayload,
   type PlayerSpeakerVotedPayload,
   type Reaction,
 } from '../shared/events';
@@ -125,6 +128,8 @@ export default function PlayerApp() {
   const [voteError, setVoteError] = useState<string | null>(null);
   const [predicted, setPredicted] = useState<VoteChoice | null>(null);
   const [predictionResult, setPredictionResult] = useState<PlayerPredictionResultPayload | null>(null);
+  const [swingBet, setSwingBet] = useState<SwingBet | null>(null);
+  const [swingBetResult, setSwingBetResult] = useState<PlayerSwingBetResultPayload | null>(null);
   const [speakerVote, setSpeakerVote] = useState<string | null>(null);
   // Current credentials, kept in a ref so the socket 'connect' handler can
   // re-claim the seat after a network blip without re-subscribing.
@@ -162,6 +167,8 @@ export default function PlayerApp() {
       setVoteError(VOTE_ERROR_MESSAGES[error] ?? 'Voto non riuscito');
     const onPredicted = ({ choice }: PlayerPredictedPayload) => setPredicted(choice);
     const onPredictionResult = (payload: PlayerPredictionResultPayload) => setPredictionResult(payload);
+    const onSwingBetted = ({ bet }: PlayerSwingBettedPayload) => setSwingBet(bet);
+    const onSwingBetResult = (payload: PlayerSwingBetResultPayload) => setSwingBetResult(payload);
     const onSpeakerVoted = ({ defenderId }: PlayerSpeakerVotedPayload) => setSpeakerVote(defenderId);
     // On every (re)connect, if we hold a token, reclaim the same seat. Covers
     // socket-level reconnects (network blip) without a page reload.
@@ -177,6 +184,8 @@ export default function PlayerApp() {
     socket.on(SocketEvents.PlayerVoteError, onVoteError);
     socket.on(SocketEvents.PlayerPredicted, onPredicted);
     socket.on(SocketEvents.PlayerPredictionResult, onPredictionResult);
+    socket.on(SocketEvents.PlayerSwingBetted, onSwingBetted);
+    socket.on(SocketEvents.PlayerSwingBetResult, onSwingBetResult);
     socket.on(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
     socket.on('connect', onConnect);
 
@@ -198,6 +207,8 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerVoteError, onVoteError);
       socket.off(SocketEvents.PlayerPredicted, onPredicted);
       socket.off(SocketEvents.PlayerPredictionResult, onPredictionResult);
+      socket.off(SocketEvents.PlayerSwingBetted, onSwingBetted);
+      socket.off(SocketEvents.PlayerSwingBetResult, onSwingBetResult);
       socket.off(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
       socket.off('connect', onConnect);
     };
@@ -237,6 +248,8 @@ export default function PlayerApp() {
     setVoteError(null);
     setPredicted(null);
     setPredictionResult(null);
+    setSwingBet(null);
+    setSwingBetResult(null);
     setSpeakerVote(null);
   }, [game?.dilemmaIndex]);
 
@@ -258,6 +271,12 @@ export default function PlayerApp() {
     setVoteError(null);
     buzz(25); // tactile confirm the tap registered
     getSocket().emit(SocketEvents.PlayerVote, { choice });
+  };
+
+  const castSwingBet = (bet: SwingBet) => {
+    setSwingBet(bet); // optimistic; confirmed via player:swingBetted
+    buzz(25);
+    getSocket().emit(SocketEvents.PlayerSwingBet, { bet });
   };
 
   const castPrediction = (choice: VoteChoice) => {
@@ -625,6 +644,49 @@ export default function PlayerApp() {
         ) : (
           <p style={{ opacity: 0.7, margin: 0 }}>Scegli chi pensi convincerà di più.</p>
         )}
+        <div
+          role="group"
+          aria-label="La tua scommessa sul ribaltone"
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'min(90vw, 22rem)' }}
+        >
+          <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0.5rem 0 0' }}>
+            🎰 Ci sarà un ribaltone?
+          </p>
+          <div style={{ display: 'flex', gap: '0.6rem' }}>
+            {(
+              [
+                ['regge', 'REGGE', 'La maggioranza tiene'],
+                ['ribalta', 'RIBALTA', 'La maggioranza cambia'],
+              ] as const
+            ).map(([value, label, hint]) => {
+              const selected = swingBet === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => castSwingBet(value)}
+                  aria-pressed={selected}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.2rem',
+                    padding: '0.75rem 0.6rem',
+                    borderRadius: '0.8rem',
+                    cursor: 'pointer',
+                    fontWeight: 800,
+                    color: 'inherit',
+                    background: selected ? 'rgba(168,130,255,0.32)' : 'rgba(168,130,255,0.12)',
+                    border: `2px solid rgba(168,130,255,${selected ? 0.9 : 0.4})`,
+                  }}
+                >
+                  <span style={{ fontSize: '1.05rem' }}>{label}</span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 500, opacity: 0.8 }}>{hint}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </main>
     );
   }
@@ -660,6 +722,13 @@ export default function PlayerApp() {
                   : predictionResult.correct
                     ? '✅ Pronostico azzeccato!'
                     : '❌ Stavolta non ci hai preso.'}
+              </p>
+            )}
+            {swingBetResult && (
+              <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+                {swingBetResult.correct
+                  ? `🎰 Ribaltone ${swingBetResult.flipped ? 'sì' : 'no'}: scommessa vinta!`
+                  : '🎰 Scommessa sul ribaltone persa.'}
               </p>
             )}
           </>
