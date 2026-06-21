@@ -3,6 +3,8 @@ import { Button } from '../shared/ui';
 import Hero from './sections/Hero';
 import HowToPlay from './sections/HowToPlay';
 import Features from './sections/Features';
+import Modes from './sections/Modes';
+import Awards from './sections/Awards';
 import styles from './Landing.module.css';
 
 // Marketing landing on `/`: describes the game and funnels to play.
@@ -28,6 +30,8 @@ export default function Landing() {
       <Hero onCreate={create} onJoin={join} />
       <HowToPlay />
       <Features />
+      <Modes />
+      <Awards />
     </main>
   );
 }
