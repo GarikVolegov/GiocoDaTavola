@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SCHIERATI">
+  <defs>
+    <clipPath id="tile"><rect width="512" height="512" rx="116"></rect></clipPath>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect width="512" height="512" fill="#131829"></rect>
+    <rect width="512" height="512" fill="none" stroke="rgba(220,224,236,0.10)" stroke-width="4"></rect>
+    
+    <path d="M256,452 L256,300" fill="none" stroke="#E8EAF2" stroke-width="46" stroke-linecap="round"></path>
+    <path d="M256,300 L150,116" fill="none" stroke="#5486C4" stroke-width="46" stroke-linecap="round"></path>
+    <path d="M256,300 L362,116" fill="none" stroke="#C77A45" stroke-width="46" stroke-linecap="round"></path>
+    <circle cx="256" cy="300" r="26" fill="#E8EAF2"></circle>
+  </g>
+</svg>
