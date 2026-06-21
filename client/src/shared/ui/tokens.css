@@ -1,33 +1,126 @@
-/* Self-hosted display font (omit this block if the woff2 wasn't downloaded). */
+/* SCHIERATI — production design tokens (v2 "elevated night")
+   Generated for GiocoDaTavola client. Paste into client/src/shared/ui/tokens.css.
+   NOTE: adjust the Space Grotesk @font-face url() to your local path
+   (client/src/assets/fonts/space-grotesk-variable.woff2). Newsreader loads from
+   Google Fonts; self-host it for fully-offline play. */
+
+/* ===== fonts.css ===== */
+/* SCHIERATI — webfonts
+   Display/UI: Space Grotesk, self-hosted variable woff2 (weights 300–700) — bundled,
+   never CDN, because the game runs on local networks.
+   Editorial serif (headings): Newsreader, loaded from Google Fonts.
+   ⚠ For fully-offline production, self-host Newsreader too and swap this @import
+   for a local @font-face (see fonts/ — only Space Grotesk is bundled today).
+   License: fonts/SpaceGrotesk-LICENSE.txt (OFL); Newsreader is OFL (Production Type). */
+
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap');
+
 @font-face {
   font-family: 'Space Grotesk';
-  src: url('../../assets/fonts/space-grotesk-variable.woff2') format('woff2');
+  font-style: normal;
   font-weight: 300 700;
   font-display: swap;
-  font-style: normal;
+  src: url('../../assets/fonts/space-grotesk-variable.woff2') format('woff2');
 }
 
+/* ===== colors.css ===== */
+/* SCHIERATI — Color tokens · "elevated night"
+   Deep navy ground, two refined dilemma sides (a desaturated blue and a warm
+   terracotta) and a restrained gold for premium highlights. Calmer and more
+   serious than neon — the energy comes from contrast and craft, not glare. */
+
 :root {
-  /* Color */
-  --bg: #0E1020;
-  --surface: #1A1D33;
-  --surface-2: #242846;
-  --border: rgba(242, 243, 255, 0.12);
+  /* --- Ground & surfaces --- */
+  --bg:            #0B0E1A;            /* deep navy-black ground */
+  --surface:       #131829;           /* raised cards / panels */
+  --surface-2:     #1C2238;           /* nested / hover surface */
+  --border:        rgba(220, 224, 236, 0.10);
+  --border-strong: rgba(220, 224, 236, 0.18);
 
-  --text: #F2F3FF;
-  --text-muted: rgba(242, 243, 255, 0.65);
-  --text-faint: rgba(242, 243, 255, 0.45);
+  /* --- Text --- */
+  --text:          #E8EAF2;           /* soft off-white (not pure white) */
+  --text-muted:    rgba(232, 234, 242, 0.64);
+  --text-faint:    rgba(232, 234, 242, 0.40);
+  --on-faction:    #0B0E1A;           /* dark ink for text on a solid fill */
 
-  --faction-a: #4F8CFF;
-  --faction-a-soft: rgba(79, 140, 255, 0.18);
-  --faction-b: #FF8C4F;
-  --faction-b-soft: rgba(255, 140, 79, 0.18);
+  /* --- Side A — refined blue (option A / primary action) --- */
+  --faction-a:      #5486C4;
+  --faction-a-soft: rgba(84, 134, 196, 0.16);
+  --faction-a-line: rgba(84, 134, 196, 0.42);
 
-  --accent: #C04FFF;
-  --danger: #FF6B6B;
-  --success: #52E0A0;
+  /* --- Side B — warm terracotta (option B) --- */
+  --faction-b:      #C77A45;
+  --faction-b-soft: rgba(199, 122, 69, 0.16);
+  --faction-b-line: rgba(199, 122, 69, 0.42);
 
-  /* Spacing (4px base) */
+  /* --- Gold — the premium accent (room code, awards, focus, highlights) --- */
+  --gold:           #C9A35A;
+  --gold-soft:      rgba(201, 163, 90, 0.16);
+  --gold-line:      rgba(201, 163, 90, 0.45);
+
+  /* Accent aliases (kept for continuity — now gold, not violet) */
+  --accent:         var(--gold);
+  --accent-soft:    var(--gold-soft);
+  --brand-yellow:   var(--gold);      /* legacy alias */
+  --speaker:        var(--gold);      /* highlight for "who is speaking" names */
+
+  /* --- Status (muted, grown-up) --- */
+  --danger:         #D9544E;
+  --success:        #4FA587;
+
+  /* --- Semantic aliases (use these in product code) --- */
+  --text-body:       var(--text);
+  --text-secondary:  var(--text-muted);
+  --surface-card:    var(--surface);
+  --surface-raised:  var(--surface-2);
+  --border-subtle:   var(--border);
+  --action-primary:  var(--faction-a);
+  --highlight:       var(--gold);
+}
+
+/* ===== typography.css ===== */
+/* SCHIERATI — Typography tokens
+   Two voices: an editorial SERIF (Newsreader) for headlines & display moments,
+   and Space Grotesk for UI, labels, the room code and the countdown. Body is the
+   system stack. Serif = the thinking/editorial voice; grotesk = the functional UI. */
+
+:root {
+  --font-serif:   'Newsreader', Georgia, 'Times New Roman', serif;   /* headlines, claims */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;            /* UI display, code, countdown */
+  --font-body:    system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:    ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Fluid type scale */
+  --text-xs:  0.85rem;
+  --text-sm:  1rem;
+  --text-md:  1.2rem;
+  --text-lg:  clamp(1.5rem, 4vw, 2.3rem);
+  --text-xl:  clamp(2rem, 7vw, 3rem);
+  --text-2xl: clamp(3rem, 11vw, 5.5rem);   /* room code / countdown on the host */
+
+  /* Weights */
+  --weight-regular: 400;
+  --weight-medium:  500;
+  --weight-semibold:600;
+  --weight-bold:    700;
+
+  /* Line heights */
+  --leading-tight: 1.04;
+  --leading-snug:  1.18;
+  --leading-body:  1.55;
+
+  /* Tracking */
+  --tracking-tight:   -0.02em;    /* large grotesk display */
+  --tracking-serif:   -0.01em;    /* serif headlines */
+  --tracking-eyebrow:  0.18em;    /* uppercase eyebrows / kickers */
+  --tracking-code:     0.35rem;   /* room-code letterspacing */
+}
+
+/* ===== spacing.css ===== */
+/* SCHIERATI — Spacing, radius & motion tokens. 4px base scale. */
+
+:root {
+  /* --- Spacing (4px base) --- */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -37,32 +130,42 @@
   --space-7: 3rem;
   --space-8: 4rem;
 
-  /* Radius */
-  --radius-sm: 0.5rem;
-  --radius-md: 0.9rem;
-  --radius-lg: 1.25rem;
+  /* --- Radius (restrained — grown-up, not bubbly) --- */
+  --radius-sm:   0.375rem;
+  --radius-md:   0.625rem;
+  --radius-lg:   0.875rem;
   --radius-pill: 999px;
 
-  /* Shadow / glow */
-  --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.45);
-  --glow-a: 0 0 0 2px rgba(79, 140, 255, 0.5), 0 0 24px rgba(79, 140, 255, 0.35);
-  --glow-b: 0 0 0 2px rgba(255, 140, 79, 0.5), 0 0 24px rgba(255, 140, 79, 0.35);
-  --glow-accent: 0 0 24px rgba(192, 79, 255, 0.45);
-
-  /* Typography */
-  --font-display: 'Space Grotesk', system-ui, sans-serif;
-  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-
-  --text-xs: 0.85rem;
-  --text-sm: 1rem;
-  --text-md: 1.25rem;
-  --text-lg: clamp(1.5rem, 4vw, 2.4rem);
-  --text-xl: clamp(2rem, 8vw, 3rem);
-  --text-2xl: clamp(3rem, 12vw, 6rem);
-
-  /* Motion */
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --dur-fast: 120ms;
-  --dur-med: 260ms;
+  /* --- Motion --- */
+  --ease:     cubic-bezier(0.22, 1, 0.36, 1);  /* @kind other */ /* gentle overshoot-free easeOut */
+  --dur-fast: 120ms;  /* @kind other */
+  --dur-med:  260ms;  /* @kind other */
 }
+
+/* ===== effects.css ===== */
+/* SCHIERATI — Elevation & emphasis tokens.
+   Refined and restrained: a soft, deep card shadow for depth, and quiet
+   "emphasis" treatments (a hairline ring + a faint bloom) instead of neon glows.
+   The brand reads serious — emphasis whispers, it doesn't shout. */
+
+:root {
+  --shadow-card:  0 12px 34px rgba(0, 0, 0, 0.50);
+  --shadow-soft:  0 6px 18px rgba(0, 0, 0, 0.35);
+
+  /* Hairline rings (selected / active states) */
+  --ring-a:      0 0 0 1.5px var(--faction-a-line);
+  --ring-b:      0 0 0 1.5px var(--faction-b-line);
+  --ring-gold:   0 0 0 1.5px var(--gold-line);
+
+  /* Subtle emphasis: ring + faint colored bloom (was the neon "glow") */
+  --glow-a:      0 0 0 1.5px var(--faction-a-line), 0 8px 24px rgba(84, 134, 196, 0.16);
+  --glow-b:      0 0 0 1.5px var(--faction-b-line), 0 8px 24px rgba(199, 122, 69, 0.16);
+  --glow-accent: 0 0 0 1.5px var(--gold-line),     0 8px 24px rgba(201, 163, 90, 0.16);
+
+  /* Ambient marketing background: very faint side-blooms over the navy ground */
+  --bg-ambient:
+    radial-gradient(820px 460px at 82% -12%, rgba(199, 122, 69, 0.10), transparent 60%),
+    radial-gradient(820px 540px at 8% -4%,  rgba(84, 134, 196, 0.10), transparent 58%),
+    var(--bg); /* @kind other */
+}
+
