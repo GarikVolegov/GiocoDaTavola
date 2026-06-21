@@ -68,6 +68,14 @@ export const SocketEvents = {
   PlayerKnowGuessError: 'player:knowGuessError',
   /** Server privately tells a guesser whether they were right (at PHASE_RESULTS). */
   PlayerKnowGuessResult: 'player:knowGuessResult',
+  /** Server privately tells a player they are the infiltrator (at game start). */
+  PlayerInfiltratoRole: 'player:infiltratoRole',
+  /** Player accuses who they think the infiltrator is (ACCUSE phase). */
+  PlayerAccuse: 'player:accuse',
+  /** Server confirms the player's current accusation back to them only. */
+  PlayerAccused: 'player:accused',
+  /** Server rejects the accusation (wrong phase, self, unknown target). */
+  PlayerAccuseError: 'player:accuseError',
   /** Player secretly votes the most convincing defender (SPEAKER_VOTE phase). */
   PlayerVoteSpeaker: 'player:voteSpeaker',
   /** Server confirms the player's current best-speaker vote back to them only. */
@@ -166,6 +174,7 @@ export type GamePhase =
   | 'VOTE_2'
   | 'SPEAKER_VOTE'
   | 'PHASE_RESULTS'
+  | 'ACCUSE'
   | 'FINAL_AWARDS'
   // 1v1 "Duello" mode phases (mirror server rooms.ts).
   | 'DUEL_PICK'
@@ -227,6 +236,21 @@ export interface StartGamePayload {
   register: ContentRegister;
   /** Game mode; defaults to 'gruppo' server-side when omitted. */
   mode?: GameMode;
+  /** Enable "L'Infiltrato" (gruppo + ≥4 humans); defaults off. */
+  infiltrato?: boolean;
+}
+
+/** Minimum humans required to enable "L'Infiltrato" (mirror of server). */
+export const MIN_INFILTRATO_HUMANS = 4;
+
+/** Public reveal of the infiltrator outcome at FINAL_AWARDS (mirror of server). */
+export interface InfiltratoResult {
+  infiltratorId: string;
+  infiltratorNickname: string;
+  flips: number;
+  caught: boolean;
+  won: boolean;
+  votesAgainst: number;
 }
 
 /** Public dilemma shown on the shared screen: the prompt + its two options. */
@@ -384,6 +408,10 @@ export interface GameStatePayload {
   knowPairs: KnowPair[] | null;
   /** How many players have guessed in the know round. Aggregate count only. */
   knowGuessedCount: number;
+  /** "L'Infiltrato": how many have accused this game (ACCUSE). Aggregate count only. */
+  accusedCount: number;
+  /** "L'Infiltrato": the reveal at FINAL_AWARDS (who, won/caught); null otherwise. */
+  infiltratoResult: InfiltratoResult | null;
   /**
    * The defenders to vote between, shown only in SPEAKER_VOTE; null otherwise.
    * Their identities/side are already public (they spoke in DEFENSE).
@@ -572,6 +600,25 @@ export interface PlayerKnowGuessErrorPayload {
   error: KnowGuessError;
 }
 
+/** Private notice that this phone is the infiltrator (with the mission text). */
+export interface PlayerInfiltratoRolePayload {
+  mission: string;
+}
+
+export interface PlayerAccusePayload {
+  accusedId: string;
+}
+
+export interface PlayerAccusedPayload {
+  accusedId: string;
+}
+
+export type AccuseError = 'ROOM_NOT_FOUND' | 'NOT_ACCUSE_PHASE' | 'NOT_IN_ROOM' | 'INVALID_TARGET';
+
+export interface PlayerAccuseErrorPayload {
+  error: AccuseError;
+}
+
 export interface PlayerVoteSpeakerPayload {
   defenderId: string;
 }
@@ -620,6 +667,7 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   VOTE_2: 'Secondo voto',
   SPEAKER_VOTE: 'Miglior oratore',
   PHASE_RESULTS: 'Risultati',
+  ACCUSE: "Chi era l'infiltrato?",
   FINAL_AWARDS: 'Premi finali',
   DUEL_PICK: 'Scegliete',
   DUEL_REVEAL: 'Rivelazione',
@@ -636,6 +684,7 @@ export type StartGameError =
   | 'WRONG_PLAYER_COUNT'
   | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
+  | 'INFILTRATO_NEEDS_PLAYERS'
   | 'ALREADY_STARTED';
 
 export interface HostStartErrorPayload {
@@ -650,6 +699,7 @@ export const START_ERROR_MESSAGES: Record<StartGameError, string> = {
   WRONG_PLAYER_COUNT: 'Il 1v1 richiede esattamente 2 giocatori',
   INVALID_DILEMMA_COUNT: 'Numero di dilemmi non valido',
   INVALID_REGISTER: 'Registro non valido',
+  INFILTRATO_NEEDS_PLAYERS: "L'Infiltrato richiede almeno 4 persone",
   ALREADY_STARTED: 'La partita è già iniziata',
 };
 

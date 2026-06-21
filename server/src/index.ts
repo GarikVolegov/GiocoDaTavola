@@ -123,6 +123,9 @@ function gameStatePayload(room: Room) {
     // know round, null otherwise) + how many have guessed. Guesses stay secret.
     knowPairs: rooms.publicKnowPairs(room.code),
     knowGuessedCount: room.knowGuesses.size,
+    // "L'Infiltrato": how many have accused (ACCUSE) + the FINAL_AWARDS reveal.
+    accusedCount: room.accusations.size,
+    infiltratoResult: rooms.publicInfiltratoResult(room.code),
     // The defenders to vote between, gated to SPEAKER_VOTE (null otherwise), plus
     // how many have voted. Aggregate only — never who voted which speaker.
     speakerCandidates: rooms.speakerCandidates(room.code),
@@ -355,7 +358,7 @@ io.on('connection', (socket) => {
 
   // The leader starts the game for their room, choosing the dilemma count.
   // Gated: only the socket whose player is the room leader may start.
-  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string }) => {
+  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean }) => {
     const code = leaderCodeFor(socket.id);
     if (!code) {
       socket.emit('leader:startError', { error: 'ROOM_NOT_FOUND' });
@@ -366,10 +369,21 @@ io.on('connection', (socket) => {
       Number(payload?.dilemmaCount),
       String(payload?.register ?? 'misto'),
       String(payload?.mode ?? 'gruppo'),
+      Boolean(payload?.infiltrato),
     );
     if (!result.ok) {
       socket.emit('leader:startError', { error: result.error });
       return;
+    }
+    // Privately tell the infiltrator their secret role + mission (only their phone).
+    const infiltratorId = result.room.infiltratorId;
+    if (infiltratorId) {
+      const sid = playerSocket.get(infiltratorId);
+      if (sid) {
+        io.to(sid).emit('player:infiltratoRole', {
+          mission: 'Sei l’Infiltrato! Fai ribaltare il gruppo verso la minoranza, senza farti smascherare.',
+        });
+      }
     }
     broadcastGameState(code);
     schedulePhase(code);
@@ -552,6 +566,25 @@ io.on('connection', (socket) => {
       advanceAndBroadcast(code);
     } else {
       broadcastGameState(code); // refresh the guessed count
+    }
+  });
+
+  // A player accuses who they think the infiltrator is (ACCUSE phase). The store
+  // gates it; the phase ends early once everyone present has accused.
+  socket.on('player:accuse', (payload: { accusedId?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.accuse(code, playerId, String(payload?.accusedId ?? ''));
+    if (!result.ok) {
+      socket.emit('player:accuseError', { error: result.error });
+      return;
+    }
+    socket.emit('player:accused', { accusedId: result.room.accusations.get(playerId) });
+    if (rooms.allAccused(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code); // refresh the accused count
     }
   });
 
