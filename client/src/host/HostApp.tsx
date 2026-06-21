@@ -150,7 +150,7 @@ export default function HostApp() {
             Dilemma {game.dilemmaIndex}/{game.dilemmaCount}
           </p>
         )}
-        <h1 style={{ fontSize: '2.5rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
+        <h1 style={{ fontSize: '2.5rem', margin: 0, fontFamily: 'var(--font-serif)', fontWeight: 500, letterSpacing: 'var(--tracking-serif)' }}>{PHASE_LABELS[phase]}</h1>
 
         {phase === 'PHASE_INTRO' && (
           <>
@@ -158,7 +158,7 @@ export default function HostApp() {
               Vi mostreremo {game.dilemmaCount} dilemmi. Votate, ascoltate le difese e
               cambiate idea… se vi convincono!
             </p>
-            <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, maxWidth: '40rem' }}>
+            <p style={{ fontSize: '1.6rem', fontWeight: 500, margin: 0, maxWidth: '40rem', fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>
               🎯 {OBJECTIVE}
             </p>
           </>
