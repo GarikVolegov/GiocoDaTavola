@@ -119,6 +119,10 @@ function gameStatePayload(room: Room) {
     swingBetCount: room.swingBets.size,
     // How many player-written dilemmas the group has added (LOBBY). Count only.
     submittedCount: room.submittedDilemmas.length,
+    // "Quanto mi conosci" round: the public guesser->target ring (gated to the
+    // know round, null otherwise) + how many have guessed. Guesses stay secret.
+    knowPairs: rooms.publicKnowPairs(room.code),
+    knowGuessedCount: room.knowGuesses.size,
     // The defenders to vote between, gated to SPEAKER_VOTE (null otherwise), plus
     // how many have voted. Aggregate only — never who voted which speaker.
     speakerCandidates: rooms.speakerCandidates(room.code),
@@ -258,6 +262,15 @@ function advanceAndBroadcast(code: string): void {
     for (const r of rooms.swingBetResults(code)) {
       const sid = playerSocket.get(r.playerId);
       if (sid) io.to(sid).emit('player:swingBetResult', { correct: r.correct, bet: r.bet, flipped: r.flipped });
+    }
+    // …and each know-round guesser's own result.
+    for (const r of rooms.knowGuessResults(code)) {
+      const sid = playerSocket.get(r.guesserId);
+      if (sid) {
+        io.to(sid).emit('player:knowGuessResult', {
+          correct: r.correct, guess: r.guess, actual: r.actual, targetId: r.targetId,
+        });
+      }
     }
   }
   if (room && room.phase === 'FINAL_AWARDS') {
@@ -521,6 +534,25 @@ io.on('connection', (socket) => {
     }
     socket.emit('player:dilemmaSubmitted', { count: result.count });
     broadcastGameState(code); // refresh the submitted count for everyone
+  });
+
+  // A player guesses how their assigned friend voted in the "Quanto mi conosci"
+  // round (PREDICT). The store gates it; the phase ends early once all have guessed.
+  socket.on('player:knowGuess', (payload: { choice?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.knowGuess(code, playerId, String(payload?.choice ?? ''));
+    if (!result.ok) {
+      socket.emit('player:knowGuessError', { error: result.error });
+      return;
+    }
+    socket.emit('player:knowGuessed', { choice: result.room.knowGuesses.get(playerId) });
+    if (rooms.allKnowGuessed(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code); // refresh the guessed count
+    }
   });
 
   // A player votes the most convincing defender during SPEAKER_VOTE. The store
