@@ -834,6 +834,18 @@ describe('RoomStore per-player stats (Fase A)', () => {
     return code;
   }
 
+  function defenseRoom(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B']): string {
+    const { code } = store.create();
+    for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3); // PHASE_INTRO
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
+    store.advancePhase(code); // SPLIT_REVEAL
+    store.advancePhase(code); // DEFENSE
+    return code;
+  }
+
   it('a freshly started game has empty per-player stats', () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
     const code = startedStatsRoom(store);
@@ -848,9 +860,9 @@ describe('RoomStore per-player stats (Fase A)', () => {
     playRound(store, code, { 'sock-0': 'A', 'sock-1': 'B', 'sock-2': 'B' }, { 'sock-1': 'A' });
     expect(store.get(code)?.phase).toBe('PHASE_RESULTS');
     const stats = store.get(code)!.stats;
-    expect(stats.get('sock-0')).toEqual({ rounds: 1, changedCount: 0, majorityCount: 1, minorityCount: 0, persuasion: 1 });
-    expect(stats.get('sock-1')).toEqual({ rounds: 1, changedCount: 1, majorityCount: 1, minorityCount: 0, persuasion: 0 });
-    expect(stats.get('sock-2')).toEqual({ rounds: 1, changedCount: 0, majorityCount: 0, minorityCount: 1, persuasion: 0 });
+    expect(stats.get('sock-0')).toEqual({ rounds: 1, changedCount: 0, majorityCount: 1, minorityCount: 0, persuasion: 1, defendedCount: 1 });
+    expect(stats.get('sock-1')).toEqual({ rounds: 1, changedCount: 1, majorityCount: 1, minorityCount: 0, persuasion: 0, defendedCount: 1 });
+    expect(stats.get('sock-2')).toEqual({ rounds: 1, changedCount: 0, majorityCount: 0, minorityCount: 1, persuasion: 0, defendedCount: 0 });
   });
 
   it('does not credit majority or minority on a tied second vote', () => {
@@ -873,9 +885,19 @@ describe('RoomStore per-player stats (Fase A)', () => {
     // Round 2: everyone votes A, nobody changes -> majority A, no swing.
     playRound(store, code, { 'sock-0': 'A', 'sock-1': 'A', 'sock-2': 'A' });
     const stats = store.get(code)!.stats;
-    expect(stats.get('sock-0')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 2, minorityCount: 0, persuasion: 1 });
-    expect(stats.get('sock-1')).toEqual({ rounds: 2, changedCount: 1, majorityCount: 2, minorityCount: 0, persuasion: 0 });
-    expect(stats.get('sock-2')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 1, minorityCount: 1, persuasion: 0 });
+    expect(stats.get('sock-0')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 2, minorityCount: 0, persuasion: 1, defendedCount: 2 });
+    expect(stats.get('sock-1')).toEqual({ rounds: 2, changedCount: 1, majorityCount: 2, minorityCount: 0, persuasion: 0, defendedCount: 1 });
+    expect(stats.get('sock-2')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 1, minorityCount: 1, persuasion: 0, defendedCount: 0 });
+  });
+
+  it('counts a round each defender defended (defendedCount)', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']); // defenders: sock-0 (A), sock-1 (B)
+    let guard = 0;
+    while (store.get(code)?.phase !== 'PHASE_RESULTS' && guard++ < 20) store.advancePhase(code);
+    expect(store.get(code)?.stats.get('sock-0')?.defendedCount).toBe(1);
+    expect(store.get(code)?.stats.get('sock-1')?.defendedCount).toBe(1);
+    expect(store.get(code)?.stats.get('sock-2')?.defendedCount ?? 0).toBe(0);
   });
 });
 

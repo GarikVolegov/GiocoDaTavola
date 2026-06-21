@@ -392,7 +392,9 @@ export class RoomStore {
     }
     const netSwing: VoteTally = { A: second.A - first.A, B: second.B - first.B };
     for (const d of room.defenders) {
-      if (netSwing[d.side] > 0) ensureStats(room, d.id).persuasion += netSwing[d.side];
+      const ds = ensureStats(room, d.id);
+      ds.defendedCount++;
+      if (netSwing[d.side] > 0) ds.persuasion += netSwing[d.side];
     }
   }
 

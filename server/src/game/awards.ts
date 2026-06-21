@@ -15,6 +15,8 @@ export interface PlayerStats {
   minorityCount: number;
   /** Net votes that swung toward sides this player defended. */
   persuasion: number;
+  /** Rounds the player was a chosen defender. */
+  defendedCount: number;
 }
 
 /** The fun end-of-game superlatives (persuasion-themed). */
@@ -33,7 +35,7 @@ export interface Award {
 export function ensureStats(room: Room, id: string): PlayerStats {
   let s = room.stats.get(id);
   if (!s) {
-    s = { rounds: 0, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0 };
+    s = { rounds: 0, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0, defendedCount: 0 };
     room.stats.set(id, s);
   }
   return s;
