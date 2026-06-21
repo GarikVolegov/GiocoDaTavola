@@ -106,6 +106,10 @@ function gameStatePayload(room: Room) {
     // Who is defending + turn progress, gated to DEFENSE (null otherwise). Only
     // the chosen defenders' identities/side are public; no other votes leak.
     defense: rooms.publicDefense(room.code),
+    // Whether this is the surprise "Avvocato del Diavolo" round (defenders argue
+    // the side they did NOT vote). Revealed only from DEFENSE on, so it can't
+    // skew the first vote/prediction.
+    isDevilRound: rooms.publicDevilRound(room.code),
     // The swing + per-defender attribution, gated to PHASE_RESULTS (null
     // otherwise). Aggregate counts only — never who voted what.
     swing: rooms.publicSwing(room.code),

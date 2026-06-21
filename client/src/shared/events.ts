@@ -231,6 +231,12 @@ export interface Defender {
   id: string;
   nickname: string;
   side: VoteChoice;
+  /**
+   * True in the surprise "Avvocato del Diavolo" round: this defender argues
+   * AGAINST their own vote. `side` is the side they ARGUE; their real vote is the
+   * opposite. Absent/false in normal rounds.
+   */
+  devil?: boolean;
 }
 
 /** Public defense view: who is currently speaking + the turn progress. */
@@ -276,7 +282,8 @@ export type AwardId =
   | 'bastian'
   | 'beniamino'
   | 'oracolo'
-  | 'oratore';
+  | 'oratore'
+  | 'voltagabbana';
 
 /** Payload of the `room:reaction` broadcast: a single allowlisted emoji. */
 export interface RoomReactionPayload {
@@ -358,6 +365,11 @@ export interface GameStatePayload {
    * Only the chosen defenders' identities/side are public.
    */
   defense: DefenseState | null;
+  /**
+   * True in the surprise "Avvocato del Diavolo" round (defenders argue the side
+   * they did NOT vote). Revealed only from DEFENSE on; false otherwise.
+   */
+  isDevilRound: boolean;
   /**
    * The swing + per-defender attribution, shown only in PHASE_RESULTS; null
    * otherwise. Aggregate counts only — never who voted what.
