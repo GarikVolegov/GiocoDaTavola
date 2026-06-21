@@ -118,6 +118,20 @@ function broadcastGameState(code: string): void {
   io.to(code).emit('game:state', gameStatePayload(room));
 }
 
+// At FINAL_AWARDS, send each HUMAN player their own private blind-spot tip — to
+// their socket only (never broadcast). Bots and offline players are skipped.
+function emitBlindSpots(code: string): void {
+  const room = rooms.get(code);
+  if (!room || room.phase !== 'FINAL_AWARDS') return;
+  for (const player of room.players.values()) {
+    if (player.isBot) continue;
+    const sid = playerSocket.get(player.id);
+    if (!sid) continue;
+    const tip = rooms.blindSpotFor(code, player.id);
+    if (tip) io.to(sid).emit('player:blindSpot', tip);
+  }
+}
+
 // Cancel any pending auto-advance timer for a room.
 function clearPhaseTimer(code: string): void {
   const timer = phaseTimers.get(code);
@@ -165,6 +179,7 @@ function advanceAndBroadcast(code: string): void {
   const result = rooms.advancePhase(code);
   if (!result.ok) return;
   broadcastGameState(code);
+  if (rooms.get(code)?.phase === 'FINAL_AWARDS') emitBlindSpots(code);
   schedulePhase(code);
   maybeGenerateAiDefense(code);
 }
@@ -270,6 +285,10 @@ io.on('connection', (socket) => {
     // screen immediately (the lobby broadcast alone wouldn't place it in-game).
     const room = rooms.get(code);
     if (room) socket.emit('game:state', gameStatePayload(room));
+    if (room && room.phase === 'FINAL_AWARDS') {
+      const tip = rooms.blindSpotFor(code, playerId);
+      if (tip) socket.emit('player:blindSpot', tip);
+    }
     broadcastLobby(code);
     if (reconnecting && room && isVotingPhase(room.phase)) broadcastGameState(code);
   });

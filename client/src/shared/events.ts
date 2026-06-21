@@ -32,6 +32,8 @@ export const SocketEvents = {
   PlayerVoted: 'player:voted',
   /** Server rejects the vote (wrong phase, not in room, bad choice). */
   PlayerVoteError: 'player:voteError',
+  /** Server sends each player their own private end-of-game blind-spot tip. */
+  PlayerBlindSpot: 'player:blindSpot',
 } as const;
 
 /** Session formats and their dilemma counts (mirror server rooms.ts). */
@@ -393,3 +395,13 @@ export const START_ERROR_MESSAGES: Record<StartGameError, string> = {
   INVALID_REGISTER: 'Registro non valido',
   ALREADY_STARTED: 'La partita è già iniziata',
 };
+
+export type BlindSpotId =
+  | 'volubile' | 'rigido' | 'conformista' | 'contrarian' | 'difese-deboli' | 'equilibrato' | 'esordiente';
+
+/** Private per-player improvement tip, shown only on that player's own phone. */
+export interface BlindSpot {
+  id: BlindSpotId;
+  title: string;
+  advice: string;
+}
