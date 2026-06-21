@@ -55,3 +55,32 @@
   .stage { order: -1; }
   .navLinks a { display: none; }
 }
+
+/* shared section chrome */
+.section { padding: var(--space-7) 0; border-top: 1px solid var(--border); }
+.kicker { font-size: .8rem; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600; margin: 0 0 var(--space-2); }
+.h2 { font-family: var(--font-display); font-size: clamp(1.6rem, 3.6vw, 2.4rem);
+  margin: 0 0 var(--space-6); font-weight: 700; letter-spacing: -.01em; }
+
+/* steps */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+.step { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: var(--space-5); }
+.stepN { width: 34px; height: 34px; border-radius: var(--radius-pill); display: grid; place-items: center;
+  font-weight: 800; background: rgba(192, 79, 255, .18); color: var(--accent); margin-bottom: var(--space-3); }
+.step h3 { margin: 0 0 var(--space-1); font-size: 1.1rem; }
+.step p { margin: 0; color: var(--text-muted); font-size: .95rem; }
+
+/* features */
+.feat { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.card { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: var(--space-5); display: flex; gap: var(--space-4); }
+.cardIc { font-size: 1.9rem; line-height: 1; }
+.card h3 { margin: 0 0 var(--space-1); font-size: 1.1rem; }
+.card p { margin: 0; color: var(--text-muted); font-size: .95rem; }
+
+@media (max-width: 780px) {
+  .steps { grid-template-columns: 1fr; }
+  .feat { grid-template-columns: 1fr; }
+}

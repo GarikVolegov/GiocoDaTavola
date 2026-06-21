@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../shared/ui';
 import Hero from './sections/Hero';
+import HowToPlay from './sections/HowToPlay';
+import Features from './sections/Features';
 import styles from './Landing.module.css';
 
 // Marketing landing on `/`: describes the game and funnels to play.
@@ -24,6 +26,8 @@ export default function Landing() {
       </nav>
 
       <Hero onCreate={create} onJoin={join} />
+      <HowToPlay />
+      <Features />
     </main>
   );
 }
