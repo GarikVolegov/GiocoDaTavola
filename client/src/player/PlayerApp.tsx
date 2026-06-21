@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useAuth, Show, SignInButton } from '@clerk/react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import {
@@ -165,6 +166,20 @@ export default function PlayerApp() {
 
   const phase = game?.phase ?? 'LOBBY';
   const remaining = useCountdown(game?.phaseExpiresAt ?? null);
+
+  // When the phone's user is logged in, send the Clerk token so the server can
+  // attribute saved awards. Re-runs on login and on (re)joining a room.
+  const { isSignedIn, getToken } = useAuth();
+  useEffect(() => {
+    if (!isSignedIn || !joinedCode) return;
+    let cancelled = false;
+    void getToken().then((token) => {
+      if (token && !cancelled) getSocket().emit(SocketEvents.PlayerIdentify, { token });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn, joinedCode]);
 
   // Each new dilemma round starts with a clean (unselected) vote.
   useEffect(() => {
@@ -413,9 +428,30 @@ export default function PlayerApp() {
               : `${switched} ${switched === 1 ? 'persona ha' : 'persone hanno'} cambiato idea dopo le difese!`}
           </p>
         ) : phase === 'FINAL_AWARDS' ? (
-          <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
-            🏆 Guarda i premi sullo schermo!
-          </p>
+          <>
+            <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
+              🏆 Guarda i premi sullo schermo!
+            </p>
+            <Show when="signed-out">
+              <p style={{ fontSize: '1rem', opacity: 0.85, margin: '0.4rem 0 0' }}>
+                Accedi per salvare i tuoi premi 💾
+              </p>
+              <SignInButton mode="modal">
+                <button
+                  type="button"
+                  style={{
+                    marginTop: '0.5rem',
+                    fontWeight: 700,
+                    padding: '0.6rem 1.4rem',
+                    borderRadius: '0.7rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Accedi e salva
+                </button>
+              </SignInButton>
+            </Show>
+          </>
         ) : phase === 'FINAL_DUEL' ? (
           <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
             🏆 Guarda il risultato sullo schermo!
