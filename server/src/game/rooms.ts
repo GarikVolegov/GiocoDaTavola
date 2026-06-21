@@ -123,6 +123,12 @@ export interface Defender {
   id: string;
   nickname: string;
   side: VoteChoice;
+  /**
+   * True when this defender must argue AGAINST their own vote (the surprise
+   * "Avvocato del Diavolo" round). `side` is the side they ARGUE; their real
+   * vote is the opposite. Absent/false in normal rounds.
+   */
+  devil?: boolean;
 }
 
 /** Public view of the defense phase: who is speaking + turn progress. */
@@ -159,6 +165,12 @@ export interface Room {
   deck: Deck | null;
   /** The dilemma in play this round; null in the lobby/intro and after the game. */
   currentDilemma: Dilemma | null;
+  /**
+   * The 1-based dilemma index chosen at start to be the surprise "Avvocato del
+   * Diavolo" round, where defenders argue the side they did NOT vote. null when
+   * no twist applies (duello mode, or fewer than 2 dilemmas). Never the first round.
+   */
+  devilRoundIndex: number | null;
   /**
    * Secret votes for the current dilemma, keyed by player id. Holds the first
    * vote during VOTE_1 and the (live, changeable) second vote during VOTE_2 —
@@ -389,6 +401,7 @@ export class RoomStore {
    * is chosen via the injectable rng, so tests can pin the pick.
    */
   private selectDefenders(room: Room): Defender[] {
+    const devil = this.isDevilRound(room);
     const defenders: Defender[] = [];
     for (const side of ['A', 'B'] as const) {
       const voters = [...room.votes.entries()]
@@ -397,9 +410,33 @@ export class RoomStore {
       if (voters.length === 0) continue; // side with no votes -> no defender
       const chosen = voters[Math.floor(this.rng() * voters.length)];
       const player = room.players.get(chosen);
-      if (player) defenders.push({ id: player.id, nickname: player.nickname, side });
+      if (!player) continue;
+      if (devil) {
+        // "Avvocato del Diavolo": argue the OPPOSITE side. Everything downstream
+        // (bot/AI argument, attribution, persuasion, public display) keys off
+        // `side` = the side being argued, so no other code needs to know.
+        const argued: VoteChoice = side === 'A' ? 'B' : 'A';
+        defenders.push({ id: player.id, nickname: player.nickname, side: argued, devil: true });
+      } else {
+        defenders.push({ id: player.id, nickname: player.nickname, side });
+      }
     }
     return defenders;
+  }
+
+  /**
+   * Pick the surprise "Avvocato del Diavolo" round: a random 1-based dilemma
+   * index in [2..dilemmaCount] (never the first round, so the group learns the
+   * normal flow first). null when there are fewer than 2 dilemmas.
+   */
+  private pickDevilRound(dilemmaCount: number): number | null {
+    if (dilemmaCount < 2) return null;
+    return 2 + Math.floor(this.rng() * (dilemmaCount - 1));
+  }
+
+  /** True when the round in play is the "Avvocato del Diavolo" round. */
+  private isDevilRound(room: Room): boolean {
+    return room.devilRoundIndex !== null && room.dilemmaIndex === room.devilRoundIndex;
   }
 
   /** Cast each bot's (random) first vote on entry to VOTE_1. */
@@ -470,7 +507,12 @@ export class RoomStore {
     }
     const netSwing: VoteTally = { A: second.A - first.A, B: second.B - first.B };
     for (const d of room.defenders) {
-      if (netSwing[d.side] > 0) ensureStats(room, d.id).persuasion += netSwing[d.side];
+      if (netSwing[d.side] <= 0) continue;
+      const s = ensureStats(room, d.id);
+      s.persuasion += netSwing[d.side];
+      // In the "Avvocato del Diavolo" round, also bank it as devil persuasion (a
+      // subset of persuasion) for the 🎭 Il Voltagabbana award.
+      if (d.devil) s.devilPersuasion = (s.devilPersuasion ?? 0) + netSwing[d.side];
     }
     // Credit each predictor who called the post-defense majority (the second-vote
     // majority). On a tie there is no majority, so nobody scores.
@@ -540,6 +582,7 @@ export class RoomStore {
       phaseExpiresAt: null,
       deck: null,
       currentDilemma: null,
+      devilRoundIndex: null,
       votes: new Map(),
       votes1: new Map(),
       defenders: [],
@@ -597,6 +640,8 @@ export class RoomStore {
     room.phaseExpiresAt = this.expiryFor('PHASE_INTRO');
     room.deck = this.makeDeck(register);
     room.currentDilemma = null;
+    // Pick the surprise "Avvocato del Diavolo" round up front (group mode only).
+    room.devilRoundIndex = mode === 'gruppo' ? this.pickDevilRound(dilemmaCount) : null;
     room.stats = new Map();
     room.duelScore = new Map();
     room.duelAgreements = 0;
@@ -891,6 +936,22 @@ export class RoomStore {
     const room = this.rooms.get(code);
     if (!room || !isSplitRevealed(room.phase)) return null;
     return this.voteTally(code);
+  }
+
+  /**
+   * Whether the round in play is the surprise "Avvocato del Diavolo" round, but
+   * revealed only once defenses begin (DEFENSE → PHASE_RESULTS) so it can't skew
+   * the first vote or the prediction. false everywhere else.
+   */
+  publicDevilRound(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room || !this.isDevilRound(room)) return false;
+    return (
+      room.phase === 'DEFENSE' ||
+      room.phase === 'VOTE_2' ||
+      room.phase === 'SPEAKER_VOTE' ||
+      room.phase === 'PHASE_RESULTS'
+    );
   }
 
   /**

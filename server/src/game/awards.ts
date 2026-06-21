@@ -31,6 +31,12 @@ export interface PlayerStats {
    * (SPEAKER_VOTE phase). Optional + only set once non-zero (see reactionsReceived).
    */
   oratorVotes?: number;
+  /**
+   * Net votes swung toward the side this player DEFENDED while playing devil's
+   * advocate (the surprise "Avvocato del Diavolo" round — argued the side they
+   * did NOT vote). A subset of `persuasion`. Optional + only set once non-zero.
+   */
+  devilPersuasion?: number;
 }
 
 /** The fun end-of-game superlatives (persuasion-themed). */
@@ -42,7 +48,8 @@ export type AwardId =
   | 'bastian'
   | 'beniamino'
   | 'oracolo'
-  | 'oratore';
+  | 'oratore'
+  | 'voltagabbana';
 
 /** An award and who won it. Only awards with a real winner are ever returned. */
 export interface Award {
@@ -110,6 +117,9 @@ export function computeAwards(room: Room): Award[] {
     { id: 'oratore', title: 'Il Grande Oratore', emoji: '🎤',
       description: 'Votato dai più come il più convincente.',
       winner: winnerBy((s) => s.oratorVotes ?? 0, (s) => (s.oratorVotes ?? 0) > 0) },
+    { id: 'voltagabbana', title: 'Il Voltagabbana', emoji: '🎭',
+      description: 'Ha spostato più voti difendendo il lato che NON aveva votato.',
+      winner: winnerBy((s) => s.devilPersuasion ?? 0, (s) => (s.devilPersuasion ?? 0) > 0) },
   ];
   return defs.filter((d): d is Award => d.winner !== null);
 }
