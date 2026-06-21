@@ -1489,3 +1489,49 @@ describe('RoomStore reconnection / connected state', () => {
     expect(store.blindSpotFor(code, 'nobody')).toBeNull();
   });
 });
+
+describe('RoomStore leadership', () => {
+  it('setLeader marks a present player as leader; isLeader reflects it', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p0', 'P0');
+    expect(store.setLeader(code, 'p0')).toBe(true);
+    expect(store.isLeader(code, 'p0')).toBe(true);
+    expect(store.isLeader(code, 'p1')).toBe(false);
+  });
+
+  it('setLeader fails for an absent player', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    expect(store.setLeader(code, 'ghost')).toBe(false);
+  });
+
+  it('reassigns leadership to the next human when the leader leaves', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p0', 'P0');
+    store.join(code, 'p1', 'P1');
+    store.setLeader(code, 'p0');
+    store.leave(code, 'p0');
+    expect(store.isLeader(code, 'p1')).toBe(true);
+  });
+
+  it('keeps the leader when a non-leader leaves', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p0', 'P0');
+    store.join(code, 'p1', 'P1');
+    store.setLeader(code, 'p0');
+    store.leave(code, 'p1');
+    expect(store.isLeader(code, 'p0')).toBe(true);
+  });
+
+  it('clears leadership (null) when the last human leaves', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p0', 'P0');
+    store.setLeader(code, 'p0');
+    store.leave(code, 'p0');
+    expect(store.get(code)?.leaderId).toBeNull();
+  });
+});

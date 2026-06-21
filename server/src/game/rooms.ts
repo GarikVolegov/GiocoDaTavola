@@ -128,6 +128,8 @@ export interface DefenseState {
 export interface Room {
   code: string;
   createdAt: number;
+  /** The leader-player's stable id (drives the game from their phone); null until set. */
+  leaderId: string | null;
   /** Players currently in the lobby, keyed by player id. */
   players: Map<string, Player>;
   /** Current phase of the game state machine. */
@@ -445,6 +447,7 @@ export class RoomStore {
     const room: Room = {
       code,
       createdAt: this.now(),
+      leaderId: null,
       players: new Map(),
       phase: 'LOBBY',
       dilemmaCount: null,
@@ -862,7 +865,12 @@ export class RoomStore {
     // Drop any votes so the tally + allVoted + swing only count present players.
     room.votes.delete(playerId);
     room.votes1.delete(playerId);
-    return room.players.delete(playerId);
+    const removed = room.players.delete(playerId);
+    if (removed && room.leaderId === playerId) {
+      const nextHuman = [...room.players.values()].find((p) => !p.isBot);
+      room.leaderId = nextHuman ? nextHuman.id : null;
+    }
+    return removed;
   }
 
   /**
@@ -900,6 +908,19 @@ export class RoomStore {
   listPlayers(code: string): Player[] {
     const room = this.rooms.get(code);
     return room ? [...room.players.values()] : [];
+  }
+
+  /** Make a present player the room's leader. False if room/player unknown. */
+  setLeader(code: string, playerId: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room || !room.players.has(playerId)) return false;
+    room.leaderId = playerId;
+    return true;
+  }
+
+  /** Whether the given player is the room's leader. */
+  isLeader(code: string, playerId: string): boolean {
+    return this.rooms.get(code)?.leaderId === playerId;
   }
 
   get(code: string): Room | undefined {
