@@ -1447,3 +1447,15 @@ describe('RoomStore reconnection / connected state', () => {
     expect(store.get(code)?.players.get('p1')?.connected ?? true).toBe(true);
   });
 });
+
+describe('RoomStore.setPlayerUser', () => {
+  it('tags a player with a clerk user id; false for unknown room/player', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    expect(store.setPlayerUser(code, 'p1', 'user_123')).toBe(true);
+    expect(store.get(code)?.players.get('p1')?.clerkUserId).toBe('user_123');
+    expect(store.setPlayerUser('ZZZZ', 'p1', 'user_123')).toBe(false);
+    expect(store.setPlayerUser(code, 'ghost', 'user_123')).toBe(false);
+  });
+});

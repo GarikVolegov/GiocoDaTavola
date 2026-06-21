@@ -94,6 +94,11 @@ export interface Player {
    * `{id, nickname}` (mirrors `isBot?`).
    */
   connected?: boolean;
+  /**
+   * Clerk user id, set when a logged-in phone identifies itself (player:identify).
+   * Absent = anonymous (the default). Used only to attribute saved awards.
+   */
+  clerkUserId?: string;
 }
 
 /**
@@ -802,6 +807,14 @@ export class RoomStore {
     if (!player) return false;
     if (connected) delete player.connected;
     else player.connected = false;
+    return true;
+  }
+
+  /** Tag a player with a Clerk user id (for award attribution). False if unknown. */
+  setPlayerUser(code: string, playerId: string, clerkUserId: string): boolean {
+    const player = this.rooms.get(code)?.players.get(playerId);
+    if (!player) return false;
+    player.clerkUserId = clerkUserId;
     return true;
   }
 
