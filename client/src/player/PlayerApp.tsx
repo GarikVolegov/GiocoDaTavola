@@ -342,8 +342,8 @@ export default function PlayerApp() {
                   Spunti per te:
                 </p>
                 <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  {game.defense.spunti.map((s) => (
-                    <li key={s} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{s}</li>
+                  {game.defense.spunti.map((s, i) => (
+                    <li key={`${i}-${s}`} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{s}</li>
                   ))}
                 </ul>
               </div>

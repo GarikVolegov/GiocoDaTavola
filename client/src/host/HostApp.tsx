@@ -370,8 +370,8 @@ export default function HostApp() {
               )}
               {defense.spunti && defense.spunti.length > 0 && (
                 <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  {defense.spunti.map((s) => (
-                    <li key={s} style={{ fontSize: '1.1rem', opacity: 0.85 }}>{s}</li>
+                  {defense.spunti.map((s, i) => (
+                    <li key={`${i}-${s}`} style={{ fontSize: '1.1rem', opacity: 0.85 }}>{s}</li>
                   ))}
                 </ul>
               )}
