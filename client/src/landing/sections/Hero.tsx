@@ -1,4 +1,4 @@
-import { Button } from '../../shared/ui';
+import { Button, Swing } from '../../shared/ui';
 import styles from '../Landing.module.css';
 
 interface HeroProps {
@@ -11,6 +11,13 @@ interface HeroProps {
 export default function Hero({ onCreate, onJoin }: HeroProps) {
   return (
     <div className={styles.wrap}>
+      {/* one faint bivio watermark behind the hero — the dilemma made into a mark */}
+      <svg className={styles.watermark} viewBox="0 0 200 215" aria-hidden="true">
+        <path d="M100,205 L100,120" fill="none" stroke="currentColor" strokeWidth={22} strokeLinecap="round" />
+        <path d="M100,120 L42,26" fill="none" stroke="currentColor" strokeWidth={22} strokeLinecap="round" />
+        <path d="M100,120 L158,26" fill="none" stroke="currentColor" strokeWidth={22} strokeLinecap="round" />
+        <circle cx={100} cy={120} r={12} fill="currentColor" />
+      </svg>
       <section className={styles.hero}>
         <div>
           <p className={styles.eyebrow}>Party game dal vivo · 3–8 amici</p>
@@ -24,7 +31,7 @@ export default function Hero({ onCreate, onJoin }: HeroProps) {
             propria scelta, si rivota. Nessun vincitore — solo risate e qualche verità.
           </p>
           <div className={styles.ctaRow}>
-            <Button variant="primary" size="lg" onClick={onCreate}>⚡ Crea una partita</Button>
+            <Button variant="primary" size="lg" onClick={onCreate}>Crea una partita</Button>
             <Button variant="ghost" size="lg" onClick={onJoin}>Ho un codice · Partecipa</Button>
           </div>
           <p className={styles.meta}>
@@ -51,6 +58,9 @@ export default function Hero({ onCreate, onJoin }: HeroProps) {
               <div className={`${styles.opt} ${styles.optB}`}>
                 <span className={styles.optK}>B</span> Mai: la reputazione vale più dei soldi
               </div>
+            </div>
+            <div className={styles.tally}>
+              <Swing split={38} width={260} height={12} labels />
             </div>
           </div>
           <div className={styles.phone}>
