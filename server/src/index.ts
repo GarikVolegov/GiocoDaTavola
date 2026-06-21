@@ -117,6 +117,8 @@ function gameStatePayload(room: Room) {
     // How many players have placed a secret swing bet this round (PREDICT phase).
     // Aggregate count only — never who bet what.
     swingBetCount: room.swingBets.size,
+    // How many player-written dilemmas the group has added (LOBBY). Count only.
+    submittedCount: room.submittedDilemmas.length,
     // The defenders to vote between, gated to SPEAKER_VOTE (null otherwise), plus
     // how many have voted. Aggregate only — never who voted which speaker.
     speakerCandidates: rooms.speakerCandidates(room.code),
@@ -498,6 +500,27 @@ io.on('connection', (socket) => {
     } else {
       broadcastGameState(code); // refresh the swing-bet count for the host
     }
+  });
+
+  // A player writes their own dilemma in the LOBBY (max 2/player). The store
+  // validates + caps it; on success the room's submitted count is broadcast.
+  socket.on('player:submitDilemma', (payload: { text?: string; optionA?: string; optionB?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.submitDilemma(
+      code,
+      playerId,
+      String(payload?.text ?? ''),
+      String(payload?.optionA ?? ''),
+      String(payload?.optionB ?? ''),
+    );
+    if (!result.ok) {
+      socket.emit('player:submitDilemmaError', { error: result.error });
+      return;
+    }
+    socket.emit('player:dilemmaSubmitted', { count: result.count });
+    broadcastGameState(code); // refresh the submitted count for everyone
   });
 
   // A player votes the most convincing defender during SPEAKER_VOTE. The store

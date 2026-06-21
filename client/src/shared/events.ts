@@ -54,6 +54,12 @@ export const SocketEvents = {
   PlayerSwingBetError: 'player:swingBetError',
   /** Server privately tells a bettor whether they were right (at PHASE_RESULTS). */
   PlayerSwingBetResult: 'player:swingBetResult',
+  /** Player writes their own dilemma in the LOBBY (max 2/player). */
+  PlayerSubmitDilemma: 'player:submitDilemma',
+  /** Server confirms the player's submission back to them only (with their count). */
+  PlayerDilemmaSubmitted: 'player:dilemmaSubmitted',
+  /** Server rejects the submission (wrong phase, empty/duplicate/too long, limit). */
+  PlayerSubmitDilemmaError: 'player:submitDilemmaError',
   /** Player secretly votes the most convincing defender (SPEAKER_VOTE phase). */
   PlayerVoteSpeaker: 'player:voteSpeaker',
   /** Server confirms the player's current best-speaker vote back to them only. */
@@ -292,7 +298,8 @@ export type AwardId =
   | 'oracolo'
   | 'oratore'
   | 'voltagabbana'
-  | 'sensitivo';
+  | 'sensitivo'
+  | 'autore';
 
 /** Payload of the `room:reaction` broadcast: a single allowlisted emoji. */
 export interface RoomReactionPayload {
@@ -362,6 +369,8 @@ export interface GameStatePayload {
    * Aggregate count only — never who bet what.
    */
   swingBetCount: number;
+  /** How many player-written dilemmas the group has added in the lobby. Count only. */
+  submittedCount: number;
   /**
    * The defenders to vote between, shown only in SPEAKER_VOTE; null otherwise.
    * Their identities/side are already public (they spoke in DEFENSE).
@@ -480,6 +489,44 @@ export type SwingBetError = 'ROOM_NOT_FOUND' | 'NOT_PREDICT_PHASE' | 'NOT_IN_ROO
 export interface PlayerSwingBetErrorPayload {
   error: SwingBetError;
 }
+
+/** Max dilemmas a single player may write in the lobby (mirror of server). */
+export const MAX_SUBMISSIONS_PER_PLAYER = 2;
+
+export interface PlayerSubmitDilemmaPayload {
+  text: string;
+  optionA: string;
+  optionB: string;
+}
+
+export interface PlayerDilemmaSubmittedPayload {
+  /** How many dilemmas this player has written so far (1 or 2). */
+  count: number;
+}
+
+export type SubmitDilemmaError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_LOBBY'
+  | 'NOT_IN_ROOM'
+  | 'EMPTY'
+  | 'TOO_LONG'
+  | 'SAME_OPTIONS'
+  | 'LIMIT_REACHED';
+
+export interface PlayerSubmitDilemmaErrorPayload {
+  error: SubmitDilemmaError;
+}
+
+/** User-facing (Italian) messages for dilemma-submission errors. */
+export const SUBMIT_DILEMMA_ERROR_MESSAGES: Record<SubmitDilemmaError, string> = {
+  ROOM_NOT_FOUND: 'Stanza non trovata',
+  NOT_LOBBY: 'Si possono aggiungere dilemmi solo prima dell’inizio',
+  NOT_IN_ROOM: 'Non sei in questa stanza',
+  EMPTY: 'Scrivi la domanda e le due opzioni',
+  TOO_LONG: 'Testo troppo lungo',
+  SAME_OPTIONS: 'Le due opzioni devono essere diverse',
+  LIMIT_REACHED: 'Hai già aggiunto il massimo dei dilemmi',
+};
 
 export interface PlayerVoteSpeakerPayload {
   defenderId: string;
