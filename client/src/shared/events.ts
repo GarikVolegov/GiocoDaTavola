@@ -46,6 +46,14 @@ export const SocketEvents = {
   PlayerPredictError: 'player:predictError',
   /** Server privately tells a predictor whether they were right (at PHASE_RESULTS). */
   PlayerPredictionResult: 'player:predictionResult',
+  /** Player secretly bets whether the lead will change after the defenses (PREDICT phase). */
+  PlayerSwingBet: 'player:swingBet',
+  /** Server confirms the player's current swing bet back to them only. */
+  PlayerSwingBetted: 'player:swingBetted',
+  /** Server rejects the swing bet (wrong phase, not in room, bad value). */
+  PlayerSwingBetError: 'player:swingBetError',
+  /** Server privately tells a bettor whether they were right (at PHASE_RESULTS). */
+  PlayerSwingBetResult: 'player:swingBetResult',
   /** Player secretly votes the most convincing defender (SPEAKER_VOTE phase). */
   PlayerVoteSpeaker: 'player:voteSpeaker',
   /** Server confirms the player's current best-speaker vote back to them only. */
@@ -283,7 +291,8 @@ export type AwardId =
   | 'beniamino'
   | 'oracolo'
   | 'oratore'
-  | 'voltagabbana';
+  | 'voltagabbana'
+  | 'sensitivo';
 
 /** Payload of the `room:reaction` broadcast: a single allowlisted emoji. */
 export interface RoomReactionPayload {
@@ -348,6 +357,11 @@ export interface GameStatePayload {
    * Aggregate count only — never who predicted what.
    */
   predictedCount: number;
+  /**
+   * How many players have placed a secret swing bet this round (PREDICT phase).
+   * Aggregate count only — never who bet what.
+   */
+  swingBetCount: number;
   /**
    * The defenders to vote between, shown only in SPEAKER_VOTE; null otherwise.
    * Their identities/side are already public (they spoke in DEFENSE).
@@ -438,6 +452,31 @@ export type PredictError = 'ROOM_NOT_FOUND' | 'NOT_PREDICT_PHASE' | 'NOT_IN_ROOM
 
 export interface PlayerPredictErrorPayload {
   error: PredictError;
+}
+
+/** A secret bet on whether the leading side will change after the defenses. */
+export type SwingBet = 'ribalta' | 'regge';
+
+export interface PlayerSwingBetPayload {
+  bet: SwingBet;
+}
+
+export interface PlayerSwingBettedPayload {
+  bet: SwingBet;
+}
+
+/** Private per-bettor swing outcome at PHASE_RESULTS (mirror of `SwingBetOutcome`). */
+export interface PlayerSwingBetResultPayload {
+  bet: SwingBet;
+  /** Whether the leading side actually changed (pre- vs post-defense). */
+  flipped: boolean;
+  correct: boolean;
+}
+
+export type SwingBetError = 'ROOM_NOT_FOUND' | 'NOT_PREDICT_PHASE' | 'NOT_IN_ROOM' | 'INVALID_BET';
+
+export interface PlayerSwingBetErrorPayload {
+  error: SwingBetError;
 }
 
 export interface PlayerVoteSpeakerPayload {

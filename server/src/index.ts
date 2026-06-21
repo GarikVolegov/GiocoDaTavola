@@ -96,6 +96,9 @@ function gameStatePayload(room: Room) {
     // How many players have made a secret prediction this round (PREDICT phase).
     // Aggregate count only — never who predicted what.
     predictedCount: room.predictions.size,
+    // How many players have placed a secret swing bet this round (PREDICT phase).
+    // Aggregate count only — never who bet what.
+    swingBetCount: room.swingBets.size,
     // The defenders to vote between, gated to SPEAKER_VOTE (null otherwise), plus
     // how many have voted. Aggregate only — never who voted which speaker.
     speakerCandidates: rooms.speakerCandidates(room.code),
@@ -188,6 +191,11 @@ function advanceAndBroadcast(code: string): void {
     for (const r of rooms.predictionResults(code)) {
       const sid = playerSocket.get(r.playerId);
       if (sid) io.to(sid).emit('player:predictionResult', { correct: r.correct, predicted: r.predicted, actual: r.actual });
+    }
+    // Same for each swing bettor's own result (only their result reaches them).
+    for (const r of rooms.swingBetResults(code)) {
+      const sid = playerSocket.get(r.playerId);
+      if (sid) io.to(sid).emit('player:swingBetResult', { correct: r.correct, bet: r.bet, flipped: r.flipped });
     }
   }
   if (room && room.phase === 'FINAL_AWARDS') {
@@ -383,10 +391,31 @@ io.on('connection', (socket) => {
       return;
     }
     socket.emit('player:predicted', { choice: result.room.predictions.get(playerId) });
-    if (rooms.allPredicted(code)) {
-      advanceAndBroadcast(code); // everyone predicted -> skip the rest of the timer
+    // End PREDICT early only once everyone has done BOTH the side prediction AND
+    // the swing bet, so nobody's bet is cut off.
+    if (rooms.allPredicted(code) && rooms.allSwingBet(code)) {
+      advanceAndBroadcast(code);
     } else {
       broadcastGameState(code); // refresh the predicted count for the host
+    }
+  });
+
+  // A player places (or changes) their secret swing bet during PREDICT: whether
+  // the leading side will change after the defenses. Mirrors player:predict.
+  socket.on('player:swingBet', (payload: { bet?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.swingBet(code, playerId, String(payload?.bet ?? ''));
+    if (!result.ok) {
+      socket.emit('player:swingBetError', { error: result.error });
+      return;
+    }
+    socket.emit('player:swingBetted', { bet: result.room.swingBets.get(playerId) });
+    if (rooms.allPredicted(code) && rooms.allSwingBet(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code); // refresh the swing-bet count for the host
     }
   });
 
