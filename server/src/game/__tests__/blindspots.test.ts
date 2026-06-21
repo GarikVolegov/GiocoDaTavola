@@ -16,6 +16,12 @@ describe('computeBlindSpot', () => {
     expect(computeBlindSpot(stats({ rounds: 3, changedCount: 0, majorityCount: 2, minorityCount: 1, persuasion: 1, defendedCount: 1 })).id).toBe('rigido');
   });
 
+  it('prioritizes rigido over contrarian when both could apply', () => {
+    // changedCount === 0 (rigido) AND minorityCount 3/3 (contrarian): rigido is
+    // checked first in the priority chain, so it wins.
+    expect(computeBlindSpot(stats({ rounds: 3, changedCount: 0, minorityCount: 3 })).id).toBe('rigido');
+  });
+
   it('flags a majority-follower as "conformista"', () => {
     expect(computeBlindSpot(stats({ rounds: 3, changedCount: 1, majorityCount: 3 })).id).toBe('conformista');
   });
