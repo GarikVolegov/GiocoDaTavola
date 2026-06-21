@@ -13,6 +13,15 @@ import {
   nextDuelPhase,
 } from './phases';
 import { ensureStats, computeAwards as computeAwardsFor, type Award, type PlayerStats } from './awards';
+import {
+  duelPlayers,
+  duelAgreed,
+  recordDuelResult,
+  duelReveal,
+  duelTurn,
+  duelResult,
+  duelSummary,
+} from './duel';
 
 // Re-export the phase state machine so existing importers (tests, index.ts)
 // keep importing GamePhase / PHASE_DURATIONS_MS / nextPhase / … from './rooms'.
@@ -385,46 +394,6 @@ export class RoomStore {
     }
   }
 
-  /** The (up to two) human players of a duel room, in insertion order. */
-  private duelPlayers(room: Room): Player[] {
-    return [...room.players.values()].filter((p) => !p.isBot);
-  }
-
-  /** True when both duel players picked the same side this round (current votes). */
-  private duelAgreed(room: Room): boolean {
-    const players = this.duelPlayers(room);
-    if (players.length !== 2) return false;
-    const a = room.votes.get(players[0].id);
-    const b = room.votes.get(players[1].id);
-    return a != null && a === b;
-  }
-
-  /**
-   * Fold a finished duel round into the score: if the two first picks (votes1)
-   * already agreed, count one agreement; otherwise a player whose re-pick changed
-   * side was convinced, so the OTHER player earns +1 persuasion. Called on entry to
-   * DUEL_RESULT, while votes1 (first pick) and votes (re-pick) are still intact.
-   */
-  private recordDuelResult(room: Room): void {
-    const players = this.duelPlayers(room);
-    if (players.length !== 2) return;
-    const first0 = room.votes1.get(players[0].id);
-    const first1 = room.votes1.get(players[1].id);
-    if (first0 != null && first0 === first1) {
-      room.duelAgreements++;
-      return;
-    }
-    for (let i = 0; i < players.length; i++) {
-      const me = players[i];
-      const other = players[1 - i];
-      const before = room.votes1.get(me.id);
-      const after = room.votes.get(me.id);
-      if (before && after && before !== after) {
-        room.duelScore.set(other.id, (room.duelScore.get(other.id) ?? 0) + 1);
-      }
-    }
-  }
-
   /**
    * Advance the 1v1 duel state machine one step (the duello analogue of the group
    * logic in advancePhase). DUEL_ARGUE runs one timed turn per player (mirror of
@@ -433,12 +402,12 @@ export class RoomStore {
    * the first pick; DUEL_RESULT records the round's outcome.
    */
   private advanceDuelPhase(room: Room): AdvancePhaseResult {
-    if (room.phase === 'DUEL_ARGUE' && room.duelTurnIndex < this.duelPlayers(room).length - 1) {
+    if (room.phase === 'DUEL_ARGUE' && room.duelTurnIndex < duelPlayers(room).length - 1) {
       room.duelTurnIndex++;
       room.phaseExpiresAt = this.expiryFor('DUEL_ARGUE');
       return { ok: true, room };
     }
-    const agreed = room.phase === 'DUEL_REVEAL' ? this.duelAgreed(room) : false;
+    const agreed = room.phase === 'DUEL_REVEAL' ? duelAgreed(room) : false;
     const t = nextDuelPhase(room.phase, room.dilemmaIndex, room.dilemmaCount ?? 0, agreed);
     room.phase = t.phase;
     room.dilemmaIndex = t.dilemmaIndex;
@@ -456,7 +425,7 @@ export class RoomStore {
       // Agreed path skips DUEL_REPICK, so votes1 was never snapshotted — take it
       // now so recordDuelResult sees first==second (no flips) and counts the agree.
       if (room.votes1.size === 0) room.votes1 = new Map(room.votes);
-      this.recordDuelResult(room);
+      recordDuelResult(room);
     }
     return { ok: true, room };
   }
@@ -714,38 +683,18 @@ export class RoomStore {
    * whether they agreed. The picks are intentionally public here — that's the
    * point of the reveal; no other state leaks.
    */
-  publicDuelReveal(code: string): {
-    picks: Array<{ id: string; nickname: string; choice: VoteChoice }>;
-    agreed: boolean;
-  } | null {
+  publicDuelReveal(code: string) {
     const room = this.rooms.get(code);
-    if (!room || room.phase !== 'DUEL_REVEAL') return null;
-    const picks = this.duelPlayers(room)
-      .map((p) => ({ id: p.id, nickname: p.nickname, choice: room.votes.get(p.id) }))
-      .filter((p): p is { id: string; nickname: string; choice: VoteChoice } => p.choice != null);
-    return { picks, agreed: this.duelAgreed(room) };
+    return room ? duelReveal(room) : null;
   }
 
   /**
    * Public duel argue turn (only DUEL_ARGUE, null otherwise): who is arguing now
    * (the current player + their picked side) and the turn progress.
    */
-  publicDuelTurn(code: string): {
-    speaker: { id: string; nickname: string; side: VoteChoice } | null;
-    turn: number;
-    totalTurns: number;
-  } | null {
+  publicDuelTurn(code: string) {
     const room = this.rooms.get(code);
-    if (!room || room.phase !== 'DUEL_ARGUE') return null;
-    const players = this.duelPlayers(room);
-    const total = players.length;
-    const cur = players[room.duelTurnIndex];
-    const side = cur ? room.votes.get(cur.id) ?? null : null;
-    return {
-      speaker: cur && side ? { id: cur.id, nickname: cur.nickname, side } : null,
-      turn: total === 0 ? 0 : room.duelTurnIndex + 1,
-      totalTurns: total,
-    };
+    return room ? duelTurn(room) : null;
   }
 
   /**
@@ -753,56 +702,18 @@ export class RoomStore {
    * and—if not—who convinced whom (a player whose re-pick changed was convinced
    * by the other). Derived from votes1 (first pick) vs votes (re-pick).
    */
-  publicDuelResult(code: string): {
-    agreed: boolean;
-    convinced: Array<{
-      persuader: { id: string; nickname: string };
-      convinced: { id: string; nickname: string };
-    }>;
-  } | null {
+  publicDuelResult(code: string) {
     const room = this.rooms.get(code);
-    if (!room || room.phase !== 'DUEL_RESULT') return null;
-    const players = this.duelPlayers(room);
-    const first0 = players[0] ? room.votes1.get(players[0].id) : undefined;
-    const first1 = players[1] ? room.votes1.get(players[1].id) : undefined;
-    const agreed = players.length === 2 && first0 != null && first0 === first1;
-    const convinced: Array<{
-      persuader: { id: string; nickname: string };
-      convinced: { id: string; nickname: string };
-    }> = [];
-    if (!agreed) {
-      for (let i = 0; i < players.length; i++) {
-        const me = players[i];
-        const other = players[1 - i];
-        const before = room.votes1.get(me.id);
-        const after = room.votes.get(me.id);
-        if (other && before && after && before !== after) {
-          convinced.push({
-            persuader: { id: other.id, nickname: other.nickname },
-            convinced: { id: me.id, nickname: me.nickname },
-          });
-        }
-      }
-    }
-    return { agreed, convinced };
+    return room ? duelResult(room) : null;
   }
 
   /**
    * Public duel summary (only FINAL_DUEL, null otherwise): each player's total
    * persuasions and how many rounds the two agreed.
    */
-  publicDuelSummary(code: string): {
-    scores: Array<{ id: string; nickname: string; persuasions: number }>;
-    agreements: number;
-  } | null {
+  publicDuelSummary(code: string) {
     const room = this.rooms.get(code);
-    if (!room || room.phase !== 'FINAL_DUEL') return null;
-    const scores = this.duelPlayers(room).map((p) => ({
-      id: p.id,
-      nickname: p.nickname,
-      persuasions: room.duelScore.get(p.id) ?? 0,
-    }));
-    return { scores, agreements: room.duelAgreements };
+    return room ? duelSummary(room) : null;
   }
 
   /**
