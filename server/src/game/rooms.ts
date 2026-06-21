@@ -13,6 +13,7 @@ import {
   nextDuelPhase,
 } from './phases';
 import { ensureStats, computeAwards as computeAwardsFor, type Award, type PlayerStats } from './awards';
+import { computeBlindSpot, type BlindSpot } from './blindspots';
 import {
   duelPlayers,
   duelAgreed,
@@ -28,6 +29,7 @@ import {
 export * from './phases';
 // Re-export the scoring types so consumers keep importing them from './rooms'.
 export type { Award, AwardId, PlayerStats } from './awards';
+export type { BlindSpot, BlindSpotId } from './blindspots';
 
 const CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const CODE_LENGTH = 4;
@@ -786,6 +788,17 @@ export class RoomStore {
     const room = this.rooms.get(code);
     if (!room || room.phase !== 'FINAL_AWARDS') return null;
     return this.computeAwards(code);
+  }
+
+  /**
+   * The player's end-of-game blind-spot tip, only at FINAL_AWARDS (null
+   * otherwise). Private feedback — index.ts emits it per-socket, never broadcast.
+   */
+  blindSpotFor(code: string, playerId: string): BlindSpot | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'FINAL_AWARDS') return null;
+    const stats = room.stats.get(playerId);
+    return stats ? computeBlindSpot(stats) : null;
   }
 
   /**

@@ -1469,4 +1469,23 @@ describe('RoomStore reconnection / connected state', () => {
     expect(again.ok).toBe(true);
     expect(store.get(code)?.players.get('p1')?.connected ?? true).toBe(true);
   });
+
+  it('blindSpotFor returns a tip at FINAL_AWARDS and null otherwise', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    addPlayers(store, code, 3); // p0, p1, p2
+    store.startGame(code, 3);
+    expect(store.blindSpotFor(code, 'p0')).toBeNull(); // before the end
+    let guard = 0;
+    while (store.get(code)?.phase !== 'FINAL_AWARDS' && guard++ < 200) {
+      const phase = store.get(code)!.phase;
+      if (phase === 'VOTE_1' || phase === 'VOTE_2') {
+        ['p0', 'p1', 'p2'].forEach((id) => store.vote(code, id, 'A'));
+      }
+      store.advancePhase(code);
+    }
+    expect(store.get(code)?.phase).toBe('FINAL_AWARDS');
+    expect(store.blindSpotFor(code, 'p0')?.id).toBeTruthy();
+    expect(store.blindSpotFor(code, 'nobody')).toBeNull();
+  });
 });
