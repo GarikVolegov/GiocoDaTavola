@@ -1174,6 +1174,11 @@ export class RoomStore {
     return this.rooms.has(code);
   }
 
+  /** Remove a room from the store entirely. Returns whether one was removed. */
+  delete(code: string): boolean {
+    return this.rooms.delete(code);
+  }
+
   get size(): number {
     return this.rooms.size;
   }

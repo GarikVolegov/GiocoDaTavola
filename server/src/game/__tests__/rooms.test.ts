@@ -1949,3 +1949,19 @@ describe('RoomStore best-speaker vote (engagement)', () => {
     expect(store2.computeAwards(c2).map((a) => a.id)).not.toContain('oratore');
   });
 });
+
+describe('RoomStore.delete (lifecycle)', () => {
+  it('removes a room from memory and reports it; false for unknown codes', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    expect(store.has(code)).toBe(true);
+    expect(store.size).toBe(1);
+
+    expect(store.delete(code)).toBe(true);
+    expect(store.has(code)).toBe(false);
+    expect(store.get(code)).toBeUndefined();
+    expect(store.size).toBe(0);
+
+    expect(store.delete('ZZZZ')).toBe(false);
+  });
+});
