@@ -5,6 +5,7 @@ import HowToPlay from './sections/HowToPlay';
 import Features from './sections/Features';
 import Modes from './sections/Modes';
 import Awards from './sections/Awards';
+import FinalCta from './sections/FinalCta';
 import styles from './Landing.module.css';
 
 // Marketing landing on `/`: describes the game and funnels to play.
@@ -32,6 +33,7 @@ export default function Landing() {
       <Features />
       <Modes />
       <Awards />
+      <FinalCta onCreate={create} />
     </main>
   );
 }

@@ -107,3 +107,27 @@
 @media (max-width: 780px) {
   .modes { grid-template-columns: 1fr; }
 }
+
+/* final CTA */
+.final { text-align: center; padding: var(--space-8) var(--space-5); }
+.finalH { font-family: var(--font-display); font-size: clamp(1.8rem, 4.4vw, 2.9rem);
+  margin: 0 0 var(--space-2); font-weight: 700; }
+.finalH .a { color: var(--faction-a); } .finalH .b { color: var(--faction-b); }
+.finalP { color: var(--text-muted); margin: 0 0 var(--space-5); }
+.foot { color: var(--text-faint); font-size: .8rem; text-align: center; padding: var(--space-5) 0 var(--space-7); }
+
+/* entrance motion — only when the user hasn't asked to reduce motion */
+@media (prefers-reduced-motion: no-preference) {
+  .hero, .section, .final {
+    animation: rise var(--dur-med) var(--ease) both;
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+@media (max-width: 780px) {
+  .wrap { padding: 0 var(--space-4); }
+  .section { padding: var(--space-6) 0; }
+}
