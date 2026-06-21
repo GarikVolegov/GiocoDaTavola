@@ -32,6 +32,21 @@ const DILEMMA_FIXTURE: Dilemma[] = Array.from({ length: 6 }, (_, i) => ({
 }));
 const makeFixtureDeck = (_register: ContentRegister) => new Deck(DILEMMA_FIXTURE, () => 0);
 
+// helper: drive a fresh room into DEFENSE with a known split. Each entry of
+// `sides` is one player's secret vote; rng is injected so defender selection
+// is deterministic (the store's 4th ctor arg).
+function defenseRoom(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B']): string {
+  const { code } = store.create();
+  for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
+  store.startGame(code, 3); // PHASE_INTRO
+  store.advancePhase(code); // DILEMMA_REVEAL
+  store.advancePhase(code); // VOTE_1
+  sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
+  store.advancePhase(code); // SPLIT_REVEAL
+  store.advancePhase(code); // DEFENSE
+  return code;
+}
+
 // helper: spin up a 2-human duel and advance to the first DUEL_PICK.
 function startDuel(store: RoomStore, code: string) {
   store.create();
@@ -552,21 +567,6 @@ describe('RoomStore split reveal (US-009)', () => {
 });
 
 describe('RoomStore defense (US-010)', () => {
-  // Drive a fresh room into DEFENSE with a known split. Each entry of `sides`
-  // is one player's secret vote; rng is injected so defender selection is
-  // deterministic (the store's 4th ctor arg).
-  function defenseRoom(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B']): string {
-    const { code } = store.create();
-    for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
-    store.startGame(code, 3); // PHASE_INTRO
-    store.advancePhase(code); // DILEMMA_REVEAL
-    store.advancePhase(code); // VOTE_1
-    sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
-    store.advancePhase(code); // SPLIT_REVEAL
-    store.advancePhase(code); // DEFENSE
-    return code;
-  }
-
   it("auto-selects one defender per side from that side's voters", () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
     const code = defenseRoom(store, ['A', 'B', 'B']);
@@ -831,18 +831,6 @@ describe('RoomStore per-player stats (Fase A)', () => {
     const { code } = store.create();
     for (let i = 0; i < players; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, dilemmaCount);
-    return code;
-  }
-
-  function defenseRoom(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B']): string {
-    const { code } = store.create();
-    for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
-    store.startGame(code, 3); // PHASE_INTRO
-    store.advancePhase(code); // DILEMMA_REVEAL
-    store.advancePhase(code); // VOTE_1
-    sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
-    store.advancePhase(code); // SPLIT_REVEAL
-    store.advancePhase(code); // DEFENSE
     return code;
   }
 
