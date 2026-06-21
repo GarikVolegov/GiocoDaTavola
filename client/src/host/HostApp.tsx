@@ -12,7 +12,7 @@ import {
   type PlayerJoinErrorPayload,
   type PublicPlayer,
 } from '../shared/events';
-import { Card, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo } from '../shared/ui';
+import { Card, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing } from '../shared/ui';
 import ReactionSwarm from './ReactionSwarm';
 
 const screen = {
@@ -192,14 +192,14 @@ export default function HostApp() {
 
         {phase === 'PREDICT' && (
           <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
-            🔮 Pronosticate dal telefono: chi avrà più voti <em>dopo</em> le difese? ·{' '}
+            Pronosticate dal telefono: chi avrà più voti <em>dopo</em> le difese? ·{' '}
             {game.predictedCount}/{players.length}
           </p>
         )}
 
         {phase === 'SPEAKER_VOTE' && (
           <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
-            🎤 Votate dal telefono il più convincente · {game.speakerVotedCount}/{players.length}
+            Votate dal telefono il più convincente · {game.speakerVotedCount}/{players.length}
           </p>
         )}
 
@@ -419,7 +419,10 @@ export default function HostApp() {
           Giocatori ({players.length}/8)
         </h2>
         {players.length === 0 ? (
-          <p style={{ opacity: 0.6, margin: 0 }}>In attesa di giocatori…</p>
+          <>
+            <Swing animated />
+            <p style={{ opacity: 0.6, margin: 0 }}>In attesa di giocatori…</p>
+          </>
         ) : (
           <ul
             style={{
