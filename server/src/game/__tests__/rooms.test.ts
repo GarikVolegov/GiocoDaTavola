@@ -630,6 +630,7 @@ describe('RoomStore defense (US-010)', () => {
       turn: 1,
       totalTurns: 2,
       argument: null,
+      spunti: ['pro A1 #1', 'pro A1 #2'],
     });
     store.advancePhase(code); // next turn -> side B speaker
     expect(store.publicDefense(code)).toEqual({
@@ -637,6 +638,7 @@ describe('RoomStore defense (US-010)', () => {
       turn: 2,
       totalTurns: 2,
       argument: null,
+      spunti: ['pro B1 #1', 'pro B1 #2'],
     });
     store.advancePhase(code); // VOTE_2 -> defense no longer public
     expect(store.publicDefense(code)).toBeNull();
@@ -671,9 +673,18 @@ describe('RoomStore defense (US-010)', () => {
     store.advancePhase(code); // SPLIT_REVEAL
     store.advancePhase(code); // DEFENSE (no defenders)
     expect(store.get(code)?.phase).toBe('DEFENSE');
-    expect(store.publicDefense(code)).toEqual({ speaker: null, turn: 0, totalTurns: 0, argument: null });
+    expect(store.publicDefense(code)).toEqual({ speaker: null, turn: 0, totalTurns: 0, argument: null, spunti: null });
     store.advancePhase(code); // -> VOTE_2
     expect(store.get(code)?.phase).toBe('VOTE_2');
+  });
+
+  it("exposes the speaking side's spunti during DEFENSE", () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']); // defenders: A=sock-0, B=sock-1
+    // First DEFENSE turn speaks side A -> d1.spuntiA.
+    expect(store.publicDefense(code)?.spunti).toEqual(['pro A1 #1', 'pro A1 #2']);
+    store.advancePhase(code); // next DEFENSE turn -> side B
+    expect(store.publicDefense(code)?.spunti).toEqual(['pro B1 #1', 'pro B1 #2']);
   });
 });
 

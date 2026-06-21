@@ -119,6 +119,8 @@ export interface DefenseState {
    * the host screen since a bot can't speak aloud; null when a human is speaking.
    */
   argument: string | null;
+  /** Talking points for the current speaker's side; null outside DEFENSE/no speaker. */
+  spunti: string[] | null;
 }
 
 export interface Room {
@@ -670,11 +672,18 @@ export class RoomStore {
     if (!room || !isDefensePhase(room.phase)) return null;
     const totalTurns = room.defenders.length;
     const speaker = room.defenders[room.defenseTurnIndex] ?? null;
+    const spunti =
+      speaker && room.currentDilemma
+        ? speaker.side === 'A'
+          ? room.currentDilemma.spuntiA
+          : room.currentDilemma.spuntiB
+        : null;
     return {
       speaker,
       turn: totalTurns === 0 ? 0 : room.defenseTurnIndex + 1,
       totalTurns,
       argument: room.defenseArgument,
+      spunti,
     };
   }
 
