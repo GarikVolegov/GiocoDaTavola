@@ -16,8 +16,10 @@ export type GamePhase =
   | 'DILEMMA_REVEAL'
   | 'VOTE_1'
   | 'SPLIT_REVEAL'
+  | 'PREDICT'
   | 'DEFENSE'
   | 'VOTE_2'
+  | 'SPEAKER_VOTE'
   | 'PHASE_RESULTS'
   | 'FINAL_AWARDS'
   // 1v1 "Duello" mode phases (run instead of the group sequence when mode==='duello').
@@ -40,8 +42,10 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   DILEMMA_REVEAL: 6_000,
   VOTE_1: 20_000,
   SPLIT_REVEAL: 6_000,
+  PREDICT: 12_000,
   DEFENSE: 60_000,
   VOTE_2: 20_000,
+  SPEAKER_VOTE: 12_000,
   PHASE_RESULTS: 8_000,
   FINAL_AWARDS: null,
   DUEL_PICK: 20_000,
@@ -79,13 +83,25 @@ export function isDefensePhase(phase: GamePhase): boolean {
   return phase === 'DEFENSE';
 }
 
+/** Phase in which phones secretly predict the post-defense outcome. */
+export function isPredictPhase(phase: GamePhase): boolean {
+  return phase === 'PREDICT';
+}
+
+/** Phase in which phones secretly vote the most convincing defender. */
+export function isSpeakerVotePhase(phase: GamePhase): boolean {
+  return phase === 'SPEAKER_VOTE';
+}
+
 /** Ordered phases that make up a single dilemma round. */
 const DILEMMA_SEQUENCE: GamePhase[] = [
   'DILEMMA_REVEAL',
   'VOTE_1',
   'SPLIT_REVEAL',
+  'PREDICT',
   'DEFENSE',
   'VOTE_2',
+  'SPEAKER_VOTE',
   'PHASE_RESULTS',
 ];
 

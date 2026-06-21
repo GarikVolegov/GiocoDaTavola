@@ -30,9 +30,11 @@ import {
   type PlayerJoinErrorPayload,
   type PlayerVotedPayload,
   type PlayerVoteErrorPayload,
+  type PlayerPredictedPayload,
   type VoteChoice,
 } from '../shared/events';
 import { Card, Pill, Button, Alert } from '../shared/ui';
+import ReactionSwarm from './ReactionSwarm';
 
 const screen = {
   display: 'flex',
@@ -64,6 +66,7 @@ export default function HostApp() {
   const [joinError, setJoinError] = useState<string | null>(null);
   const [myVote, setMyVote] = useState<VoteChoice | null>(null);
   const [voteError, setVoteError] = useState<string | null>(null);
+  const [myPrediction, setMyPrediction] = useState<VoteChoice | null>(null);
 
   useEffect(() => {
     const socket = getSocket();
@@ -86,6 +89,7 @@ export default function HostApp() {
       setMyVote(choice);
       setVoteError(null);
     };
+    const onPredicted = ({ choice }: PlayerPredictedPayload) => setMyPrediction(choice);
     const onVoteError = ({ error }: PlayerVoteErrorPayload) =>
       setVoteError(VOTE_ERROR_MESSAGES[error] ?? 'Voto non riuscito');
     socket.on(SocketEvents.HostRoomCreated, onRoomCreated);
@@ -96,6 +100,7 @@ export default function HostApp() {
     socket.on(SocketEvents.PlayerJoinError, onJoinError);
     socket.on(SocketEvents.PlayerVoted, onVoted);
     socket.on(SocketEvents.PlayerVoteError, onVoteError);
+    socket.on(SocketEvents.PlayerPredicted, onPredicted);
     socket.emit(SocketEvents.HostCreateRoom);
     return () => {
       socket.off(SocketEvents.HostRoomCreated, onRoomCreated);
@@ -106,16 +111,18 @@ export default function HostApp() {
       socket.off(SocketEvents.PlayerJoinError, onJoinError);
       socket.off(SocketEvents.PlayerVoted, onVoted);
       socket.off(SocketEvents.PlayerVoteError, onVoteError);
+      socket.off(SocketEvents.PlayerPredicted, onPredicted);
     };
   }, []);
 
   const phase = game?.phase ?? 'LOBBY';
   const remaining = useCountdown(game?.phaseExpiresAt ?? null);
 
-  // Each new dilemma round starts with a clean (unselected) vote for the host.
+  // Each new dilemma round starts with a clean (unselected) vote + prediction.
   useEffect(() => {
     setMyVote(null);
     setVoteError(null);
+    setMyPrediction(null);
   }, [game?.dilemmaIndex]);
 
   const startGame = () => {
@@ -149,6 +156,10 @@ export default function HostApp() {
     setVoteError(null);
     getSocket().emit(SocketEvents.PlayerVote, { choice });
   };
+  const castPrediction = (choice: VoteChoice) => {
+    setMyPrediction(choice);
+    getSocket().emit(SocketEvents.PlayerPredict, { choice });
+  };
 
   // Gruppo: solo play allowed (1 human + bots), never bots-only. Duello: exactly
   // two humans (no bot opponent).
@@ -178,6 +189,7 @@ export default function HostApp() {
     const duelSummary = game.duelSummary;
     return (
       <main style={screen}>
+        <ReactionSwarm />
         {inDilemma && (
           <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
             Dilemma {game.dilemmaIndex}/{game.dilemmaCount}
@@ -241,6 +253,52 @@ export default function HostApp() {
         {phase === 'VOTE_2' && (
           <p style={{ fontSize: '1.4rem', fontWeight: 600, margin: 0, opacity: 0.9 }}>
             Si vota di nuovo: confermate o cambiate idea dopo le difese 📱
+          </p>
+        )}
+
+        {phase === 'PREDICT' && (
+          <>
+            <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
+              🔮 Pronosticate: chi avrà più voti <em>dopo</em> le difese? · {game.predictedCount}/{players.length}
+            </p>
+            {myPlayerId && (
+              <div
+                role="group"
+                aria-label="Il tuo pronostico"
+                style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}
+              >
+                {(['A', 'B'] as const).map((letter) => {
+                  const selected = myPrediction === letter;
+                  const rgb = letter === 'A' ? '79,140,255' : '255,140,79';
+                  return (
+                    <button
+                      key={letter}
+                      type="button"
+                      onClick={() => castPrediction(letter)}
+                      aria-pressed={selected}
+                      style={{
+                        padding: '0.75rem 1.5rem',
+                        borderRadius: '0.8rem',
+                        cursor: 'pointer',
+                        fontWeight: 800,
+                        fontSize: '1.2rem',
+                        color: 'inherit',
+                        background: selected ? `rgba(${rgb},0.32)` : `rgba(${rgb},0.12)`,
+                        border: `2px solid rgba(${rgb},${selected ? 0.9 : 0.4})`,
+                      }}
+                    >
+                      {letter}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+
+        {phase === 'SPEAKER_VOTE' && (
+          <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
+            🎤 Votate dal telefono il più convincente · {game.speakerVotedCount}/{players.length}
           </p>
         )}
 

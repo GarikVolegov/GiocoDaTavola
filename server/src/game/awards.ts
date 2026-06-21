@@ -15,10 +15,34 @@ export interface PlayerStats {
   minorityCount: number;
   /** Net votes that swung toward sides this player defended. */
   persuasion: number;
+  /**
+   * Live audience reactions received while this player was the current speaker
+   * (DEFENSE / DUEL_ARGUE). Optional + only set once non-zero, so a player who
+   * was never reacted to keeps the base 5-field shape.
+   */
+  reactionsReceived?: number;
+  /**
+   * How many rounds this player predicted the post-defense majority correctly
+   * (PREDICT phase). Optional + only set once non-zero (see reactionsReceived).
+   */
+  correctPredictions?: number;
+  /**
+   * Total peer votes received as "most convincing defender" across the game
+   * (SPEAKER_VOTE phase). Optional + only set once non-zero (see reactionsReceived).
+   */
+  oratorVotes?: number;
 }
 
 /** The fun end-of-game superlatives (persuasion-themed). */
-export type AwardId = 'persuasore' | 'banderuola' | 'roccione' | 'sintonia' | 'bastian';
+export type AwardId =
+  | 'persuasore'
+  | 'banderuola'
+  | 'roccione'
+  | 'sintonia'
+  | 'bastian'
+  | 'beniamino'
+  | 'oracolo'
+  | 'oratore';
 
 /** An award and who won it. Only awards with a real winner are ever returned. */
 export interface Award {
@@ -77,6 +101,15 @@ export function computeAwards(room: Room): Award[] {
     { id: 'bastian', title: 'Bastian Contrario', emoji: '🦓',
       description: 'Più spesso in minoranza.',
       winner: winnerBy((s) => s.minorityCount, (s) => s.minorityCount > 0) },
+    { id: 'beniamino', title: 'Beniamino del pubblico', emoji: '👏',
+      description: 'Ha ricevuto più reazioni mentre difendeva.',
+      winner: winnerBy((s) => s.reactionsReceived ?? 0, (s) => (s.reactionsReceived ?? 0) > 0) },
+    { id: 'oracolo', title: "L'Oracolo", emoji: '🎯',
+      description: 'Ha pronosticato meglio l’esito delle difese.',
+      winner: winnerBy((s) => s.correctPredictions ?? 0, (s) => (s.correctPredictions ?? 0) > 0) },
+    { id: 'oratore', title: 'Il Grande Oratore', emoji: '🎤',
+      description: 'Votato dai più come il più convincente.',
+      winner: winnerBy((s) => s.oratorVotes ?? 0, (s) => (s.oratorVotes ?? 0) > 0) },
   ];
   return defs.filter((d): d is Award => d.winner !== null);
 }

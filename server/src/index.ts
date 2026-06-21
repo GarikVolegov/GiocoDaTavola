@@ -93,6 +93,13 @@ function gameStatePayload(room: Room) {
     // How many players have voted this round. Aggregate count only — the per-
     // choice split stays secret until SPLIT_REVEAL.
     votedCount: room.votes.size,
+    // How many players have made a secret prediction this round (PREDICT phase).
+    // Aggregate count only — never who predicted what.
+    predictedCount: room.predictions.size,
+    // The defenders to vote between, gated to SPEAKER_VOTE (null otherwise), plus
+    // how many have voted. Aggregate only — never who voted which speaker.
+    speakerCandidates: rooms.speakerCandidates(room.code),
+    speakerVotedCount: room.speakerVotes.size,
     // The aggregate A/B split, gated to SPLIT_REVEAL (null otherwise). Counts
     // only — never who voted what.
     split: rooms.publicSplit(room.code),
@@ -171,6 +178,14 @@ function advanceAndBroadcast(code: string): void {
   schedulePhase(code);
   maybeGenerateAiDefense(code);
   const room = rooms.get(code);
+  if (room && room.phase === 'PHASE_RESULTS') {
+    // Privately tell each predictor whether they called the post-defense majority
+    // (mirrors the secret-vote pattern: only your own result reaches your phone).
+    for (const r of rooms.predictionResults(code)) {
+      const sid = playerSocket.get(r.playerId);
+      if (sid) io.to(sid).emit('player:predictionResult', { correct: r.correct, predicted: r.predicted, actual: r.actual });
+    }
+  }
   if (room && room.phase === 'FINAL_AWARDS') {
     saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards failed', e));
   }
@@ -337,6 +352,58 @@ io.on('connection', (socket) => {
       advanceAndBroadcast(code); // everyone voted -> skip the rest of the timer
     } else {
       broadcastGameState(code); // refresh the voted count for the host
+    }
+  });
+
+  // A player taps a live reaction during DEFENSE / DUEL_ARGUE. The store validates
+  // the phase/emoji and rate-limits per player, then attributes it to the current
+  // speaker; we re-broadcast just the emoji as a lightweight stream the host
+  // animates (no full game:state — reactions are ephemeral, never secret votes).
+  socket.on('player:react', (payload: { emoji?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const result = rooms.react(session.code, session.playerId, String(payload?.emoji ?? ''));
+    if (result.ok) io.to(session.code).emit('room:reaction', { emoji: result.emoji });
+  });
+
+  // A player makes (or changes) their secret prediction during PREDICT. Like the
+  // first vote, the phase ends early once every present human has predicted; the
+  // per-choice predictions stay secret (only the aggregate count is broadcast).
+  socket.on('player:predict', (payload: { choice?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.predict(code, playerId, String(payload?.choice ?? ''));
+    if (!result.ok) {
+      socket.emit('player:predictError', { error: result.error });
+      return;
+    }
+    socket.emit('player:predicted', { choice: result.room.predictions.get(playerId) });
+    if (rooms.allPredicted(code)) {
+      advanceAndBroadcast(code); // everyone predicted -> skip the rest of the timer
+    } else {
+      broadcastGameState(code); // refresh the predicted count for the host
+    }
+  });
+
+  // A player votes the most convincing defender during SPEAKER_VOTE. The store
+  // validates the phase/target; the phase ends early once every present human has
+  // voted. Only the aggregate count + the per-defender tally (folded into stats)
+  // ever leave the server — never who voted whom.
+  socket.on('player:voteSpeaker', (payload: { defenderId?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.voteSpeaker(code, playerId, String(payload?.defenderId ?? ''));
+    if (!result.ok) {
+      socket.emit('player:speakerVoteError', { error: result.error });
+      return;
+    }
+    socket.emit('player:speakerVoted', { defenderId: result.room.speakerVotes.get(playerId) });
+    if (rooms.allSpeakerVoted(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code);
     }
   });
 

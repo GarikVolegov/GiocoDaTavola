@@ -62,6 +62,20 @@ function isContentRegister(v: string): v is ContentRegister {
   return (CONTENT_REGISTERS as readonly string[]).includes(v);
 }
 
+/**
+ * The fixed allowlist of live audience-reaction emojis a phone may send during
+ * DEFENSE / DUEL_ARGUE. A small set keeps the host's "swarm" readable and the
+ * input un-spoofable (anything else is rejected).
+ */
+export const REACTIONS = ['👏', '🔥', '🤯', '😂', '🤔'] as const;
+export type Reaction = (typeof REACTIONS)[number];
+function isReaction(e: string): e is Reaction {
+  return (REACTIONS as readonly string[]).includes(e);
+}
+
+/** Minimum gap between two reactions from the SAME player (anti-spam), in ms. */
+export const REACTION_MIN_INTERVAL_MS = 400;
+
 /** A single secret vote: which side a player chose. */
 export type VoteChoice = 'A' | 'B';
 
@@ -189,6 +203,27 @@ export interface Room {
   duelScore: Map<string, number>;
   /** Duel: how many rounds the two players already agreed (no duel needed). */
   duelAgreements: number;
+  /**
+   * Last time (epoch ms) each player sent a live reaction, keyed by player id —
+   * used only to rate-limit the reaction stream. Reset never needed (stale
+   * entries are harmless); pruned with the player on leave.
+   */
+  lastReactionAt: Map<string, number>;
+  /**
+   * Secret predictions for the current round, keyed by player id: which side each
+   * player thinks will hold the majority AFTER the defenses (PREDICT phase). Like
+   * votes they never leave the server as identities — only the aggregate count is
+   * public, and each predictor learns only their OWN result. Cleared each
+   * DILEMMA_REVEAL; pruned when a player leaves.
+   */
+  predictions: Map<string, VoteChoice>;
+  /**
+   * Secret peer votes for the most convincing defender this round, keyed by voter
+   * id with the chosen defender's id as value (SPEAKER_VOTE phase). Aggregate only
+   * (we expose the candidate list + a count, never who voted whom). Cleared each
+   * DILEMMA_REVEAL; pruned when a player leaves.
+   */
+  speakerVotes: Map<string, string>;
 }
 
 export type JoinError = 'ROOM_NOT_FOUND' | 'NICKNAME_REQUIRED' | 'ROOM_FULL';
@@ -231,6 +266,46 @@ export type VoteError =
 export type VoteResult =
   | { ok: true; room: Room }
   | { ok: false; error: VoteError };
+
+export type ReactError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_REACTING_PHASE'
+  | 'NOT_IN_ROOM'
+  | 'INVALID_EMOJI'
+  | 'RATE_LIMITED';
+
+export type ReactResult =
+  | { ok: true; emoji: Reaction }
+  | { ok: false; error: ReactError };
+
+export type PredictError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_PREDICT_PHASE'
+  | 'NOT_IN_ROOM'
+  | 'INVALID_CHOICE';
+
+export type PredictResult =
+  | { ok: true; room: Room }
+  | { ok: false; error: PredictError };
+
+/** One predictor's outcome, revealed privately to them at PHASE_RESULTS. */
+export interface PredictionResult {
+  playerId: string;
+  predicted: VoteChoice;
+  /** The post-defense (second-vote) majority side, or null on a tie. */
+  actual: VoteChoice | null;
+  correct: boolean;
+}
+
+export type SpeakerVoteError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_SPEAKER_VOTE_PHASE'
+  | 'NOT_IN_ROOM'
+  | 'INVALID_TARGET';
+
+export type SpeakerVoteResult =
+  | { ok: true; room: Room }
+  | { ok: false; error: SpeakerVoteError };
 
 /** Aggregate A/B tally for one round of voting. Counts only — no identities. */
 export interface VoteTally {
@@ -397,6 +472,19 @@ export class RoomStore {
     for (const d of room.defenders) {
       if (netSwing[d.side] > 0) ensureStats(room, d.id).persuasion += netSwing[d.side];
     }
+    // Credit each predictor who called the post-defense majority (the second-vote
+    // majority). On a tie there is no majority, so nobody scores.
+    for (const [id, predicted] of room.predictions) {
+      if (majoritySide && predicted === majoritySide) {
+        const s = ensureStats(room, id);
+        s.correctPredictions = (s.correctPredictions ?? 0) + 1;
+      }
+    }
+    // Credit each defender with the peer "best speaker" votes they received.
+    for (const defenderId of room.speakerVotes.values()) {
+      const s = ensureStats(room, defenderId);
+      s.oratorVotes = (s.oratorVotes ?? 0) + 1;
+    }
   }
 
   /**
@@ -463,6 +551,9 @@ export class RoomStore {
       duelTurnIndex: 0,
       duelScore: new Map(),
       duelAgreements: 0,
+      lastReactionAt: new Map(),
+      predictions: new Map(),
+      speakerVotes: new Map(),
     };
     this.rooms.set(code, room);
     return room;
@@ -539,7 +630,12 @@ export class RoomStore {
       return { ok: true, room };
     }
 
-    const transition = nextPhase(room.phase, room.dilemmaIndex, room.dilemmaCount ?? 0);
+    let transition = nextPhase(room.phase, room.dilemmaIndex, room.dilemmaCount ?? 0);
+    // The peer "best speaker" vote needs at least two defenders to choose between;
+    // with 0 or 1 it's degenerate, so skip straight to the results.
+    if (transition.phase === 'SPEAKER_VOTE' && room.defenders.length < 2) {
+      transition = nextPhase('SPEAKER_VOTE', transition.dilemmaIndex, room.dilemmaCount ?? 0);
+    }
     room.phase = transition.phase;
     room.dilemmaIndex = transition.dilemmaIndex;
     room.phaseExpiresAt = this.expiryFor(transition.phase);
@@ -549,6 +645,8 @@ export class RoomStore {
       room.currentDilemma = room.deck?.draw() ?? null;
       room.votes.clear();
       room.votes1.clear();
+      room.predictions.clear();
+      room.speakerVotes.clear();
     }
     // Entering DEFENSE picks the defenders from this round's votes and starts at
     // the first turn (the per-turn timer was set by expiryFor above).
@@ -592,6 +690,136 @@ export class RoomStore {
 
     room.votes.set(playerId, choice);
     return { ok: true, room };
+  }
+
+  /** The id of the player currently speaking (defender in DEFENSE, arguer in DUEL_ARGUE), or null. */
+  private currentSpeakerId(room: Room): string | null {
+    if (room.phase === 'DEFENSE') return room.defenders[room.defenseTurnIndex]?.id ?? null;
+    if (room.phase === 'DUEL_ARGUE') return duelPlayers(room)[room.duelTurnIndex]?.id ?? null;
+    return null;
+  }
+
+  /**
+   * Record a live audience reaction from a phone during DEFENSE / DUEL_ARGUE. The
+   * reaction is attributed to whoever is currently speaking (the defender/arguer),
+   * accumulating their `reactionsReceived` for the end-game "Beniamino" award.
+   * Rate-limited per player (anti-spam) and restricted to the emoji allowlist.
+   * Reactions are public expressions broadcast as an aggregate stream — they
+   * never touch the secret votes.
+   */
+  react(code: string, playerId: string, emoji: string): ReactResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.phase !== 'DEFENSE' && room.phase !== 'DUEL_ARGUE') {
+      return { ok: false, error: 'NOT_REACTING_PHASE' };
+    }
+    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
+    if (!isReaction(emoji)) return { ok: false, error: 'INVALID_EMOJI' };
+    const now = this.now();
+    const last = room.lastReactionAt.get(playerId);
+    if (last != null && now - last < REACTION_MIN_INTERVAL_MS) {
+      return { ok: false, error: 'RATE_LIMITED' };
+    }
+    room.lastReactionAt.set(playerId, now);
+    const speakerId = this.currentSpeakerId(room);
+    if (speakerId) {
+      const s = ensureStats(room, speakerId);
+      s.reactionsReceived = (s.reactionsReceived ?? 0) + 1;
+    }
+    return { ok: true, emoji };
+  }
+
+  /**
+   * Record (or change) a player's secret prediction of the post-defense majority
+   * during PREDICT. Overwritable until the phase ends, like a vote. Predictions
+   * never leave the server individually — only the aggregate count, plus each
+   * predictor's own result at PHASE_RESULTS.
+   */
+  predict(code: string, playerId: string, choice: string): PredictResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.phase !== 'PREDICT') return { ok: false, error: 'NOT_PREDICT_PHASE' };
+    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
+    if (!isVoteChoice(choice)) return { ok: false, error: 'INVALID_CHOICE' };
+    room.predictions.set(playerId, choice);
+    return { ok: true, room };
+  }
+
+  /** How many players have made a prediction this round (aggregate only). */
+  predictedCount(code: string): number {
+    return this.rooms.get(code)?.predictions.size ?? 0;
+  }
+
+  /**
+   * True once every CONNECTED HUMAN has predicted (and at least one is present).
+   * Bots never predict, so they're ignored; used only to short-circuit the
+   * PREDICT timer (the phase timer still bounds it regardless).
+   */
+  allPredicted(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room) return false;
+    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+    if (humans.length === 0) return false;
+    return humans.every((p) => room.predictions.has(p.id));
+  }
+
+  /**
+   * Each predictor's own outcome for the just-finished round, for the private
+   * `player:predictionResult` emit at PHASE_RESULTS. `actual` is the second-vote
+   * majority (null on a tie); a prediction is correct only when it matches it.
+   */
+  predictionResults(code: string): PredictionResult[] {
+    const room = this.rooms.get(code);
+    if (!room) return [];
+    const tally = RoomStore.tally(room.votes);
+    const actual: VoteChoice | null = tally.A > tally.B ? 'A' : tally.B > tally.A ? 'B' : null;
+    return [...room.predictions].map(([playerId, predicted]) => ({
+      playerId,
+      predicted,
+      actual,
+      correct: actual != null && predicted === actual,
+    }));
+  }
+
+  /**
+   * Record (or change) a player's secret vote for the most convincing defender
+   * during SPEAKER_VOTE. The target must be one of this round's defenders and not
+   * the voter themselves (no self-vote). Overwritable until the phase ends.
+   */
+  voteSpeaker(code: string, voterId: string, defenderId: string): SpeakerVoteResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.phase !== 'SPEAKER_VOTE') return { ok: false, error: 'NOT_SPEAKER_VOTE_PHASE' };
+    if (!room.players.has(voterId)) return { ok: false, error: 'NOT_IN_ROOM' };
+    const isDefender = room.defenders.some((d) => d.id === defenderId);
+    if (!isDefender || defenderId === voterId) return { ok: false, error: 'INVALID_TARGET' };
+    room.speakerVotes.set(voterId, defenderId);
+    return { ok: true, room };
+  }
+
+  /** The defenders to choose between during SPEAKER_VOTE; null otherwise. */
+  speakerCandidates(code: string): Defender[] | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'SPEAKER_VOTE') return null;
+    return room.defenders;
+  }
+
+  /** How many players have cast a best-speaker vote this round (aggregate only). */
+  speakerVotedCount(code: string): number {
+    return this.rooms.get(code)?.speakerVotes.size ?? 0;
+  }
+
+  /**
+   * True once every CONNECTED HUMAN has cast a best-speaker vote (and at least one
+   * is present). Bots never peer-vote, so they're ignored; used only to
+   * short-circuit the SPEAKER_VOTE timer.
+   */
+  allSpeakerVoted(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room) return false;
+    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+    if (humans.length === 0) return false;
+    return humans.every((p) => room.speakerVotes.has(p.id));
   }
 
   /** How many connected players have cast a vote this round (aggregate only). */
@@ -851,6 +1079,8 @@ export class RoomStore {
     // Drop any votes so the tally + allVoted + swing only count present players.
     room.votes.delete(playerId);
     room.votes1.delete(playerId);
+    room.predictions.delete(playerId);
+    room.speakerVotes.delete(playerId);
     return room.players.delete(playerId);
   }
 

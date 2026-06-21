@@ -35,6 +35,9 @@ export interface Award {
 
 export const AWARDS: Award[] = [
   { emoji: '🏆', title: 'Il Persuasore', sub: 'Ha spostato più voti' },
+  { emoji: '🎤', title: 'Il Grande Oratore', sub: 'Il più convincente, votato dai pari' },
+  { emoji: '🎯', title: "L'Oracolo", sub: 'Indovina come finiscono le difese' },
+  { emoji: '👏', title: 'Beniamino del pubblico', sub: 'Più reazioni mentre difende' },
   { emoji: '🎏', title: 'La Banderuola', sub: 'Cambia idea di continuo' },
   { emoji: '🪨', title: 'Il Roccione', sub: 'Non molla mai' },
   { emoji: '🔮', title: 'In sintonia', sub: 'Sempre con la maggioranza' },

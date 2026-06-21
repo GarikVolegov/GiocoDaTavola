@@ -10,6 +10,8 @@ import {
   PERSONA_LABELS,
   OBJECTIVE,
   HOW_TO_PLAY,
+  REACTIONS,
+  REACTION_MIN_INTERVAL_MS,
   type PlayerJoinedPayload,
   type PlayerJoinErrorPayload,
   type LobbyUpdatePayload,
@@ -18,8 +20,44 @@ import {
   type VoteChoice,
   type PlayerVotedPayload,
   type PlayerVoteErrorPayload,
+  type PlayerPredictedPayload,
+  type PlayerPredictionResultPayload,
+  type PlayerSpeakerVotedPayload,
+  type Reaction,
 } from '../shared/events';
 import { Card } from '../shared/ui';
+
+// A row of tap-to-send reaction emojis, shown to the audience during a defense /
+// duel turn so non-speakers stay engaged. Throttled by the caller.
+function ReactionBar({ onReact }: { onReact: (emoji: Reaction) => void }) {
+  return (
+    <div
+      role="group"
+      aria-label="Reagisci"
+      style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}
+    >
+      {REACTIONS.map((emoji) => (
+        <button
+          key={emoji}
+          type="button"
+          onClick={() => onReact(emoji)}
+          aria-label={`Reagisci ${emoji}`}
+          style={{
+            fontSize: '1.8rem',
+            lineHeight: 1,
+            padding: '0.55rem 0.7rem',
+            borderRadius: '999px',
+            cursor: 'pointer',
+            background: 'rgba(242,243,255,0.08)',
+            border: '1px solid rgba(242,243,255,0.18)',
+          }}
+        >
+          {emoji}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 // Read a prefilled room code from the QR join URL (`/join?room=CODE`).
 function urlRoom(): string {
@@ -85,6 +123,9 @@ export default function PlayerApp() {
   const [game, setGame] = useState<GameStatePayload | null>(null);
   const [vote, setVote] = useState<VoteChoice | null>(null);
   const [voteError, setVoteError] = useState<string | null>(null);
+  const [predicted, setPredicted] = useState<VoteChoice | null>(null);
+  const [predictionResult, setPredictionResult] = useState<PlayerPredictionResultPayload | null>(null);
+  const [speakerVote, setSpeakerVote] = useState<string | null>(null);
   // Current credentials, kept in a ref so the socket 'connect' handler can
   // re-claim the seat after a network blip without re-subscribing.
   const credsRef = useRef<SavedSession | null>(null);
@@ -119,6 +160,9 @@ export default function PlayerApp() {
     };
     const onVoteError = ({ error }: PlayerVoteErrorPayload) =>
       setVoteError(VOTE_ERROR_MESSAGES[error] ?? 'Voto non riuscito');
+    const onPredicted = ({ choice }: PlayerPredictedPayload) => setPredicted(choice);
+    const onPredictionResult = (payload: PlayerPredictionResultPayload) => setPredictionResult(payload);
+    const onSpeakerVoted = ({ defenderId }: PlayerSpeakerVotedPayload) => setSpeakerVote(defenderId);
     // On every (re)connect, if we hold a token, reclaim the same seat. Covers
     // socket-level reconnects (network blip) without a page reload.
     const onConnect = () => {
@@ -131,6 +175,9 @@ export default function PlayerApp() {
     socket.on(SocketEvents.GameState, onGameState);
     socket.on(SocketEvents.PlayerVoted, onVoted);
     socket.on(SocketEvents.PlayerVoteError, onVoteError);
+    socket.on(SocketEvents.PlayerPredicted, onPredicted);
+    socket.on(SocketEvents.PlayerPredictionResult, onPredictionResult);
+    socket.on(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
     socket.on('connect', onConnect);
 
     // Auto-rejoin on mount (page reload / reopened tab): replay the saved token
@@ -149,6 +196,9 @@ export default function PlayerApp() {
       socket.off(SocketEvents.GameState, onGameState);
       socket.off(SocketEvents.PlayerVoted, onVoted);
       socket.off(SocketEvents.PlayerVoteError, onVoteError);
+      socket.off(SocketEvents.PlayerPredicted, onPredicted);
+      socket.off(SocketEvents.PlayerPredictionResult, onPredictionResult);
+      socket.off(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
       socket.off('connect', onConnect);
     };
   }, []);
@@ -181,10 +231,13 @@ export default function PlayerApp() {
     };
   }, [isSignedIn, joinedCode]);
 
-  // Each new dilemma round starts with a clean (unselected) vote.
+  // Each new dilemma round starts with a clean (unselected) vote + prediction.
   useEffect(() => {
     setVote(null);
     setVoteError(null);
+    setPredicted(null);
+    setPredictionResult(null);
+    setSpeakerVote(null);
   }, [game?.dilemmaIndex]);
 
   // Buzz the phone the moment it becomes this player's turn to speak (defense or
@@ -205,6 +258,29 @@ export default function PlayerApp() {
     setVoteError(null);
     buzz(25); // tactile confirm the tap registered
     getSocket().emit(SocketEvents.PlayerVote, { choice });
+  };
+
+  const castPrediction = (choice: VoteChoice) => {
+    setPredicted(choice); // optimistic; confirmed via player:predicted
+    buzz(25);
+    getSocket().emit(SocketEvents.PlayerPredict, { choice });
+  };
+
+  const castSpeakerVote = (defenderId: string) => {
+    setSpeakerVote(defenderId); // optimistic; confirmed via player:speakerVoted
+    buzz(25);
+    getSocket().emit(SocketEvents.PlayerVoteSpeaker, { defenderId });
+  };
+
+  // Live reaction during a defense/duel turn. Throttled client-side to mirror the
+  // server's per-player rate limit (avoids spamming rejected emits).
+  const lastReactRef = useRef(0);
+  const sendReaction = (emoji: Reaction) => {
+    const now = Date.now();
+    if (now - lastReactRef.current < REACTION_MIN_INTERVAL_MS) return;
+    lastReactRef.current = now;
+    buzz(15);
+    getSocket().emit(SocketEvents.PlayerReact, { emoji });
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -353,9 +429,12 @@ export default function PlayerApp() {
             </p>
           </>
         ) : (
-          <p style={{ fontSize: '1.3rem', margin: 0 }}>
-            Sta parlando <strong>{speaker.nickname}</strong> 🎤
-          </p>
+          <>
+            <p style={{ fontSize: '1.3rem', margin: 0 }}>
+              Sta parlando <strong>{speaker.nickname}</strong> 🎤
+            </p>
+            <ReactionBar onReact={sendReaction} />
+          </>
         )}
       </main>
     );
@@ -394,11 +473,138 @@ export default function PlayerApp() {
             </p>
           </>
         ) : speaker ? (
-          <p style={{ fontSize: '1.3rem', margin: 0 }}>
-            Sta argomentando <strong>{speaker.nickname}</strong> 🎤
-          </p>
+          <>
+            <p style={{ fontSize: '1.3rem', margin: 0 }}>
+              Sta argomentando <strong>{speaker.nickname}</strong> 🎤
+            </p>
+            <ReactionBar onReact={sendReaction} />
+          </>
         ) : (
           <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>Guarda lo schermo condiviso 👀</p>
+        )}
+      </main>
+    );
+  }
+
+  if (joinedCode && phase === 'SPEAKER_VOTE') {
+    const candidates = (game?.speakerCandidates ?? []).filter((d) => d.id !== playerId);
+    return (
+      <main style={wrap}>
+        <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.SPEAKER_VOTE}</h1>
+        <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
+          🎤 Chi è stato più convincente?
+        </p>
+        {remaining != null && (
+          <div
+            aria-label="Tempo rimanente"
+            style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+          >
+            {remaining}s
+          </div>
+        )}
+        {candidates.length === 0 ? (
+          <p style={{ opacity: 0.8, margin: 0 }}>Hai parlato tu: guarda lo schermo 👀</p>
+        ) : (
+          <div
+            role="group"
+            aria-label="Il tuo voto al miglior oratore"
+            style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(90vw, 22rem)' }}
+          >
+            {candidates.map((d) => {
+              const selected = speakerVote === d.id;
+              const accent = d.side === 'A' ? '79,140,255' : '255,140,79';
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => castSpeakerVote(d.id)}
+                  aria-pressed={selected}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    textAlign: 'left',
+                    padding: '1rem 1.1rem',
+                    borderRadius: '0.8rem',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    color: 'inherit',
+                    background: selected ? `rgba(${accent},0.32)` : `rgba(${accent},0.12)`,
+                    border: `2px solid rgba(${accent},${selected ? 0.9 : 0.4})`,
+                  }}
+                >
+                  <span style={{ fontSize: '1.4rem', fontWeight: 800, opacity: 0.85 }}>{d.side}</span>
+                  <span style={{ fontSize: '1.1rem' }}>{d.nickname}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {speakerVote && (
+          <p style={{ opacity: 0.8, margin: 0 }}>Voto registrato. Puoi cambiare finché c’è tempo.</p>
+        )}
+      </main>
+    );
+  }
+
+  if (joinedCode && phase === 'PREDICT') {
+    const dilemma = game?.dilemma;
+    return (
+      <main style={wrap}>
+        <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.PREDICT}</h1>
+        <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
+          🔮 Chi vincerà <em>dopo</em> le difese?
+        </p>
+        {remaining != null && (
+          <div
+            aria-label="Tempo rimanente"
+            style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+          >
+            {remaining}s
+          </div>
+        )}
+        <div
+          role="group"
+          aria-label="Il tuo pronostico"
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(90vw, 22rem)' }}
+        >
+          {(['A', 'B'] as const).map((letter) => {
+            const selected = predicted === letter;
+            const accent = letter === 'A' ? '79,140,255' : '255,140,79';
+            return (
+              <button
+                key={letter}
+                type="button"
+                onClick={() => castPrediction(letter)}
+                aria-pressed={selected}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  textAlign: 'left',
+                  padding: '1rem 1.1rem',
+                  borderRadius: '0.8rem',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  color: 'inherit',
+                  background: selected ? `rgba(${accent},0.32)` : `rgba(${accent},0.12)`,
+                  border: `2px solid rgba(${accent},${selected ? 0.9 : 0.4})`,
+                }}
+              >
+                <span style={{ fontSize: '1.6rem', fontWeight: 800, opacity: 0.85 }}>{letter}</span>
+                <span style={{ fontSize: '1.1rem' }}>
+                  {dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {predicted ? (
+          <p style={{ opacity: 0.8, margin: 0 }}>
+            Hai pronosticato <strong>{predicted}</strong>. Vediamo se indovini 👀
+          </p>
+        ) : (
+          <p style={{ opacity: 0.7, margin: 0 }}>Scegli chi pensi convincerà di più.</p>
         )}
       </main>
     );
@@ -422,11 +628,22 @@ export default function PlayerApp() {
             🎯 {OBJECTIVE}
           </p>
         ) : phase === 'PHASE_RESULTS' ? (
-          <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
-            {switched === 0
-              ? 'Nessuno ha cambiato idea dopo le difese.'
-              : `${switched} ${switched === 1 ? 'persona ha' : 'persone hanno'} cambiato idea dopo le difese!`}
-          </p>
+          <>
+            <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
+              {switched === 0
+                ? 'Nessuno ha cambiato idea dopo le difese.'
+                : `${switched} ${switched === 1 ? 'persona ha' : 'persone hanno'} cambiato idea dopo le difese!`}
+            </p>
+            {predictionResult && (
+              <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+                {predictionResult.actual == null
+                  ? '🔮 Pareggio: nessun pronostico vince.'
+                  : predictionResult.correct
+                    ? '✅ Pronostico azzeccato!'
+                    : '❌ Stavolta non ci hai preso.'}
+              </p>
+            )}
+          </>
         ) : phase === 'FINAL_AWARDS' ? (
           <>
             <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>

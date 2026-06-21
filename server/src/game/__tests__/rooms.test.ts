@@ -9,6 +9,8 @@ import {
   MAX_PLAYERS,
   MIN_PLAYERS_TO_START,
   DILEMMA_COUNT_OPTIONS,
+  REACTIONS,
+  REACTION_MIN_INTERVAL_MS,
   type GamePhase,
   type VoteChoice,
 } from '../rooms';
@@ -239,8 +241,10 @@ describe('PHASE_DURATIONS_MS', () => {
       'DILEMMA_REVEAL',
       'VOTE_1',
       'SPLIT_REVEAL',
+      'PREDICT',
       'DEFENSE',
       'VOTE_2',
+      'SPEAKER_VOTE',
       'PHASE_RESULTS',
     ];
     for (const phase of timed) {
@@ -255,9 +259,11 @@ describe('nextPhase (pure transition)', () => {
     expect(nextPhase('PHASE_INTRO', 0, 3)).toEqual({ phase: 'DILEMMA_REVEAL', dilemmaIndex: 1 });
     expect(nextPhase('DILEMMA_REVEAL', 1, 3)).toEqual({ phase: 'VOTE_1', dilemmaIndex: 1 });
     expect(nextPhase('VOTE_1', 1, 3)).toEqual({ phase: 'SPLIT_REVEAL', dilemmaIndex: 1 });
-    expect(nextPhase('SPLIT_REVEAL', 1, 3)).toEqual({ phase: 'DEFENSE', dilemmaIndex: 1 });
+    expect(nextPhase('SPLIT_REVEAL', 1, 3)).toEqual({ phase: 'PREDICT', dilemmaIndex: 1 });
+    expect(nextPhase('PREDICT', 1, 3)).toEqual({ phase: 'DEFENSE', dilemmaIndex: 1 });
     expect(nextPhase('DEFENSE', 1, 3)).toEqual({ phase: 'VOTE_2', dilemmaIndex: 1 });
-    expect(nextPhase('VOTE_2', 1, 3)).toEqual({ phase: 'PHASE_RESULTS', dilemmaIndex: 1 });
+    expect(nextPhase('VOTE_2', 1, 3)).toEqual({ phase: 'SPEAKER_VOTE', dilemmaIndex: 1 });
+    expect(nextPhase('SPEAKER_VOTE', 1, 3)).toEqual({ phase: 'PHASE_RESULTS', dilemmaIndex: 1 });
   });
 
   it('loops PHASE_RESULTS back to DILEMMA_REVEAL while dilemmas remain', () => {
@@ -538,6 +544,7 @@ describe('RoomStore split reveal (US-009)', () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
     const code = splitRoom(store);
     store.advancePhase(code); // SPLIT_REVEAL
+    store.advancePhase(code); // PREDICT
     store.advancePhase(code); // DEFENSE
     expect(store.get(code)?.phase).toBe('DEFENSE');
     expect(store.publicSplit(code)).toBeNull();
@@ -561,6 +568,7 @@ describe('RoomStore defense (US-010)', () => {
     store.advancePhase(code); // VOTE_1
     sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
     store.advancePhase(code); // SPLIT_REVEAL
+    store.advancePhase(code); // PREDICT
     store.advancePhase(code); // DEFENSE
     return code;
   }
@@ -667,6 +675,7 @@ describe('RoomStore defense (US-010)', () => {
     store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1 (nobody votes)
     store.advancePhase(code); // SPLIT_REVEAL
+    store.advancePhase(code); // PREDICT
     store.advancePhase(code); // DEFENSE (no defenders)
     expect(store.get(code)?.phase).toBe('DEFENSE');
     expect(store.publicDefense(code)).toEqual({ speaker: null, turn: 0, totalTurns: 0, argument: null });
@@ -811,7 +820,10 @@ describe('RoomStore per-player stats (Fase A)', () => {
     g = 0;
     while (store.get(code)?.phase !== 'VOTE_2' && g++ < 10) store.advancePhase(code);
     for (const [id, side] of Object.entries(vote2)) store.vote(code, id, side);
-    store.advancePhase(code); // VOTE_2 -> PHASE_RESULTS (records stats)
+    // VOTE_2 -> ... -> PHASE_RESULTS (records stats). Loop so a SPEAKER_VOTE step
+    // in between doesn't break this helper.
+    let r = 0;
+    while (store.get(code)?.phase !== 'PHASE_RESULTS' && r++ < 5) store.advancePhase(code);
   }
 
   function startedStatsRoom(store: RoomStore, players = 3, dilemmaCount = 3): string {
@@ -879,7 +891,8 @@ describe('RoomStore public swing (Fase A)', () => {
     g = 0;
     while (store.get(code)?.phase !== 'VOTE_2' && g++ < 10) store.advancePhase(code);
     store.vote(code, 'sock-1', 'A'); // B -> A
-    store.advancePhase(code); // -> PHASE_RESULTS
+    g = 0;
+    while (store.get(code)?.phase !== 'PHASE_RESULTS' && g++ < 5) store.advancePhase(code);
     return code;
   }
 
@@ -1094,6 +1107,7 @@ describe('RoomStore bots (Fase B)', () => {
     store.vote(code, 'sock-1', 'A');
     store.vote(code, botId, 'B');
     store.advancePhase(code); // SPLIT_REVEAL
+    store.advancePhase(code); // PREDICT
     store.advancePhase(code); // DEFENSE — defenders: A (human sock-0) then B (bot)
     const t1 = store.publicDefense(code);
     expect(t1?.speaker?.id).toBe('sock-0');
@@ -1122,6 +1136,7 @@ describe('RoomStore bot defender AI hooks (Fase C)', () => {
     store.vote(code, 'sock-1', 'A');
     store.vote(code, botId, 'B');
     store.advancePhase(code); // SPLIT_REVEAL
+    store.advancePhase(code); // PREDICT
     store.advancePhase(code); // DEFENSE (turn 0 = human on A)
     return { code, botId };
   }
@@ -1457,5 +1472,392 @@ describe('RoomStore.setPlayerUser', () => {
     expect(store.get(code)?.players.get('p1')?.clerkUserId).toBe('user_123');
     expect(store.setPlayerUser('ZZZZ', 'p1', 'user_123')).toBe(false);
     expect(store.setPlayerUser(code, 'ghost', 'user_123')).toBe(false);
+  });
+});
+
+describe('RoomStore live reactions (engagement)', () => {
+  // Drive a fresh room into DEFENSE with a known split; rng=0 makes defender
+  // selection deterministic. sides=['A','B','B'] => defenders A->sock-0, B->sock-1,
+  // and turn 0 is the side-A speaker (sock-0).
+  function defenseRoom(
+    store: RoomStore,
+    sides: VoteChoice[] = ['A', 'B', 'B'],
+  ): string {
+    const { code } = store.create();
+    for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3); // PHASE_INTRO
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
+    store.advancePhase(code); // SPLIT_REVEAL
+    store.advancePhase(code); // PREDICT
+    store.advancePhase(code); // DEFENSE
+    return code;
+  }
+
+  it('exposes a fixed allowlist of reaction emojis', () => {
+    expect(REACTIONS.length).toBeGreaterThan(0);
+    expect(REACTIONS).toContain('👏');
+  });
+
+  it('records a reaction for the current speaker and returns the emoji', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']);
+    expect(store.get(code)?.phase).toBe('DEFENSE');
+    const result = store.react(code, 'sock-1', '👏');
+    expect(result).toEqual({ ok: true, emoji: '👏' });
+    // The current speaker is sock-0 (side A); the reaction accrues to them.
+    expect(store.get(code)?.stats.get('sock-0')?.reactionsReceived).toBe(1);
+  });
+
+  it('accumulates reactions from several players onto the current speaker', () => {
+    let now = 0;
+    const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']);
+    store.react(code, 'sock-1', '👏');
+    now += REACTION_MIN_INTERVAL_MS; // past the rate-limit window
+    store.react(code, 'sock-2', '🔥');
+    expect(store.get(code)?.stats.get('sock-0')?.reactionsReceived).toBe(2);
+  });
+
+  it('rejects a reaction outside DEFENSE / DUEL_ARGUE', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3); // PHASE_INTRO
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    expect(store.react(code, 'sock-0', '👏')).toEqual({ ok: false, error: 'NOT_REACTING_PHASE' });
+  });
+
+  it('rejects an emoji outside the allowlist', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store);
+    expect(store.react(code, 'sock-1', '💩')).toEqual({ ok: false, error: 'INVALID_EMOJI' });
+  });
+
+  it('rejects a reaction from someone not in the room, and an unknown room', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store);
+    expect(store.react(code, 'intruder', '👏')).toEqual({ ok: false, error: 'NOT_IN_ROOM' });
+    expect(store.react('ZZZZ', 'sock-1', '👏')).toEqual({ ok: false, error: 'ROOM_NOT_FOUND' });
+  });
+
+  it('rate-limits repeated reactions from the same player', () => {
+    let now = 1_000;
+    const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']);
+    expect(store.react(code, 'sock-1', '👏').ok).toBe(true);
+    now += REACTION_MIN_INTERVAL_MS - 1; // still within the window
+    expect(store.react(code, 'sock-1', '🔥')).toEqual({ ok: false, error: 'RATE_LIMITED' });
+    now += 2; // now past the window
+    expect(store.react(code, 'sock-1', '🤯').ok).toBe(true);
+    // Only the two accepted reactions counted toward the speaker.
+    expect(store.get(code)?.stats.get('sock-0')?.reactionsReceived).toBe(2);
+  });
+
+  it('allows reactions during a duel argue turn', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    store.join(code, 'p2', 'Bob');
+    store.startGame(code, 3, 'misto', 'duello'); // PHASE_INTRO
+    store.advancePhase(code); // DUEL_PICK
+    store.vote(code, 'p1', 'A');
+    store.vote(code, 'p2', 'B'); // disagree -> the duel goes to DUEL_ARGUE
+    store.advancePhase(code); // DUEL_REVEAL
+    store.advancePhase(code); // DUEL_ARGUE
+    expect(store.get(code)?.phase).toBe('DUEL_ARGUE');
+    expect(store.react(code, 'p2', '👏').ok).toBe(true);
+  });
+
+  it('crowns "Beniamino del pubblico" for the most-reacted player', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    for (const id of ['sock-0', 'sock-1', 'sock-2']) store.join(code, id, id.toUpperCase());
+    store.get(code)!.stats = new Map(
+      Object.entries({
+        'sock-0': { rounds: 1, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0, reactionsReceived: 5 },
+        'sock-1': { rounds: 1, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0, reactionsReceived: 2 },
+        'sock-2': { rounds: 1, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0 },
+      }),
+    );
+    const beniamino = store.computeAwards(code).find((a) => a.id === 'beniamino');
+    expect(beniamino?.winner).toEqual({ id: 'sock-0', nickname: 'SOCK-0' });
+  });
+
+  it('omits the beniamino award when nobody received a reaction', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'sock-0', 'P0');
+    store.get(code)!.stats = new Map(
+      Object.entries({
+        'sock-0': { rounds: 1, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0 },
+      }),
+    );
+    expect(store.computeAwards(code).map((a) => a.id)).not.toContain('beniamino');
+  });
+});
+
+describe('RoomStore predictions (engagement)', () => {
+  // Drive a fresh room into the PREDICT phase (after SPLIT_REVEAL, before DEFENSE)
+  // with a known first-vote split. rng=0 keeps everything deterministic.
+  function predictRoom(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B']): string {
+    const { code } = store.create();
+    for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3); // PHASE_INTRO
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
+    store.advancePhase(code); // SPLIT_REVEAL
+    store.advancePhase(code); // PREDICT
+    return code;
+  }
+
+  it('reaches a PREDICT phase between SPLIT_REVEAL and DEFENSE', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = predictRoom(store);
+    expect(store.get(code)?.phase).toBe('PREDICT');
+    store.advancePhase(code); // PREDICT -> DEFENSE
+    expect(store.get(code)?.phase).toBe('DEFENSE');
+  });
+
+  it('records and counts a secret prediction during PREDICT', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = predictRoom(store);
+    expect(store.predict(code, 'sock-0', 'A').ok).toBe(true);
+    expect(store.predictedCount(code)).toBe(1);
+    // changing it keeps a single prediction
+    expect(store.predict(code, 'sock-0', 'B').ok).toBe(true);
+    expect(store.predictedCount(code)).toBe(1);
+  });
+
+  it('rejects predicting outside PREDICT, unknown room, intruder, bad choice', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = predictRoom(store);
+    expect(store.predict('ZZZZ', 'sock-0', 'A')).toEqual({ ok: false, error: 'ROOM_NOT_FOUND' });
+    expect(store.predict(code, 'intruder', 'A')).toEqual({ ok: false, error: 'NOT_IN_ROOM' });
+    expect(store.predict(code, 'sock-0', 'C')).toEqual({ ok: false, error: 'INVALID_CHOICE' });
+    store.advancePhase(code); // DEFENSE
+    expect(store.predict(code, 'sock-0', 'A')).toEqual({ ok: false, error: 'NOT_PREDICT_PHASE' });
+  });
+
+  it('allPredicted ignores bots and waits only on connected humans', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    store.join(code, 'sock-0', 'H0');
+    store.join(code, 'sock-1', 'H1');
+    store.addBot(code); // a bot never predicts
+    store.startGame(code, 3);
+    let g = 0;
+    while (store.get(code)?.phase !== 'PREDICT' && g++ < 10) store.advancePhase(code);
+    expect(store.get(code)?.phase).toBe('PREDICT');
+    store.predict(code, 'sock-0', 'A');
+    expect(store.allPredicted(code)).toBe(false);
+    store.predict(code, 'sock-1', 'B');
+    expect(store.allPredicted(code)).toBe(true); // bot is not awaited
+  });
+
+  it('credits a correct prediction (matched the second-vote majority) at PHASE_RESULTS', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = predictRoom(store, ['A', 'B', 'B']); // first split A=1 B=2
+    store.predict(code, 'sock-0', 'A'); // will be RIGHT (A becomes majority)
+    store.predict(code, 'sock-1', 'B'); // will be WRONG
+    let g = 0;
+    while (store.get(code)?.phase !== 'VOTE_2' && g++ < 10) store.advancePhase(code);
+    store.vote(code, 'sock-1', 'A'); // B->A: second A=2 B=1, majority A
+    g = 0;
+    while (store.get(code)?.phase !== 'PHASE_RESULTS' && g++ < 5) store.advancePhase(code);
+    expect(store.get(code)?.phase).toBe('PHASE_RESULTS');
+    expect(store.get(code)?.stats.get('sock-0')?.correctPredictions).toBe(1);
+    expect(store.get(code)?.stats.get('sock-1')?.correctPredictions ?? 0).toBe(0);
+  });
+
+  it('credits nobody on a tied second vote', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = predictRoom(store, ['A', 'A', 'B', 'B']); // 2-2 tie, nobody changes
+    store.predict(code, 'sock-0', 'A');
+    store.predict(code, 'sock-1', 'B');
+    let g = 0;
+    while (store.get(code)?.phase !== 'PHASE_RESULTS' && g++ < 12) store.advancePhase(code);
+    expect(store.get(code)?.stats.get('sock-0')?.correctPredictions ?? 0).toBe(0);
+    expect(store.get(code)?.stats.get('sock-1')?.correctPredictions ?? 0).toBe(0);
+  });
+
+  it('reports each predictor’s result at PHASE_RESULTS', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = predictRoom(store, ['A', 'B', 'B']);
+    store.predict(code, 'sock-0', 'A');
+    store.predict(code, 'sock-1', 'B');
+    let g = 0;
+    while (store.get(code)?.phase !== 'VOTE_2' && g++ < 10) store.advancePhase(code);
+    store.vote(code, 'sock-1', 'A'); // majority becomes A
+    g = 0;
+    while (store.get(code)?.phase !== 'PHASE_RESULTS' && g++ < 5) store.advancePhase(code);
+    const results = store.predictionResults(code);
+    expect(results).toContainEqual({ playerId: 'sock-0', predicted: 'A', actual: 'A', correct: true });
+    expect(results).toContainEqual({ playerId: 'sock-1', predicted: 'B', actual: 'A', correct: false });
+  });
+
+  it('clears predictions for the next dilemma and prunes a leaver', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = predictRoom(store, ['A', 'B', 'B']);
+    store.predict(code, 'sock-0', 'A');
+    store.predict(code, 'sock-1', 'B');
+    expect(store.predictedCount(code)).toBe(2);
+    store.leave(code, 'sock-1'); // prune on leave
+    expect(store.predictedCount(code)).toBe(1);
+    let g = 0;
+    while (store.get(code)?.dilemmaIndex !== 2 && g++ < 20) store.advancePhase(code);
+    expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL');
+    expect(store.predictedCount(code)).toBe(0); // cleared for the new dilemma
+  });
+
+  it('crowns "L\'Oracolo" for the most correct predictions; omits it when none', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    for (const id of ['sock-0', 'sock-1']) store.join(code, id, id.toUpperCase());
+    store.get(code)!.stats = new Map(
+      Object.entries({
+        'sock-0': { rounds: 2, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0, correctPredictions: 3 },
+        'sock-1': { rounds: 2, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0, correctPredictions: 1 },
+      }),
+    );
+    const oracolo = store.computeAwards(code).find((a) => a.id === 'oracolo');
+    expect(oracolo?.winner).toEqual({ id: 'sock-0', nickname: 'SOCK-0' });
+
+    const store2 = new RoomStore();
+    const { code: c2 } = store2.create();
+    store2.join(c2, 'sock-0', 'P0');
+    store2.get(c2)!.stats = new Map(
+      Object.entries({ 'sock-0': { rounds: 1, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0 } }),
+    );
+    expect(store2.computeAwards(c2).map((a) => a.id)).not.toContain('oracolo');
+  });
+});
+
+describe('RoomStore best-speaker vote (engagement)', () => {
+  // Drive a fresh room into SPEAKER_VOTE (after VOTE_2, before PHASE_RESULTS) with
+  // the given first-vote split. rng=0 makes defender selection deterministic:
+  // ['A','B','B'] -> defenders A:sock-0, B:sock-1 (2 candidates).
+  function speakerVoteRoom(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B']): string {
+    const { code } = store.create();
+    for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3); // PHASE_INTRO
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
+    store.advancePhase(code); // SPLIT_REVEAL
+    store.advancePhase(code); // PREDICT
+    store.advancePhase(code); // DEFENSE
+    let g = 0;
+    while (store.get(code)?.phase !== 'VOTE_2' && g++ < 10) store.advancePhase(code);
+    store.advancePhase(code); // VOTE_2 -> SPEAKER_VOTE
+    return code;
+  }
+
+  it('reaches SPEAKER_VOTE between VOTE_2 and PHASE_RESULTS with >=2 defenders', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = speakerVoteRoom(store, ['A', 'B', 'B']);
+    expect(store.get(code)?.phase).toBe('SPEAKER_VOTE');
+    store.advancePhase(code); // -> PHASE_RESULTS
+    expect(store.get(code)?.phase).toBe('PHASE_RESULTS');
+  });
+
+  it('skips SPEAKER_VOTE straight to PHASE_RESULTS with fewer than 2 defenders', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = speakerVoteRoom(store, ['A', 'A', 'A']); // unanimous -> 1 defender
+    expect(store.get(code)?.phase).toBe('PHASE_RESULTS');
+  });
+
+  it('exposes the candidate defenders only during SPEAKER_VOTE', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = speakerVoteRoom(store, ['A', 'B', 'B']);
+    expect(store.speakerCandidates(code)).toEqual([
+      { id: 'sock-0', nickname: 'P0', side: 'A' },
+      { id: 'sock-1', nickname: 'P1', side: 'B' },
+    ]);
+    store.advancePhase(code); // PHASE_RESULTS
+    expect(store.speakerCandidates(code)).toBeNull();
+  });
+
+  it('records a peer vote and counts it; rejects bad targets and self-votes', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = speakerVoteRoom(store, ['A', 'B', 'B']);
+    expect(store.voteSpeaker(code, 'sock-2', 'sock-0').ok).toBe(true); // sock-2 -> defender sock-0
+    expect(store.speakerVotedCount(code)).toBe(1);
+    expect(store.voteSpeaker(code, 'sock-0', 'sock-0')).toEqual({ ok: false, error: 'INVALID_TARGET' }); // self
+    expect(store.voteSpeaker(code, 'sock-2', 'sock-2')).toEqual({ ok: false, error: 'INVALID_TARGET' }); // not a defender
+    expect(store.voteSpeaker(code, 'intruder', 'sock-0')).toEqual({ ok: false, error: 'NOT_IN_ROOM' });
+    expect(store.voteSpeaker('ZZZZ', 'sock-2', 'sock-0')).toEqual({ ok: false, error: 'ROOM_NOT_FOUND' });
+  });
+
+  it('rejects a speaker vote outside SPEAKER_VOTE', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = speakerVoteRoom(store, ['A', 'B', 'B']);
+    store.advancePhase(code); // PHASE_RESULTS
+    expect(store.voteSpeaker(code, 'sock-2', 'sock-0')).toEqual({ ok: false, error: 'NOT_SPEAKER_VOTE_PHASE' });
+  });
+
+  it('allSpeakerVoted ignores bots and waits only on connected humans', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    store.join(code, 'sock-0', 'H0');
+    store.join(code, 'sock-1', 'H1');
+    store.join(code, 'sock-2', 'H2');
+    store.addBot(code);
+    store.startGame(code, 3);
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'B');
+    store.vote(code, 'sock-2', 'B');
+    let g = 0;
+    while (store.get(code)?.phase !== 'SPEAKER_VOTE' && g++ < 12) store.advancePhase(code);
+    expect(store.get(code)?.phase).toBe('SPEAKER_VOTE');
+    const [a, b] = store.speakerCandidates(code)!;
+    store.voteSpeaker(code, 'sock-0', b.id);
+    store.voteSpeaker(code, 'sock-1', a.id);
+    expect(store.allSpeakerVoted(code)).toBe(false);
+    store.voteSpeaker(code, 'sock-2', a.id);
+    expect(store.allSpeakerVoted(code)).toBe(true); // bot is not awaited
+  });
+
+  it('accumulates oratorVotes per defender at PHASE_RESULTS, clears + prunes', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = speakerVoteRoom(store, ['A', 'B', 'B']);
+    store.voteSpeaker(code, 'sock-1', 'sock-0'); // -> sock-0
+    store.voteSpeaker(code, 'sock-2', 'sock-0'); // -> sock-0
+    store.advancePhase(code); // PHASE_RESULTS (folds orator votes)
+    expect(store.get(code)?.phase).toBe('PHASE_RESULTS');
+    expect(store.get(code)?.stats.get('sock-0')?.oratorVotes).toBe(2);
+    // votes cleared + pruned for the next round
+    store.leave(code, 'sock-2');
+    let g = 0;
+    while (store.get(code)?.dilemmaIndex !== 2 && g++ < 20) store.advancePhase(code);
+    expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL');
+    expect(store.speakerVotedCount(code)).toBe(0);
+  });
+
+  it('crowns "Il Grande Oratore" for the most peer votes; omits it when none', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    for (const id of ['sock-0', 'sock-1']) store.join(code, id, id.toUpperCase());
+    store.get(code)!.stats = new Map(
+      Object.entries({
+        'sock-0': { rounds: 2, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0, oratorVotes: 4 },
+        'sock-1': { rounds: 2, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0, oratorVotes: 1 },
+      }),
+    );
+    const oratore = store.computeAwards(code).find((a) => a.id === 'oratore');
+    expect(oratore?.winner).toEqual({ id: 'sock-0', nickname: 'SOCK-0' });
+
+    const store2 = new RoomStore();
+    const { code: c2 } = store2.create();
+    store2.join(c2, 'sock-0', 'P0');
+    store2.get(c2)!.stats = new Map(
+      Object.entries({ 'sock-0': { rounds: 1, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0 } }),
+    );
+    expect(store2.computeAwards(c2).map((a) => a.id)).not.toContain('oratore');
   });
 });

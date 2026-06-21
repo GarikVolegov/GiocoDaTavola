@@ -34,7 +34,35 @@ export const SocketEvents = {
   PlayerVoted: 'player:voted',
   /** Server rejects the vote (wrong phase, not in room, bad choice). */
   PlayerVoteError: 'player:voteError',
+  /** Player taps a live audience reaction (DEFENSE / DUEL_ARGUE). */
+  PlayerReact: 'player:react',
+  /** Server re-broadcasts a single reaction emoji to everyone (the host's swarm). */
+  RoomReaction: 'room:reaction',
+  /** Player secretly predicts the post-defense majority (PREDICT phase). */
+  PlayerPredict: 'player:predict',
+  /** Server confirms the player's current prediction back to them only. */
+  PlayerPredicted: 'player:predicted',
+  /** Server rejects the prediction (wrong phase, not in room, bad choice). */
+  PlayerPredictError: 'player:predictError',
+  /** Server privately tells a predictor whether they were right (at PHASE_RESULTS). */
+  PlayerPredictionResult: 'player:predictionResult',
+  /** Player secretly votes the most convincing defender (SPEAKER_VOTE phase). */
+  PlayerVoteSpeaker: 'player:voteSpeaker',
+  /** Server confirms the player's current best-speaker vote back to them only. */
+  PlayerSpeakerVoted: 'player:speakerVoted',
+  /** Server rejects the best-speaker vote (wrong phase, not in room, bad target). */
+  PlayerSpeakerVoteError: 'player:speakerVoteError',
 } as const;
+
+/**
+ * The fixed allowlist of live-reaction emojis (mirror of the server's `REACTIONS`).
+ * Order is the order shown on the phone's reaction bar.
+ */
+export const REACTIONS = ['👏', '🔥', '🤯', '😂', '🤔'] as const;
+export type Reaction = (typeof REACTIONS)[number];
+
+/** Minimum gap between a player's reactions, client-side throttle (mirror of server). */
+export const REACTION_MIN_INTERVAL_MS = 400;
 
 /** Session formats and their dilemma counts (mirror server rooms.ts). */
 export const SESSION_FORMATS = ['assaggio', 'classica', 'maratona'] as const;
@@ -109,8 +137,10 @@ export type GamePhase =
   | 'DILEMMA_REVEAL'
   | 'VOTE_1'
   | 'SPLIT_REVEAL'
+  | 'PREDICT'
   | 'DEFENSE'
   | 'VOTE_2'
+  | 'SPEAKER_VOTE'
   | 'PHASE_RESULTS'
   | 'FINAL_AWARDS'
   // 1v1 "Duello" mode phases (mirror server rooms.ts).
@@ -238,7 +268,20 @@ export interface PublicSwing extends SwingResult {
 }
 
 /** The fun end-of-game superlatives (mirror of the server's `AwardId`). */
-export type AwardId = 'persuasore' | 'banderuola' | 'roccione' | 'sintonia' | 'bastian';
+export type AwardId =
+  | 'persuasore'
+  | 'banderuola'
+  | 'roccione'
+  | 'sintonia'
+  | 'bastian'
+  | 'beniamino'
+  | 'oracolo'
+  | 'oratore';
+
+/** Payload of the `room:reaction` broadcast: a single allowlisted emoji. */
+export interface RoomReactionPayload {
+  emoji: Reaction;
+}
 
 /** An award and who won it. */
 export interface Award {
@@ -293,6 +336,18 @@ export interface GameStatePayload {
    * voted what (votes are secret). The A/B split is revealed later (SPLIT_REVEAL).
    */
   votedCount: number;
+  /**
+   * How many players have made a secret prediction this round (PREDICT phase).
+   * Aggregate count only — never who predicted what.
+   */
+  predictedCount: number;
+  /**
+   * The defenders to vote between, shown only in SPEAKER_VOTE; null otherwise.
+   * Their identities/side are already public (they spoke in DEFENSE).
+   */
+  speakerCandidates: Defender[] | null;
+  /** How many have cast a best-speaker vote this round (aggregate count only). */
+  speakerVotedCount: number;
   /**
    * The aggregate A/B split, shown only in SPLIT_REVEAL; null otherwise (e.g.
    * during VOTE_1 so the live vote isn't spoiled). Counts only, no identities.
@@ -351,6 +406,46 @@ export interface PlayerVotedPayload {
   choice: VoteChoice;
 }
 
+export interface PlayerPredictPayload {
+  choice: VoteChoice;
+}
+
+export interface PlayerPredictedPayload {
+  choice: VoteChoice;
+}
+
+/** Private per-predictor outcome at PHASE_RESULTS (mirror of the server's `PredictionResult`). */
+export interface PlayerPredictionResultPayload {
+  predicted: VoteChoice;
+  /** The post-defense (second-vote) majority side, or null on a tie. */
+  actual: VoteChoice | null;
+  correct: boolean;
+}
+
+export type PredictError = 'ROOM_NOT_FOUND' | 'NOT_PREDICT_PHASE' | 'NOT_IN_ROOM' | 'INVALID_CHOICE';
+
+export interface PlayerPredictErrorPayload {
+  error: PredictError;
+}
+
+export interface PlayerVoteSpeakerPayload {
+  defenderId: string;
+}
+
+export interface PlayerSpeakerVotedPayload {
+  defenderId: string;
+}
+
+export type SpeakerVoteError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_SPEAKER_VOTE_PHASE'
+  | 'NOT_IN_ROOM'
+  | 'INVALID_TARGET';
+
+export interface PlayerSpeakerVoteErrorPayload {
+  error: SpeakerVoteError;
+}
+
 export type VoteError =
   | 'ROOM_NOT_FOUND'
   | 'NOT_VOTING_PHASE'
@@ -376,8 +471,10 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   DILEMMA_REVEAL: 'Il dilemma',
   VOTE_1: 'Primo voto',
   SPLIT_REVEAL: 'Come si è diviso il gruppo',
+  PREDICT: 'Pronostico',
   DEFENSE: 'Le difese',
   VOTE_2: 'Secondo voto',
+  SPEAKER_VOTE: 'Miglior oratore',
   PHASE_RESULTS: 'Risultati',
   FINAL_AWARDS: 'Premi finali',
   DUEL_PICK: 'Scegliete',
