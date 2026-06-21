@@ -27,6 +27,8 @@ const DILEMMA_FIXTURE: Dilemma[] = Array.from({ length: 6 }, (_, i) => ({
   optionA: `A${i + 1}`,
   optionB: `B${i + 1}`,
   register: 'vita' as const,
+  spuntiA: [`pro A${i + 1} #1`, `pro A${i + 1} #2`],
+  spuntiB: [`pro B${i + 1} #1`, `pro B${i + 1} #2`],
 }));
 const makeFixtureDeck = (_register: ContentRegister) => new Deck(DILEMMA_FIXTURE, () => 0);
 

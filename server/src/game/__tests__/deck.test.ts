@@ -4,9 +4,9 @@ import { Deck, loadDilemmas, dilemmasForRegister, type Dilemma } from '../deck';
 // A small fixed deck for exercising draw behavior without depending on the
 // real data file.
 const fixture: Dilemma[] = [
-  { id: 'a', text: 'A?', optionA: 'a1', optionB: 'a2', register: 'vita' },
-  { id: 'b', text: 'B?', optionA: 'b1', optionB: 'b2', register: 'business' },
-  { id: 'c', text: 'C?', optionA: 'c1', optionB: 'c2', register: 'vita' },
+  { id: 'a', text: 'A?', optionA: 'a1', optionB: 'a2', register: 'vita', spuntiA: ['x', 'y'], spuntiB: ['x', 'y'] },
+  { id: 'b', text: 'B?', optionA: 'b1', optionB: 'b2', register: 'business', spuntiA: ['x', 'y'], spuntiB: ['x', 'y'] },
+  { id: 'c', text: 'C?', optionA: 'c1', optionB: 'c2', register: 'vita', spuntiA: ['x', 'y'], spuntiB: ['x', 'y'] },
 ];
 
 describe('loadDilemmas (server/data/dilemmas.json)', () => {
@@ -134,5 +134,17 @@ describe('deck content volume & balance', () => {
   it('non ci sono testi di dilemma duplicati', () => {
     const texts = all.map((d) => d.text.trim().toLowerCase());
     expect(new Set(texts).size).toBe(texts.length);
+  });
+});
+
+describe('spunti per lato', () => {
+  it('every dilemma has at least two non-empty spunti per side', () => {
+    for (const d of loadDilemmas()) {
+      expect(d.spuntiA.length).toBeGreaterThanOrEqual(2);
+      expect(d.spuntiB.length).toBeGreaterThanOrEqual(2);
+      for (const s of [...d.spuntiA, ...d.spuntiB]) {
+        expect(s.trim()).not.toBe('');
+      }
+    }
   });
 });

@@ -15,6 +15,10 @@ export interface Dilemma {
   optionB: string;
   /** Which content register this dilemma belongs to. */
   register: 'vita' | 'business';
+  /** 2–3 talking points for someone defending side A (optionA). */
+  spuntiA: string[];
+  /** 2–3 talking points for someone defending side B (optionB). */
+  spuntiB: string[];
 }
 
 /** Dilemmas matching a register; 'misto' returns the whole pool. */
