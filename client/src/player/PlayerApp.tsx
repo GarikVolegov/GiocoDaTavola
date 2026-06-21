@@ -1,21 +1,33 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { useAuth, Show, SignInButton } from '@clerk/react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import {
   SocketEvents,
   JOIN_ERROR_MESSAGES,
   VOTE_ERROR_MESSAGES,
+  START_ERROR_MESSAGES,
   PHASE_LABELS,
   PERSONA_LABELS,
   OBJECTIVE,
   HOW_TO_PLAY,
+  SESSION_FORMATS,
+  FORMAT_LABELS,
+  FORMAT_DILEMMA_COUNT,
+  CONTENT_REGISTERS,
+  REGISTER_LABELS,
+  MIN_PLAYERS_TO_START,
+  GAME_MODES,
+  MODE_LABELS,
   REACTIONS,
   REACTION_MIN_INTERVAL_MS,
+  type GameMode,
+  type SessionFormat,
+  type ContentRegister,
   type PlayerJoinedPayload,
   type PlayerJoinErrorPayload,
   type LobbyUpdatePayload,
   type GameStatePayload,
+  type HostStartErrorPayload,
   type PublicPlayer,
   type VoteChoice,
   type PlayerVotedPayload,
@@ -27,8 +39,10 @@ import {
   type PlayerSwingBetResultPayload,
   type PlayerSpeakerVotedPayload,
   type Reaction,
+  type BlindSpot,
 } from '../shared/events';
-import { Card } from '../shared/ui';
+import { Card, Pill, Button, Alert, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel } from '../shared/ui';
+import { useAuth, Show, SignInButton } from '@clerk/react';
 
 // A row of tap-to-send reaction emojis, shown to the audience during a defense /
 // duel turn so non-speakers stay engaged. Throttled by the caller.
@@ -65,6 +79,11 @@ function ReactionBar({ onReact }: { onReact: (emoji: Reaction) => void }) {
 // Read a prefilled room code from the QR join URL (`/join?room=CODE`).
 function urlRoom(): string {
   return new URLSearchParams(window.location.search).get('room')?.toUpperCase() ?? '';
+}
+
+// Whether the URL asks to start in "create a room" mode (`/join?create=1`).
+function urlWantsCreate(): boolean {
+  return new URLSearchParams(window.location.search).get('create') === '1';
 }
 
 // Persisted session so a locked/refreshed phone can reclaim its seat + vote.
@@ -118,6 +137,8 @@ function buzz(pattern: number | number[]): void {
 export default function PlayerApp() {
   const [code, setCode] = useState(initialCode);
   const [nickname, setNickname] = useState(() => loadSession()?.nickname ?? '');
+  // Create vs. join: default to "create" when arriving via /join?create=1.
+  const [mode, setMode] = useState<'join' | 'create'>(() => (urlWantsCreate() ? 'create' : 'join'));
   const [joinedCode, setJoinedCode] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -126,11 +147,17 @@ export default function PlayerApp() {
   const [game, setGame] = useState<GameStatePayload | null>(null);
   const [vote, setVote] = useState<VoteChoice | null>(null);
   const [voteError, setVoteError] = useState<string | null>(null);
+  const [blindSpot, setBlindSpot] = useState<BlindSpot | null>(null);
   const [predicted, setPredicted] = useState<VoteChoice | null>(null);
   const [predictionResult, setPredictionResult] = useState<PlayerPredictionResultPayload | null>(null);
   const [swingBet, setSwingBet] = useState<SwingBet | null>(null);
   const [swingBetResult, setSwingBetResult] = useState<PlayerSwingBetResultPayload | null>(null);
   const [speakerVote, setSpeakerVote] = useState<string | null>(null);
+  // Leader-only lobby config (mirrors the old HostApp setup).
+  const [format, setFormat] = useState<SessionFormat>('classica');
+  const [register, setRegister] = useState<ContentRegister>('misto');
+  const [gameMode, setGameMode] = useState<GameMode>('gruppo');
+  const [startError, setStartError] = useState<string | null>(null);
   // Current credentials, kept in a ref so the socket 'connect' handler can
   // re-claim the seat after a network blip without re-subscribing.
   const credsRef = useRef<SavedSession | null>(null);
@@ -157,7 +184,12 @@ export default function PlayerApp() {
       }
     };
     const onLobbyUpdate = ({ players }: LobbyUpdatePayload) => setPlayers(players);
-    const onGameState = (payload: GameStatePayload) => setGame(payload);
+    const onGameState = (payload: GameStatePayload) => {
+      setGame(payload);
+      setStartError(null);
+    };
+    const onStartError = ({ error }: HostStartErrorPayload) =>
+      setStartError(START_ERROR_MESSAGES[error] ?? 'Impossibile avviare la partita');
     // The server confirms our own current choice (so a refused change reverts).
     const onVoted = ({ choice }: PlayerVotedPayload) => {
       setVote(choice);
@@ -165,11 +197,18 @@ export default function PlayerApp() {
     };
     const onVoteError = ({ error }: PlayerVoteErrorPayload) =>
       setVoteError(VOTE_ERROR_MESSAGES[error] ?? 'Voto non riuscito');
+    const onBlindSpot = (tip: BlindSpot) => setBlindSpot(tip);
+    socket.on(SocketEvents.PlayerBlindSpot, onBlindSpot);
     const onPredicted = ({ choice }: PlayerPredictedPayload) => setPredicted(choice);
     const onPredictionResult = (payload: PlayerPredictionResultPayload) => setPredictionResult(payload);
     const onSwingBetted = ({ bet }: PlayerSwingBettedPayload) => setSwingBet(bet);
     const onSwingBetResult = (payload: PlayerSwingBetResultPayload) => setSwingBetResult(payload);
     const onSpeakerVoted = ({ defenderId }: PlayerSpeakerVotedPayload) => setSpeakerVote(defenderId);
+    socket.on(SocketEvents.PlayerPredicted, onPredicted);
+    socket.on(SocketEvents.PlayerPredictionResult, onPredictionResult);
+    socket.on(SocketEvents.PlayerSwingBetted, onSwingBetted);
+    socket.on(SocketEvents.PlayerSwingBetResult, onSwingBetResult);
+    socket.on(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
     // On every (re)connect, if we hold a token, reclaim the same seat. Covers
     // socket-level reconnects (network blip) without a page reload.
     const onConnect = () => {
@@ -180,13 +219,9 @@ export default function PlayerApp() {
     socket.on(SocketEvents.PlayerJoinError, onJoinError);
     socket.on(SocketEvents.LobbyUpdate, onLobbyUpdate);
     socket.on(SocketEvents.GameState, onGameState);
+    socket.on(SocketEvents.LeaderStartError, onStartError);
     socket.on(SocketEvents.PlayerVoted, onVoted);
     socket.on(SocketEvents.PlayerVoteError, onVoteError);
-    socket.on(SocketEvents.PlayerPredicted, onPredicted);
-    socket.on(SocketEvents.PlayerPredictionResult, onPredictionResult);
-    socket.on(SocketEvents.PlayerSwingBetted, onSwingBetted);
-    socket.on(SocketEvents.PlayerSwingBetResult, onSwingBetResult);
-    socket.on(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
     socket.on('connect', onConnect);
 
     // Auto-rejoin on mount (page reload / reopened tab): replay the saved token
@@ -203,8 +238,10 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerJoinError, onJoinError);
       socket.off(SocketEvents.LobbyUpdate, onLobbyUpdate);
       socket.off(SocketEvents.GameState, onGameState);
+      socket.off(SocketEvents.LeaderStartError, onStartError);
       socket.off(SocketEvents.PlayerVoted, onVoted);
       socket.off(SocketEvents.PlayerVoteError, onVoteError);
+      socket.off(SocketEvents.PlayerBlindSpot, onBlindSpot);
       socket.off(SocketEvents.PlayerPredicted, onPredicted);
       socket.off(SocketEvents.PlayerPredictionResult, onPredictionResult);
       socket.off(SocketEvents.PlayerSwingBetted, onSwingBetted);
@@ -223,10 +260,22 @@ export default function PlayerApp() {
     setGame(null);
     setPlayers([]);
     setVote(null);
+    setBlindSpot(null);
   };
 
   const phase = game?.phase ?? 'LOBBY';
   const remaining = useCountdown(game?.phaseExpiresAt ?? null);
+
+  // Each new dilemma round starts with a clean (unselected) vote + prediction.
+  useEffect(() => {
+    setVote(null);
+    setVoteError(null);
+    setPredicted(null);
+    setPredictionResult(null);
+    setSwingBet(null);
+    setSwingBetResult(null);
+    setSpeakerVote(null);
+  }, [game?.dilemmaIndex]);
 
   // When the phone's user is logged in, send the Clerk token so the server can
   // attribute saved awards. Re-runs on login and on (re)joining a room.
@@ -241,17 +290,6 @@ export default function PlayerApp() {
       cancelled = true;
     };
   }, [isSignedIn, joinedCode]);
-
-  // Each new dilemma round starts with a clean (unselected) vote + prediction.
-  useEffect(() => {
-    setVote(null);
-    setVoteError(null);
-    setPredicted(null);
-    setPredictionResult(null);
-    setSwingBet(null);
-    setSwingBetResult(null);
-    setSpeakerVote(null);
-  }, [game?.dilemmaIndex]);
 
   // Buzz the phone the moment it becomes this player's turn to speak (defense or
   // duel) so they look up from the screen — easy to miss on a shared TV.
@@ -314,6 +352,69 @@ export default function PlayerApp() {
     setSubmitting(true);
     getSocket().emit(SocketEvents.PlayerJoin, { code: trimmedCode, nickname: trimmedNick });
   };
+
+  // Create a brand-new room from this phone; the creator becomes its leader.
+  // The server replies with player:joined (same path as a join) — onJoined runs.
+  const createRoom = (e: FormEvent) => {
+    e.preventDefault();
+    const nick = nickname.trim();
+    if (!nick) {
+      setError(JOIN_ERROR_MESSAGES.NICKNAME_REQUIRED);
+      return;
+    }
+    setError(null);
+    setSubmitting(true);
+    getSocket().emit(SocketEvents.PlayerCreateRoom, { nickname: nick });
+  };
+
+  // This phone holds the leadership when the room's leaderId matches our seat.
+  const isLeader = game?.leaderId != null && game.leaderId === playerId;
+
+  // Leader controls (gated server-side; non-leader emits are ignored).
+  const startGame = () => {
+    setStartError(null);
+    getSocket().emit(SocketEvents.LeaderStartGame, {
+      dilemmaCount: FORMAT_DILEMMA_COUNT[format],
+      register,
+      mode: gameMode,
+    });
+  };
+  const addBot = () => getSocket().emit(SocketEvents.LeaderAddBot);
+  const removeBot = (id: string) => getSocket().emit(SocketEvents.LeaderRemoveBot, { id });
+  const advance = () => getSocket().emit(SocketEvents.LeaderAdvancePhase);
+
+  // Gruppo: solo play allowed (1 human + bots), never bots-only. Duello: exactly
+  // two humans (no bot opponent). Mirrors the old HostApp start gating.
+  const humanCount = players.filter((p) => !p.isBot).length;
+  const canStart =
+    gameMode === 'duello'
+      ? players.length === 2 && humanCount === 2
+      : players.length >= MIN_PLAYERS_TO_START && humanCount >= 1;
+  const canAddBot = gameMode !== 'duello' && players.length < 8;
+
+  // Phases that run a server-side countdown the leader may skip (everything past
+  // the lobby except the terminal award/duel screens).
+  const phaseHasTimer = (p: GameStatePayload['phase']) =>
+    p !== 'LOBBY' && p !== 'FINAL_AWARDS' && p !== 'FINAL_DUEL';
+
+  // The leader's "skip the rest of this phase" button — only shown to the leader
+  // during a phase that has a countdown. Rendered in each in-game branch.
+  const skipButton =
+    isLeader && phaseHasTimer(phase) ? (
+      <button
+        type="button"
+        onClick={advance}
+        style={{
+          fontSize: '1rem',
+          fontWeight: 700,
+          padding: '0.5rem 1.3rem',
+          borderRadius: '0.6rem',
+          cursor: 'pointer',
+        }}
+      >
+        Salta ▶
+      </button>
+    ) : null;
 
   const wrap = {
     display: 'flex',
@@ -407,6 +508,7 @@ export default function PlayerApp() {
         ) : (
           <p style={{ opacity: 0.7, margin: 0 }}>Tocca A o B per votare.</p>
         )}
+        {skipButton}
       </main>
     );
   }
@@ -460,6 +562,18 @@ export default function PlayerApp() {
                 {sideOption ? `: ${sideOption}` : ''}
               </p>
             )}
+            {game?.defense?.spunti && game.defense.spunti.length > 0 && (
+              <div style={{ width: 'min(90vw, 22rem)', textAlign: 'left' }}>
+                <p style={{ fontSize: '0.9rem', fontWeight: 700, opacity: 0.8, margin: '0 0 0.3rem' }}>
+                  Spunti per te:
+                </p>
+                <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  {game.defense.spunti.map((s, i) => (
+                    <li key={`${i}-${s}`} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{s}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </>
         ) : (
           <>
@@ -474,6 +588,7 @@ export default function PlayerApp() {
             <ReactionBar onReact={sendReaction} />
           </>
         )}
+        {skipButton}
       </main>
     );
   }
@@ -520,6 +635,7 @@ export default function PlayerApp() {
         ) : (
           <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>Guarda lo schermo condiviso 👀</p>
         )}
+        {skipButton}
       </main>
     );
   }
@@ -581,6 +697,7 @@ export default function PlayerApp() {
         {speakerVote && (
           <p style={{ opacity: 0.8, margin: 0 }}>Voto registrato. Puoi cambiare finché c’è tempo.</p>
         )}
+        {skipButton}
       </main>
     );
   }
@@ -687,12 +804,12 @@ export default function PlayerApp() {
             })}
           </div>
         </div>
+        {skipButton}
       </main>
     );
   }
 
   if (joinedCode && phase !== 'LOBBY') {
-    const switched = game?.swing?.switched ?? 0;
     return (
       <main style={wrap}>
         <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
@@ -708,13 +825,16 @@ export default function PlayerApp() {
           <p style={{ fontSize: '1.15rem', fontWeight: 600, margin: 0, maxWidth: '22rem' }}>
             🎯 {OBJECTIVE}
           </p>
+        ) : phase === 'DILEMMA_REVEAL' ? (
+          game?.dilemma && <DilemmaCard dilemma={game.dilemma} />
+        ) : phase === 'SPLIT_REVEAL' ? (
+          <>
+            {game?.split && <SplitBar split={game.split} />}
+            {game?.dilemma && <DilemmaCard dilemma={game.dilemma} />}
+          </>
         ) : phase === 'PHASE_RESULTS' ? (
           <>
-            <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
-              {switched === 0
-                ? 'Nessuno ha cambiato idea dopo le difese.'
-                : `${switched} ${switched === 1 ? 'persona ha' : 'persone hanno'} cambiato idea dopo le difese!`}
-            </p>
+            {game?.swing && <ResultsPanel swing={game.swing} />}
             {predictionResult && (
               <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
                 {predictionResult.actual == null
@@ -734,9 +854,17 @@ export default function PlayerApp() {
           </>
         ) : phase === 'FINAL_AWARDS' ? (
           <>
-            <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
-              🏆 Guarda i premi sullo schermo!
-            </p>
+            {game?.awards && <AwardsPanel awards={game.awards} />}
+            {blindSpot && (
+              <Card
+                glow="accent"
+                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'left' }}
+              >
+                <h3 style={{ margin: 0, fontSize: '1.05rem' }}>🔭 Il tuo punto cieco</h3>
+                <p style={{ margin: 0, fontWeight: 700 }}>{blindSpot.title}</p>
+                <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.9 }}>{blindSpot.advice}</p>
+              </Card>
+            )}
             <Show when="signed-out">
               <p style={{ fontSize: '1rem', opacity: 0.85, margin: '0.4rem 0 0' }}>
                 Accedi per salvare i tuoi premi 💾
@@ -744,13 +872,7 @@ export default function PlayerApp() {
               <SignInButton mode="modal">
                 <button
                   type="button"
-                  style={{
-                    marginTop: '0.5rem',
-                    fontWeight: 700,
-                    padding: '0.6rem 1.4rem',
-                    borderRadius: '0.7rem',
-                    cursor: 'pointer',
-                  }}
+                  style={{ marginTop: '0.5rem', fontWeight: 700, padding: '0.6rem 1.4rem', borderRadius: '0.7rem', cursor: 'pointer' }}
                 >
                   Accedi e salva
                 </button>
@@ -766,6 +888,7 @@ export default function PlayerApp() {
             Guarda lo schermo condiviso 👀
           </p>
         )}
+        {skipButton}
       </main>
     );
   }
@@ -819,6 +942,24 @@ export default function PlayerApp() {
                   <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{PERSONA_LABELS[p.persona]}</span>
                 )}
                 {absent && <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>· assente 📵</span>}
+                {isLeader && p.isBot && (
+                  <button
+                    type="button"
+                    onClick={() => removeBot(p.id)}
+                    aria-label={`Rimuovi ${p.nickname}`}
+                    style={{
+                      marginLeft: 'auto',
+                      border: 'none',
+                      background: 'transparent',
+                      color: 'inherit',
+                      cursor: 'pointer',
+                      fontWeight: 800,
+                      opacity: 0.7,
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
               </li>
             );
           })}
@@ -845,7 +986,90 @@ export default function PlayerApp() {
           </p>
         </Card>
 
-        <p style={{ opacity: 0.7, margin: 0 }}>In attesa che l’host avvii la partita…</p>
+        {isLeader ? (
+          <Card
+            glow="accent"
+            style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.8rem', alignItems: 'center' }}
+          >
+            <h3 style={{ fontSize: '1.05rem', margin: 0 }}>Sei il leader — componi la serata</h3>
+
+            <div style={{ width: '100%' }}>
+              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità</p>
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Modalità">
+                {GAME_MODES.map((m) => (
+                  <Pill
+                    key={m}
+                    selected={gameMode === m}
+                    onClick={() => setGameMode(m)}
+                    aria-label={`${MODE_LABELS[m].nome}, ${MODE_LABELS[m].descr}`}
+                  >
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
+                      <span style={{ fontWeight: 700 }}>{MODE_LABELS[m].nome}</span>
+                      <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{MODE_LABELS[m].descr}</span>
+                    </span>
+                  </Pill>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ width: '100%' }}>
+              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Argomenti</p>
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Registro">
+                {CONTENT_REGISTERS.map((r) => (
+                  <Pill
+                    key={r}
+                    selected={register === r}
+                    onClick={() => setRegister(r)}
+                    aria-label={REGISTER_LABELS[r]}
+                  >
+                    {REGISTER_LABELS[r]}
+                  </Pill>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ width: '100%' }}>
+              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Durata</p>
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Formato">
+                {SESSION_FORMATS.map((f) => (
+                  <Pill
+                    key={f}
+                    selected={format === f}
+                    onClick={() => setFormat(f)}
+                    aria-label={`${FORMAT_LABELS[f].nome}, ${FORMAT_LABELS[f].round} round, ${FORMAT_LABELS[f].durata}`}
+                  >
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
+                      <span style={{ fontWeight: 700 }}>{FORMAT_LABELS[f].nome}</span>
+                      <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+                        {FORMAT_LABELS[f].round} round · {FORMAT_LABELS[f].durata}
+                      </span>
+                    </span>
+                  </Pill>
+                ))}
+              </div>
+            </div>
+
+            <Button variant="ghost" onClick={addBot} disabled={!canAddBot}>
+              + Aggiungi bot 🤖
+            </Button>
+
+            <Button variant="primary" size="lg" onClick={startGame} disabled={!canStart}>
+              Avvia partita
+            </Button>
+            {!canStart && (
+              <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem' }}>
+                {gameMode === 'duello'
+                  ? 'Il 1v1 richiede esattamente 2 giocatori.'
+                  : humanCount < 1
+                    ? 'Serve almeno una persona (i bot da soli non bastano).'
+                    : `Servono almeno ${MIN_PLAYERS_TO_START} partecipanti: aggiungi giocatori o bot 🤖`}
+              </p>
+            )}
+            {startError && <Alert>{startError}</Alert>}
+          </Card>
+        ) : (
+          <p style={{ opacity: 0.7, margin: 0 }}>In attesa che il leader avvii la partita…</p>
+        )}
         <button
           type="button"
           onClick={leaveRoom}
@@ -865,12 +1089,19 @@ export default function PlayerApp() {
     );
   }
 
+  const creating = mode === 'create';
   return (
     <main style={wrap}>
-      <h1 style={{ fontSize: '1.75rem', margin: 0 }}>Entra nella partita</h1>
-      <p style={{ opacity: 0.7, margin: 0 }}>Inserisci il codice e il tuo nome.</p>
+      <h1 style={{ fontSize: '1.75rem', margin: 0 }}>
+        {creating ? 'Crea una partita' : 'Entra nella partita'}
+      </h1>
+      <p style={{ opacity: 0.7, margin: 0 }}>
+        {creating
+          ? 'Scegli il tuo nome: sarai il leader della stanza.'
+          : 'Inserisci il codice e il tuo nome.'}
+      </p>
       <form
-        onSubmit={handleSubmit}
+        onSubmit={creating ? createRoom : handleSubmit}
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -878,26 +1109,28 @@ export default function PlayerApp() {
           width: 'min(90vw, 22rem)',
         }}
       >
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', textAlign: 'left' }}>
-          <span style={{ opacity: 0.8 }}>Codice stanza</span>
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="ABCD"
-            autoCapitalize="characters"
-            autoCorrect="off"
-            spellCheck={false}
-            maxLength={4}
-            style={{
-              fontSize: '1.5rem',
-              letterSpacing: '0.3rem',
-              textAlign: 'center',
-              padding: '0.6rem',
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-              textTransform: 'uppercase',
-            }}
-          />
-        </label>
+        {!creating && (
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', textAlign: 'left' }}>
+            <span style={{ opacity: 0.8 }}>Codice stanza</span>
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="ABCD"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              maxLength={4}
+              style={{
+                fontSize: '1.5rem',
+                letterSpacing: '0.3rem',
+                textAlign: 'center',
+                padding: '0.6rem',
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                textTransform: 'uppercase',
+              }}
+            />
+          </label>
+        )}
         <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', textAlign: 'left' }}>
           <span style={{ opacity: 0.8 }}>Nickname</span>
           <input
@@ -925,9 +1158,27 @@ export default function PlayerApp() {
             opacity: submitting ? 0.6 : 1,
           }}
         >
-          {submitting ? 'Entro…' : 'Entra'}
+          {submitting ? (creating ? 'Creo…' : 'Entro…') : creating ? 'Crea stanza' : 'Entra'}
         </button>
       </form>
+      <button
+        type="button"
+        onClick={() => {
+          setError(null);
+          setMode(creating ? 'join' : 'create');
+        }}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          color: 'inherit',
+          opacity: 0.7,
+          fontSize: '0.9rem',
+          textDecoration: 'underline',
+          cursor: 'pointer',
+        }}
+      >
+        {creating ? 'Hai un codice? Entra' : 'Vuoi creare una stanza?'}
+      </button>
     </main>
   );
 }

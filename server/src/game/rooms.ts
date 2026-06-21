@@ -13,6 +13,7 @@ import {
   nextDuelPhase,
 } from './phases';
 import { ensureStats, computeAwards as computeAwardsFor, type Award, type PlayerStats } from './awards';
+import { computeBlindSpot, type BlindSpot } from './blindspots';
 import {
   duelPlayers,
   duelAgreed,
@@ -28,6 +29,7 @@ import {
 export * from './phases';
 // Re-export the scoring types so consumers keep importing them from './rooms'.
 export type { Award, AwardId, PlayerStats } from './awards';
+export type { BlindSpot, BlindSpotId } from './blindspots';
 
 const CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const CODE_LENGTH = 4;
@@ -148,11 +150,15 @@ export interface DefenseState {
    * the host screen since a bot can't speak aloud; null when a human is speaking.
    */
   argument: string | null;
+  /** Talking points for the current speaker's side; null outside DEFENSE/no speaker. */
+  spunti: string[] | null;
 }
 
 export interface Room {
   code: string;
   createdAt: number;
+  /** The leader-player's stable id (drives the game from their phone); null until set. */
+  leaderId: string | null;
   /** Players currently in the lobby, keyed by player id. */
   players: Map<string, Player>;
   /** Current phase of the game state machine. */
@@ -543,8 +549,9 @@ export class RoomStore {
     }
     const netSwing: VoteTally = { A: second.A - first.A, B: second.B - first.B };
     for (const d of room.defenders) {
-      if (netSwing[d.side] <= 0) continue;
       const s = ensureStats(room, d.id);
+      s.defendedCount++;
+      if (netSwing[d.side] <= 0) continue;
       s.persuasion += netSwing[d.side];
       // In the "Avvocato del Diavolo" round, also bank it as devil persuasion (a
       // subset of persuasion) for the 🎭 Il Voltagabbana award.
@@ -619,6 +626,7 @@ export class RoomStore {
     const room: Room = {
       code,
       createdAt: this.now(),
+      leaderId: null,
       players: new Map(),
       phase: 'LOBBY',
       dilemmaCount: null,
@@ -1067,11 +1075,18 @@ export class RoomStore {
     if (!room || !isDefensePhase(room.phase)) return null;
     const totalTurns = room.defenders.length;
     const speaker = room.defenders[room.defenseTurnIndex] ?? null;
+    const spunti =
+      speaker && room.currentDilemma
+        ? speaker.side === 'A'
+          ? room.currentDilemma.spuntiA
+          : room.currentDilemma.spuntiB
+        : null;
     return {
       speaker,
       turn: totalTurns === 0 ? 0 : room.defenseTurnIndex + 1,
       totalTurns,
       argument: room.defenseArgument,
+      spunti,
     };
   }
 
@@ -1175,6 +1190,17 @@ export class RoomStore {
   }
 
   /**
+   * The player's end-of-game blind-spot tip, only at FINAL_AWARDS (null
+   * otherwise). Private feedback — index.ts emits it per-socket, never broadcast.
+   */
+  blindSpotFor(code: string, playerId: string): BlindSpot | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'FINAL_AWARDS') return null;
+    const stats = room.stats.get(playerId);
+    return stats ? computeBlindSpot(stats) : null;
+  }
+
+  /**
    * True once every CONNECTED player has voted (and at least one is present).
    * Disconnected players (mid-grace) are ignored so a locked phone doesn't block
    * the early-advance — bots count as connected. Used only to short-circuit the
@@ -1246,7 +1272,12 @@ export class RoomStore {
     room.predictions.delete(playerId);
     room.swingBets.delete(playerId);
     room.speakerVotes.delete(playerId);
-    return room.players.delete(playerId);
+    const removed = room.players.delete(playerId);
+    if (removed && room.leaderId === playerId) {
+      const nextHuman = [...room.players.values()].find((p) => !p.isBot);
+      room.leaderId = nextHuman ? nextHuman.id : null;
+    }
+    return removed;
   }
 
   /**
@@ -1286,12 +1317,56 @@ export class RoomStore {
     return room ? [...room.players.values()] : [];
   }
 
+  /** Make a present player the room's leader. False if room/player unknown. */
+  setLeader(code: string, playerId: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room || !room.players.has(playerId)) return false;
+    room.leaderId = playerId;
+    return true;
+  }
+
+  /** Whether the given player is the room's leader. */
+  isLeader(code: string, playerId: string): boolean {
+    return this.rooms.get(code)?.leaderId === playerId;
+  }
+
   get(code: string): Room | undefined {
     return this.rooms.get(code);
   }
 
   has(code: string): boolean {
     return this.rooms.has(code);
+  }
+
+  /** Remove a room from the store entirely. Returns whether one was removed. */
+  delete(code: string): boolean {
+    return this.rooms.delete(code);
+  }
+
+  /** How many human players are currently connected (bots and mid-grace
+   * absentees excluded). Used to decide whether a room is still alive. */
+  connectedHumanCount(code: string): number {
+    const room = this.rooms.get(code);
+    if (!room) return 0;
+    let n = 0;
+    for (const p of room.players.values()) {
+      if (!p.isBot && p.connected !== false) n++;
+    }
+    return n;
+  }
+
+  /** Codes of rooms with no connected humans and older than `maxIdleMs`
+   * (a safety-net sweep for abandoned rooms). Pure query — the caller deletes,
+   * so it can skip rooms whose players are still within their reconnect grace. */
+  abandonedRooms(maxIdleMs: number): string[] {
+    const now = this.now();
+    const codes: string[] = [];
+    for (const [code, room] of this.rooms) {
+      if (this.connectedHumanCount(code) === 0 && now - room.createdAt > maxIdleMs) {
+        codes.push(code);
+      }
+    }
+    return codes;
   }
 
   get size(): number {

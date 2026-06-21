@@ -25,9 +25,6 @@ const io = new Server(httpServer, {
 
 // Authoritative in-memory room store (no DB).
 const rooms = new RoomStore();
-// Which room each host socket owns, so a re-emit (e.g. React StrictMode's
-// double-mount in dev) recovers the same room instead of creating a new one.
-const hostRooms = new Map<string, string>();
 // Pending auto-advance timer per room, so we can reschedule / cancel it.
 const phaseTimers = new Map<string, NodeJS.Timeout>();
 
@@ -50,6 +47,27 @@ const graceTimers = new Map<string, NodeJS.Timeout>();
 
 // How long a disconnected phone keeps its seat + secret vote before removal.
 const RECONNECT_GRACE_MS = 45_000;
+
+// Safety-net sweep: reap rooms abandoned (no connected humans) for well over the
+// reconnect grace window, in case a per-player grace path missed one (e.g. a
+// bots-only leftover). Skips rooms that still have a pending grace (reconnectable).
+const ABANDONED_ROOM_MAX_IDLE_MS = 5 * 60_000; // 5 min, >> RECONNECT_GRACE_MS
+const ABANDONED_SWEEP_INTERVAL_MS = 60_000;
+
+function hasPendingGrace(code: string): boolean {
+  const room = rooms.get(code);
+  if (!room) return false;
+  for (const id of room.players.keys()) {
+    if (graceTimers.has(id)) return true;
+  }
+  return false;
+}
+
+setInterval(() => {
+  for (const code of rooms.abandonedRooms(ABANDONED_ROOM_MAX_IDLE_MS)) {
+    if (!hasPendingGrace(code)) reapRoom(code);
+  }
+}, ABANDONED_SWEEP_INTERVAL_MS).unref(); // .unref so the timer never blocks exit
 
 function cancelGrace(playerId: string): void {
   const t = graceTimers.get(playerId);
@@ -120,6 +138,8 @@ function gameStatePayload(room: Room) {
     awards: rooms.publicAwards(room.code),
     // 1v1 duel: the room's mode + the duel views, each gated to its own phase.
     mode: room.mode,
+    // The leader-player's id, so the creator's phone shows its controls.
+    leaderId: room.leaderId,
     duelReveal: rooms.publicDuelReveal(room.code),
     duelTurn: rooms.publicDuelTurn(room.code),
     duelResult: rooms.publicDuelResult(room.code),
@@ -135,6 +155,20 @@ function broadcastGameState(code: string): void {
   io.to(code).emit('game:state', gameStatePayload(room));
 }
 
+// At FINAL_AWARDS, send each HUMAN player their own private blind-spot tip — to
+// their socket only (never broadcast). Bots and offline players are skipped.
+function emitBlindSpots(code: string): void {
+  const room = rooms.get(code);
+  if (!room || room.phase !== 'FINAL_AWARDS') return;
+  for (const player of room.players.values()) {
+    if (player.isBot) continue;
+    const sid = playerSocket.get(player.id);
+    if (!sid) continue;
+    const tip = rooms.blindSpotFor(code, player.id);
+    if (tip) io.to(sid).emit('player:blindSpot', tip);
+  }
+}
+
 // Cancel any pending auto-advance timer for a room.
 function clearPhaseTimer(code: string): void {
   const timer = phaseTimers.get(code);
@@ -142,6 +176,21 @@ function clearPhaseTimer(code: string): void {
     clearTimeout(timer);
     phaseTimers.delete(code);
   }
+}
+
+// Drop a deleted room's leftover reconnect tokens so they don't accumulate.
+function pruneTokensForRoom(code: string): void {
+  for (const [tok, v] of tokens) {
+    if (v.code === code) tokens.delete(tok);
+  }
+}
+
+// Reap a dead room: stop its phase timer, drop its tokens, remove it from memory.
+function reapRoom(code: string): void {
+  clearPhaseTimer(code);
+  pruneTokensForRoom(code);
+  rooms.delete(code);
+  console.log('[server] reaped abandoned room', code);
 }
 
 // Schedule the next auto-advance from the room's server-side expiry. Replaces
@@ -152,6 +201,9 @@ function schedulePhase(code: string): void {
   if (!room || room.phaseExpiresAt == null) return;
   const delay = Math.max(0, room.phaseExpiresAt - Date.now());
   const timer = setTimeout(() => {
+    // If a manual advance (leader/host) already replaced this timer, this stale
+    // callback must not advance the phase a second time.
+    if (phaseTimers.get(code) !== timer) return;
     phaseTimers.delete(code);
     advanceAndBroadcast(code);
   }, delay);
@@ -176,12 +228,20 @@ function maybeGenerateAiDefense(code: string): void {
     });
 }
 
+// The room a socket may control: only if its player is that room's leader.
+function leaderCodeFor(socketId: string): string | null {
+  const session = sessions.get(socketId);
+  if (!session) return null;
+  return rooms.isLeader(session.code, session.playerId) ? session.code : null;
+}
+
 // Advance the state machine one step, broadcast it, and arm the next timer.
-// Used by both timer expiry and the host's force-advance.
+// Used by both timer expiry and the leader's force-advance.
 function advanceAndBroadcast(code: string): void {
   const result = rooms.advancePhase(code);
   if (!result.ok) return;
   broadcastGameState(code);
+  if (rooms.get(code)?.phase === 'FINAL_AWARDS') emitBlindSpots(code);
   schedulePhase(code);
   maybeGenerateAiDefense(code);
   const room = rooms.get(code);
@@ -243,28 +303,47 @@ app.get('/api/me/awards', async (req, res) => {
 io.on('connection', (socket) => {
   console.log('[server] client connected:', socket.id);
 
-  // A host opening /host requests a room; reuse this socket's room if it still
-  // exists so the host always sees a single, stable code.
-  socket.on('host:createRoom', () => {
-    let code = hostRooms.get(socket.id);
-    if (!code || !rooms.has(code)) {
-      code = rooms.create().code;
-      hostRooms.set(socket.id, code);
+  // A player creates a room from their phone: they join as a player AND become
+  // the room's leader (the controls live on their phone; the TV is optional).
+  socket.on('player:createRoom', (payload: { nickname?: string }) => {
+    const nickname = String(payload?.nickname ?? '');
+    const { code } = rooms.create();
+    const playerId = `p_${randomUUID()}`;
+    const token = randomUUID();
+    const result = rooms.join(code, playerId, nickname);
+    if (!result.ok) {
+      socket.emit('player:joinError', { error: result.error });
+      return;
+    }
+    rooms.setLeader(code, playerId);
+    tokens.set(token, { code, playerId });
+    sessions.set(socket.id, { code, playerId });
+    playerSocket.set(playerId, socket.id);
+    socket.join(code);
+    socket.emit('player:joined', { code, player: result.player, token });
+    broadcastLobby(code);
+    broadcastGameState(code); // carries leaderId so the creator sees their controls
+  });
+
+  // A spectator screen (TV) attaches to an existing room in read-only mode.
+  socket.on('spectator:join', (payload: { code?: string }) => {
+    const code = String(payload?.code ?? '').trim().toUpperCase();
+    if (!rooms.has(code)) {
+      socket.emit('player:joinError', { error: 'ROOM_NOT_FOUND' });
+      return;
     }
     socket.join(code);
-    socket.emit('host:roomCreated', { code });
-    // Send the current roster + phase so a re-created/recovered host shows
-    // existing players and the right screen (lobby vs. an in-progress game).
     socket.emit('lobby:update', { players: rooms.listPlayers(code) });
     const room = rooms.get(code);
     if (room) socket.emit('game:state', gameStatePayload(room));
   });
 
-  // The host starts the game for the room it owns, choosing the dilemma count.
-  socket.on('host:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string }) => {
-    const code = hostRooms.get(socket.id);
+  // The leader starts the game for their room, choosing the dilemma count.
+  // Gated: only the socket whose player is the room leader may start.
+  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string }) => {
+    const code = leaderCodeFor(socket.id);
     if (!code) {
-      socket.emit('host:startError', { error: 'ROOM_NOT_FOUND' });
+      socket.emit('leader:startError', { error: 'ROOM_NOT_FOUND' });
       return;
     }
     const result = rooms.startGame(
@@ -274,33 +353,31 @@ io.on('connection', (socket) => {
       String(payload?.mode ?? 'gruppo'),
     );
     if (!result.ok) {
-      socket.emit('host:startError', { error: result.error });
+      socket.emit('leader:startError', { error: result.error });
       return;
     }
     broadcastGameState(code);
-    // Arm the server-side timer that auto-advances the state machine.
     schedulePhase(code);
   });
 
-  // The host force-advances the state machine for the room it owns (skip the
-  // remaining countdown). Same path the timer uses, so it reschedules cleanly.
-  socket.on('host:advancePhase', () => {
-    const code = hostRooms.get(socket.id);
+  // The leader force-advances the state machine (skip the remaining countdown).
+  socket.on('leader:advancePhase', () => {
+    const code = leaderCodeFor(socket.id);
     if (!code) return;
     advanceAndBroadcast(code);
   });
 
-  // The host adds a bot to fill a seat (enables solo play). Bots have no socket;
-  // the server drives their votes. Broadcast the updated roster on success.
-  socket.on('host:addBot', () => {
-    const code = hostRooms.get(socket.id);
+  // The leader adds a bot to fill a seat (enables solo play). Bots have no
+  // socket; the server drives their votes. Broadcast the updated roster.
+  socket.on('leader:addBot', () => {
+    const code = leaderCodeFor(socket.id);
     if (!code) return;
     if (rooms.addBot(code).ok) broadcastLobby(code);
   });
 
-  // The host removes a bot by id from the room it owns.
-  socket.on('host:removeBot', (payload: { id?: string }) => {
-    const code = hostRooms.get(socket.id);
+  // The leader removes a bot by id from their room.
+  socket.on('leader:removeBot', (payload: { id?: string }) => {
+    const code = leaderCodeFor(socket.id);
     if (!code) return;
     if (rooms.removeBot(code, String(payload?.id ?? ''))) broadcastLobby(code);
   });
@@ -337,6 +414,10 @@ io.on('connection', (socket) => {
     // screen immediately (the lobby broadcast alone wouldn't place it in-game).
     const room = rooms.get(code);
     if (room) socket.emit('game:state', gameStatePayload(room));
+    if (room && room.phase === 'FINAL_AWARDS') {
+      const tip = rooms.blindSpotFor(code, playerId);
+      if (tip) socket.emit('player:blindSpot', tip);
+    }
     broadcastLobby(code);
     if (reconnecting && room && isVotingPhase(room.phase)) broadcastGameState(code);
   });
@@ -456,7 +537,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    hostRooms.delete(socket.id);
     const session = sessions.get(socket.id);
     sessions.delete(socket.id);
     if (!session) return;
@@ -479,9 +559,17 @@ io.on('connection', (socket) => {
         graceTimers.delete(playerId);
         const tok = [...tokens].find(([, v]) => v.playerId === playerId)?.[0];
         if (tok) tokens.delete(tok);
+        const wasLeader = rooms.isLeader(code, playerId);
         rooms.leave(code, playerId);
+        // Last one out: reap the now-empty room (no slots left to reconnect to)
+        // so it doesn't linger in memory with its phase timer still cycling.
+        if (rooms.get(code) && rooms.get(code)!.players.size === 0) {
+          reapRoom(code);
+          return;
+        }
         broadcastLobby(code);
         if (rooms.get(code) && isVotingPhase(rooms.get(code)!.phase)) refreshAfterRosterChange(code);
+        if (wasLeader) broadcastGameState(code);
       }, RECONNECT_GRACE_MS),
     );
   });

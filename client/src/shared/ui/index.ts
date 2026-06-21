@@ -8,3 +8,4 @@ export { CodeDisplay } from './CodeDisplay';
 export { Field } from './Field';
 export { TextInput } from './TextInput';
 export { Alert } from './Alert';
+export { DilemmaCard, SplitBar, ResultsPanel, AwardsPanel } from './PublicViews';

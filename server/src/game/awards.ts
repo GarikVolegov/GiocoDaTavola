@@ -15,10 +15,12 @@ export interface PlayerStats {
   minorityCount: number;
   /** Net votes that swung toward sides this player defended. */
   persuasion: number;
+  /** Rounds the player was a chosen defender. */
+  defendedCount: number;
   /**
    * Live audience reactions received while this player was the current speaker
    * (DEFENSE / DUEL_ARGUE). Optional + only set once non-zero, so a player who
-   * was never reacted to keeps the base 5-field shape.
+   * was never reacted to keeps the base shape.
    */
   reactionsReceived?: number;
   /**
@@ -70,7 +72,7 @@ export interface Award {
 export function ensureStats(room: Room, id: string): PlayerStats {
   let s = room.stats.get(id);
   if (!s) {
-    s = { rounds: 0, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0 };
+    s = { rounds: 0, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0, defendedCount: 0 };
     room.stats.set(id, s);
   }
   return s;

@@ -29,8 +29,26 @@ const DILEMMA_FIXTURE: Dilemma[] = Array.from({ length: 6 }, (_, i) => ({
   optionA: `A${i + 1}`,
   optionB: `B${i + 1}`,
   register: 'vita' as const,
+  spuntiA: [`pro A${i + 1} #1`, `pro A${i + 1} #2`],
+  spuntiB: [`pro B${i + 1} #1`, `pro B${i + 1} #2`],
 }));
 const makeFixtureDeck = (_register: ContentRegister) => new Deck(DILEMMA_FIXTURE, () => 0);
+
+// helper: drive a fresh room into DEFENSE with a known split. Each entry of
+// `sides` is one player's secret vote; rng is injected so defender selection
+// is deterministic (the store's 4th ctor arg).
+function defenseRoom(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B']): string {
+  const { code } = store.create();
+  for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
+  store.startGame(code, 3); // PHASE_INTRO
+  store.advancePhase(code); // DILEMMA_REVEAL
+  store.advancePhase(code); // VOTE_1
+  sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
+  store.advancePhase(code); // SPLIT_REVEAL
+  store.advancePhase(code); // PREDICT
+  store.advancePhase(code); // DEFENSE
+  return code;
+}
 
 // helper: spin up a 2-human duel and advance to the first DUEL_PICK.
 function startDuel(store: RoomStore, code: string) {
@@ -557,22 +575,6 @@ describe('RoomStore split reveal (US-009)', () => {
 });
 
 describe('RoomStore defense (US-010)', () => {
-  // Drive a fresh room into DEFENSE with a known split. Each entry of `sides`
-  // is one player's secret vote; rng is injected so defender selection is
-  // deterministic (the store's 4th ctor arg).
-  function defenseRoom(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B']): string {
-    const { code } = store.create();
-    for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
-    store.startGame(code, 3); // PHASE_INTRO
-    store.advancePhase(code); // DILEMMA_REVEAL
-    store.advancePhase(code); // VOTE_1
-    sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
-    store.advancePhase(code); // SPLIT_REVEAL
-    store.advancePhase(code); // PREDICT
-    store.advancePhase(code); // DEFENSE
-    return code;
-  }
-
   it("auto-selects one defender per side from that side's voters", () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
     const code = defenseRoom(store, ['A', 'B', 'B']);
@@ -636,6 +638,7 @@ describe('RoomStore defense (US-010)', () => {
       turn: 1,
       totalTurns: 2,
       argument: null,
+      spunti: ['pro A1 #1', 'pro A1 #2'],
     });
     store.advancePhase(code); // next turn -> side B speaker
     expect(store.publicDefense(code)).toEqual({
@@ -643,6 +646,7 @@ describe('RoomStore defense (US-010)', () => {
       turn: 2,
       totalTurns: 2,
       argument: null,
+      spunti: ['pro B1 #1', 'pro B1 #2'],
     });
     store.advancePhase(code); // VOTE_2 -> defense no longer public
     expect(store.publicDefense(code)).toBeNull();
@@ -678,9 +682,18 @@ describe('RoomStore defense (US-010)', () => {
     store.advancePhase(code); // PREDICT
     store.advancePhase(code); // DEFENSE (no defenders)
     expect(store.get(code)?.phase).toBe('DEFENSE');
-    expect(store.publicDefense(code)).toEqual({ speaker: null, turn: 0, totalTurns: 0, argument: null });
+    expect(store.publicDefense(code)).toEqual({ speaker: null, turn: 0, totalTurns: 0, argument: null, spunti: null });
     store.advancePhase(code); // -> VOTE_2
     expect(store.get(code)?.phase).toBe('VOTE_2');
+  });
+
+  it("exposes the speaking side's spunti during DEFENSE", () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']); // defenders: A=sock-0, B=sock-1
+    // First DEFENSE turn speaks side A -> d1.spuntiA.
+    expect(store.publicDefense(code)?.spunti).toEqual(['pro A1 #1', 'pro A1 #2']);
+    store.advancePhase(code); // next DEFENSE turn -> side B
+    expect(store.publicDefense(code)?.spunti).toEqual(['pro B1 #1', 'pro B1 #2']);
   });
 });
 
@@ -847,9 +860,9 @@ describe('RoomStore per-player stats (Fase A)', () => {
     playRound(store, code, { 'sock-0': 'A', 'sock-1': 'B', 'sock-2': 'B' }, { 'sock-1': 'A' });
     expect(store.get(code)?.phase).toBe('PHASE_RESULTS');
     const stats = store.get(code)!.stats;
-    expect(stats.get('sock-0')).toEqual({ rounds: 1, changedCount: 0, majorityCount: 1, minorityCount: 0, persuasion: 1 });
-    expect(stats.get('sock-1')).toEqual({ rounds: 1, changedCount: 1, majorityCount: 1, minorityCount: 0, persuasion: 0 });
-    expect(stats.get('sock-2')).toEqual({ rounds: 1, changedCount: 0, majorityCount: 0, minorityCount: 1, persuasion: 0 });
+    expect(stats.get('sock-0')).toEqual({ rounds: 1, changedCount: 0, majorityCount: 1, minorityCount: 0, persuasion: 1, defendedCount: 1 });
+    expect(stats.get('sock-1')).toEqual({ rounds: 1, changedCount: 1, majorityCount: 1, minorityCount: 0, persuasion: 0, defendedCount: 1 });
+    expect(stats.get('sock-2')).toEqual({ rounds: 1, changedCount: 0, majorityCount: 0, minorityCount: 1, persuasion: 0, defendedCount: 0 });
   });
 
   it('does not credit majority or minority on a tied second vote', () => {
@@ -872,9 +885,19 @@ describe('RoomStore per-player stats (Fase A)', () => {
     // Round 2: everyone votes A, nobody changes -> majority A, no swing.
     playRound(store, code, { 'sock-0': 'A', 'sock-1': 'A', 'sock-2': 'A' });
     const stats = store.get(code)!.stats;
-    expect(stats.get('sock-0')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 2, minorityCount: 0, persuasion: 1 });
-    expect(stats.get('sock-1')).toEqual({ rounds: 2, changedCount: 1, majorityCount: 2, minorityCount: 0, persuasion: 0 });
-    expect(stats.get('sock-2')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 1, minorityCount: 1, persuasion: 0 });
+    expect(stats.get('sock-0')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 2, minorityCount: 0, persuasion: 1, defendedCount: 2 });
+    expect(stats.get('sock-1')).toEqual({ rounds: 2, changedCount: 1, majorityCount: 2, minorityCount: 0, persuasion: 0, defendedCount: 1 });
+    expect(stats.get('sock-2')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 1, minorityCount: 1, persuasion: 0, defendedCount: 0 });
+  });
+
+  it('counts a round each defender defended (defendedCount)', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']); // defenders: sock-0 (A), sock-1 (B)
+    let guard = 0;
+    while (store.get(code)?.phase !== 'PHASE_RESULTS' && guard++ < 20) store.advancePhase(code);
+    expect(store.get(code)?.stats.get('sock-0')?.defendedCount).toBe(1);
+    expect(store.get(code)?.stats.get('sock-1')?.defendedCount).toBe(1);
+    expect(store.get(code)?.stats.get('sock-2')?.defendedCount ?? 0).toBe(0);
   });
 });
 
@@ -1461,6 +1484,71 @@ describe('RoomStore reconnection / connected state', () => {
     expect(again.ok).toBe(true);
     expect(store.get(code)?.players.get('p1')?.connected ?? true).toBe(true);
   });
+
+  it('blindSpotFor returns a tip at FINAL_AWARDS and null otherwise', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    addPlayers(store, code, 3); // p0, p1, p2
+    store.startGame(code, 3);
+    expect(store.blindSpotFor(code, 'p0')).toBeNull(); // before the end
+    let guard = 0;
+    while (store.get(code)?.phase !== 'FINAL_AWARDS' && guard++ < 200) {
+      const phase = store.get(code)!.phase;
+      if (phase === 'VOTE_1' || phase === 'VOTE_2') {
+        ['p0', 'p1', 'p2'].forEach((id) => store.vote(code, id, 'A'));
+      }
+      store.advancePhase(code);
+    }
+    expect(store.get(code)?.phase).toBe('FINAL_AWARDS');
+    expect(store.blindSpotFor(code, 'p0')?.id).toBeTruthy();
+    expect(store.blindSpotFor(code, 'nobody')).toBeNull();
+  });
+});
+
+describe('RoomStore leadership', () => {
+  it('setLeader marks a present player as leader; isLeader reflects it', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p0', 'P0');
+    expect(store.setLeader(code, 'p0')).toBe(true);
+    expect(store.isLeader(code, 'p0')).toBe(true);
+    expect(store.isLeader(code, 'p1')).toBe(false);
+  });
+
+  it('setLeader fails for an absent player', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    expect(store.setLeader(code, 'ghost')).toBe(false);
+  });
+
+  it('reassigns leadership to the next human when the leader leaves', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p0', 'P0');
+    store.join(code, 'p1', 'P1');
+    store.setLeader(code, 'p0');
+    store.leave(code, 'p0');
+    expect(store.isLeader(code, 'p1')).toBe(true);
+  });
+
+  it('keeps the leader when a non-leader leaves', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p0', 'P0');
+    store.join(code, 'p1', 'P1');
+    store.setLeader(code, 'p0');
+    store.leave(code, 'p1');
+    expect(store.isLeader(code, 'p0')).toBe(true);
+  });
+
+  it('clears leadership (null) when the last human leaves', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p0', 'P0');
+    store.setLeader(code, 'p0');
+    store.leave(code, 'p0');
+    expect(store.get(code)?.leaderId).toBeNull();
+  });
 });
 
 describe('RoomStore.setPlayerUser', () => {
@@ -1859,5 +1947,70 @@ describe('RoomStore best-speaker vote (engagement)', () => {
       Object.entries({ 'sock-0': { rounds: 1, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0 } }),
     );
     expect(store2.computeAwards(c2).map((a) => a.id)).not.toContain('oratore');
+  });
+});
+
+describe('RoomStore.delete (lifecycle)', () => {
+  it('removes a room from memory and reports it; false for unknown codes', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    expect(store.has(code)).toBe(true);
+    expect(store.size).toBe(1);
+
+    expect(store.delete(code)).toBe(true);
+    expect(store.has(code)).toBe(false);
+    expect(store.get(code)).toBeUndefined();
+    expect(store.size).toBe(0);
+
+    expect(store.delete('ZZZZ')).toBe(false);
+  });
+});
+
+describe('RoomStore.connectedHumanCount (lifecycle)', () => {
+  it('counts connected humans only, ignoring bots and disconnected players', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'h1', 'Ann');
+    store.join(code, 'h2', 'Bob');
+    store.addBot(code, 'roccione'); // bots never count
+    expect(store.connectedHumanCount(code)).toBe(2);
+
+    store.setConnected(code, 'h2', false); // mid-grace -> not connected
+    expect(store.connectedHumanCount(code)).toBe(1);
+
+    store.setConnected(code, 'h1', false);
+    expect(store.connectedHumanCount(code)).toBe(0); // bot remains, but no humans
+
+    expect(store.connectedHumanCount('ZZZZ')).toBe(0); // unknown room
+  });
+});
+
+describe('RoomStore.abandonedRooms (lifecycle)', () => {
+  it('lists rooms with no connected humans older than maxIdleMs; keeps the rest', () => {
+    let t = 0;
+    const store = new RoomStore(generateRoomCode, () => t);
+
+    const alive = store.create().code; // createdAt = 0
+    store.join(alive, 'h1', 'Ann'); // a connected human -> never abandoned
+
+    const dead = store.create().code; // createdAt = 0
+    store.join(dead, 'h2', 'Bob');
+    store.setConnected(dead, 'h2', false); // no connected humans
+
+    const fresh = store.create().code; // createdAt = 0, never joined
+
+    t = 60_000; // 60s later
+    const reaped = store.abandonedRooms(30_000);
+    expect(reaped).toContain(dead); // empty + older than 30s
+    expect(reaped).not.toContain(alive); // has a connected human
+    expect(reaped).toContain(fresh); // empty + older than 30s
+  });
+
+  it('does not list an empty room younger than maxIdleMs', () => {
+    let t = 0;
+    const store = new RoomStore(generateRoomCode, () => t);
+    const code = store.create().code;
+    t = 10_000; // only 10s old
+    expect(store.abandonedRooms(30_000)).not.toContain(code);
   });
 });

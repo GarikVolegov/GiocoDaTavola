@@ -4,419 +4,1019 @@
     "text": "Hai un'idea geniale ma rischiosa. Cosa fai?",
     "optionA": "Mollo tutto e ci punto al 100%",
     "optionB": "La porto avanti la sera, tenendo il lavoro sicuro",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Il costo di non provarci è il rimpianto",
+      "Sul campo impari più in fretta",
+      "La finestra giusta non torna sempre"
+    ],
+    "spuntiB": [
+      "Riduci il rischio, non il sogno",
+      "Un reddito sicuro ti dà lucidità",
+      "Validare prima costa molto meno"
+    ]
   },
   {
     "id": "d02",
     "text": "Un socio ti propone di gonfiare i numeri per chiudere un investimento.",
     "optionA": "Lo faccio: i soldi servono ora",
     "optionB": "Mai: la reputazione vale più dei soldi",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Senza cassa non arrivi a domani",
+      "Tutti aggiustano un po' la narrazione",
+      "Chiudi il round, poi rimetti i conti a posto"
+    ],
+    "spuntiB": [
+      "Una bugia ai numeri non si recupera più",
+      "Gli investitori seri fanno due diligence",
+      "La fiducia persa costa più di un round saltato"
+    ]
   },
   {
     "id": "d03",
     "text": "Hai 10.000€ inattesi da gestire.",
     "optionA": "Li investo tutti per farli crescere",
     "optionB": "Li tengo da parte per dormire tranquillo",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Il denaro fermo perde valore ogni anno",
+      "Il momento migliore per investire è adesso",
+      "Un rischio calcolato oggi vale una rendita domani"
+    ],
+    "spuntiB": [
+      "Un cuscinetto finanziario vale più di qualsiasi rendimento",
+      "Chi ha riserve prende decisioni senza paura",
+      "L'emergenza arriva sempre quando meno te lo aspetti"
+    ]
   },
   {
     "id": "d04",
     "text": "Il tuo miglior dipendente vuole il doppio dello stipendio.",
     "optionA": "Glielo do: trattenerlo conviene",
     "optionB": "Lo lascio andare: nessuno è insostituibile",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Sostituire un talento costa tre volte il suo stipendio",
+      "Un dipendente apprezzato lavora il doppio con più motivazione",
+      "La conoscenza accumulata non si ricrea dall'esterno"
+    ],
+    "spuntiB": [
+      "Chi chiede il doppio presto chiederà di più",
+      "L'organizzazione non può dipendere da una sola persona",
+      "È l'occasione per valutare candidati freschi e motivati"
+    ]
   },
   {
     "id": "d05",
     "text": "Come si costruisce davvero il successo?",
     "optionA": "Lavorando più di tutti gli altri",
     "optionB": "Lavorando più furbo, non più ore",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Nessun risultato straordinario arriva senza sacrificio straordinario",
+      "Le ore investite costruiscono competenze che non si comprano",
+      "La dedizione totale separa i migliori dalla media"
+    ],
+    "spuntiB": [
+      "Le ore extra senza direzione producono solo stanchezza",
+      "Il vero vantaggio competitivo è la strategia, non la resistenza",
+      "Chi lavora furbo crea sistemi che lavorano al posto suo"
+    ]
   },
   {
     "id": "d06",
     "text": "Un cliente ti chiede uno sconto enorme o se ne va.",
     "optionA": "Cedo: meglio poco che niente",
     "optionB": "Tengo il prezzo: il mio lavoro vale",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Un cliente che paga meno è comunque un cliente che paga",
+      "Il cash flow conta più del margine in certi momenti",
+      "Un accordo apre la porta a referenze future"
+    ],
+    "spuntiB": [
+      "Cedere sul prezzo insegna al cliente che il prezzo è sempre negoziabile",
+      "Il tuo valore si misura in quello che non sconti",
+      "Un cliente che se ne va per il prezzo non era il cliente giusto"
+    ]
   },
   {
     "id": "d07",
     "text": "Hai fallito un progetto importante in pubblico.",
     "optionA": "Mi prendo tutta la colpa, anche degli altri",
     "optionB": "Spiego cos'è andato storto, senza scusarmi troppo",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Un leader che protegge il team guadagna lealtà duratura",
+      "Assumersi la responsabilità è la mossa che disarma i critici",
+      "Chi sbaglia e lo ammette costruisce credibilità vera"
+    ],
+    "spuntiB": [
+      "Un'analisi onesta del fallimento evita che si ripeta",
+      "Coprire gli errori degli altri crea dipendenza, non rispetto",
+      "La chiarezza sulle cause è più utile del capro espiatorio"
+    ]
   },
   {
     "id": "d08",
     "text": "Lavoro che ami ma povero, o noioso ma ricco?",
     "optionA": "Faccio ciò che amo, costi quel che costi",
     "optionB": "Prima la sicurezza economica, la passione poi",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Chi ama il suo lavoro non lavora neanche un giorno",
+      "La passione genera energia che il denaro non compra",
+      "Il tempo speso a fare cose che odi non torna mai"
+    ],
+    "spuntiB": [
+      "La libertà finanziaria è la precondizione di tutte le libertà",
+      "La passione sopravvive meglio quando non dipendi da essa per mangiare",
+      "Con la sicurezza economica puoi inseguire la passione nei momenti giusti"
+    ]
   },
   {
     "id": "d09",
     "text": "Un amico ti chiede di entrare in affari insieme.",
     "optionA": "Accetto: ci si fida tra amici",
     "optionB": "Rifiuto: gli affari rovinano le amicizie",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "La fiducia reciproca è la base migliore per una partnership",
+      "Con un amico condividi valori e visione già allineati",
+      "Le migliori aziende del mondo nascono tra amici"
+    ],
+    "spuntiB": [
+      "I soldi cambiano le persone e i rapporti",
+      "Un litigio d'affari può distruggere anni di amicizia",
+      "È più facile licenziare un estraneo che un amico"
+    ]
   },
   {
     "id": "d10",
     "text": "Per crescere devi licenziare il primo dipendente che hai assunto.",
     "optionA": "Lo faccio: l'azienda viene prima",
     "optionB": "Trovo un altro modo, costi quel che costi",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "La sostenibilità dell'azienda protegge tutti gli altri posti",
+      "Mantenere chi non può crescere insieme a te è un disservizio verso entrambi",
+      "Un leader vero prende le decisioni difficili al momento giusto"
+    ],
+    "spuntiB": [
+      "La lealtà verso chi ha creduto in te si ripaga",
+      "Un'azienda che sacrifica le persone perde l'anima",
+      "Chi risolve problemi creativamente costruisce una cultura migliore"
+    ]
   },
   {
     "id": "d11",
     "text": "Copiare un'idea che funziona o inventarne una nuova?",
     "optionA": "Copio e miglioro: perché reinventare la ruota",
     "optionB": "Creo qualcosa di originale, anche se più dura",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Il mercato già esiste: non devi educare i clienti",
+      "Migliorare ciò che funziona è spesso più difficile che inventarlo",
+      "La maggior parte delle grandi aziende è nata come copia migliorata"
+    ],
+    "spuntiB": [
+      "L'originalità crea barriere competitive che le copie non possono abbattere",
+      "Chi arriva secondo deve lottare contro qualcuno che ha già imparato",
+      "Il brand costruito su un'idea unica vale molto di più"
+    ]
   },
   {
     "id": "d12",
     "text": "Ti offrono fama immediata o crescita lenta e solida.",
     "optionA": "Fama subito: l'occasione non torna",
     "optionB": "Crescita lenta: voglio basi solide",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "La visibilità apre porte che la qualità da sola non apre",
+      "Un momento di fama può lanciare una carriera intera",
+      "L'attenzione pubblica è il capitale più difficile da costruire"
+    ],
+    "spuntiB": [
+      "La fama senza fondamenta crolla alla prima crisi",
+      "Una crescita solida è più difficile da distruggere",
+      "Chi costruisce lentamente costruisce qualcosa che dura"
+    ]
   },
   {
     "id": "d13",
     "text": "Scopri che un collega ruba piccole somme all'azienda.",
     "optionA": "Lo denuncio subito",
     "optionB": "Gli parlo prima in privato",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Il furto è furto, indipendentemente dall'importo",
+      "Tacere rende complice chi sa",
+      "Denunciare protegge tutti gli altri colleghi onesti"
+    ],
+    "spuntiB": [
+      "Una conversazione diretta può risolvere senza distruggere",
+      "Forse il collega è in difficoltà e un confronto umano basta",
+      "La denuncia dovrebbe essere l'ultimo passo, non il primo"
+    ]
   },
   {
     "id": "d14",
     "text": "Meglio essere temuti o amati da chi lavora con te?",
     "optionA": "Amati: la fiducia muove le persone",
     "optionB": "Temuti: il rispetto tiene tutto in ordine",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Le persone per un leader amato vanno oltre il loro dovere",
+      "La paura produce obbedienza, non innovazione",
+      "Chi è amato attrae i talenti migliori"
+    ],
+    "spuntiB": [
+      "Un leader temuto ottiene risultati anche quando manca la motivazione",
+      "Il rispetto che nasce dalla forza è più stabile dell'affetto",
+      "Chi è solo amato rischia di essere anche ignorato"
+    ]
   },
   {
     "id": "d15",
     "text": "Hai poco tempo libero. Come lo usi?",
     "optionA": "Mi formo e miglioro le mie competenze",
     "optionB": "Stacco totalmente per ricaricarmi",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Il margine tra chi avanza e chi resta fermo si costruisce nei ritagli di tempo",
+      "Investire in sé stessi è il rendimento più alto che esiste",
+      "Le competenze accumulate oggi aprono porte domani"
+    ],
+    "spuntiB": [
+      "Un cervello ricaricato produce molto più di uno esausto",
+      "Il riposo non è tempo sprecato: è produttività futura",
+      "La sostenibilità a lungo termine dipende dal recupero"
+    ]
   },
   {
     "id": "d16",
     "text": "Un investitore vuole il 60% della tua azienda.",
     "optionA": "Accetto: meglio una fetta piccola di una torta grande",
     "optionB": "Rifiuto: voglio restare padrone in casa mia",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Il capitale giusto può moltiplicare il valore di ciò che ti resta",
+      "Senza risorse la crescita è limitata: con esse è esponenziale",
+      "Il 40% di qualcosa di grande vale più del 100% di qualcosa di piccolo"
+    ],
+    "spuntiB": [
+      "Cedere il controllo significa cedere la visione",
+      "Un investitore col 60% decide prima di te sulle scelte chiave",
+      "L'indipendenza vale un premio che i numeri non catturano"
+    ]
   },
   {
     "id": "d17",
     "text": "Dire una bugia bianca può chiudere l'affare della vita.",
     "optionA": "La dico: nessuno si fa male davvero",
     "optionB": "Resto onesto, anche se perdo l'affare",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Una piccola omissione strategica non è la stessa cosa di una frode",
+      "Chiudere un affare permette di mantenere il lavoro di tutto il team",
+      "In certi mercati chi è troppo onesto perde sempre"
+    ],
+    "spuntiB": [
+      "Le bugie piccole diventano trappole grandi al primo controllo",
+      "Un rapporto costruito su una bugia dura poco",
+      "La reputazione di onestà vale più di qualsiasi singolo affare"
+    ]
   },
   {
     "id": "d18",
     "text": "Il mercato cambia e il tuo prodotto è superato.",
     "optionA": "Cambio tutto e mi reinvento",
     "optionB": "Resisto e punto su chi mi è rimasto fedele",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Chi non si adatta si estingue: vale per le aziende come per le specie",
+      "La reinvenzione è dolorosa ma l'alternativa è la lenta irrilevanza",
+      "I mercati premiano chi arriva dove il cliente starà, non dove era"
+    ],
+    "spuntiB": [
+      "I clienti fedeli sono un patrimonio raro che merita rispetto",
+      "Cambiare tutto per inseguire la moda può alienare chi ti sostiene",
+      "Una nicchia solida vale più di una quota in un mercato incerto"
+    ]
   },
   {
     "id": "d19",
     "text": "Come si prendono le decisioni importanti?",
     "optionA": "Di pancia: l'istinto raramente sbaglia",
     "optionB": "Coi dati: i numeri non mentono",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "L'esperienza accumulata si cristallizza nell'istinto",
+      "I dati raccontano il passato, l'intuizione anticipa il futuro",
+      "In situazioni nuove i dati mancano: l'istinto no"
+    ],
+    "spuntiB": [
+      "L'istinto porta con sé bias cognitivi invisibili",
+      "Le decisioni data-driven si possono difendere e replicare",
+      "Un buon dato vale più di mille opinioni, anche esperte"
+    ]
   },
   {
     "id": "d20",
     "text": "Un concorrente ti propone un'alleanza scomoda.",
     "optionA": "Mi alleo: insieme siamo più forti",
     "optionB": "Vado da solo: meglio nemico che falso amico",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Un accordo strategico può creare valore che nessuno dei due avrebbe da solo",
+      "Il mercato premia spesso chi sa collaborare prima della concorrenza",
+      "Conoscere il concorrente dall'interno è un vantaggio enorme"
+    ],
+    "spuntiB": [
+      "Un'alleanza scomoda crea dipendenze che indeboliscono nel lungo periodo",
+      "Condividere risorse significa condividere anche i rischi",
+      "Chi cammina da solo va dove vuole, chi va in coppia scende a compromessi"
+    ]
   },
   {
     "id": "d21",
     "text": "Il tuo team propone un'idea che secondo te fallirà.",
     "optionA": "Li lascio provare e sbagliare",
     "optionB": "Blocco tutto: non posso permettere l'errore",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Chi sbaglia e capisce perché cresce più di chi non prova mai",
+      "Bloccare le idee del team uccide la motivazione e l'iniziativa",
+      "Forse hai torto tu: i team vedono cose che i leader non vedono"
+    ],
+    "spuntiB": [
+      "Un errore evitato in tempo risparmia risorse preziose",
+      "Il ruolo del leader è anche proteggere il team dalle scelte sbagliate",
+      "Non tutti gli errori sono recuperabili, soprattutto i primi"
+    ]
   },
   {
     "id": "d22",
     "text": "Vorresti di più ma rischieresti ciò che hai costruito.",
     "optionA": "Rischio: chi non risica non rosica",
     "optionB": "Mi godo ciò che ho: l'avidità rovina",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "La crescita richiede sempre un atto di fede verso l'incerto",
+      "Chi non risica nulla non ottiene nulla di straordinario",
+      "Il rimpianto di non aver provato è peggio del fallimento"
+    ],
+    "spuntiB": [
+      "Sapere quando basta è saggezza, non debolezza",
+      "Rovinare ciò che hai per inseguire altro è un lusso che non tutti si possono permettere",
+      "La felicità sta spesso nel godersi il presente, non nel rincorrere il futuro"
+    ]
   },
   {
     "id": "d23",
     "text": "Un mentore famoso ti offre consigli che senti sbagliati.",
     "optionA": "Lo seguo: ne sa più di me",
     "optionB": "Seguo la mia strada, anche se rischio",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "L'esperienza del mentore ha già attraversato errori che tu non puoi ancora vedere",
+      "L'umiltà di imparare anche quando pensi di sapere è rara e preziosa",
+      "Fidarsi di chi sa più di te è esattamente come si impara"
+    ],
+    "spuntiB": [
+      "Nessun esperto conosce il tuo contesto meglio di te",
+      "I consigli migliori arrivano dall'ascolto profondo di sé stessi",
+      "La tua strada ti appartiene: i mentori la illuminano, non la percorrono"
+    ]
   },
   {
     "id": "d24",
     "text": "Successo personale o tempo con le persone che ami?",
     "optionA": "Punto al successo: poi avrò tempo per tutto",
     "optionB": "Le persone prima: il tempo non torna",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Il successo costruisce le condizioni per vivere meglio con chi ami",
+      "Le fondamenta solide oggi proteggono chi ti sta vicino domani",
+      "Il rimpianto di non aver dato il massimo è difficile da portare"
+    ],
+    "spuntiB": [
+      "Nessuno sul letto di morte ha detto 'avrei voluto lavorare di più'",
+      "Le relazioni trascurate non aspettano che tu sia pronto",
+      "Il successo senza connessione è vuoto: i ricordi con chi ami non lo sono mai"
+    ]
   },
   {
     "id": "d25",
     "text": "Un amico ti confessa in privato un segreto su un altro amico presente.",
     "optionA": "Lo tengo per me",
     "optionB": "Lo dico all'interessato: ha diritto di saperlo",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Un segreto condiviso in fiducia va rispettato sempre",
+      "Tradire la confidenza distrugge la fiducia tra amici",
+      "Non è detto che l'interessato voglia o debba sapere"
+    ],
+    "spuntiB": [
+      "Se fosse al contrario, vorresti sapere anche tu",
+      "Tenere un segreto che riguarda qualcun altro lo rende complice",
+      "La verità, anche scomoda, è sempre un atto di rispetto"
+    ]
   },
   {
     "id": "d26",
     "text": "Trovi per strada un portafoglio pieno di contanti, senza documenti.",
     "optionA": "Lo porto alla polizia",
     "optionB": "Chi trova tiene",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Qualcuno ha perso qualcosa di importante e si sentirà sollevato nel riaverlo",
+      "Fare la cosa giusta anche quando nessuno guarda definisce chi sei",
+      "La coscienza pulita vale più di qualsiasi somma"
+    ],
+    "spuntiB": [
+      "Senza documenti è impossibile rintracciare il proprietario",
+      "La vita ti dà raramente opportunità inaspettate: coglile",
+      "Nessuna legge chiara ti obbliga a consegnare denaro senza provenienza"
+    ]
   },
   {
     "id": "d27",
     "text": "Il partner vuole le password dei tuoi social «per fiducia».",
     "optionA": "Gliele do: non ho niente da nascondere",
     "optionB": "No: la privacy resta sacra",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "La trasparenza totale elimina ogni ombra di sospetto",
+      "Se non hai niente da nascondere, condividere è un gesto d'amore",
+      "In una coppia solida la riservatezza non dovrebbe essere un tabù"
+    ],
+    "spuntiB": [
+      "La fiducia vera non ha bisogno di prove o controlli",
+      "La privacy è un diritto fondamentale, anche in coppia",
+      "Cedere le password crea un precedente difficile da invertire"
+    ]
   },
   {
     "id": "d28",
     "text": "Al ristorante il conto è sbagliato a tuo favore di 30€.",
     "optionA": "Lo faccio notare",
     "optionB": "Fortuna mia: pago e via",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Un cameriere può perdere di tasca propria quegli errori",
+      "L'onestà non si pratica solo quando conviene",
+      "Fare la cosa giusta in piccolo costruisce il carattere"
+    ],
+    "spuntiB": [
+      "Gli errori di conto sono il rischio del mestiere del ristoratore",
+      "Non è colpa tua se hanno sbagliato a calcolare",
+      "La vita si bilancia: altre volte hai pagato senza ottenere"
+    ]
   },
   {
     "id": "d29",
     "text": "Un amico ti chiede un prestito che sai non rivedrai.",
     "optionA": "Glielo do come fosse un regalo",
     "optionB": "Dico di no, per il bene di entrambi",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Un vero amico aiuta anche quando il rimborso è improbabile",
+      "Il valore dell'amicizia supera quello del denaro",
+      "Se puoi permetterti di perderlo, darlo è un atto di generosità"
+    ],
+    "spuntiB": [
+      "I debiti non restituiti avvelenano le amicizie lentamente",
+      "Dire no con rispetto è più onesto che dire sì con risentimento",
+      "Aiutare diversamente — tempo, connessioni, consigli — è spesso più utile"
+    ]
   },
   {
     "id": "d30",
     "text": "Hai una foto bruttissima ma esilarante di un amico.",
     "optionA": "La pubblico, ci ridiamo su",
     "optionB": "La cancello: prima l'amicizia",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Il ridere insieme di sé stessi rafforza i legami",
+      "Una foto esilarante diventa un ricordo condiviso per sempre",
+      "Se l'amicizia è solida, una foto non la scalfisce"
+    ],
+    "spuntiB": [
+      "L'amico potrebbe non condividere il tuo senso dell'umorismo",
+      "Pubblicare senza consenso viola la sua fiducia",
+      "Una risata momentanea non vale il disagio che potrebbe causare"
+    ]
   },
   {
     "id": "d31",
     "text": "Per un giorno puoi leggere i pensieri di chiunque.",
     "optionA": "Lo faccio: voglio sapere tutto",
     "optionB": "No grazie: certe cose è meglio non saperle",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "La verità, anche dolorosa, vale più di una vita nell'illusione",
+      "Sapere cosa pensano davvero le persone ti dà un vantaggio enorme",
+      "L'ignoranza non è protezione: è solo ignoranza"
+    ],
+    "spuntiB": [
+      "Conoscere i pensieri altrui può distruggere relazioni costruite anni fa",
+      "La mente umana è privata per una buona ragione",
+      "Non tutti i segreti meritano di essere scoperti"
+    ]
   },
   {
     "id": "d32",
     "text": "Il tuo migliore amico inizia a uscire con il tuo ex.",
     "optionA": "Ci sto male ma li sostengo",
     "optionB": "È un tradimento dell'amicizia",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Gli amici hanno vite proprie che non ti appartengono",
+      "Un'amicizia vera supera anche i momenti più difficili",
+      "Trattenerti in modo maturo mostra che sei cresciuto"
+    ],
+    "spuntiB": [
+      "Esistono codici non scritti che l'amicizia richiede di rispettare",
+      "L'ex è ex, ma il dolore di vederli insieme è reale e legittimo",
+      "Chi ti vuole bene davvero evita situazioni che sa ti feriscono"
+    ]
   },
   {
     "id": "d33",
     "text": "Cena stellata gratis, ma devi andarci completamente da solo.",
     "optionA": "Ci vado: che esperienza",
     "optionB": "Senza compagnia non vale niente",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Le esperienze vissute da soli insegnano ad apprezzare sé stessi",
+      "Un pasto eccezionale parla da solo, senza bisogno di pubblico",
+      "La solitudine è un lusso raro che si impara ad amare"
+    ],
+    "spuntiB": [
+      "Il cibo è un atto sociale: senza condivisione perde metà del sapore",
+      "I ricordi più belli si costruiscono con gli altri, non da soli",
+      "Un'esperienza che non puoi raccontare a qualcuno perde magia"
+    ]
   },
   {
     "id": "d34",
     "text": "Sai una verità che farebbe stare malissimo un amico.",
     "optionA": "Gliela dico: merita la verità",
     "optionB": "Lo proteggo col silenzio",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Nascondere la verità è una forma di paternalismo che nega l'autonomia altrui",
+      "Prima o poi verrà a sapere: meglio da te che da un estraneo",
+      "Chi ama davvero dice anche le cose che fanno male"
+    ],
+    "spuntiB": [
+      "Alcune verità non cambiano la situazione ma distruggono la serenità",
+      "Il momento di dire una verità difficile è cruciale: aspettare può essere saggio",
+      "Proteggere chi ami dal dolore è a volte l'atto più amorevole"
+    ]
   },
   {
     "id": "d35",
     "text": "Vacanza: tutto pianificato o zaino in spalla e improvvisazione?",
     "optionA": "Pianifico ogni dettaglio",
     "optionB": "Parto e vada come vada",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Pianificare significa non sprecare giorni preziosi a risolvere problemi",
+      "I momenti migliori spesso nascono da attività programmate con cura",
+      "Un piano flessibile lascia spazio all'imprevisto senza il caos"
+    ],
+    "spuntiB": [
+      "I migliori ricordi di viaggio nascono dagli imprevisti",
+      "L'improvvisazione ti porta dove i turisti non arrivano mai",
+      "La vacanza pianificata al millimetro non è riposo: è un altro lavoro"
+    ]
   },
   {
     "id": "d36",
     "text": "Un'app ti regala 1000€ in cambio di tutti i tuoi dati personali.",
     "optionA": "Accetto: i dati ce li hanno già",
     "optionB": "Rifiuto: la privacy non si vende",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "I tuoi dati vengono già raccolti gratuitamente: almeno ti pagano",
+      "Con 1000€ puoi fare qualcosa di concreto per te",
+      "I dati personali sono astratti finché non vedi il danno: i soldi sono reali"
+    ],
+    "spuntiB": [
+      "I dati personali sono il combustibile del controllo e della manipolazione",
+      "Una volta ceduti non li recuperi più",
+      "Chi vende la sua privacy per comodità la perde per sempre"
+    ]
   },
   {
     "id": "d37",
     "text": "Il gruppo vuole andare nel locale che detesti.",
     "optionA": "Mi adeguo per stare insieme",
     "optionB": "Propongo altro, a costo di discutere",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "La compagnia vale più del posto",
+      "Cedere su piccole cose è il lubrificante delle amicizie",
+      "Chi si adatta facilmente è sempre il benvenuto nel gruppo"
+    ],
+    "spuntiB": [
+      "Se non dici mai la tua, il gruppo non sa mai cosa vuoi davvero",
+      "Un'alternativa proposta bene può piacere a tutti",
+      "La propria voce ha valore e va espressa anche in piccole cose"
+    ]
   },
   {
     "id": "d38",
     "text": "Puoi rifare una scelta del passato, ma cancelli i ricordi venuti dopo.",
     "optionA": "La rifaccio: voglio l'altra vita",
     "optionB": "Tengo tutto: i ricordi valgono troppo",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Una vita diversa potrebbe includere gioie che non riesci nemmeno a immaginare",
+      "I rimpianti pesanti meritano la possibilità di essere corretti",
+      "I ricordi che perdi sarebbero comunque sostituiti da nuovi"
+    ],
+    "spuntiB": [
+      "I ricordi definiscono chi sei: cancellarli è cancellarti",
+      "Non sai cosa perderesti nell'altra vita: potresti rimpiangere di più",
+      "La nostra storia, anche dolorosa, ci ha resi chi siamo oggi"
+    ]
   },
   {
     "id": "d39",
     "text": "Adotteresti un cucciolo che ha bisogno di tantissime cure?",
     "optionA": "Sì, l'amore vale la fatica",
     "optionB": "No, non sarei giusto verso di lui",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Un animale che ha bisogno di cure trova in te esattamente quello di cui ha bisogno",
+      "La fatica dell'amore non è mai sprecata",
+      "Accogliere chi è fragile è il gesto più umano che esista"
+    ],
+    "spuntiB": [
+      "Un cucciolo che non riesci a seguire starà peggio con te che altrove",
+      "Riconoscere i propri limiti è un atto di onestà verso l'animale",
+      "Esistono famiglie più adatte: lasciargli la possibilità di trovarle è amore"
+    ]
   },
   {
     "id": "d40",
     "text": "Un amico ha l'alito pesante e non se ne accorge.",
     "optionA": "Glielo dico con tatto",
     "optionB": "Faccio finta di niente",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Un vero amico ti dice le cose che nessun altro dice",
+      "Risparmiare all'amico un imbarazzo maggiore davanti agli altri è un favore",
+      "Dirlo con gentilezza è un atto di rispetto, non di crudeltà"
+    ],
+    "spuntiB": [
+      "Non è un problema tuo e potrebbe metterlo in imbarazzo inutilmente",
+      "Alcune cose si risolvono da soli senza bisogno di intervenire",
+      "L'amicizia sopravvive meglio senza certe conversazioni scomode"
+    ]
   },
   {
     "id": "d41",
     "text": "Festa imperdibile stasera o sveglia all'alba per un'occasione unica domani.",
     "optionA": "Vado alla festa: si vive una volta",
     "optionB": "A nanna: domani conta di più",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Le feste con gli amici creano ricordi che le occasioni professionali raramente eguagliano",
+      "Presentarsi esausti a un'opportunità è peggio che non presentarsi",
+      "La vita è fatta di presenze: essere lì conta"
+    ],
+    "spuntiB": [
+      "Un'opportunità rara merita di arrivare freschi e lucidi",
+      "Puoi divertirti altri mille giorni: certe porte si aprono una volta sola",
+      "Rinunciare a una festa è un sacrificio piccolo per un guadagno grande"
+    ]
   },
   {
     "id": "d42",
     "text": "Un estraneo simpaticissimo ti chiede il numero mentre corri a prendere il treno.",
     "optionA": "Glielo do e perdo il treno",
     "optionB": "Prendo il treno: occasione persa",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Le connessioni umane inaspettate cambiano la vita",
+      "Un treno perso si recupera: una persona speciale no",
+      "I momenti di coraggio spontaneo aprono storie meravigliose"
+    ],
+    "spuntiB": [
+      "I tuoi impegni esistenti vengono prima di un incontro casuale",
+      "Se era destino, troverà un altro modo per ritrovarti",
+      "Agire d'impulso su un estraneo ha rischi che non si vedono subito"
+    ]
   },
   {
     "id": "d43",
     "text": "Potessi scegliere, preferiresti sapere quando o come morirai?",
     "optionA": "Quando",
     "optionB": "Come",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Sapere quando ti permette di pianificare ogni cosa importante",
+      "La data certa trasforma ogni giorno che precede in un dono consapevole",
+      "Non sapere quando spaventa più del sapere come"
+    ],
+    "spuntiB": [
+      "Sapere come ti permette di evitarlo o almeno prepararti",
+      "Il quando senza il come non ti dà nessun controllo reale",
+      "Conoscere le circostanze ti permette di proteggerti e proteggere chi ami"
+    ]
   },
   {
     "id": "d44",
     "text": "Il coinquilino non lava mai i piatti.",
     "optionA": "Glielo dico chiaro e tondo",
     "optionB": "Li lavo io per quieto vivere",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "Vivere insieme richiede regole condivise: dirle è il primo passo",
+      "Il silenzio accumula risentimento che esplode peggio dopo",
+      "Comunicare chiaramente rispetta entrambi"
+    ],
+    "spuntiB": [
+      "Una convivenza serena vale più di avere ragione",
+      "Lavare i piatti costa meno energia di una discussione",
+      "Non ogni battaglia vale il prezzo del conflitto"
+    ]
   },
   {
     "id": "d45",
     "text": "Per un regalo importante punti su…",
     "optionA": "Un'esperienza da ricordare",
     "optionB": "Un oggetto che dura nel tempo",
-    "register": "vita"
+    "register": "vita",
+    "spuntiA": [
+      "I ricordi di un'esperienza durano più di qualsiasi oggetto",
+      "Le esperienze creano storie condivise che rafforzano i legami",
+      "Un'esperienza è sempre personale e difficilmente duplicabile"
+    ],
+    "spuntiB": [
+      "Un oggetto bello è un pensiero presente ogni giorno",
+      "Le esperienze finiscono: un oggetto continua a raccontare chi te l'ha regalato",
+      "Certe persone preferiscono il tangibile all'effimero"
+    ]
   },
   {
     "id": "d46",
     "text": "In riunione il capo presenta la tua idea come sua.",
     "optionA": "Lo correggo davanti a tutti",
     "optionB": "Mordo il freno e ne parlo dopo in privato",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Lasciare che passi in silenzio crea un precedente difficile da invertire",
+      "Gli altri in sala devono sapere chi genera le idee",
+      "La tua visibilità professionale dipende dal rivendicare il tuo lavoro"
+    ],
+    "spuntiB": [
+      "Correggere il capo davanti al gruppo crea un nemico potente",
+      "Una conversazione privata risolve meglio e senza danni collaterali",
+      "Scegliere il momento giusto è intelligenza, non debolezza"
+    ]
   },
   {
     "id": "d47",
     "text": "Stipendio doppio, ma in un'azienda dai metodi discutibili.",
     "optionA": "Accetto: i soldi sono soldi",
     "optionB": "Rinuncio: non vendo i miei valori",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Il denaro extra ti permette di fare del bene altrove",
+      "Non sei responsabile dei metodi dell'azienda: lo sono i vertici",
+      "Le risorse accumulate ti danno la libertà di scegliere dopo"
+    ],
+    "spuntiB": [
+      "I metodi discutibili ti riguardano: ci lavori tu ogni giorno",
+      "I valori ceduti una volta sono più facili da cedere ancora",
+      "La reputazione professionale è un capitale che accumuli o distruggi"
+    ]
   },
   {
     "id": "d48",
     "text": "Un collega ti chiede di coprire un suo errore grave.",
     "optionA": "Lo copro: oggi a lui, domani a me",
     "optionB": "Non mento per nessuno",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "La solidarietà tra colleghi è il tessuto connettivo del lavoro quotidiano",
+      "Aiutare nei momenti difficili crea debiti di riconoscenza reali",
+      "Un errore coperto in tempo può salvare una carriera"
+    ],
+    "spuntiB": [
+      "Coprire un errore grave ti rende responsabile delle conseguenze",
+      "La tua integrità non è in vendita, neanche per un collega",
+      "Chi sbaglia deve imparare: coprirlo gliene impedisce la possibilità"
+    ]
   },
   {
     "id": "d49",
     "text": "Arriva un'email di lavoro nel weekend.",
     "optionA": "Rispondo: meglio non accumulare",
     "optionB": "Stacco: il weekend è sacro",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Rispondere subito evita che il problema cresca nel frattempo",
+      "Cinque minuti ora valgono un'ora di stress lunedì mattina",
+      "La reattività è un segnale di professionalità che viene notato"
+    ],
+    "spuntiB": [
+      "Il riposo non è un lusso: è una necessità per lavorare bene",
+      "Rispondere nel weekend educa tutti ad aspettarsi che tu risponda sempre",
+      "I confini sani tra lavoro e vita privata si costruiscono rispettandoli"
+    ]
   },
   {
     "id": "d50",
     "text": "Per sempre: smart working da casa o ufficio coi colleghi?",
     "optionA": "Casa: libertà e concentrazione",
     "optionB": "Ufficio: si lavora meglio insieme",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "La concentrazione profonda è quasi impossibile in open space",
+      "L'autonomia sul proprio ambiente aumenta la qualità della vita",
+      "Zero pendolarismo significa più ore per la vita vera"
+    ],
+    "spuntiB": [
+      "La collaborazione spontanea in ufficio genera idee che le videocall non producono",
+      "Il senso di appartenenza al team si costruisce di persona",
+      "L'isolamento da casa logora la motivazione nel lungo periodo"
+    ]
   },
   {
     "id": "d51",
     "text": "Devi promuovere il più bravo o il più amato dal team?",
     "optionA": "Il più bravo: vincono i risultati",
     "optionB": "Il più amato: tiene unito il gruppo",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "I risultati sono misurabili e difendibili: le simpatie no",
+      "Premiare il merito manda un messaggio chiaro a tutto il team",
+      "Un leader competente eleva il livello di tutti"
+    ],
+    "spuntiB": [
+      "Un team unito sotto una guida rispettata produce più di uno brillante ma diviso",
+      "Le competenze si insegnano: la leadership naturale è rara",
+      "Un manager amato riduce il turnover e aumenta la retention"
+    ]
   },
   {
     "id": "d52",
     "text": "Un cliente che fattura tanto è maleducato col tuo staff.",
     "optionA": "Lo perdo: il mio team viene prima",
     "optionB": "Stringo i denti: quei soldi servono",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Un team trattato male lavora peggio: perdi in produttività ciò che guadagni in fattura",
+      "Tollerare il maltrattamento invia un messaggio tossico sulla cultura aziendale",
+      "I clienti migliori non hanno bisogno di essere maleducati per ottenere ciò che vogliono"
+    ],
+    "spuntiB": [
+      "Le aziende hanno attraversato periodi difficili grazie a un cliente chiave",
+      "Con le risorse giuste puoi costruire l'indipendenza per non aver più bisogno di lui",
+      "Il pragmatismo in certi momenti è più onesto dei principi che non ti puoi permettere"
+    ]
   },
   {
     "id": "d53",
     "text": "Assumi il fenomeno arrogante o il candidato normale ma piacevole?",
     "optionA": "Il fenomeno: il talento decide",
     "optionB": "Il piacevole: il clima conta di più",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Un talento raro alza il livello dell'intero team",
+      "L'arroganza spesso si gestisce: la mediocrità no",
+      "In certi ruoli il risultato supera tutto il resto"
+    ],
+    "spuntiB": [
+      "Una persona tossica, anche brillante, può distruggere il morale di un intero team",
+      "Il climate aziendale è il moltiplicatore di tutti i talenti presenti",
+      "Chi non sa lavorare in gruppo non è davvero un fenomeno completo"
+    ]
   },
   {
     "id": "d54",
     "text": "Comunicheresti un licenziamento via email?",
     "optionA": "Sì, evito una scena dolorosa",
     "optionB": "Mai: certe cose si dicono in faccia",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Un'email permette alla persona di elaborare in privato senza dover contenere le emozioni",
+      "In certi contesti remoti o internazionali è l'unica opzione pratica",
+      "La chiarezza scritta evita malintesi sul messaggio"
+    ],
+    "spuntiB": [
+      "Un licenziamento di persona dimostra rispetto per anni di lavoro condiviso",
+      "Le email sono facili da ignorare: il coraggio di guardarsi in faccia è necessario",
+      "La dignità della persona richiede una conversazione, non un testo"
+    ]
   },
   {
     "id": "d55",
     "text": "Il tuo prodotto vende benissimo ma inquina.",
     "optionA": "Lo vendo: è legale e la gente lo vuole",
     "optionB": "Lo ritiro finché non è pulito",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "La legalità è la soglia minima condivisa dalla società: se è legale, è accettabile",
+      "Ritirarti lascia il mercato a chi inquina ancora di più senza scrupoli",
+      "Con i profitti generati puoi investire in innovazione green"
+    ],
+    "spuntiB": [
+      "Il danno ambientale è reale anche quando è legale",
+      "Le aziende che anticipano le regolamentazioni ambientali sopravvivono meglio",
+      "La responsabilità di un'azienda va oltre la legalità"
+    ]
   },
   {
     "id": "d56",
     "text": "Devi dare un feedback a un collega.",
     "optionA": "Durissimo ma davvero utile",
     "optionB": "Gentile ma un po' vago",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Un feedback onesto è l'unico che produce cambiamento reale",
+      "Il collega merita la verità: è l'unico modo per crescere",
+      "La gentilezza vaga lascia l'altro in un limbo che non aiuta nessuno"
+    ],
+    "spuntiB": [
+      "Un feedback troppo duro chiude la persona invece di aprirla",
+      "Il tono conta quanto il contenuto: senza rispetto non arriva niente",
+      "Costruire fiducia prima di dire la verità difficile produce risultati migliori"
+    ]
   },
   {
     "id": "d57",
     "text": "Avviare un progetto rischioso insieme al tuo migliore amico.",
     "optionA": "Lo faccio: mi fido ciecamente",
     "optionB": "Lavoro e amicizia non si mischiano",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Lavorare con qualcuno di cui ti fidi elimina una quantità enorme di attrito",
+      "La lealtà reciproca tra amici è un vantaggio competitivo reale",
+      "Le migliori partnership nascono da relazioni già profonde"
+    ],
+    "spuntiB": [
+      "I conflitti d'affari si riversano inevitabilmente sull'amicizia",
+      "Non puoi essere onesto al 100% con un amico nelle difficoltà del business",
+      "Perdere l'amicizia è un prezzo troppo alto per qualsiasi progetto"
+    ]
   },
   {
     "id": "d58",
     "text": "Anno sabbatico non pagato per un sogno, o stipendio sicuro e niente avventure?",
     "optionA": "Mollo e inseguo il sogno",
     "optionB": "Tengo il sicuro: il sogno aspetta",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "I sogni hanno finestre temporali: alcune si chiudono e non riaprono",
+      "Rimpiangere di non aver provato è più pesante di aver fallito",
+      "Un anno sabbatico può trasformarsi nel capitolo più importante della tua vita"
+    ],
+    "spuntiB": [
+      "La sicurezza economica ti permette di inseguire il sogno con meno ansia",
+      "Aspettare il momento giusto non è rinunciare: è costruire le condizioni",
+      "Un sogno realizzato con basi solide dura di più"
+    ]
   },
   {
     "id": "d59",
     "text": "Un concorrente ti offre tanti soldi per i segreti della tua azienda.",
     "optionA": "Tradisco: nessuno lo saprà",
     "optionB": "Resto leale, costi quel che costi",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "Se nessuno lo viene mai a sapere, il danno è limitato e il guadagno reale",
+      "Le aziende trattano i dipendenti come risorse: perché non fare lo stesso?",
+      "Con quel denaro potresti finalmente costruire qualcosa di tuo"
+    ],
+    "spuntiB": [
+      "Il tradimento ti definisce come persona, non solo come dipendente",
+      "I segreti hanno un modo di emergere: il rischio è sproporzionato",
+      "La lealtà professionale è la base di qualsiasi carriera solida"
+    ]
   },
   {
     "id": "d60",
     "text": "Convochi una riunione che poteva tranquillamente essere un'email?",
     "optionA": "Sì, di persona è più chiaro",
     "optionB": "No, mando l'email e tutti ringraziano",
-    "register": "business"
+    "register": "business",
+    "spuntiA": [
+      "La comunicazione sincrona risolve in dieci minuti ciò che le email rimpallinano per ore",
+      "Vedersi di persona cattura le sfumature che i testi perdono",
+      "Alcune decisioni richiedono la presenza per essere veramente prese"
+    ],
+    "spuntiB": [
+      "Le riunioni inutili sono il nemico numero uno della produttività",
+      "Un'email chiara e strutturata è più rispettosa del tempo altrui",
+      "Tutto ciò che non richiede dialogo in tempo reale non merita una riunione"
+    ]
   }
 ]
