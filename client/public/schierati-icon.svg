@@ -1,13 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SCHIERATI icon">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SCHIERATI">
   <defs>
-    <clipPath id="roundedW"><rect width="512" height="512" rx="112"/></clipPath>
+    <clipPath id="tile"><rect width="512" height="512" rx="116"></rect></clipPath>
   </defs>
-
-  <g clip-path="url(#roundedW)">
-    <rect x="0" y="0" width="256" height="512" fill="#4F8DFF"/>
-    <rect x="256" y="0" width="256" height="512" fill="#FF8C4F"/>
-
-    <path d="M300,52 L196,250 L256,250 L212,460 L330,232 L268,232 Z" fill="#0E1020"/>
-    <path d="M292,64 L208,256 L262,256 L226,448 L324,238 L272,238 Z" fill="#FFFFFF"/>
+  <g clip-path="url(#tile)">
+    <rect width="512" height="512" fill="#131829"></rect>
+    <rect width="512" height="512" fill="none" stroke="rgba(220,224,236,0.10)" stroke-width="4"></rect>
+    
+    <path d="M256,452 L256,300" fill="none" stroke="#E8EAF2" stroke-width="46" stroke-linecap="round"></path>
+    <path d="M256,300 L150,116" fill="none" stroke="#5486C4" stroke-width="46" stroke-linecap="round"></path>
+    <path d="M256,300 L362,116" fill="none" stroke="#C77A45" stroke-width="46" stroke-linecap="round"></path>
+    <circle cx="256" cy="300" r="26" fill="#E8EAF2"></circle>
   </g>
 </svg>
