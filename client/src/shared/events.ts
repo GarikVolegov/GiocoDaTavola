@@ -28,6 +28,8 @@ export const SocketEvents = {
   GameState: 'game:state',
   /** Player casts (or changes) a secret A/B vote from their phone. */
   PlayerVote: 'player:vote',
+  /** Player sends its Clerk session token so the server can attribute awards to the account. */
+  PlayerIdentify: 'player:identify',
   /** Server confirms the player's current vote back to them only. */
   PlayerVoted: 'player:voted',
   /** Server rejects the vote (wrong phase, not in room, bad choice). */
@@ -322,6 +324,24 @@ export interface GameStatePayload {
 
 /** Which side a player secretly votes for. */
 export type VoteChoice = 'A' | 'B';
+
+export interface PlayerIdentifyPayload {
+  /** Clerk session token; the server verifies it and tags the player with the userId. */
+  token: string;
+}
+
+/** One saved award as returned by GET /api/me/awards. */
+export interface MyAward {
+  id: string;
+  awardId: string;
+  title: string;
+  emoji: string;
+  description: string;
+  gameCode: string;
+  gameMode: string;
+  nickname: string;
+  wonAt: string;
+}
 
 export interface PlayerVotePayload {
   choice: VoteChoice;

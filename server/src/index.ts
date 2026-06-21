@@ -6,6 +6,9 @@ import fs from 'fs';
 import { randomUUID } from 'crypto';
 import { RoomStore, isVotingPhase, type Room } from './game/rooms';
 import { generateBotDefense, aiDefenseEnabled } from './game/aiDefense';
+import { migrate, dbEnabled, pool } from './db';
+import { saveAwards, awardsToPersist } from './persistence';
+import { verifyClerkToken } from './clerk';
 
 // Load server/.env (e.g. AI_BASE_URL / AI_MODEL for self-hosted LLM defenses) if
 // present. Zero-dependency: uses Node's built-in env-file loader (Node 20.12+).
@@ -167,10 +170,47 @@ function advanceAndBroadcast(code: string): void {
   broadcastGameState(code);
   schedulePhase(code);
   maybeGenerateAiDefense(code);
+  const room = rooms.get(code);
+  if (room && room.phase === 'FINAL_AWARDS') {
+    saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards failed', e));
+  }
 }
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
+});
+
+// The caller's own saved awards. Bearer token (Clerk) → userId → their rows only.
+app.get('/api/me/awards', async (req, res) => {
+  const header = req.header('authorization') ?? '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const userId = await verifyClerkToken(token);
+  if (!userId) {
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
+  if (!dbEnabled() || !pool) {
+    res.json({ awards: [] });
+    return;
+  }
+  const { rows } = await pool.query(
+    `SELECT id, award_id, title, emoji, description, game_code, game_mode, nickname, won_at
+     FROM awards WHERE clerk_user_id = $1 ORDER BY won_at DESC`,
+    [userId],
+  );
+  res.json({
+    awards: rows.map((r) => ({
+      id: String(r.id),
+      awardId: r.award_id,
+      title: r.title,
+      emoji: r.emoji,
+      description: r.description,
+      gameCode: r.game_code,
+      gameMode: r.game_mode,
+      nickname: r.nickname,
+      wonAt: r.won_at,
+    })),
+  });
 });
 
 io.on('connection', (socket) => {
@@ -300,6 +340,21 @@ io.on('connection', (socket) => {
     }
   });
 
+  // A logged-in phone sends its Clerk token; verify it and tag the player so the
+  // server can attribute saved awards. A late identify on the awards screen
+  // triggers a re-save (idempotent) so results aren't lost.
+  socket.on('player:identify', async (payload: { token?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const userId = await verifyClerkToken(typeof payload?.token === 'string' ? payload.token : undefined);
+    if (!userId) return;
+    rooms.setPlayerUser(session.code, session.playerId, userId);
+    const room = rooms.get(session.code);
+    if (room && room.phase === 'FINAL_AWARDS') {
+      saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards (identify) failed', e));
+    }
+  });
+
   socket.on('disconnect', () => {
     hostRooms.delete(socket.id);
     const session = sessions.get(socket.id);
@@ -347,4 +402,11 @@ httpServer.listen(PORT, () => {
   console.log(
     `[server] AI bot defenses: ${aiDefenseEnabled() ? `on (${process.env.AI_MODEL || 'gemma3:4b'} @ ${process.env.AI_BASE_URL})` : 'off (templated fallback)'}`,
   );
+  if (dbEnabled()) {
+    migrate()
+      .then(() => console.log('[db] migrated'))
+      .catch((err) => console.error('[db] migrate failed', err));
+  } else {
+    console.log('[db] disabled (no DATABASE_URL) — awards will not be saved');
+  }
 });
