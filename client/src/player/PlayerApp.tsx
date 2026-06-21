@@ -844,7 +844,7 @@ export default function PlayerApp() {
                   gap: '0.4rem',
                   padding: '0.5rem 0.9rem',
                   borderRadius: '0.6rem',
-                  background: p.isBot ? 'rgba(192,79,255,0.18)' : 'rgba(127,127,127,0.18)',
+                  background: p.isBot ? 'var(--gold-soft)' : 'rgba(127,127,127,0.18)',
                   fontWeight: 600,
                   opacity: absent ? 0.5 : 1,
                 }}
