@@ -12,7 +12,7 @@ import {
   type PlayerJoinErrorPayload,
   type PublicPlayer,
 } from '../shared/events';
-import { Card, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel } from '../shared/ui';
+import { Card, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo } from '../shared/ui';
 import ReactionSwarm from './ReactionSwarm';
 
 const screen = {
@@ -87,11 +87,7 @@ export default function HostApp() {
   if (!code) {
     return (
       <main style={screen}>
-        <img
-          src="/schierati-logo.svg"
-          alt="SCHIERATI — il gioco dei dilemmi tra amici"
-          style={{ width: 'min(82vw, 34rem)', height: 'auto' }}
-        />
+        <Logo size={64} payoff />
         <p style={{ opacity: 0.8, margin: 0, maxWidth: '32rem' }}>
           Collega questo schermo a una partita: inserisci il codice mostrato sul telefono del leader.
         </p>
@@ -229,9 +225,9 @@ export default function HostApp() {
                   fontSize: '1.25rem',
                   fontWeight: 700,
                   background:
-                    defense.speaker.side === 'A' ? 'rgba(79,140,255,0.18)' : 'rgba(255,140,79,0.18)',
+                    defense.speaker.side === 'A' ? 'rgba(84,134,196,0.18)' : 'rgba(199,122,69,0.18)',
                   border: `2px solid ${
-                    defense.speaker.side === 'A' ? 'rgba(79,140,255,0.5)' : 'rgba(255,140,79,0.5)'
+                    defense.speaker.side === 'A' ? 'rgba(84,134,196,0.5)' : 'rgba(199,122,69,0.5)'
                   }`,
                 }}
               >
@@ -275,7 +271,7 @@ export default function HostApp() {
           >
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
               {duelReveal.picks.map((p) => {
-                const rgb = p.choice === 'A' ? '79,140,255' : '255,140,79';
+                const rgb = p.choice === 'A' ? '84,134,196' : '199,122,69';
                 return (
                   <div
                     key={p.id}
@@ -322,8 +318,8 @@ export default function HostApp() {
                 borderRadius: '0.9rem',
                 fontSize: '1.25rem',
                 fontWeight: 700,
-                background: duelTurn.speaker.side === 'A' ? 'rgba(79,140,255,0.18)' : 'rgba(255,140,79,0.18)',
-                border: `2px solid ${duelTurn.speaker.side === 'A' ? 'rgba(79,140,255,0.5)' : 'rgba(255,140,79,0.5)'}`,
+                background: duelTurn.speaker.side === 'A' ? 'rgba(84,134,196,0.18)' : 'rgba(199,122,69,0.18)',
+                border: `2px solid ${duelTurn.speaker.side === 'A' ? 'rgba(84,134,196,0.5)' : 'rgba(199,122,69,0.5)'}`,
               }}
             >
               Difende {duelTurn.speaker.side} ·{' '}
@@ -402,11 +398,7 @@ export default function HostApp() {
   // LOBBY: show the code + roster + a passive "waiting for the leader" line.
   return (
     <main style={screen}>
-      <img
-        src="/schierati-logo.svg"
-        alt="SCHIERATI — il gioco dei dilemmi tra amici"
-        style={{ width: 'min(82vw, 34rem)', height: 'auto' }}
-      />
+      <Logo size={64} payoff />
       <p style={{ opacity: 0.7, margin: 0 }}>
         Entra da <strong>{window.location.host}</strong> con il codice
       </p>

@@ -449,7 +449,7 @@ export default function PlayerApp() {
         >
           {(['A', 'B'] as const).map((letter) => {
             const selected = vote === letter;
-            const accent = letter === 'A' ? '79,140,255' : '255,140,79';
+            const accent = letter === 'A' ? '84,134,196' : '199,122,69';
             return (
               <button
                 key={letter}
@@ -628,7 +628,7 @@ export default function PlayerApp() {
           >
             {candidates.map((d) => {
               const selected = speakerVote === d.id;
-              const accent = d.side === 'A' ? '79,140,255' : '255,140,79';
+              const accent = d.side === 'A' ? '84,134,196' : '199,122,69';
               return (
                 <button
                   key={d.id}
@@ -687,7 +687,7 @@ export default function PlayerApp() {
         >
           {(['A', 'B'] as const).map((letter) => {
             const selected = predicted === letter;
-            const accent = letter === 'A' ? '79,140,255' : '255,140,79';
+            const accent = letter === 'A' ? '84,134,196' : '199,122,69';
             return (
               <button
                 key={letter}
