@@ -1,69 +1,29 @@
 import { useNavigate } from 'react-router-dom';
-import { Stage, Button } from '../shared/ui';
+import { Button } from '../shared/ui';
+import Hero from './sections/Hero';
+import styles from './Landing.module.css';
 
-// "Come si gioca" mostrato come introduzione leggera sulla landing.
-const STEPS = ['Vota un dilemma', 'Ascolta le difese', 'Cambia idea (o no!)'];
-
-// Schermata d'ingresso su `/`: introduce il gioco e instrada verso lo schermo
-// condiviso (`/host`, "Crea una partita") o il telefono (`/join`, "Partecipa").
+// Marketing landing on `/`: describes the game and funnels to play.
+// CTAs route to /host (Crea) and /join (Partecipa) — unchanged targets.
 export default function Landing() {
   const navigate = useNavigate();
+  const create = () => navigate('/host');
+  const join = () => navigate('/join');
+
   return (
-    <Stage variant="player">
-      <img
-        src="/schierati-logo-transparent.svg"
-        alt="SCHIERATI"
-        style={{ width: 'min(78vw, 26rem)', height: 'auto' }}
-      />
-      <p
-        style={{
-          color: 'var(--text-muted)',
-          fontSize: 'var(--text-md)',
-          margin: 0,
-          maxWidth: '28rem',
-        }}
-      >
-        Il party game dove voti, difendi e cambi idea… se ti convincono. 🎭
-      </p>
+    <main className={styles.page}>
+      <nav className={styles.nav}>
+        <div className={styles.brand}>
+          <span className={styles.brandA}>SCHIE</span>⚡<span className={styles.brandB}>RATI</span>
+        </div>
+        <div className={styles.navLinks}>
+          <a href="#come">Come si gioca</a>
+          <a href="#modalita">Modalità</a>
+          <Button variant="primary" size="md" onClick={create}>Crea una partita</Button>
+        </div>
+      </nav>
 
-      <ol
-        aria-label="Come si gioca"
-        style={{
-          listStyle: 'none',
-          margin: 0,
-          padding: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--space-2)',
-          color: 'var(--text-muted)',
-        }}
-      >
-        {STEPS.map((step, i) => (
-          <li key={step} style={{ fontSize: 'var(--text-sm)' }}>
-            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{i + 1}</span> · {step}
-          </li>
-        ))}
-      </ol>
-
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--space-3)',
-          width: 'min(90vw, 22rem)',
-        }}
-      >
-        <Button variant="primary" size="lg" style={{ width: '100%' }} onClick={() => navigate('/host')}>
-          Crea una partita
-        </Button>
-        <Button variant="ghost" size="lg" style={{ width: '100%' }} onClick={() => navigate('/join')}>
-          Partecipa
-        </Button>
-      </div>
-
-      <p style={{ color: 'var(--text-faint)', fontSize: 'var(--text-xs)', margin: 0 }}>
-        3–8 giocatori · dal vivo
-      </p>
-    </Stage>
+      <Hero onCreate={create} onJoin={join} />
+    </main>
   );
 }
