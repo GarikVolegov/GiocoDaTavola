@@ -211,6 +211,8 @@ export interface DefenseState {
   totalTurns: number;
   /** The bot defender's canned argument (Fase B); null for human speakers. */
   argument: string | null;
+  /** Talking points for the current speaker's side; null outside DEFENSE. */
+  spunti: string[] | null;
 }
 
 /**

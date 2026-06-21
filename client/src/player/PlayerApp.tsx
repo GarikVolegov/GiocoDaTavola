@@ -336,6 +336,18 @@ export default function PlayerApp() {
               Difendi <strong>{speaker.side}</strong>
               {sideOption ? `: ${sideOption}` : ''}
             </p>
+            {game?.defense?.spunti && game.defense.spunti.length > 0 && (
+              <div style={{ width: 'min(90vw, 22rem)', textAlign: 'left' }}>
+                <p style={{ fontSize: '0.9rem', fontWeight: 700, opacity: 0.8, margin: '0 0 0.3rem' }}>
+                  Spunti per te:
+                </p>
+                <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  {game.defense.spunti.map((s) => (
+                    <li key={s} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{s}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </>
         ) : (
           <p style={{ fontSize: '1.3rem', margin: 0 }}>
