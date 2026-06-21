@@ -2014,3 +2014,18 @@ describe('RoomStore.abandonedRooms (lifecycle)', () => {
     expect(store.abandonedRooms(30_000)).not.toContain(code);
   });
 });
+
+describe('RoomStore.restore (snapshot)', () => {
+  it('reinserts a room so get/has/size see it', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    const room = store.get(code)!;
+    store.delete(code);
+    expect(store.has(code)).toBe(false);
+
+    store.restore(room);
+    expect(store.has(code)).toBe(true);
+    expect(store.get(code)).toBe(room);
+    expect(store.size).toBe(1);
+  });
+});
