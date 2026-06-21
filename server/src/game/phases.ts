@@ -21,6 +21,9 @@ export type GamePhase =
   | 'VOTE_2'
   | 'SPEAKER_VOTE'
   | 'PHASE_RESULTS'
+  // "L'Infiltrato" end-game accusation, inserted before FINAL_AWARDS only when a
+  // room has an infiltrator (handled in advancePhase, not the pure sequence).
+  | 'ACCUSE'
   | 'FINAL_AWARDS'
   // 1v1 "Duello" mode phases (run instead of the group sequence when mode==='duello').
   | 'DUEL_PICK'
@@ -47,6 +50,7 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   VOTE_2: 20_000,
   SPEAKER_VOTE: 12_000,
   PHASE_RESULTS: 8_000,
+  ACCUSE: 30_000,
   FINAL_AWARDS: null,
   DUEL_PICK: 20_000,
   DUEL_REVEAL: 5_000,

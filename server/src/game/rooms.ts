@@ -206,6 +206,14 @@ export interface Room {
   knowTargets: Map<string, string>;
   /** Quanto mi conosci: guesser id -> their secret guess of the target's first vote. */
   knowGuesses: Map<string, VoteChoice>;
+  /** "L'Infiltrato": the secret infiltrator's player id, or null when not enabled. */
+  infiltratorId: string | null;
+  /** Rounds the infiltrator overturned the group (minority → majority). */
+  infiltratorFlips: number;
+  /** End-game accusation votes: accuser id -> accused id (ACCUSE phase). */
+  accusations: Map<string, string>;
+  /** Resolved infiltrator outcome, computed on entry to FINAL_AWARDS; null otherwise. */
+  infiltratoResult: InfiltratoResult | null;
   /**
    * Secret votes for the current dilemma, keyed by player id. Holds the first
    * vote during VOTE_1 and the (live, changeable) second vote during VOTE_2 —
@@ -293,11 +301,35 @@ export type StartGameError =
   | 'WRONG_PLAYER_COUNT'
   | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
+  | 'INFILTRATO_NEEDS_PLAYERS'
   | 'ALREADY_STARTED';
 
 export type StartGameResult =
   | { ok: true; room: Room }
   | { ok: false; error: StartGameError };
+
+/** Minimum humans required to enable "L'Infiltrato" (enough to hide + accuse). */
+export const MIN_INFILTRATO_HUMANS = 4;
+
+export type AccuseError = 'ROOM_NOT_FOUND' | 'NOT_ACCUSE_PHASE' | 'NOT_IN_ROOM' | 'INVALID_TARGET';
+
+export type AccuseResult =
+  | { ok: true; room: Room }
+  | { ok: false; error: AccuseError };
+
+/** Public reveal of the infiltrator outcome at FINAL_AWARDS (null in normal games). */
+export interface InfiltratoResult {
+  infiltratorId: string;
+  infiltratorNickname: string;
+  /** Rounds the infiltrator overturned the group (minority became majority). */
+  flips: number;
+  /** True if the group pinned them (unique top of the accusation vote). */
+  caught: boolean;
+  /** True if they overturned at least one round AND evaded detection. */
+  won: boolean;
+  /** How many accusation votes the infiltrator received. */
+  votesAgainst: number;
+}
 
 export type AddBotError = 'ROOM_NOT_FOUND' | 'ROOM_FULL' | 'ALREADY_STARTED';
 
@@ -667,6 +699,9 @@ export class RoomStore {
     // Credit each swing bettor who correctly called whether the lead would change
     // ('ribalta' when it flipped, 'regge' when it held).
     const flipped = this.leadFlipped(room);
+    // "L'Infiltrato" mission: a round where the leading side flipped (the underdog
+    // overturned the favourite) scores for the infiltrator.
+    if (room.infiltratorId && flipped) room.infiltratorFlips++;
     for (const [id, bet] of room.swingBets) {
       if ((bet === 'ribalta') === flipped) {
         const s = ensureStats(room, id);
@@ -761,6 +796,10 @@ export class RoomStore {
       knowRoundIndex: null,
       knowTargets: new Map(),
       knowGuesses: new Map(),
+      infiltratorId: null,
+      infiltratorFlips: 0,
+      accusations: new Map(),
+      infiltratoResult: null,
       votes: new Map(),
       votes1: new Map(),
       defenders: [],
@@ -792,6 +831,7 @@ export class RoomStore {
     dilemmaCount: number,
     register: string = 'misto',
     mode: string = 'gruppo',
+    infiltrato: boolean = false,
   ): StartGameResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
@@ -799,7 +839,8 @@ export class RoomStore {
     if (!isDilemmaCount(dilemmaCount)) return { ok: false, error: 'INVALID_DILEMMA_COUNT' };
     if (!isContentRegister(register)) return { ok: false, error: 'INVALID_REGISTER' };
     if (!isGameMode(mode)) return { ok: false, error: 'INVALID_REGISTER' };
-    const humanCount = [...room.players.values()].filter((p) => !p.isBot).length;
+    const humans = [...room.players.values()].filter((p) => !p.isBot);
+    const humanCount = humans.length;
     if (mode === 'duello') {
       // The duel is strictly two humans (no bot opponent in this slice).
       if (room.players.size !== 2 || humanCount !== 2) {
@@ -810,6 +851,17 @@ export class RoomStore {
       // Solo play is allowed (1 human + bots), but never a bots-only game.
       if (humanCount < 1) return { ok: false, error: 'NO_HUMAN_PLAYERS' };
     }
+    // "L'Infiltrato" needs gruppo + enough humans to hide among and to accuse.
+    const useInfiltrato = infiltrato && mode === 'gruppo';
+    if (useInfiltrato && humanCount < MIN_INFILTRATO_HUMANS) {
+      return { ok: false, error: 'INFILTRATO_NEEDS_PLAYERS' };
+    }
+
+    // Assign a secret infiltrator (a random human) when enabled; reset the role state.
+    room.infiltratorId = useInfiltrato ? humans[Math.floor(this.rng() * humans.length)].id : null;
+    room.infiltratorFlips = 0;
+    room.accusations = new Map();
+    room.infiltratoResult = null;
 
     room.mode = mode;
     room.dilemmaCount = dilemmaCount;
@@ -849,6 +901,15 @@ export class RoomStore {
     // The 1v1 duel runs its own state machine, separate from the group sequence.
     if (room.mode === 'duello') return this.advanceDuelPhase(room);
 
+    // "L'Infiltrato": the end-game accusation leads into FINAL_AWARDS, resolving
+    // whether the infiltrator was caught and whether they won.
+    if (room.phase === 'ACCUSE') {
+      room.phase = 'FINAL_AWARDS';
+      room.phaseExpiresAt = this.expiryFor('FINAL_AWARDS');
+      this.resolveInfiltrato(room);
+      return { ok: true, room };
+    }
+
     // DEFENSE runs one timed turn per defender. While turns remain, advance to
     // the next speaker (re-arming the per-turn timer) instead of leaving the
     // phase; only once every defender has spoken do we fall through to VOTE_2.
@@ -864,6 +925,10 @@ export class RoomStore {
     // with 0 or 1 it's degenerate, so skip straight to the results.
     if (transition.phase === 'SPEAKER_VOTE' && room.defenders.length < 2) {
       transition = nextPhase('SPEAKER_VOTE', transition.dilemmaIndex, room.dilemmaCount ?? 0);
+    }
+    // Detour the end of an infiltrator game through the accusation phase.
+    if (transition.phase === 'FINAL_AWARDS' && room.infiltratorId) {
+      transition = { phase: 'ACCUSE', dilemmaIndex: transition.dilemmaIndex };
     }
     room.phase = transition.phase;
     room.dilemmaIndex = transition.dilemmaIndex;
@@ -1192,6 +1257,71 @@ export class RoomStore {
       const actual = room.votes1.get(targetId) ?? null;
       return { guesserId, targetId, guess, actual, correct: actual != null && guess === actual };
     });
+  }
+
+  /**
+   * Record (or change) an accusation during the ACCUSE phase: who the accuser
+   * thinks the infiltrator is. One vote per accuser, no self-accusation.
+   */
+  accuse(code: string, accuserId: string, accusedId: string): AccuseResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.phase !== 'ACCUSE') return { ok: false, error: 'NOT_ACCUSE_PHASE' };
+    if (!room.players.has(accuserId)) return { ok: false, error: 'NOT_IN_ROOM' };
+    if (!room.players.has(accusedId) || accusedId === accuserId) return { ok: false, error: 'INVALID_TARGET' };
+    room.accusations.set(accuserId, accusedId);
+    return { ok: true, room };
+  }
+
+  /** How many players have accused this game (aggregate only). */
+  accusedCount(code: string): number {
+    return this.rooms.get(code)?.accusations.size ?? 0;
+  }
+
+  /** True once every connected human has accused (ends the ACCUSE phase early). */
+  allAccused(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room) return false;
+    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+    if (humans.length === 0) return false;
+    return humans.every((p) => room.accusations.has(p.id));
+  }
+
+  /** The resolved infiltrator reveal, only at FINAL_AWARDS; null otherwise / normal games. */
+  publicInfiltratoResult(code: string): InfiltratoResult | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'FINAL_AWARDS') return null;
+    return room.infiltratoResult;
+  }
+
+  /**
+   * Resolve the infiltrator outcome from the accusation tally: caught only on a
+   * UNIQUE top accusation that names them; they win if they overturned at least
+   * one round AND evaded that. Stored on the room for the FINAL_AWARDS reveal.
+   */
+  private resolveInfiltrato(room: Room): void {
+    const id = room.infiltratorId;
+    if (!id) {
+      room.infiltratoResult = null;
+      return;
+    }
+    const counts = new Map<string, number>();
+    for (const accused of room.accusations.values()) {
+      counts.set(accused, (counts.get(accused) ?? 0) + 1);
+    }
+    let top = 0;
+    for (const c of counts.values()) if (c > top) top = c;
+    const topAccused = [...counts.entries()].filter(([, c]) => c === top && top > 0).map(([pid]) => pid);
+    const caught = topAccused.length === 1 && topAccused[0] === id;
+    const flips = room.infiltratorFlips;
+    room.infiltratoResult = {
+      infiltratorId: id,
+      infiltratorNickname: room.players.get(id)?.nickname ?? '',
+      flips,
+      caught,
+      won: flips > 0 && !caught,
+      votesAgainst: counts.get(id) ?? 0,
+    };
   }
 
   /**
@@ -1530,6 +1660,7 @@ export class RoomStore {
     room.swingBets.delete(playerId);
     room.knowGuesses.delete(playerId);
     room.knowTargets.delete(playerId);
+    room.accusations.delete(playerId);
     room.speakerVotes.delete(playerId);
     const removed = room.players.delete(playerId);
     if (removed && room.leaderId === playerId) {
