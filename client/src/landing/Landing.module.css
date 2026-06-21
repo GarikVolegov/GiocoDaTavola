@@ -1,6 +1,9 @@
 .page {
   min-height: 100vh;
-  overflow-x: hidden;
+  /* `clip` (not `hidden`) prevents horizontal scroll WITHOUT creating a scroll
+     container — otherwise overflow-x:hidden computes overflow-y:auto and breaks
+     the sticky nav (it would scroll away instead of sticking to the viewport). */
+  overflow-x: clip;
   color: var(--text);
   font-family: var(--font-body);
   background:
