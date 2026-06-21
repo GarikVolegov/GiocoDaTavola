@@ -1,0 +1,23 @@
+.swing { display: inline-flex; flex-direction: column; gap: calc(var(--sw-h, 14px) * 0.6); }
+.ab {
+  display: flex; justify-content: space-between;
+  font-family: var(--font-display); font-weight: 700;
+  font-size: calc(var(--sw-h, 14px) * 1.1);
+}
+.a { color: var(--faction-a); }
+.b { color: var(--faction-b); }
+.bar {
+  position: relative; overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--faction-b-soft);
+  border: 1px solid var(--faction-b-line);
+}
+.fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 50%;
+  background: var(--faction-a-soft);
+  border-right: 2px solid var(--text);
+  transition: width var(--dur-med) var(--ease);
+}
+.anim { animation: swing 4.2s var(--ease) infinite; }
+@keyframes swing { 0%, 100% { width: 36%; } 50% { width: 64%; } }
+@media (prefers-reduced-motion: reduce) { .anim { animation: none; width: 50%; } }
