@@ -1,6 +1,10 @@
-# Design — Fase "Dibattito" a mano alzata (sostituisce DEFENSE a turni fissi)
+# Design — Round auto-paced: Dibattito a mano alzata + voto senza timer
 
 Data: 2026-06-22 · Modalità: **gruppo** (il duello mantiene il suo DUEL_ARGUE per ora)
+
+> Tema unificante: **niente tempi fissi nel round**. Ogni fase avanza quando **tutti i
+> presenti** (connessi) hanno agito; i **bot** contano subito; il **leader** ha sempre un
+> override ("Salta ▶" / "Chiudi dibattito") come rete per AFK/telefono morto.
 
 ## Contesto / problema
 
@@ -89,6 +93,32 @@ chi parla), `queues` (nomi+conteggi per lo schermo), `myHand` (in coda? posizion
   "Abbassa la mano (sei N° in coda)". Leader → **"Salta turno"** + **"Chiudi dibattito"**.
   Non-oratori → barra reazioni (esistente).
 
+## Voto auto-paced (niente timer)
+
+Tutte le fasi a input segreto avanzano **solo** quando ogni presente ha agito —
+`phaseExpiresAt = null` su VOTE_1, VOTE_2, PREDICT, SPEAKER_VOTE (niente auto-advance a
+tempo). "Presente" = connesso: i disconnessi (grace period) **non** bloccano; i **bot**
+agiscono all'ingresso della fase quindi contano subito.
+
+- **VOTE_1**: già esiste `allVoted` (esclude i disconnessi). Si rimuove solo il timer e si
+  mantiene l'early-advance: appena tutti i presenti hanno votato → avanza.
+- **VOTE_2 — conferma esplicita.** Oggi parte pre-riempito col primo voto, quindi
+  risulterebbe "tutto votato" all'istante. Si introduce un set `confirmedVote2:
+  Set<playerId>`: la prima scelta resta pre-selezionata, ma il voto conta solo quando il
+  giocatore **tocca "Confermo"** (o cambia lato, che conferma implicitamente). Avanza
+  quando **tutti i presenti** sono in `confirmedVote2`. I **bot** vi entrano all'ingresso
+  (dopo `applyBotSecondVotes`). `phaseExpiresAt = null`.
+- **PREDICT / SPEAKER_VOTE**: già hanno `allPredicted` / `allSpeakerVoted` (solo umani
+  connessi; i bot non vi partecipano). Si rimuove solo il timer.
+- **Override leader.** Senza tetto, un presente-connesso ma AFK bloccherebbe la fase: il
+  tasto **"Salta ▶"** del leader (`leader:advancePhase`, esistente) resta la rete per
+  forzare l'avanzamento. Se anche il leader è assente la fase attende — tradeoff accettato.
+
+Server: `confirmedVote2` su `Room` (clear su DILEMMA_REVEAL; prune su `leave`). Nuovo
+evento `player:confirmVote` (o riuso di `player:vote` con un flag `confirm`). `game:state`
+espone `confirmedCount` + (per il proprio telefono) `iConfirmed`. Le aggregazioni restano
+solo conteggi — nessun voto individuale esce.
+
 ## Si incastra con l'esistente
 
 - **Reazioni**: invariate, durante ogni intervento.
@@ -107,6 +137,13 @@ Test puri/store in `rooms.test.ts`:
 - `skipTurn`/`closeDebate` (leader).
 - doppio "passo" → fine fase; un lato senza votanti passa sempre.
 - persuasione spalmata su **tutti** gli oratori del lato; candidati miglior-oratore = tutti.
+
+Voto auto-paced:
+- VOTE_1/PREDICT/SPEAKER_VOTE hanno `phaseExpiresAt = null` (nessun auto-advance a tempo);
+  avanzano su tutti-presenti-fatto; un disconnesso non blocca; i bot non bloccano.
+- VOTE_2: `confirmedVote2` parte vuoto (umani); il pre-riempimento NON conta come votato;
+  `confirmVote` aggiunge al set; avanza solo a tutti-i-presenti-confermati; i bot
+  pre-confermati all'ingresso; cambiare lato conferma; clear su nuovo dilemma, prune su leave.
 
 Gate progetto: `typecheck`/`lint`/`test`/`build` verdi.
 End-to-end con `npm run dev`: leader crea, più telefoni alzano la mano, il pavimento
