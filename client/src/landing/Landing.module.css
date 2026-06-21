@@ -1,5 +1,6 @@
 .page {
   min-height: 100vh;
+  overflow-x: hidden;
   color: var(--text);
   font-family: var(--font-body);
   background:
@@ -32,7 +33,7 @@
 /* device showcase */
 .stage { position: relative; display: flex; align-items: flex-end; justify-content: center;
   gap: var(--space-3); min-height: 300px; }
-.tv { flex: 0 0 64%; background: var(--surface); border: 1px solid var(--border);
+.tv { flex: 1 1 56%; min-width: 0; background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-lg); padding: var(--space-4); box-shadow: var(--shadow-card); }
 .deviceLab { font-size: .62rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
 .tvQ { font-size: .95rem; font-weight: 700; margin: var(--space-1) 0 var(--space-3); }
@@ -42,7 +43,7 @@
 .optK { font-weight: 800; font-size: .95rem; opacity: .9; }
 .optA { background: var(--faction-a-soft); border: 1.5px solid var(--faction-a); }
 .optB { background: var(--faction-b-soft); border: 1.5px solid var(--faction-b); }
-.phone { flex: 0 0 22%; background: var(--surface-2); border: 1px solid var(--border);
+.phone { flex: 1 1 20%; min-width: 0; background: var(--surface-2); border: 1px solid var(--border);
   border-radius: var(--radius-lg); padding: var(--space-3) var(--space-2); box-shadow: var(--shadow-card); text-align: center; }
 .phoneBig { font-size: .8rem; font-weight: 800; margin: var(--space-2) 0; }
 .vbtn { border-radius: var(--radius-md); padding: .5rem; margin: var(--space-1) 0; font-weight: 800; }
@@ -51,9 +52,15 @@
 .mic { font-size: 1.6rem; margin: var(--space-2) 0; }
 
 @media (max-width: 780px) {
-  .hero { grid-template-columns: 1fr; }
-  .stage { order: -1; }
+  .nav { padding: var(--space-4); }
   .navLinks a { display: none; }
+  .hero { grid-template-columns: 1fr; gap: var(--space-5); padding: var(--space-5) 0 var(--space-6); }
+  .title { font-size: clamp(2rem, 9vw, 2.8rem); }
+  .lead { font-size: 1.1rem; max-width: none; }
+  /* showcase reflows: TV full width on top, the two phones share a row below */
+  .stage { order: -1; flex-wrap: wrap; align-items: stretch; min-height: 0; }
+  .tv { order: -1; flex: 1 1 100%; }
+  .phone { flex: 1 1 calc(50% - var(--space-3) / 2); }
 }
 
 /* shared section chrome */
