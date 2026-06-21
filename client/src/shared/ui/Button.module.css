@@ -10,7 +10,7 @@
 .btn:disabled { cursor: not-allowed; opacity: 0.5; }
 .md { font-size: var(--text-md); padding: var(--space-3) var(--space-6); }
 .lg { font-size: var(--text-lg); padding: var(--space-4) var(--space-7); }
-.primary { background: var(--faction-a); color: var(--text); }
+.primary { background: var(--faction-a); color: #08122e; }
 .primary:not(:disabled):hover { box-shadow: var(--glow-a); transform: translateY(-2px); }
 .primary:not(:disabled):active { transform: translateY(0) scale(0.98); }
 .ghost { background: var(--surface-2); color: var(--text); }
