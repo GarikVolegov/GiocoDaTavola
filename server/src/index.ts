@@ -48,6 +48,27 @@ const graceTimers = new Map<string, NodeJS.Timeout>();
 // How long a disconnected phone keeps its seat + secret vote before removal.
 const RECONNECT_GRACE_MS = 45_000;
 
+// Safety-net sweep: reap rooms abandoned (no connected humans) for well over the
+// reconnect grace window, in case a per-player grace path missed one (e.g. a
+// bots-only leftover). Skips rooms that still have a pending grace (reconnectable).
+const ABANDONED_ROOM_MAX_IDLE_MS = 5 * 60_000; // 5 min, >> RECONNECT_GRACE_MS
+const ABANDONED_SWEEP_INTERVAL_MS = 60_000;
+
+function hasPendingGrace(code: string): boolean {
+  const room = rooms.get(code);
+  if (!room) return false;
+  for (const id of room.players.keys()) {
+    if (graceTimers.has(id)) return true;
+  }
+  return false;
+}
+
+setInterval(() => {
+  for (const code of rooms.abandonedRooms(ABANDONED_ROOM_MAX_IDLE_MS)) {
+    if (!hasPendingGrace(code)) reapRoom(code);
+  }
+}, ABANDONED_SWEEP_INTERVAL_MS).unref(); // .unref so the timer never blocks exit
+
 function cancelGrace(playerId: string): void {
   const t = graceTimers.get(playerId);
   if (t) {
@@ -150,6 +171,21 @@ function clearPhaseTimer(code: string): void {
   }
 }
 
+// Drop a deleted room's leftover reconnect tokens so they don't accumulate.
+function pruneTokensForRoom(code: string): void {
+  for (const [tok, v] of tokens) {
+    if (v.code === code) tokens.delete(tok);
+  }
+}
+
+// Reap a dead room: stop its phase timer, drop its tokens, remove it from memory.
+function reapRoom(code: string): void {
+  clearPhaseTimer(code);
+  pruneTokensForRoom(code);
+  rooms.delete(code);
+  console.log('[server] reaped abandoned room', code);
+}
+
 // Schedule the next auto-advance from the room's server-side expiry. Replaces
 // any existing timer; phases with no timer (FINAL_AWARDS) end the chain.
 function schedulePhase(code: string): void {
@@ -158,6 +194,9 @@ function schedulePhase(code: string): void {
   if (!room || room.phaseExpiresAt == null) return;
   const delay = Math.max(0, room.phaseExpiresAt - Date.now());
   const timer = setTimeout(() => {
+    // If a manual advance (leader/host) already replaced this timer, this stale
+    // callback must not advance the phase a second time.
+    if (phaseTimers.get(code) !== timer) return;
     phaseTimers.delete(code);
     advanceAndBroadcast(code);
   }, delay);
@@ -489,6 +528,12 @@ io.on('connection', (socket) => {
         if (tok) tokens.delete(tok);
         const wasLeader = rooms.isLeader(code, playerId);
         rooms.leave(code, playerId);
+        // Last one out: reap the now-empty room (no slots left to reconnect to)
+        // so it doesn't linger in memory with its phase timer still cycling.
+        if (rooms.get(code) && rooms.get(code)!.players.size === 0) {
+          reapRoom(code);
+          return;
+        }
         broadcastLobby(code);
         if (rooms.get(code) && isVotingPhase(rooms.get(code)!.phase)) refreshAfterRosterChange(code);
         if (wasLeader) broadcastGameState(code);
