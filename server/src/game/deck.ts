@@ -57,6 +57,11 @@ export class Deck {
     return this.remaining.length;
   }
 
+  /** A copy of the cards still available to draw (for snapshotting the deck). */
+  get cards(): Dilemma[] {
+    return [...this.remaining];
+  }
+
   /** Draw one random dilemma (without repeats), or null if the deck is empty. */
   draw(): Dilemma | null {
     if (this.remaining.length === 0) return null;

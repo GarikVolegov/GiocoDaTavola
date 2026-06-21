@@ -148,3 +148,18 @@ describe('spunti per lato', () => {
     }
   });
 });
+
+describe('Deck.cards (snapshot support)', () => {
+  it('exposes the remaining cards and shrinks as they are drawn', () => {
+    const deck = new Deck(fixture, () => 0);
+    expect(deck.cards.map((c) => c.id)).toEqual(['a', 'b', 'c']);
+    deck.draw(); // rng=0 picks index 0 -> 'a'
+    expect(deck.cards.map((c) => c.id)).toEqual(['b', 'c']);
+  });
+
+  it('returns a copy (mutating the result does not change the deck)', () => {
+    const deck = new Deck(fixture);
+    deck.cards.pop();
+    expect(deck.remainingCount).toBe(fixture.length);
+  });
+});
