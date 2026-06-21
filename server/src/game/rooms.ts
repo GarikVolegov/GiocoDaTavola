@@ -214,6 +214,8 @@ export interface Room {
   accusations: Map<string, string>;
   /** Resolved infiltrator outcome, computed on entry to FINAL_AWARDS; null otherwise. */
   infiltratoResult: InfiltratoResult | null;
+  /** "Squadre" mode: player id -> team colour. Empty when teams are off. */
+  teams: Map<string, Team>;
   /**
    * Secret votes for the current dilemma, keyed by player id. Holds the first
    * vote during VOTE_1 and the (live, changeable) second vote during VOTE_2 —
@@ -302,6 +304,7 @@ export type StartGameError =
   | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
   | 'INFILTRATO_NEEDS_PLAYERS'
+  | 'SQUADRE_NEEDS_PLAYERS'
   | 'ALREADY_STARTED';
 
 export type StartGameResult =
@@ -311,11 +314,23 @@ export type StartGameResult =
 /** Minimum humans required to enable "L'Infiltrato" (enough to hide + accuse). */
 export const MIN_INFILTRATO_HUMANS = 4;
 
+/** Minimum players required to enable "Squadre" (two teams of at least two). */
+export const MIN_SQUADRE_PLAYERS = 4;
+
 export type AccuseError = 'ROOM_NOT_FOUND' | 'NOT_ACCUSE_PHASE' | 'NOT_IN_ROOM' | 'INVALID_TARGET';
 
 export type AccuseResult =
   | { ok: true; room: Room }
   | { ok: false; error: AccuseError };
+
+/** "Squadre" team colour. */
+export type Team = 'blu' | 'arancio';
+
+/** Public team assignments + running scores (sum of members' persuasion). */
+export interface TeamState {
+  assignments: Array<{ playerId: string; nickname: string; team: Team }>;
+  scores: { blu: number; arancio: number };
+}
 
 /** Public reveal of the infiltrator outcome at FINAL_AWARDS (null in normal games). */
 export interface InfiltratoResult {
@@ -800,6 +815,7 @@ export class RoomStore {
       infiltratorFlips: 0,
       accusations: new Map(),
       infiltratoResult: null,
+      teams: new Map(),
       votes: new Map(),
       votes1: new Map(),
       defenders: [],
@@ -832,6 +848,7 @@ export class RoomStore {
     register: string = 'misto',
     mode: string = 'gruppo',
     infiltrato: boolean = false,
+    squadre: boolean = false,
   ): StartGameResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
@@ -856,12 +873,24 @@ export class RoomStore {
     if (useInfiltrato && humanCount < MIN_INFILTRATO_HUMANS) {
       return { ok: false, error: 'INFILTRATO_NEEDS_PLAYERS' };
     }
+    // "Squadre" needs gruppo + enough players for two teams.
+    const useSquadre = squadre && mode === 'gruppo';
+    if (useSquadre && room.players.size < MIN_SQUADRE_PLAYERS) {
+      return { ok: false, error: 'SQUADRE_NEEDS_PLAYERS' };
+    }
 
     // Assign a secret infiltrator (a random human) when enabled; reset the role state.
     room.infiltratorId = useInfiltrato ? humans[Math.floor(this.rng() * humans.length)].id : null;
     room.infiltratorFlips = 0;
     room.accusations = new Map();
     room.infiltratoResult = null;
+    // Split players into two teams (alternating by join order) when enabled.
+    room.teams = new Map();
+    if (useSquadre) {
+      [...room.players.values()].forEach((p, i) => {
+        room.teams.set(p.id, i % 2 === 0 ? 'blu' : 'arancio');
+      });
+    }
 
     room.mode = mode;
     room.dilemmaCount = dilemmaCount;
@@ -1295,6 +1324,21 @@ export class RoomStore {
   }
 
   /**
+   * Public "Squadre" state: each player's team + the running team scores (sum of
+   * members' persuasion). null when teams are off. Teams are public by design.
+   */
+  publicTeams(code: string): TeamState | null {
+    const room = this.rooms.get(code);
+    if (!room || room.teams.size === 0) return null;
+    const scores: { blu: number; arancio: number } = { blu: 0, arancio: 0 };
+    const assignments = [...room.teams].map(([playerId, team]) => {
+      scores[team] += room.stats.get(playerId)?.persuasion ?? 0;
+      return { playerId, nickname: room.players.get(playerId)?.nickname ?? '', team };
+    });
+    return { assignments, scores };
+  }
+
+  /**
    * Resolve the infiltrator outcome from the accusation tally: caught only on a
    * UNIQUE top accusation that names them; they win if they overturned at least
    * one round AND evaded that. Stored on the room for the FINAL_AWARDS reveal.
@@ -1661,6 +1705,7 @@ export class RoomStore {
     room.knowGuesses.delete(playerId);
     room.knowTargets.delete(playerId);
     room.accusations.delete(playerId);
+    room.teams.delete(playerId);
     room.speakerVotes.delete(playerId);
     const removed = room.players.delete(playerId);
     if (removed && room.leaderId === playerId) {
