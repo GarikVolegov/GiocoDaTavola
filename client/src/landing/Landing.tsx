@@ -9,10 +9,12 @@ import FinalCta from './sections/FinalCta';
 import styles from './Landing.module.css';
 
 // Marketing landing on `/`: describes the game and funnels to play.
-// CTAs route to /host (Crea) and /join (Partecipa) — unchanged targets.
+// "Crea" routes to the phone create flow (/join?create=1) — the creator becomes
+// the room's leader on their own phone. "Partecipa" routes to /join. The TV view
+// stays reachable directly at /host?code= for anyone who wants a shared screen.
 export default function Landing() {
   const navigate = useNavigate();
-  const create = () => navigate('/host');
+  const create = () => navigate('/join?create=1');
   const join = () => navigate('/join');
 
   return (

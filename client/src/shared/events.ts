@@ -2,10 +2,10 @@
 // Keep these in sync with the server handlers in server/src/index.ts.
 
 export const SocketEvents = {
-  /** Host asks the server to create (or recover) its room. */
-  HostCreateRoom: 'host:createRoom',
-  /** Server tells the host which room code to display. */
-  HostRoomCreated: 'host:roomCreated',
+  /** A player creates a room from their phone and becomes its leader. */
+  PlayerCreateRoom: 'player:createRoom',
+  /** A spectator screen (TV) attaches to an existing room, read-only. */
+  SpectatorJoin: 'spectator:join',
   /** Player asks to join a room with a code + nickname. */
   PlayerJoin: 'player:join',
   /** Server confirms the join to the joining player. */
@@ -14,16 +14,16 @@ export const SocketEvents = {
   PlayerJoinError: 'player:joinError',
   /** Server broadcasts the current lobby roster to everyone in the room. */
   LobbyUpdate: 'lobby:update',
-  /** Host starts the game, choosing how many dilemmas to play. */
-  HostStartGame: 'host:startGame',
+  /** Leader starts the game, choosing how many dilemmas to play. */
+  LeaderStartGame: 'leader:startGame',
   /** Server rejects the start (not enough players, bad count, already started). */
-  HostStartError: 'host:startError',
-  /** Host force-advances the state machine, skipping the current countdown. */
-  HostAdvancePhase: 'host:advancePhase',
-  /** Host adds a server-driven bot to fill a seat (Fase B). */
-  HostAddBot: 'host:addBot',
-  /** Host removes a bot by id (Fase B). */
-  HostRemoveBot: 'host:removeBot',
+  LeaderStartError: 'leader:startError',
+  /** Leader force-advances the state machine, skipping the current countdown. */
+  LeaderAdvancePhase: 'leader:advancePhase',
+  /** Leader adds a server-driven bot to fill a seat. */
+  LeaderAddBot: 'leader:addBot',
+  /** Leader removes a bot by id. */
+  LeaderRemoveBot: 'leader:removeBot',
   /** Server broadcasts the current game phase to everyone in the room. */
   GameState: 'game:state',
   /** Player casts (or changes) a secret A/B vote from their phone. */
@@ -120,10 +120,6 @@ export type GamePhase =
   | 'DUEL_REPICK'
   | 'DUEL_RESULT'
   | 'FINAL_DUEL';
-
-export interface RoomCreatedPayload {
-  code: string;
-}
 
 export interface PlayerJoinPayload {
   code: string;
@@ -314,6 +310,8 @@ export interface GameStatePayload {
   awards: Award[] | null;
   /** Game mode of the room; 'gruppo' until/unless a duel is started. */
   mode: GameMode;
+  /** The leader-player's id (drives the game); null until a leader exists. */
+  leaderId: string | null;
   /** Duel: both picks + agreement, shown only in DUEL_REVEAL; null otherwise. */
   duelReveal: DuelReveal | null;
   /** Duel: current arguer + turn, shown only in DUEL_ARGUE; null otherwise. */
