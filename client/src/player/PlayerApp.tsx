@@ -41,11 +41,14 @@ import {
   type Reaction,
   type BlindSpot,
   MAX_SUBMISSIONS_PER_PLAYER,
+  MIN_INFILTRATO_HUMANS,
   SUBMIT_DILEMMA_ERROR_MESSAGES,
   type PlayerDilemmaSubmittedPayload,
   type PlayerSubmitDilemmaErrorPayload,
   type PlayerKnowGuessedPayload,
   type PlayerKnowGuessResultPayload,
+  type PlayerInfiltratoRolePayload,
+  type PlayerAccusedPayload,
 } from '../shared/events';
 import { Card, Pill, Button, Alert, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel } from '../shared/ui';
 import { useAuth, Show, SignInButton } from '@clerk/react';
@@ -160,6 +163,8 @@ export default function PlayerApp() {
   const [swingBetResult, setSwingBetResult] = useState<PlayerSwingBetResultPayload | null>(null);
   const [knowGuess, setKnowGuess] = useState<VoteChoice | null>(null);
   const [knowResult, setKnowResult] = useState<PlayerKnowGuessResultPayload | null>(null);
+  const [infiltratoRole, setInfiltratoRole] = useState<PlayerInfiltratoRolePayload | null>(null);
+  const [myAccusation, setMyAccusation] = useState<string | null>(null);
   const [speakerVote, setSpeakerVote] = useState<string | null>(null);
   // Player-written dilemmas (lobby): the draft form + how many we've added.
   const [dilemmaText, setDilemmaText] = useState('');
@@ -171,6 +176,7 @@ export default function PlayerApp() {
   const [format, setFormat] = useState<SessionFormat>('classica');
   const [register, setRegister] = useState<ContentRegister>('misto');
   const [gameMode, setGameMode] = useState<GameMode>('gruppo');
+  const [infiltratoOn, setInfiltratoOn] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   // Current credentials, kept in a ref so the socket 'connect' handler can
   // re-claim the seat after a network blip without re-subscribing.
@@ -219,6 +225,8 @@ export default function PlayerApp() {
     const onSwingBetResult = (payload: PlayerSwingBetResultPayload) => setSwingBetResult(payload);
     const onKnowGuessed = ({ choice }: PlayerKnowGuessedPayload) => setKnowGuess(choice);
     const onKnowGuessResult = (payload: PlayerKnowGuessResultPayload) => setKnowResult(payload);
+    const onInfiltratoRole = (payload: PlayerInfiltratoRolePayload) => setInfiltratoRole(payload);
+    const onAccused = ({ accusedId }: PlayerAccusedPayload) => setMyAccusation(accusedId);
     const onSpeakerVoted = ({ defenderId }: PlayerSpeakerVotedPayload) => setSpeakerVote(defenderId);
     const onDilemmaSubmitted = ({ count }: PlayerDilemmaSubmittedPayload) => {
       setMySubmitted(count);
@@ -235,6 +243,8 @@ export default function PlayerApp() {
     socket.on(SocketEvents.PlayerSwingBetResult, onSwingBetResult);
     socket.on(SocketEvents.PlayerKnowGuessed, onKnowGuessed);
     socket.on(SocketEvents.PlayerKnowGuessResult, onKnowGuessResult);
+    socket.on(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
+    socket.on(SocketEvents.PlayerAccused, onAccused);
     socket.on(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
     socket.on(SocketEvents.PlayerSubmitDilemmaError, onSubmitDilemmaError);
     socket.on(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
@@ -277,6 +287,8 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerSwingBetResult, onSwingBetResult);
       socket.off(SocketEvents.PlayerKnowGuessed, onKnowGuessed);
       socket.off(SocketEvents.PlayerKnowGuessResult, onKnowGuessResult);
+      socket.off(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
+      socket.off(SocketEvents.PlayerAccused, onAccused);
       socket.off(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
       socket.off(SocketEvents.PlayerSubmitDilemmaError, onSubmitDilemmaError);
       socket.off(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
@@ -418,7 +430,13 @@ export default function PlayerApp() {
       dilemmaCount: FORMAT_DILEMMA_COUNT[format],
       register,
       mode: gameMode,
+      infiltrato: gameMode === 'gruppo' && infiltratoOn,
     });
+  };
+  const castAccuse = (accusedId: string) => {
+    setMyAccusation(accusedId); // optimistic; confirmed via player:accused
+    buzz(25);
+    getSocket().emit(SocketEvents.PlayerAccuse, { accusedId });
   };
   const addBot = () => getSocket().emit(SocketEvents.LeaderAddBot);
   const removeBot = (id: string) => getSocket().emit(SocketEvents.LeaderRemoveBot, { id });
@@ -939,6 +957,62 @@ export default function PlayerApp() {
     );
   }
 
+  if (joinedCode && phase === 'ACCUSE') {
+    const candidates = players.filter((p) => p.id !== playerId);
+    return (
+      <main style={wrap}>
+        <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.ACCUSE}</h1>
+        <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
+          🕵️ Chi ha cercato di ribaltare il gruppo?
+        </p>
+        {remaining != null && (
+          <div
+            aria-label="Tempo rimanente"
+            style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+          >
+            {remaining}s
+          </div>
+        )}
+        <div
+          role="group"
+          aria-label="La tua accusa"
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'min(90vw, 22rem)' }}
+        >
+          {candidates.map((p) => {
+            const selected = myAccusation === p.id;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => castAccuse(p.id)}
+                aria-pressed={selected}
+                style={{
+                  padding: '0.9rem 1.1rem',
+                  borderRadius: '0.8rem',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '1.05rem',
+                  color: 'inherit',
+                  textAlign: 'left',
+                  background: selected ? 'rgba(168,130,255,0.32)' : 'rgba(168,130,255,0.12)',
+                  border: `2px solid rgba(168,130,255,${selected ? 0.9 : 0.4})`,
+                }}
+              >
+                {p.nickname}
+                {p.isBot ? ' 🤖' : ''}
+              </button>
+            );
+          })}
+        </div>
+        {myAccusation ? (
+          <p style={{ opacity: 0.8, margin: 0 }}>Accusa registrata. Vediamo chi era… 👀</p>
+        ) : (
+          <p style={{ opacity: 0.7, margin: 0 }}>Tocca chi sospetti.</p>
+        )}
+      </main>
+    );
+  }
+
   if (joinedCode && phase !== 'LOBBY') {
     return (
       <main style={wrap}>
@@ -952,9 +1026,20 @@ export default function PlayerApp() {
           </div>
         )}
         {phase === 'PHASE_INTRO' ? (
-          <p style={{ fontSize: '1.15rem', fontWeight: 600, margin: 0, maxWidth: '22rem' }}>
-            🎯 {OBJECTIVE}
-          </p>
+          <>
+            {infiltratoRole && (
+              <Card
+                glow="accent"
+                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.4rem', textAlign: 'center' }}
+              >
+                <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>🕵️ Sei l'Infiltrato!</p>
+                <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.9 }}>{infiltratoRole.mission}</p>
+              </Card>
+            )}
+            <p style={{ fontSize: '1.15rem', fontWeight: 600, margin: 0, maxWidth: '22rem' }}>
+              🎯 {OBJECTIVE}
+            </p>
+          </>
         ) : phase === 'DILEMMA_REVEAL' ? (
           game?.dilemma && <DilemmaCard dilemma={game.dilemma} />
         ) : phase === 'SPLIT_REVEAL' ? (
@@ -989,6 +1074,23 @@ export default function PlayerApp() {
           </>
         ) : phase === 'FINAL_AWARDS' ? (
           <>
+            {game?.infiltratoResult && (
+              <Card
+                glow={game.infiltratoResult.won ? 'a' : 'accent'}
+                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.4rem', textAlign: 'center' }}
+              >
+                <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>
+                  🕵️ L'infiltrato era <strong>{game.infiltratoResult.infiltratorNickname}</strong>
+                </p>
+                <p style={{ margin: 0, fontSize: '1rem', opacity: 0.95 }}>
+                  {game.infiltratoResult.won
+                    ? `Ha vinto! Ha ribaltato ${game.infiltratoResult.flips} round senza farsi scoprire.`
+                    : game.infiltratoResult.caught
+                      ? 'Smascherato dal gruppo! 🎉'
+                      : 'Non è riuscito nella missione.'}
+                </p>
+              </Card>
+            )}
             {game?.awards && <AwardsPanel awards={game.awards} />}
             {blindSpot && (
               <Card
@@ -1225,6 +1327,24 @@ export default function PlayerApp() {
                 ))}
               </div>
             </div>
+
+            {gameMode === 'gruppo' && (
+              <div style={{ width: '100%' }}>
+                <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità speciale</p>
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <Pill
+                    selected={infiltratoOn}
+                    onClick={() => setInfiltratoOn((v) => !v)}
+                    aria-label="L'Infiltrato (un giocatore segreto)"
+                  >
+                    🕵️ L'Infiltrato {infiltratoOn ? 'ON' : 'OFF'}
+                  </Pill>
+                </div>
+                <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
+                  Un giocatore segreto deve ribaltare il gruppo · servono ≥{MIN_INFILTRATO_HUMANS} persone
+                </p>
+              </div>
+            )}
 
             <Button variant="ghost" onClick={addBot} disabled={!canAddBot}>
               + Aggiungi bot 🤖

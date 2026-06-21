@@ -277,6 +277,36 @@ export default function HostApp() {
 
         {phase === 'PHASE_RESULTS' && swing && <ResultsPanel swing={swing} />}
 
+        {phase === 'ACCUSE' && (
+          <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
+            🕵️ Accusate dal telefono: chi era l'infiltrato? · {game.accusedCount}/{players.length}
+          </p>
+        )}
+
+        {phase === 'FINAL_AWARDS' && game.infiltratoResult && (
+          <div
+            style={{
+              padding: '1rem 1.6rem',
+              borderRadius: '1rem',
+              textAlign: 'center',
+              background: 'rgba(168,130,255,0.16)',
+              border: '2px solid rgba(168,130,255,0.5)',
+            }}
+          >
+            <p style={{ margin: 0, fontSize: '1.8rem', fontWeight: 800 }}>
+              🕵️ L'infiltrato era{' '}
+              <span style={{ color: '#ffd36b' }}>{game.infiltratoResult.infiltratorNickname}</span>
+            </p>
+            <p style={{ margin: '0.4rem 0 0', fontSize: '1.3rem' }}>
+              {game.infiltratoResult.won
+                ? `Ha vinto! ${game.infiltratoResult.flips} ribaltoni, mai scoperto.`
+                : game.infiltratoResult.caught
+                  ? 'Smascherato dal gruppo! 🎉'
+                  : 'Missione fallita.'}
+            </p>
+          </div>
+        )}
+
         {phase === 'FINAL_AWARDS' && awards && <AwardsPanel awards={awards} />}
 
         {phase === 'DUEL_PICK' && (
