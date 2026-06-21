@@ -90,6 +90,10 @@ function isVoteChoice(c: string): c is VoteChoice {
   return c === 'A' || c === 'B';
 }
 
+function isSwingBet(b: string): b is SwingBet {
+  return b === 'ribalta' || b === 'regge';
+}
+
 export interface Player {
   /** Stable, public per-player id (NOT the socket id and NOT the reconnect
    * token): survives reconnects so votes/stats keyed by it persist, and the
@@ -230,6 +234,13 @@ export interface Room {
    */
   predictions: Map<string, VoteChoice>;
   /**
+   * Secret swing bets for the current round (PREDICT phase): 'ribalta' = the
+   * leading side will change after the defenses, 'regge' = it'll hold. Like
+   * predictions, only the aggregate count is public and each bettor learns only
+   * their OWN result. Cleared each DILEMMA_REVEAL; pruned when a player leaves.
+   */
+  swingBets: Map<string, SwingBet>;
+  /**
    * Secret peer votes for the most convincing defender this round, keyed by voter
    * id with the chosen defender's id as value (SPEAKER_VOTE phase). Aggregate only
    * (we expose the candidate list + a count, never who voted whom). Cleared each
@@ -306,6 +317,31 @@ export interface PredictionResult {
   predicted: VoteChoice;
   /** The post-defense (second-vote) majority side, or null on a tie. */
   actual: VoteChoice | null;
+  correct: boolean;
+}
+
+/**
+ * A secret bet, placed during PREDICT, on whether the leading side will change
+ * after the defenses: 'ribalta' (the majority flips) vs 'regge' (it holds).
+ */
+export type SwingBet = 'ribalta' | 'regge';
+
+export type SwingBetError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_PREDICT_PHASE'
+  | 'NOT_IN_ROOM'
+  | 'INVALID_BET';
+
+export type SwingBetResult =
+  | { ok: true; room: Room }
+  | { ok: false; error: SwingBetError };
+
+/** One bettor's swing-bet outcome, revealed privately to them at PHASE_RESULTS. */
+export interface SwingBetOutcome {
+  playerId: string;
+  bet: SwingBet;
+  /** Whether the leading side actually changed (pre- vs post-defense). */
+  flipped: boolean;
   correct: boolean;
 }
 
@@ -522,6 +558,15 @@ export class RoomStore {
         s.correctPredictions = (s.correctPredictions ?? 0) + 1;
       }
     }
+    // Credit each swing bettor who correctly called whether the lead would change
+    // ('ribalta' when it flipped, 'regge' when it held).
+    const flipped = this.leadFlipped(room);
+    for (const [id, bet] of room.swingBets) {
+      if ((bet === 'ribalta') === flipped) {
+        const s = ensureStats(room, id);
+        s.correctSwingBets = (s.correctSwingBets ?? 0) + 1;
+      }
+    }
     // Credit each defender with the peer "best speaker" votes they received.
     for (const defenderId of room.speakerVotes.values()) {
       const s = ensureStats(room, defenderId);
@@ -596,6 +641,7 @@ export class RoomStore {
       duelAgreements: 0,
       lastReactionAt: new Map(),
       predictions: new Map(),
+      swingBets: new Map(),
       speakerVotes: new Map(),
     };
     this.rooms.set(code, room);
@@ -691,6 +737,7 @@ export class RoomStore {
       room.votes.clear();
       room.votes1.clear();
       room.predictions.clear();
+      room.swingBets.clear();
       room.speakerVotes.clear();
     }
     // Entering DEFENSE picks the defenders from this round's votes and starts at
@@ -824,6 +871,62 @@ export class RoomStore {
       actual,
       correct: actual != null && predicted === actual,
     }));
+  }
+
+  /**
+   * Record (or change) a player's secret swing bet during PREDICT: whether the
+   * leading side will change after the defenses. Overwritable until the phase
+   * ends; never leaves the server as an identity (only the aggregate count, plus
+   * each bettor's own result at PHASE_RESULTS).
+   */
+  swingBet(code: string, playerId: string, bet: string): SwingBetResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.phase !== 'PREDICT') return { ok: false, error: 'NOT_PREDICT_PHASE' };
+    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
+    if (!isSwingBet(bet)) return { ok: false, error: 'INVALID_BET' };
+    room.swingBets.set(playerId, bet);
+    return { ok: true, room };
+  }
+
+  /** How many players have placed a swing bet this round (aggregate only). */
+  swingBetCount(code: string): number {
+    return this.rooms.get(code)?.swingBets.size ?? 0;
+  }
+
+  /** True once every CONNECTED HUMAN has placed a swing bet (mirror of allPredicted). */
+  allSwingBet(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room) return false;
+    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+    if (humans.length === 0) return false;
+    return humans.every((p) => room.swingBets.has(p.id));
+  }
+
+  /**
+   * Each bettor's own swing-bet outcome for the just-finished round, for the
+   * private `player:swingBetResult` emit at PHASE_RESULTS.
+   */
+  swingBetResults(code: string): SwingBetOutcome[] {
+    const room = this.rooms.get(code);
+    if (!room) return [];
+    const flipped = this.leadFlipped(room);
+    return [...room.swingBets].map(([playerId, bet]) => ({
+      playerId,
+      bet,
+      flipped,
+      correct: (bet === 'ribalta') === flipped,
+    }));
+  }
+
+  /**
+   * Whether the leading side changed between the first vote (votes1) and the
+   * second (votes) — a tie counts as its own "side", so A→tie or tie→A both flip.
+   */
+  private leadFlipped(room: Room): boolean {
+    const lead = (t: VoteTally): VoteChoice | null =>
+      t.A > t.B ? 'A' : t.B > t.A ? 'B' : null;
+    return lead(RoomStore.tally(room.votes1)) !== lead(RoomStore.tally(room.votes));
   }
 
   /**
@@ -1141,6 +1244,7 @@ export class RoomStore {
     room.votes.delete(playerId);
     room.votes1.delete(playerId);
     room.predictions.delete(playerId);
+    room.swingBets.delete(playerId);
     room.speakerVotes.delete(playerId);
     return room.players.delete(playerId);
   }

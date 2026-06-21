@@ -37,6 +37,11 @@ export interface PlayerStats {
    * did NOT vote). A subset of `persuasion`. Optional + only set once non-zero.
    */
   devilPersuasion?: number;
+  /**
+   * Rounds this player correctly bet whether the leading side would change after
+   * the defenses (PREDICT phase swing bet). Optional + only set once non-zero.
+   */
+  correctSwingBets?: number;
 }
 
 /** The fun end-of-game superlatives (persuasion-themed). */
@@ -49,7 +54,8 @@ export type AwardId =
   | 'beniamino'
   | 'oracolo'
   | 'oratore'
-  | 'voltagabbana';
+  | 'voltagabbana'
+  | 'sensitivo';
 
 /** An award and who won it. Only awards with a real winner are ever returned. */
 export interface Award {
@@ -120,6 +126,9 @@ export function computeAwards(room: Room): Award[] {
     { id: 'voltagabbana', title: 'Il Voltagabbana', emoji: '🎭',
       description: 'Ha spostato più voti difendendo il lato che NON aveva votato.',
       winner: winnerBy((s) => s.devilPersuasion ?? 0, (s) => (s.devilPersuasion ?? 0) > 0) },
+    { id: 'sensitivo', title: 'Il Sensitivo', emoji: '🎰',
+      description: 'Ha indovinato più spesso se il gruppo si sarebbe ribaltato.',
+      winner: winnerBy((s) => s.correctSwingBets ?? 0, (s) => (s.correctSwingBets ?? 0) > 0) },
   ];
   return defs.filter((d): d is Award => d.winner !== null);
 }
