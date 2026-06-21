@@ -17,6 +17,7 @@ import {
   type VoteChoice,
   type PlayerVotedPayload,
   type PlayerVoteErrorPayload,
+  type BlindSpot,
 } from '../shared/events';
 import { Card } from '../shared/ui';
 
@@ -84,6 +85,7 @@ export default function PlayerApp() {
   const [game, setGame] = useState<GameStatePayload | null>(null);
   const [vote, setVote] = useState<VoteChoice | null>(null);
   const [voteError, setVoteError] = useState<string | null>(null);
+  const [blindSpot, setBlindSpot] = useState<BlindSpot | null>(null);
   // Current credentials, kept in a ref so the socket 'connect' handler can
   // re-claim the seat after a network blip without re-subscribing.
   const credsRef = useRef<SavedSession | null>(null);
@@ -118,6 +120,8 @@ export default function PlayerApp() {
     };
     const onVoteError = ({ error }: PlayerVoteErrorPayload) =>
       setVoteError(VOTE_ERROR_MESSAGES[error] ?? 'Voto non riuscito');
+    const onBlindSpot = (tip: BlindSpot) => setBlindSpot(tip);
+    socket.on(SocketEvents.PlayerBlindSpot, onBlindSpot);
     // On every (re)connect, if we hold a token, reclaim the same seat. Covers
     // socket-level reconnects (network blip) without a page reload.
     const onConnect = () => {
@@ -148,6 +152,7 @@ export default function PlayerApp() {
       socket.off(SocketEvents.GameState, onGameState);
       socket.off(SocketEvents.PlayerVoted, onVoted);
       socket.off(SocketEvents.PlayerVoteError, onVoteError);
+      socket.off(SocketEvents.PlayerBlindSpot, onBlindSpot);
       socket.off('connect', onConnect);
     };
   }, []);
@@ -161,6 +166,7 @@ export default function PlayerApp() {
     setGame(null);
     setPlayers([]);
     setVote(null);
+    setBlindSpot(null);
   };
 
   const phase = game?.phase ?? 'LOBBY';
@@ -425,9 +431,21 @@ export default function PlayerApp() {
               : `${switched} ${switched === 1 ? 'persona ha' : 'persone hanno'} cambiato idea dopo le difese!`}
           </p>
         ) : phase === 'FINAL_AWARDS' ? (
-          <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
-            🏆 Guarda i premi sullo schermo!
-          </p>
+          <>
+            <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
+              🏆 Guarda i premi sullo schermo!
+            </p>
+            {blindSpot && (
+              <Card
+                glow="accent"
+                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'left' }}
+              >
+                <h3 style={{ margin: 0, fontSize: '1.05rem' }}>🔭 Il tuo punto cieco</h3>
+                <p style={{ margin: 0, fontWeight: 700 }}>{blindSpot.title}</p>
+                <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.9 }}>{blindSpot.advice}</p>
+              </Card>
+            )}
+          </>
         ) : phase === 'FINAL_DUEL' ? (
           <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
             🏆 Guarda il risultato sullo schermo!
