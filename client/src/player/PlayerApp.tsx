@@ -468,7 +468,7 @@ export default function PlayerApp() {
         >
           {(['A', 'B'] as const).map((letter) => {
             const selected = vote === letter;
-            const accent = letter === 'A' ? '79,140,255' : '255,140,79';
+            const accent = letter === 'A' ? '84,134,196' : '199,122,69';
             return (
               <button
                 key={letter}
@@ -633,7 +633,7 @@ export default function PlayerApp() {
             <ReactionBar onReact={sendReaction} />
           </>
         ) : (
-          <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>Guarda lo schermo condiviso 👀</p>
+          <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>Guarda lo schermo condiviso.</p>
         )}
         {skipButton}
       </main>
@@ -646,7 +646,7 @@ export default function PlayerApp() {
       <main style={wrap}>
         <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.SPEAKER_VOTE}</h1>
         <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
-          🎤 Chi è stato più convincente?
+          Chi è stato più convincente?
         </p>
         {remaining != null && (
           <div
@@ -657,7 +657,7 @@ export default function PlayerApp() {
           </div>
         )}
         {candidates.length === 0 ? (
-          <p style={{ opacity: 0.8, margin: 0 }}>Hai parlato tu: guarda lo schermo 👀</p>
+          <p style={{ opacity: 0.8, margin: 0 }}>Hai parlato tu: guarda lo schermo.</p>
         ) : (
           <div
             role="group"
@@ -666,7 +666,7 @@ export default function PlayerApp() {
           >
             {candidates.map((d) => {
               const selected = speakerVote === d.id;
-              const accent = d.side === 'A' ? '79,140,255' : '255,140,79';
+              const accent = d.side === 'A' ? '84,134,196' : '199,122,69';
               return (
                 <button
                   key={d.id}
@@ -708,7 +708,7 @@ export default function PlayerApp() {
       <main style={wrap}>
         <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.PREDICT}</h1>
         <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
-          🔮 Chi vincerà <em>dopo</em> le difese?
+          Chi vincerà <em>dopo</em> le difese?
         </p>
         {remaining != null && (
           <div
@@ -725,7 +725,7 @@ export default function PlayerApp() {
         >
           {(['A', 'B'] as const).map((letter) => {
             const selected = predicted === letter;
-            const accent = letter === 'A' ? '79,140,255' : '255,140,79';
+            const accent = letter === 'A' ? '84,134,196' : '199,122,69';
             return (
               <button
                 key={letter}
@@ -756,7 +756,7 @@ export default function PlayerApp() {
         </div>
         {predicted ? (
           <p style={{ opacity: 0.8, margin: 0 }}>
-            Hai pronosticato <strong>{predicted}</strong>. Vediamo se indovini 👀
+            Hai pronosticato <strong>{predicted}</strong>. Vediamo se indovini!
           </p>
         ) : (
           <p style={{ opacity: 0.7, margin: 0 }}>Scegli chi pensi convincerà di più.</p>
@@ -867,7 +867,7 @@ export default function PlayerApp() {
             )}
             <Show when="signed-out">
               <p style={{ fontSize: '1rem', opacity: 0.85, margin: '0.4rem 0 0' }}>
-                Accedi per salvare i tuoi premi 💾
+                Accedi per salvare i tuoi premi.
               </p>
               <SignInButton mode="modal">
                 <button
@@ -881,11 +881,11 @@ export default function PlayerApp() {
           </>
         ) : phase === 'FINAL_DUEL' ? (
           <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
-            🏆 Guarda il risultato sullo schermo!
+            Guarda il risultato sullo schermo!
           </p>
         ) : (
           <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
-            Guarda lo schermo condiviso 👀
+            Guarda lo schermo condiviso.
           </p>
         )}
         {skipButton}
@@ -932,7 +932,7 @@ export default function PlayerApp() {
                   gap: '0.4rem',
                   padding: '0.5rem 0.9rem',
                   borderRadius: '0.6rem',
-                  background: p.isBot ? 'rgba(192,79,255,0.18)' : 'rgba(127,127,127,0.18)',
+                  background: p.isBot ? 'var(--gold-soft)' : 'rgba(127,127,127,0.18)',
                   fontWeight: 600,
                   opacity: absent ? 0.5 : 1,
                 }}

@@ -20,7 +20,7 @@
   font-style: normal;
   font-weight: 300 700;
   font-display: swap;
-  src: url('../../assets/fonts/space-grotesk-variable.woff2') format('woff2');
+  src: url('../fonts/space-grotesk-variable.woff2') format('woff2');
 }
 
 /* ===== colors.css ===== */

@@ -1,4 +1,4 @@
-import { Button } from '../../shared/ui';
+import { Button, Swing } from '../../shared/ui';
 import styles from '../Landing.module.css';
 
 interface FinalCtaProps {
@@ -12,7 +12,10 @@ export default function FinalCta({ onCreate }: FinalCtaProps) {
         Pronti a <span className={styles.a}>schierar</span><span className={styles.b}>vi</span>?
       </h2>
       <p className={styles.finalP}>Apri lo schermo grande, fai inquadrare il QR agli amici e via.</p>
-      <Button variant="primary" size="lg" onClick={onCreate}>⚡ Crea una partita</Button>
+      <div className={styles.finalSwing}>
+        <Swing animated width={240} height={14} labels />
+      </div>
+      <Button variant="primary" size="lg" onClick={onCreate}>Crea una partita</Button>
       <p className={styles.foot}>Gratis · niente download · niente account · dal browser</p>
     </div>
   );
