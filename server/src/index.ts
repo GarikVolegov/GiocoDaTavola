@@ -126,6 +126,8 @@ function gameStatePayload(room: Room) {
     // "L'Infiltrato": how many have accused (ACCUSE) + the FINAL_AWARDS reveal.
     accusedCount: room.accusations.size,
     infiltratoResult: rooms.publicInfiltratoResult(room.code),
+    // "Squadre": team assignments + running scores; null when teams are off.
+    teams: rooms.publicTeams(room.code),
     // The defenders to vote between, gated to SPEAKER_VOTE (null otherwise), plus
     // how many have voted. Aggregate only — never who voted which speaker.
     speakerCandidates: rooms.speakerCandidates(room.code),
@@ -358,7 +360,7 @@ io.on('connection', (socket) => {
 
   // The leader starts the game for their room, choosing the dilemma count.
   // Gated: only the socket whose player is the room leader may start.
-  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean }) => {
+  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean }) => {
     const code = leaderCodeFor(socket.id);
     if (!code) {
       socket.emit('leader:startError', { error: 'ROOM_NOT_FOUND' });
@@ -370,6 +372,7 @@ io.on('connection', (socket) => {
       String(payload?.register ?? 'misto'),
       String(payload?.mode ?? 'gruppo'),
       Boolean(payload?.infiltrato),
+      Boolean(payload?.squadre),
     );
     if (!result.ok) {
       socket.emit('leader:startError', { error: result.error });

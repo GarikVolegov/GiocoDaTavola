@@ -238,10 +238,23 @@ export interface StartGamePayload {
   mode?: GameMode;
   /** Enable "L'Infiltrato" (gruppo + ≥4 humans); defaults off. */
   infiltrato?: boolean;
+  /** Enable "Squadre" (gruppo + ≥4 players); defaults off. */
+  squadre?: boolean;
 }
 
 /** Minimum humans required to enable "L'Infiltrato" (mirror of server). */
 export const MIN_INFILTRATO_HUMANS = 4;
+/** Minimum players required to enable "Squadre" (mirror of server). */
+export const MIN_SQUADRE_PLAYERS = 4;
+
+/** "Squadre" team colour (mirror of server). */
+export type Team = 'blu' | 'arancio';
+
+/** Public team assignments + running scores (mirror of server `TeamState`). */
+export interface TeamState {
+  assignments: Array<{ playerId: string; nickname: string; team: Team }>;
+  scores: { blu: number; arancio: number };
+}
 
 /** Public reveal of the infiltrator outcome at FINAL_AWARDS (mirror of server). */
 export interface InfiltratoResult {
@@ -412,6 +425,8 @@ export interface GameStatePayload {
   accusedCount: number;
   /** "L'Infiltrato": the reveal at FINAL_AWARDS (who, won/caught); null otherwise. */
   infiltratoResult: InfiltratoResult | null;
+  /** "Squadre": team assignments + running scores; null when teams are off. */
+  teams: TeamState | null;
   /**
    * The defenders to vote between, shown only in SPEAKER_VOTE; null otherwise.
    * Their identities/side are already public (they spoke in DEFENSE).
@@ -685,6 +700,7 @@ export type StartGameError =
   | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
   | 'INFILTRATO_NEEDS_PLAYERS'
+  | 'SQUADRE_NEEDS_PLAYERS'
   | 'ALREADY_STARTED';
 
 export interface HostStartErrorPayload {
@@ -700,6 +716,7 @@ export const START_ERROR_MESSAGES: Record<StartGameError, string> = {
   INVALID_DILEMMA_COUNT: 'Numero di dilemmi non valido',
   INVALID_REGISTER: 'Registro non valido',
   INFILTRATO_NEEDS_PLAYERS: "L'Infiltrato richiede almeno 4 persone",
+  SQUADRE_NEEDS_PLAYERS: 'Le Squadre richiedono almeno 4 giocatori',
   ALREADY_STARTED: 'La partita è già iniziata',
 };
 
