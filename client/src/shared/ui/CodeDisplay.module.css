@@ -5,5 +5,5 @@
   letter-spacing: 0.4rem;
   line-height: 1;
   color: var(--accent);
-  text-shadow: var(--glow-accent);
+  text-shadow: 0 2px 18px var(--gold-soft);
 }

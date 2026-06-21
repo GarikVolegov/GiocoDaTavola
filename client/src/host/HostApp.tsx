@@ -12,7 +12,7 @@ import {
   type PlayerJoinErrorPayload,
   type PublicPlayer,
 } from '../shared/events';
-import { Card, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel } from '../shared/ui';
+import { Card, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing } from '../shared/ui';
 import ReactionSwarm from './ReactionSwarm';
 
 const screen = {
@@ -87,11 +87,7 @@ export default function HostApp() {
   if (!code) {
     return (
       <main style={screen}>
-        <img
-          src="/schierati-logo.svg"
-          alt="SCHIERATI — il gioco dei dilemmi tra amici"
-          style={{ width: 'min(82vw, 34rem)', height: 'auto' }}
-        />
+        <Logo size={64} payoff />
         <p style={{ opacity: 0.8, margin: 0, maxWidth: '32rem' }}>
           Collega questo schermo a una partita: inserisci il codice mostrato sul telefono del leader.
         </p>
@@ -154,7 +150,7 @@ export default function HostApp() {
             Dilemma {game.dilemmaIndex}/{game.dilemmaCount}
           </p>
         )}
-        <h1 style={{ fontSize: '2.5rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
+        <h1 style={{ fontSize: '2.5rem', margin: 0, fontFamily: phase === 'PHASE_INTRO' ? 'var(--font-serif)' : 'var(--font-display)', fontWeight: phase === 'PHASE_INTRO' ? 500 : 700, ...(phase === 'PHASE_INTRO' && { letterSpacing: 'var(--tracking-serif)' }) }}>{PHASE_LABELS[phase]}</h1>
 
         {phase === 'PHASE_INTRO' && (
           <>
@@ -162,7 +158,7 @@ export default function HostApp() {
               Vi mostreremo {game.dilemmaCount} dilemmi. Votate, ascoltate le difese e
               cambiate idea… se vi convincono!
             </p>
-            <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, maxWidth: '40rem' }}>
+            <p style={{ fontSize: '1.6rem', fontWeight: 500, margin: 0, maxWidth: '40rem', fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>
               🎯 {OBJECTIVE}
             </p>
           </>
@@ -197,17 +193,17 @@ export default function HostApp() {
         {phase === 'PREDICT' && (
           game.knowPairs ? (
             <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
-              🔮 Quanto mi conosci: indovinate dal telefono come ha votato il vicino ·{' '}
+              Quanto mi conosci: indovinate dal telefono come ha votato il vicino ·{' '}
               {game.knowGuessedCount}/{game.knowPairs.length}
             </p>
           ) : (
             <>
               <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
-                🔮 Pronosticate dal telefono: chi avrà più voti <em>dopo</em> le difese? ·{' '}
+                Pronosticate dal telefono: chi avrà più voti <em>dopo</em> le difese? ·{' '}
                 {game.predictedCount}/{players.length}
               </p>
-              <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: '#c9b3ff' }}>
-                🎰 …e scommettete: ci sarà un ribaltone? · {game.swingBetCount}/{players.length}
+              <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--gold)' }}>
+                …e scommettete: ci sarà un ribaltone? · {game.swingBetCount}/{players.length}
               </p>
             </>
           )
@@ -215,7 +211,7 @@ export default function HostApp() {
 
         {phase === 'SPEAKER_VOTE' && (
           <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
-            🎤 Votate dal telefono il più convincente · {game.speakerVotedCount}/{players.length}
+            Votate dal telefono il più convincente · {game.speakerVotedCount}/{players.length}
           </p>
         )}
 
@@ -246,9 +242,9 @@ export default function HostApp() {
                   fontSize: '1.25rem',
                   fontWeight: 700,
                   background:
-                    defense.speaker.side === 'A' ? 'rgba(79,140,255,0.18)' : 'rgba(255,140,79,0.18)',
+                    defense.speaker.side === 'A' ? 'rgba(84,134,196,0.18)' : 'rgba(199,122,69,0.18)',
                   border: `2px solid ${
-                    defense.speaker.side === 'A' ? 'rgba(79,140,255,0.5)' : 'rgba(255,140,79,0.5)'
+                    defense.speaker.side === 'A' ? 'rgba(84,134,196,0.5)' : 'rgba(199,122,69,0.5)'
                   }`,
                 }}
               >
@@ -345,7 +341,7 @@ export default function HostApp() {
           >
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
               {duelReveal.picks.map((p) => {
-                const rgb = p.choice === 'A' ? '79,140,255' : '255,140,79';
+                const rgb = p.choice === 'A' ? '84,134,196' : '199,122,69';
                 return (
                   <div
                     key={p.id}
@@ -392,8 +388,8 @@ export default function HostApp() {
                 borderRadius: '0.9rem',
                 fontSize: '1.25rem',
                 fontWeight: 700,
-                background: duelTurn.speaker.side === 'A' ? 'rgba(79,140,255,0.18)' : 'rgba(255,140,79,0.18)',
-                border: `2px solid ${duelTurn.speaker.side === 'A' ? 'rgba(79,140,255,0.5)' : 'rgba(255,140,79,0.5)'}`,
+                background: duelTurn.speaker.side === 'A' ? 'rgba(84,134,196,0.18)' : 'rgba(199,122,69,0.18)',
+                border: `2px solid ${duelTurn.speaker.side === 'A' ? 'rgba(84,134,196,0.5)' : 'rgba(199,122,69,0.5)'}`,
               }}
             >
               Difende {duelTurn.speaker.side} ·{' '}
@@ -472,11 +468,7 @@ export default function HostApp() {
   // LOBBY: show the code + roster + a passive "waiting for the leader" line.
   return (
     <main style={screen}>
-      <img
-        src="/schierati-logo.svg"
-        alt="SCHIERATI — il gioco dei dilemmi tra amici"
-        style={{ width: 'min(82vw, 34rem)', height: 'auto' }}
-      />
+      <Logo size={64} payoff />
       <p style={{ opacity: 0.7, margin: 0 }}>
         Entra da <strong>{window.location.host}</strong> con il codice
       </p>
@@ -497,7 +489,10 @@ export default function HostApp() {
           Giocatori ({players.length}/8)
         </h2>
         {players.length === 0 ? (
-          <p style={{ opacity: 0.6, margin: 0 }}>In attesa di giocatori…</p>
+          <>
+            <Swing animated />
+            <p style={{ opacity: 0.6, margin: 0 }}>In attesa di giocatori…</p>
+          </>
         ) : (
           <ul
             style={{
@@ -519,7 +514,7 @@ export default function HostApp() {
                   gap: '0.4rem',
                   padding: '0.4rem 0.9rem',
                   borderRadius: '999px',
-                  background: p.isBot ? 'rgba(192,79,255,0.18)' : 'rgba(127,127,127,0.18)',
+                  background: p.isBot ? 'var(--gold-soft)' : 'rgba(127,127,127,0.18)',
                   fontWeight: 600,
                   opacity: p.connected === false ? 0.5 : 1,
                 }}

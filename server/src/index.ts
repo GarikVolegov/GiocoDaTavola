@@ -9,6 +9,8 @@ import { generateBotDefense, aiDefenseEnabled } from './game/aiDefense';
 import { migrate, dbEnabled, pool } from './db';
 import { saveAwards, awardsToPersist } from './persistence';
 import { verifyClerkToken } from './clerk';
+import { serializeRoom, deserializeRoom } from './game/roomSnapshot';
+import { persistSnapshot, loadAllSnapshots, deleteSnapshot } from './snapshotStore';
 
 // Load server/.env (e.g. AI_BASE_URL / AI_MODEL for self-hosted LLM defenses) if
 // present. Zero-dependency: uses Node's built-in env-file loader (Node 20.12+).
@@ -68,6 +70,16 @@ setInterval(() => {
     if (!hasPendingGrace(code)) reapRoom(code);
   }
 }, ABANDONED_SWEEP_INTERVAL_MS).unref(); // .unref so the timer never blocks exit
+
+// Periodic snapshot of every live room (catches within-phase changes like votes,
+// between the phase-transition snapshots) so a crash loses at most a few seconds.
+const SNAPSHOT_INTERVAL_MS = 15_000;
+setInterval(() => {
+  for (const code of rooms.activeCodes()) {
+    const room = rooms.get(code);
+    if (room) persistSnapshot(code, serializeRoom(room)).catch((e) => console.error('[snapshot] persist failed', e));
+  }
+}, SNAPSHOT_INTERVAL_MS).unref();
 
 function cancelGrace(playerId: string): void {
   const t = graceTimers.get(playerId);
@@ -201,6 +213,7 @@ function reapRoom(code: string): void {
   clearPhaseTimer(code);
   pruneTokensForRoom(code);
   rooms.delete(code);
+  deleteSnapshot(code).catch((e) => console.error('[snapshot] delete failed', e));
   console.log('[server] reaped abandoned room', code);
 }
 
@@ -252,6 +265,8 @@ function advanceAndBroadcast(code: string): void {
   const result = rooms.advancePhase(code);
   if (!result.ok) return;
   broadcastGameState(code);
+  const snapRoom = rooms.get(code);
+  if (snapRoom) persistSnapshot(code, serializeRoom(snapRoom)).catch((e) => console.error('[snapshot] persist failed', e));
   if (rooms.get(code)?.phase === 'FINAL_AWARDS') emitBlindSpots(code);
   schedulePhase(code);
   maybeGenerateAiDefense(code);
@@ -683,7 +698,23 @@ httpServer.listen(PORT, () => {
   );
   if (dbEnabled()) {
     migrate()
-      .then(() => console.log('[db] migrated'))
+      .then(async () => {
+        console.log('[db] migrated');
+        // Rebuild any active rooms persisted before a restart so a crash mid-party
+        // doesn't lose the game; phones reconnect with their saved token.
+        const snaps = await loadAllSnapshots();
+        let restored = 0;
+        for (const { code, json } of snaps) {
+          try {
+            rooms.restore(deserializeRoom(json));
+            schedulePhase(code); // re-arm the timer; a past expiry advances immediately
+            restored++;
+          } catch (e) {
+            console.error('[snapshot] restore failed for', code, e);
+          }
+        }
+        if (restored) console.log('[snapshot] restored', restored, 'room(s) from disk');
+      })
       .catch((err) => console.error('[db] migrate failed', err));
   } else {
     console.log('[db] disabled (no DATABASE_URL) — awards will not be saved');

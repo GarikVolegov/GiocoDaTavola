@@ -24,8 +24,8 @@ export function SplitBar({ split }: { split: VoteSplit }) {
   return (
     <div style={{ width: 'min(92vw, 40rem)' }}>
       <div style={{ display: 'flex', height: '2.5rem', borderRadius: '0.6rem', overflow: 'hidden' }}>
-        <div style={{ width: `${pctA}%`, background: 'rgba(79,140,255,0.6)' }} />
-        <div style={{ width: `${100 - pctA}%`, background: 'rgba(255,140,79,0.6)' }} />
+        <div style={{ width: `${pctA}%`, background: 'rgba(84,134,196,0.6)' }} />
+        <div style={{ width: `${100 - pctA}%`, background: 'rgba(199,122,69,0.6)' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.4rem', fontWeight: 700 }}>
         <span>A · {split.A}</span>

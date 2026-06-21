@@ -1,0 +1,33 @@
+.lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--logo-size, 30px) * 0.42);
+}
+.panel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: calc(var(--logo-size, 30px) * 0.7) calc(var(--logo-size, 30px) * 0.95);
+}
+.emblem {
+  display: block;
+  flex: none;
+  height: calc(var(--logo-size, 30px) * 1.18);
+  width: auto;
+}
+.col { display: flex; flex-direction: column; gap: calc(var(--logo-size, 30px) * 0.14); }
+.word {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--logo-size, 30px);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--text);
+}
+.pay {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: calc(var(--logo-size, 30px) * 0.42);
+  color: var(--text-muted);
+  line-height: 1.1;
+}
