@@ -1965,3 +1965,22 @@ describe('RoomStore.delete (lifecycle)', () => {
     expect(store.delete('ZZZZ')).toBe(false);
   });
 });
+
+describe('RoomStore.connectedHumanCount (lifecycle)', () => {
+  it('counts connected humans only, ignoring bots and disconnected players', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'h1', 'Ann');
+    store.join(code, 'h2', 'Bob');
+    store.addBot(code, 'roccione'); // bots never count
+    expect(store.connectedHumanCount(code)).toBe(2);
+
+    store.setConnected(code, 'h2', false); // mid-grace -> not connected
+    expect(store.connectedHumanCount(code)).toBe(1);
+
+    store.setConnected(code, 'h1', false);
+    expect(store.connectedHumanCount(code)).toBe(0); // bot remains, but no humans
+
+    expect(store.connectedHumanCount('ZZZZ')).toBe(0); // unknown room
+  });
+});

@@ -1179,6 +1179,18 @@ export class RoomStore {
     return this.rooms.delete(code);
   }
 
+  /** How many human players are currently connected (bots and mid-grace
+   * absentees excluded). Used to decide whether a room is still alive. */
+  connectedHumanCount(code: string): number {
+    const room = this.rooms.get(code);
+    if (!room) return 0;
+    let n = 0;
+    for (const p of room.players.values()) {
+      if (!p.isBot && p.connected !== false) n++;
+    }
+    return n;
+  }
+
   get size(): number {
     return this.rooms.size;
   }
