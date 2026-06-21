@@ -44,6 +44,8 @@ import {
   SUBMIT_DILEMMA_ERROR_MESSAGES,
   type PlayerDilemmaSubmittedPayload,
   type PlayerSubmitDilemmaErrorPayload,
+  type PlayerKnowGuessedPayload,
+  type PlayerKnowGuessResultPayload,
 } from '../shared/events';
 import { Card, Pill, Button, Alert, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel } from '../shared/ui';
 import { useAuth, Show, SignInButton } from '@clerk/react';
@@ -156,6 +158,8 @@ export default function PlayerApp() {
   const [predictionResult, setPredictionResult] = useState<PlayerPredictionResultPayload | null>(null);
   const [swingBet, setSwingBet] = useState<SwingBet | null>(null);
   const [swingBetResult, setSwingBetResult] = useState<PlayerSwingBetResultPayload | null>(null);
+  const [knowGuess, setKnowGuess] = useState<VoteChoice | null>(null);
+  const [knowResult, setKnowResult] = useState<PlayerKnowGuessResultPayload | null>(null);
   const [speakerVote, setSpeakerVote] = useState<string | null>(null);
   // Player-written dilemmas (lobby): the draft form + how many we've added.
   const [dilemmaText, setDilemmaText] = useState('');
@@ -213,6 +217,8 @@ export default function PlayerApp() {
     const onPredictionResult = (payload: PlayerPredictionResultPayload) => setPredictionResult(payload);
     const onSwingBetted = ({ bet }: PlayerSwingBettedPayload) => setSwingBet(bet);
     const onSwingBetResult = (payload: PlayerSwingBetResultPayload) => setSwingBetResult(payload);
+    const onKnowGuessed = ({ choice }: PlayerKnowGuessedPayload) => setKnowGuess(choice);
+    const onKnowGuessResult = (payload: PlayerKnowGuessResultPayload) => setKnowResult(payload);
     const onSpeakerVoted = ({ defenderId }: PlayerSpeakerVotedPayload) => setSpeakerVote(defenderId);
     const onDilemmaSubmitted = ({ count }: PlayerDilemmaSubmittedPayload) => {
       setMySubmitted(count);
@@ -227,6 +233,8 @@ export default function PlayerApp() {
     socket.on(SocketEvents.PlayerPredictionResult, onPredictionResult);
     socket.on(SocketEvents.PlayerSwingBetted, onSwingBetted);
     socket.on(SocketEvents.PlayerSwingBetResult, onSwingBetResult);
+    socket.on(SocketEvents.PlayerKnowGuessed, onKnowGuessed);
+    socket.on(SocketEvents.PlayerKnowGuessResult, onKnowGuessResult);
     socket.on(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
     socket.on(SocketEvents.PlayerSubmitDilemmaError, onSubmitDilemmaError);
     socket.on(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
@@ -267,6 +275,8 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerPredictionResult, onPredictionResult);
       socket.off(SocketEvents.PlayerSwingBetted, onSwingBetted);
       socket.off(SocketEvents.PlayerSwingBetResult, onSwingBetResult);
+      socket.off(SocketEvents.PlayerKnowGuessed, onKnowGuessed);
+      socket.off(SocketEvents.PlayerKnowGuessResult, onKnowGuessResult);
       socket.off(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
       socket.off(SocketEvents.PlayerSubmitDilemmaError, onSubmitDilemmaError);
       socket.off(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
@@ -297,6 +307,8 @@ export default function PlayerApp() {
     setPredictionResult(null);
     setSwingBet(null);
     setSwingBetResult(null);
+    setKnowGuess(null);
+    setKnowResult(null);
     setSpeakerVote(null);
   }, [game?.dilemmaIndex]);
 
@@ -338,6 +350,12 @@ export default function PlayerApp() {
     setSwingBet(bet); // optimistic; confirmed via player:swingBetted
     buzz(25);
     getSocket().emit(SocketEvents.PlayerSwingBet, { bet });
+  };
+
+  const castKnowGuess = (choice: VoteChoice) => {
+    setKnowGuess(choice); // optimistic; confirmed via player:knowGuessed
+    buzz(25);
+    getSocket().emit(SocketEvents.PlayerKnowGuess, { choice });
   };
 
   const castPrediction = (choice: VoteChoice) => {
@@ -751,6 +769,71 @@ export default function PlayerApp() {
 
   if (joinedCode && phase === 'PREDICT') {
     const dilemma = game?.dilemma;
+    const myKnowPair = game?.knowPairs?.find((p) => p.guesserId === playerId) ?? null;
+    if (myKnowPair) {
+      return (
+        <main style={wrap}>
+          <h1 style={{ fontSize: '1.5rem', margin: 0 }}>🔮 Quanto mi conosci</h1>
+          <p style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
+            Come ha votato <strong>{myKnowPair.targetNickname}</strong>?
+          </p>
+          {dilemma && (
+            <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0, maxWidth: '22rem' }}>{dilemma.text}</p>
+          )}
+          {remaining != null && (
+            <div
+              aria-label="Tempo rimanente"
+              style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+            >
+              {remaining}s
+            </div>
+          )}
+          <div
+            role="group"
+            aria-label="La tua ipotesi"
+            style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(90vw, 22rem)' }}
+          >
+            {(['A', 'B'] as const).map((letter) => {
+              const selected = knowGuess === letter;
+              const accent = letter === 'A' ? '79,140,255' : '255,140,79';
+              return (
+                <button
+                  key={letter}
+                  type="button"
+                  onClick={() => castKnowGuess(letter)}
+                  aria-pressed={selected}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    textAlign: 'left',
+                    padding: '1rem 1.1rem',
+                    borderRadius: '0.8rem',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    color: 'inherit',
+                    background: selected ? `rgba(${accent},0.32)` : `rgba(${accent},0.12)`,
+                    border: `2px solid rgba(${accent},${selected ? 0.9 : 0.4})`,
+                  }}
+                >
+                  <span style={{ fontSize: '1.6rem', fontWeight: 800, opacity: 0.85 }}>{letter}</span>
+                  <span style={{ fontSize: '1.1rem' }}>
+                    {dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {knowGuess ? (
+            <p style={{ opacity: 0.8, margin: 0 }}>
+              Hai scelto <strong>{knowGuess}</strong>. Conosci bene {myKnowPair.targetNickname}? 👀
+            </p>
+          ) : (
+            <p style={{ opacity: 0.7, margin: 0 }}>Indovina come ha votato.</p>
+          )}
+        </main>
+      );
+    }
     return (
       <main style={wrap}>
         <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.PREDICT}</h1>
@@ -896,6 +979,11 @@ export default function PlayerApp() {
                 {swingBetResult.correct
                   ? `🎰 Ribaltone ${swingBetResult.flipped ? 'sì' : 'no'}: scommessa vinta!`
                   : '🎰 Scommessa sul ribaltone persa.'}
+              </p>
+            )}
+            {knowResult && (
+              <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+                {knowResult.correct ? '🔮 Conosci bene il tuo amico!' : '🔮 Stavolta non l’hai indovinato.'}
               </p>
             )}
           </>
