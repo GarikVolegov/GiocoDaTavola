@@ -1191,6 +1191,20 @@ export class RoomStore {
     return n;
   }
 
+  /** Codes of rooms with no connected humans and older than `maxIdleMs`
+   * (a safety-net sweep for abandoned rooms). Pure query — the caller deletes,
+   * so it can skip rooms whose players are still within their reconnect grace. */
+  abandonedRooms(maxIdleMs: number): string[] {
+    const now = this.now();
+    const codes: string[] = [];
+    for (const [code, room] of this.rooms) {
+      if (this.connectedHumanCount(code) === 0 && now - room.createdAt > maxIdleMs) {
+        codes.push(code);
+      }
+    }
+    return codes;
+  }
+
   get size(): number {
     return this.rooms.size;
   }

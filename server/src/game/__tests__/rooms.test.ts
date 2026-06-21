@@ -1984,3 +1984,33 @@ describe('RoomStore.connectedHumanCount (lifecycle)', () => {
     expect(store.connectedHumanCount('ZZZZ')).toBe(0); // unknown room
   });
 });
+
+describe('RoomStore.abandonedRooms (lifecycle)', () => {
+  it('lists rooms with no connected humans older than maxIdleMs; keeps the rest', () => {
+    let t = 0;
+    const store = new RoomStore(generateRoomCode, () => t);
+
+    const alive = store.create().code; // createdAt = 0
+    store.join(alive, 'h1', 'Ann'); // a connected human -> never abandoned
+
+    const dead = store.create().code; // createdAt = 0
+    store.join(dead, 'h2', 'Bob');
+    store.setConnected(dead, 'h2', false); // no connected humans
+
+    const fresh = store.create().code; // createdAt = 0, never joined
+
+    t = 60_000; // 60s later
+    const reaped = store.abandonedRooms(30_000);
+    expect(reaped).toContain(dead); // empty + older than 30s
+    expect(reaped).not.toContain(alive); // has a connected human
+    expect(reaped).toContain(fresh); // empty + older than 30s
+  });
+
+  it('does not list an empty room younger than maxIdleMs', () => {
+    let t = 0;
+    const store = new RoomStore(generateRoomCode, () => t);
+    const code = store.create().code;
+    t = 10_000; // only 10s old
+    expect(store.abandonedRooms(30_000)).not.toContain(code);
+  });
+});
