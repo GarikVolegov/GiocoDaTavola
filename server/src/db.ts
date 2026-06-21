@@ -33,4 +33,10 @@ export async function migrate(): Promise<void> {
     );`);
   await pool.query(`CREATE INDEX IF NOT EXISTS awards_user_idx ON awards(clerk_user_id, won_at DESC);`);
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS awards_uniq ON awards(clerk_user_id, award_id, game_code);`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_snapshots (
+      code       text PRIMARY KEY,
+      snapshot   text NOT NULL,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );`);
 }
