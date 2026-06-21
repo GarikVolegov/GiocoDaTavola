@@ -66,4 +66,15 @@ describe('roomSnapshot round-trip', () => {
     expect(restored.votes).toBeInstanceOf(Map);
     expect(restored.votes.size).toBe(0);
   });
+
+  it('a restored room is still playable (RoomStore can advance it)', () => {
+    const room = liveRoom(); // VOTE_1 with votes + a live Deck
+    const json = serializeRoom(room);
+    // Restore into a fresh store, as boot does, then drive the state machine on.
+    const store = new RoomStore(undefined, () => 2_000, makeDeck);
+    store.restore(deserializeRoom(json));
+    const res = store.advancePhase(room.code);
+    expect(res.ok).toBe(true);
+    expect(store.get(room.code)!.phase).toBe('SPLIT_REVEAL');
+  });
 });
