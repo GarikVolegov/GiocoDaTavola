@@ -37,3 +37,31 @@ export function awardsToPersist(room: Room): PersistableAward[] {
   }
   return rows;
 }
+
+import { pool, dbEnabled } from './db';
+
+/**
+ * Persist award rows: upsert the user, then insert each award idempotently
+ * (ON CONFLICT on the natural key). No-op when the DB is disabled or rows empty.
+ */
+export async function saveAwards(rows: PersistableAward[]): Promise<void> {
+  if (!dbEnabled() || !pool || rows.length === 0) return;
+  const client = await pool.connect();
+  try {
+    for (const r of rows) {
+      await client.query(
+        `INSERT INTO users (clerk_user_id, last_seen) VALUES ($1, now())
+         ON CONFLICT (clerk_user_id) DO UPDATE SET last_seen = now()`,
+        [r.clerkUserId],
+      );
+      await client.query(
+        `INSERT INTO awards (clerk_user_id, award_id, title, emoji, description, game_code, game_mode, nickname)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (clerk_user_id, award_id, game_code) DO NOTHING`,
+        [r.clerkUserId, r.awardId, r.title, r.emoji, r.description, r.gameCode, r.gameMode, r.nickname],
+      );
+    }
+  } finally {
+    client.release();
+  }
+}

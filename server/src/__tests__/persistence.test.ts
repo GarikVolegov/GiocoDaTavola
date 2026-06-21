@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { RoomStore } from '../game/rooms';
-import { awardsToPersist } from '../persistence';
+import { awardsToPersist, saveAwards } from '../persistence';
+import { dbEnabled } from '../db';
 
 // Drive a tiny 1-player game where the single player wins every award, then tag
 // them with a clerk id and assert only their awards are returned.
@@ -43,5 +44,12 @@ describe('awardsToPersist', () => {
     const store = new RoomStore();
     const code = finishedRoom(store, false);
     expect(awardsToPersist(store.get(code)!)).toEqual([]);
+  });
+});
+
+describe('saveAwards (no DATABASE_URL in tests)', () => {
+  it('is disabled and resolves without throwing', async () => {
+    expect(dbEnabled()).toBe(false);
+    await expect(saveAwards([])).resolves.toBeUndefined();
   });
 });
