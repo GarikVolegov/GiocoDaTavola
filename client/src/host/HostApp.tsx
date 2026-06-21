@@ -150,7 +150,7 @@ export default function HostApp() {
             Dilemma {game.dilemmaIndex}/{game.dilemmaCount}
           </p>
         )}
-        <h1 style={{ fontSize: '2.5rem', margin: 0, fontFamily: 'var(--font-serif)', fontWeight: 500, letterSpacing: 'var(--tracking-serif)' }}>{PHASE_LABELS[phase]}</h1>
+        <h1 style={{ fontSize: '2.5rem', margin: 0, fontFamily: phase === 'PHASE_INTRO' ? 'var(--font-serif)' : 'var(--font-display)', fontWeight: phase === 'PHASE_INTRO' ? 500 : 700, ...(phase === 'PHASE_INTRO' && { letterSpacing: 'var(--tracking-serif)' }) }}>{PHASE_LABELS[phase]}</h1>
 
         {phase === 'PHASE_INTRO' && (
           <>
