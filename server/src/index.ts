@@ -365,9 +365,11 @@ io.on('connection', (socket) => {
         graceTimers.delete(playerId);
         const tok = [...tokens].find(([, v]) => v.playerId === playerId)?.[0];
         if (tok) tokens.delete(tok);
+        const wasLeader = rooms.isLeader(code, playerId);
         rooms.leave(code, playerId);
         broadcastLobby(code);
         if (rooms.get(code) && isVotingPhase(rooms.get(code)!.phase)) refreshAfterRosterChange(code);
+        if (wasLeader) broadcastGameState(code);
       }, RECONNECT_GRACE_MS),
     );
   });
