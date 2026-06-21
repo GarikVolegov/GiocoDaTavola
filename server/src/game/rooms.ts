@@ -1348,6 +1348,11 @@ export class RoomStore {
     this.rooms.set(room.code, room);
   }
 
+  /** Codes of all rooms currently in memory (for periodic snapshotting). */
+  activeCodes(): string[] {
+    return [...this.rooms.keys()];
+  }
+
   /** How many human players are currently connected (bots and mid-grace
    * absentees excluded). Used to decide whether a room is still alive. */
   connectedHumanCount(code: string): number {

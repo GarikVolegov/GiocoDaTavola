@@ -2029,3 +2029,14 @@ describe('RoomStore.restore (snapshot)', () => {
     expect(store.size).toBe(1);
   });
 });
+
+describe('RoomStore.activeCodes (snapshot)', () => {
+  it('lists every live room code', () => {
+    const store = new RoomStore();
+    const a = store.create().code;
+    const b = store.create().code;
+    expect(store.activeCodes().sort()).toEqual([a, b].sort());
+    store.delete(a);
+    expect(store.activeCodes()).toEqual([b]);
+  });
+});
