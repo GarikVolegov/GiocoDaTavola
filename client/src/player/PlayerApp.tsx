@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import {
@@ -40,6 +40,10 @@ import {
   type PlayerSpeakerVotedPayload,
   type Reaction,
   type BlindSpot,
+  MAX_SUBMISSIONS_PER_PLAYER,
+  SUBMIT_DILEMMA_ERROR_MESSAGES,
+  type PlayerDilemmaSubmittedPayload,
+  type PlayerSubmitDilemmaErrorPayload,
 } from '../shared/events';
 import { Card, Pill, Button, Alert, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel } from '../shared/ui';
 import { useAuth, Show, SignInButton } from '@clerk/react';
@@ -153,6 +157,12 @@ export default function PlayerApp() {
   const [swingBet, setSwingBet] = useState<SwingBet | null>(null);
   const [swingBetResult, setSwingBetResult] = useState<PlayerSwingBetResultPayload | null>(null);
   const [speakerVote, setSpeakerVote] = useState<string | null>(null);
+  // Player-written dilemmas (lobby): the draft form + how many we've added.
+  const [dilemmaText, setDilemmaText] = useState('');
+  const [dilemmaA, setDilemmaA] = useState('');
+  const [dilemmaB, setDilemmaB] = useState('');
+  const [mySubmitted, setMySubmitted] = useState(0);
+  const [submitDilemmaError, setSubmitDilemmaError] = useState<string | null>(null);
   // Leader-only lobby config (mirrors the old HostApp setup).
   const [format, setFormat] = useState<SessionFormat>('classica');
   const [register, setRegister] = useState<ContentRegister>('misto');
@@ -204,10 +214,21 @@ export default function PlayerApp() {
     const onSwingBetted = ({ bet }: PlayerSwingBettedPayload) => setSwingBet(bet);
     const onSwingBetResult = (payload: PlayerSwingBetResultPayload) => setSwingBetResult(payload);
     const onSpeakerVoted = ({ defenderId }: PlayerSpeakerVotedPayload) => setSpeakerVote(defenderId);
+    const onDilemmaSubmitted = ({ count }: PlayerDilemmaSubmittedPayload) => {
+      setMySubmitted(count);
+      setSubmitDilemmaError(null);
+      setDilemmaText('');
+      setDilemmaA('');
+      setDilemmaB('');
+    };
+    const onSubmitDilemmaError = ({ error }: PlayerSubmitDilemmaErrorPayload) =>
+      setSubmitDilemmaError(SUBMIT_DILEMMA_ERROR_MESSAGES[error] ?? 'Dilemma non valido');
     socket.on(SocketEvents.PlayerPredicted, onPredicted);
     socket.on(SocketEvents.PlayerPredictionResult, onPredictionResult);
     socket.on(SocketEvents.PlayerSwingBetted, onSwingBetted);
     socket.on(SocketEvents.PlayerSwingBetResult, onSwingBetResult);
+    socket.on(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
+    socket.on(SocketEvents.PlayerSubmitDilemmaError, onSubmitDilemmaError);
     socket.on(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
     // On every (re)connect, if we hold a token, reclaim the same seat. Covers
     // socket-level reconnects (network blip) without a page reload.
@@ -246,6 +267,8 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerPredictionResult, onPredictionResult);
       socket.off(SocketEvents.PlayerSwingBetted, onSwingBetted);
       socket.off(SocketEvents.PlayerSwingBetResult, onSwingBetResult);
+      socket.off(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
+      socket.off(SocketEvents.PlayerSubmitDilemmaError, onSubmitDilemmaError);
       socket.off(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
       socket.off('connect', onConnect);
     };
@@ -382,6 +405,30 @@ export default function PlayerApp() {
   const addBot = () => getSocket().emit(SocketEvents.LeaderAddBot);
   const removeBot = (id: string) => getSocket().emit(SocketEvents.LeaderRemoveBot, { id });
   const advance = () => getSocket().emit(SocketEvents.LeaderAdvancePhase);
+
+  const submitDilemma = () => {
+    buzz(15);
+    getSocket().emit(SocketEvents.PlayerSubmitDilemma, {
+      text: dilemmaText,
+      optionA: dilemmaA,
+      optionB: dilemmaB,
+    });
+  };
+  const canSubmitDilemma =
+    mySubmitted < MAX_SUBMISSIONS_PER_PLAYER &&
+    dilemmaText.trim() !== '' &&
+    dilemmaA.trim() !== '' &&
+    dilemmaB.trim() !== '';
+  const dilemmaFieldStyle: CSSProperties = {
+    width: '100%',
+    padding: '0.6rem 0.7rem',
+    borderRadius: '0.6rem',
+    border: '1px solid rgba(242,243,255,0.18)',
+    background: 'rgba(242,243,255,0.06)',
+    color: 'inherit',
+    fontSize: '0.95rem',
+    boxSizing: 'border-box',
+  };
 
   // Gruppo: solo play allowed (1 human + bots), never bots-only. Duello: exactly
   // two humans (no bot opponent). Mirrors the old HostApp start gating.
@@ -984,6 +1031,48 @@ export default function PlayerApp() {
           <p style={{ margin: '0.2rem 0 0', fontSize: '0.95rem', fontWeight: 700 }}>
             🎯 {OBJECTIVE}
           </p>
+        </Card>
+
+        <Card
+          style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.55rem', textAlign: 'left' }}
+        >
+          <h3 style={{ margin: 0, fontSize: '1.05rem' }}>✍️ Aggiungi un dilemma</h3>
+          <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.75 }}>
+            I vostri dilemmi entrano in gioco per primi · {game?.submittedCount ?? 0} dal gruppo
+          </p>
+          {mySubmitted >= MAX_SUBMISSIONS_PER_PLAYER ? (
+            <p style={{ margin: 0, fontWeight: 700, opacity: 0.9 }}>
+              Hai aggiunto {mySubmitted} dilemmi. Grazie! 🙌
+            </p>
+          ) : (
+            <>
+              <input
+                aria-label="La domanda"
+                placeholder="La domanda (es. Mare o montagna?)"
+                value={dilemmaText}
+                onChange={(e) => setDilemmaText(e.target.value)}
+                style={dilemmaFieldStyle}
+              />
+              <input
+                aria-label="Opzione A"
+                placeholder="Opzione A"
+                value={dilemmaA}
+                onChange={(e) => setDilemmaA(e.target.value)}
+                style={dilemmaFieldStyle}
+              />
+              <input
+                aria-label="Opzione B"
+                placeholder="Opzione B"
+                value={dilemmaB}
+                onChange={(e) => setDilemmaB(e.target.value)}
+                style={dilemmaFieldStyle}
+              />
+              <Button variant="ghost" onClick={submitDilemma} disabled={!canSubmitDilemma}>
+                Aggiungi dilemma{mySubmitted > 0 ? ` (${mySubmitted}/${MAX_SUBMISSIONS_PER_PLAYER})` : ''}
+              </Button>
+              {submitDilemmaError && <Alert>{submitDilemmaError}</Alert>}
+            </>
+          )}
         </Card>
 
         {isLeader ? (
