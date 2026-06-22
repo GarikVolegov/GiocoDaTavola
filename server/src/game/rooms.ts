@@ -189,6 +189,8 @@ export interface DefenseState {
   minEndsAt: number | null;
   /** Whether the current speaker may end now (minimum elapsed). */
   canFinish: boolean;
+  /** When the current turn started (epoch ms); the client renders the count-up from here. */
+  startedAt: number | null;
 }
 
 export interface Room {
@@ -314,6 +316,11 @@ export interface Room {
    * rejected. null for bot/absent speakers (no floor) and outside DEFENSE/INTERVENTI.
    */
   turnMinEndsAt: number | null;
+  /**
+   * When the current DEFENSE/INTERVENTI turn started (epoch ms); source for the
+   * client's count-up timer. null outside a speaking turn.
+   */
+  turnStartedAt: number | null;
   /**
    * Per-player tallies accumulated across the game (keyed by player id), updated
    * once per round on entry to PHASE_RESULTS and read at FINAL_AWARDS. Empty
@@ -664,6 +671,7 @@ export class RoomStore {
     const speakerId = this.currentSpeakerId(room);
     const speaker = speakerId ? room.players.get(speakerId) : undefined;
     const now = this.now();
+    room.turnStartedAt = now;
     if (speaker && !speaker.isBot) {
       room.turnMinEndsAt = now + (interventi ? INTERVENTO_MIN_MS : DEFENSE_MIN_MS);
       room.phaseExpiresAt = now + (interventi ? INTERVENTI_MAX_MS : DEFENSE_MAX_MS);
@@ -969,6 +977,7 @@ export class RoomStore {
       interventiQueue: [],
       interventiIndex: 0,
       turnMinEndsAt: null,
+      turnStartedAt: null,
       stats: new Map(),
       botSeq: 0,
       mode: 'gruppo',
@@ -1871,6 +1880,7 @@ export class RoomStore {
         queue,
         minEndsAt: room.turnMinEndsAt,
         canFinish,
+        startedAt: room.turnStartedAt,
       };
     }
 
@@ -1895,6 +1905,7 @@ export class RoomStore {
       queue: null,
       minEndsAt: room.turnMinEndsAt,
       canFinish,
+      startedAt: room.turnStartedAt,
     };
   }
 
