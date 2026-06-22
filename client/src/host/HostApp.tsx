@@ -1,6 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
+import { useElapsed } from '../shared/useElapsed';
+import { formatMSS, isWaitingPhase } from '../shared/time';
+import { startAmbient, stopAmbient, unlockAmbient } from './ambient';
 import {
   SocketEvents,
   PHASE_LABELS,
@@ -119,6 +122,32 @@ export default function HostApp() {
 
   const phase = game?.phase ?? 'LOBBY';
   const remaining = useCountdown(game?.phaseExpiresAt ?? null);
+  // While someone is speaking, the big timer counts UP from 0 (turn start) instead
+  // of down from the safety cap.
+  const elapsed = useElapsed(game?.defense?.startedAt ?? null);
+  const speaking = phase === 'DEFENSE' || phase === 'INTERVENTI';
+
+  // Ambient waiting-screen loop (host-only). Unlock on the first user gesture (the
+  // "Collega TV" submit is a pointerdown, so it counts) per the browser autoplay
+  // policy, then play during waiting phases and stop otherwise / on unmount.
+  const [audioReady, setAudioReady] = useState(false);
+  useEffect(() => {
+    const onGesture = () => {
+      unlockAmbient();
+      setAudioReady(true);
+    };
+    window.addEventListener('pointerdown', onGesture, { once: true });
+    window.addEventListener('keydown', onGesture, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', onGesture);
+      window.removeEventListener('keydown', onGesture);
+    };
+  }, []);
+  useEffect(() => {
+    if (audioReady && isWaitingPhase(phase)) startAmbient();
+    else stopAmbient();
+  }, [audioReady, phase]);
+  useEffect(() => () => stopAmbient(), []);
 
   // No code yet: ask for one (the leader's phone shows it after creating a room).
   if (!code) {
@@ -550,7 +579,19 @@ export default function HostApp() {
           </section>
         )}
 
-        {remaining != null && (
+        {speaking && game?.defense?.startedAt != null ? (
+          <div
+            aria-label="Tempo trascorso"
+            style={{
+              fontSize: 'clamp(3rem, 12vw, 6rem)',
+              fontWeight: 800,
+              fontVariantNumeric: 'tabular-nums',
+              lineHeight: 1,
+            }}
+          >
+            {formatMSS(elapsed ?? 0)}
+          </div>
+        ) : remaining != null ? (
           <div
             aria-label="Tempo rimanente"
             style={{
@@ -562,7 +603,7 @@ export default function HostApp() {
           >
             {remaining}s
           </div>
-        )}
+        ) : null}
       </main>
     );
   }

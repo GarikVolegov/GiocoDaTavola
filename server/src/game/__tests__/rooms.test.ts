@@ -663,6 +663,7 @@ describe('RoomStore defense (US-010)', () => {
       queue: null,
       minEndsAt: 30_000,
       canFinish: false,
+      startedAt: 0,
     });
     store.advancePhase(code); // next turn -> side B speaker
     expect(store.publicDefense(code)).toEqual({
@@ -678,6 +679,7 @@ describe('RoomStore defense (US-010)', () => {
       queue: null,
       minEndsAt: 30_000,
       canFinish: false,
+      startedAt: 0,
     });
     store.advancePhase(code); // VOTE_2 -> defense no longer public
     expect(store.publicDefense(code)).toBeNull();
@@ -726,6 +728,7 @@ describe('RoomStore defense (US-010)', () => {
       queue: null,
       minEndsAt: null,
       canFinish: true,
+      startedAt: 0,
     });
     store.advancePhase(code); // -> VOTE_2
     expect(store.get(code)?.phase).toBe('VOTE_2');
@@ -2262,6 +2265,14 @@ describe('armTurn on DEFENSE entry', () => {
     expect(room.phase).toBe('DEFENSE');
     expect(room.turnMinEndsAt).toBe(now + 30_000);
     expect(room.phaseExpiresAt).toBe(now + 180_000);
+  });
+
+  it('records the turn start (turnStartedAt) and exposes it as defense.startedAt', () => {
+    const now = 7_000;
+    const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']);
+    expect(store.get(code)!.turnStartedAt).toBe(now);
+    expect(store.publicDefense(code)!.startedAt).toBe(now);
   });
 });
 

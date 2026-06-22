@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
+import { useElapsed } from '../shared/useElapsed';
+import { formatMSS } from '../shared/time';
 import ReactionSwarm from '../shared/ReactionSwarm';
 import {
   SocketEvents,
@@ -331,6 +333,8 @@ export default function PlayerApp() {
   // Self-paced turn (DEFENSE/INTERVENTI): the floor countdown gates "Ho finito".
   const minRemaining = useCountdown(game?.defense?.minEndsAt ?? null);
   const canFinishNow = game?.defense?.minEndsAt == null || (minRemaining ?? 0) <= 0;
+  // The speaker's elapsed time, counting UP from the turn start.
+  const speakerElapsed = useElapsed(game?.defense?.startedAt ?? null);
 
   // Each new dilemma round starts with a clean (unselected) vote + prediction.
   useEffect(() => {
@@ -753,6 +757,14 @@ export default function PlayerApp() {
                   </div>
                 )}
               </>
+            )}
+            {game?.defense?.startedAt != null && (
+              <div
+                aria-label="Tempo trascorso"
+                style={{ fontSize: '3rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+              >
+                {formatMSS(speakerElapsed ?? 0)}
+              </div>
             )}
             {finishButton}
           </>
