@@ -18,6 +18,7 @@ export type GamePhase =
   | 'SPLIT_REVEAL'
   | 'PREDICT'
   | 'DEFENSE'
+  | 'INTERVENTI'
   | 'VOTE_2'
   | 'SPEAKER_VOTE'
   | 'PHASE_RESULTS'
@@ -38,6 +39,17 @@ export type GamePhase =
   | 'FINAL_DUEL';
 
 /**
+ * Per-turn timing for the self-paced defense + interventi. A human speaker gets a
+ * MIN floor (below which "Ho finito" is rejected) and a generous MAX safety cap;
+ * a bot or absent speaker (who can't tap) just gets TURN_BOT_MS.
+ */
+export const DEFENSE_MIN_MS = 30_000;
+export const INTERVENTO_MIN_MS = 15_000;
+export const DEFENSE_MAX_MS = 180_000;
+export const INTERVENTI_MAX_MS = 90_000;
+export const TURN_BOT_MS = 60_000;
+
+/**
  * How long each phase lasts before the server auto-advances, in ms. `null`
  * means the phase has no timer: LOBBY waits for the host to start, FINAL_AWARDS
  * is terminal. Timers are authoritative server-side; clients only render the
@@ -52,7 +64,8 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   VOTE_1: null,
   SPLIT_REVEAL: 6_000,
   PREDICT: null,
-  DEFENSE: 60_000,
+  DEFENSE: DEFENSE_MAX_MS,
+  INTERVENTI: INTERVENTI_MAX_MS,
   VOTE_2: null,
   SPEAKER_VOTE: null,
   PHASE_RESULTS: 8_000,
@@ -95,6 +108,11 @@ export function isSplitRevealed(phase: GamePhase): boolean {
 /** Phases in which the chosen defenders' identities/side are public. */
 export function isDefensePhase(phase: GamePhase): boolean {
   return phase === 'DEFENSE';
+}
+
+/** Phase in which queued players take their post-defense mini-turns. */
+export function isInterventiPhase(phase: GamePhase): boolean {
+  return phase === 'INTERVENTI';
 }
 
 /** Phase in which phones secretly predict the post-defense outcome. */

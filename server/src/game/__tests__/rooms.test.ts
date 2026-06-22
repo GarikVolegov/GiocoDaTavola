@@ -11,6 +11,12 @@ import {
   DILEMMA_COUNT_OPTIONS,
   REACTIONS,
   REACTION_MIN_INTERVAL_MS,
+  DEFENSE_MIN_MS,
+  INTERVENTO_MIN_MS,
+  DEFENSE_MAX_MS,
+  INTERVENTI_MAX_MS,
+  TURN_BOT_MS,
+  isInterventiPhase,
   type GamePhase,
   type VoteChoice,
 } from '../rooms';
@@ -2154,5 +2160,29 @@ describe('RoomStore defense — equa rotazione difensori', () => {
     // sock-2 ha già difeso B (count 1); sock-1 non ha mai parlato (count 0):
     // tocca a sock-1, anche se l'rng da solo ripescherebbe sock-2.
     expect(store.get(code)?.defenders.find((d) => d.side === 'B')?.id).toBe('sock-1');
+  });
+});
+
+describe('INTERVENTI phase constants + room fields', () => {
+  it('exposes the floor/cap/bot durations', () => {
+    expect([DEFENSE_MIN_MS, INTERVENTO_MIN_MS, DEFENSE_MAX_MS, INTERVENTI_MAX_MS, TURN_BOT_MS])
+      .toEqual([30_000, 15_000, 180_000, 90_000, 60_000]);
+  });
+  it('DEFENSE cap is the 3-minute safety net', () => {
+    expect(PHASE_DURATIONS_MS.DEFENSE).toBe(180_000);
+    expect(PHASE_DURATIONS_MS.INTERVENTI).toBe(90_000);
+  });
+  it('isInterventiPhase only matches INTERVENTI', () => {
+    expect(isInterventiPhase('INTERVENTI')).toBe(true);
+    expect(isInterventiPhase('DEFENSE')).toBe(false);
+  });
+  it('initializes the raised-hand/interventi fields on create', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    const room = store.get(code)!;
+    expect(room.raisedHands).toEqual([]);
+    expect(room.interventiQueue).toEqual([]);
+    expect(room.interventiIndex).toBe(0);
+    expect(room.turnMinEndsAt).toBeNull();
   });
 });

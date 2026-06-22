@@ -279,6 +279,22 @@ export interface Room {
    */
   defenseArgument: string | null;
   /**
+   * Raised hands during the CURRENT defender's turn, in FIFO order (player ids) —
+   * the speaking order for the INTERVENTI mini-turns that follow. Reset at the
+   * start of each defender turn and on DILEMMA_REVEAL; pruned on leave. Only the
+   * aggregate count leaves the server during DEFENSE (names only from INTERVENTI).
+   */
+  raisedHands: string[];
+  /** Frozen snapshot of raisedHands taken when a defender finishes; walked in INTERVENTI. */
+  interventiQueue: string[];
+  /** Which intervenor (0-based) is speaking during INTERVENTI. */
+  interventiIndex: number;
+  /**
+   * When the current turn's minimum elapses (epoch ms); below it "Ho finito" is
+   * rejected. null for bot/absent speakers (no floor) and outside DEFENSE/INTERVENTI.
+   */
+  turnMinEndsAt: number | null;
+  /**
    * Per-player tallies accumulated across the game (keyed by player id), updated
    * once per round on entry to PHASE_RESULTS and read at FINAL_AWARDS. Empty
    * until the first round's results; reset when a new game starts.
@@ -901,6 +917,10 @@ export class RoomStore {
       defenders: [],
       defenseTurnIndex: 0,
       defenseArgument: null,
+      raisedHands: [],
+      interventiQueue: [],
+      interventiIndex: 0,
+      turnMinEndsAt: null,
       stats: new Map(),
       botSeq: 0,
       mode: 'gruppo',
@@ -1125,6 +1145,10 @@ export class RoomStore {
       room.knowTargets.clear();
       room.knowGuesses.clear();
       room.speakerVotes.clear();
+      room.raisedHands = [];
+      room.interventiQueue = [];
+      room.interventiIndex = 0;
+      room.turnMinEndsAt = null;
     }
     // Entering PREDICT in the "Quanto mi conosci" round assigns the guessing ring.
     if (transition.phase === 'PREDICT' && this.isKnowRound(room)) {
