@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import { useElapsed } from '../shared/useElapsed';
@@ -44,7 +44,6 @@ import {
   type PlayerSpeakerVotedPayload,
   type Reaction,
   type BlindSpot,
-  MAX_SUBMISSIONS_PER_PLAYER,
   MIN_INFILTRATO_HUMANS,
   MIN_SQUADRE_PLAYERS,
   SUBMIT_DILEMMA_ERROR_MESSAGES,
@@ -64,6 +63,7 @@ import DefenseView from './views/DefenseView';
 import PredictView from './views/PredictView';
 import DuelArgueView from './views/DuelArgueView';
 import StatusView from './views/StatusView';
+import SubmitDilemmaCard from './views/SubmitDilemmaCard';
 import { wrap } from './views/layout';
 
 
@@ -478,21 +478,6 @@ export default function PlayerApp() {
       optionB: dilemmaB,
     });
   };
-  const canSubmitDilemma =
-    mySubmitted < MAX_SUBMISSIONS_PER_PLAYER &&
-    dilemmaText.trim() !== '' &&
-    dilemmaA.trim() !== '' &&
-    dilemmaB.trim() !== '';
-  const dilemmaFieldStyle: CSSProperties = {
-    width: '100%',
-    padding: '0.6rem 0.7rem',
-    borderRadius: '0.6rem',
-    border: '1px solid rgba(242,243,255,0.18)',
-    background: 'rgba(242,243,255,0.06)',
-    color: 'inherit',
-    fontSize: '0.95rem',
-    boxSizing: 'border-box',
-  };
 
   // Gruppo: solo play allowed (1 human + bots), never bots-only. Duello: exactly
   // two humans (no bot opponent). Mirrors the old HostApp start gating.
@@ -741,47 +726,18 @@ export default function PlayerApp() {
           </p>
         </Card>
 
-        <Card
-          style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.55rem', textAlign: 'left' }}
-        >
-          <h3 style={{ margin: 0, fontSize: '1.05rem' }}>✍️ Aggiungi un dilemma</h3>
-          <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.75 }}>
-            I vostri dilemmi entrano in gioco per primi · {game?.submittedCount ?? 0} dal gruppo
-          </p>
-          {mySubmitted >= MAX_SUBMISSIONS_PER_PLAYER ? (
-            <p style={{ margin: 0, fontWeight: 700, opacity: 0.9 }}>
-              Hai aggiunto {mySubmitted} dilemmi. Grazie! 🙌
-            </p>
-          ) : (
-            <>
-              <input
-                aria-label="La domanda"
-                placeholder="La domanda (es. Mare o montagna?)"
-                value={dilemmaText}
-                onChange={(e) => setDilemmaText(e.target.value)}
-                style={dilemmaFieldStyle}
-              />
-              <input
-                aria-label="Opzione A"
-                placeholder="Opzione A"
-                value={dilemmaA}
-                onChange={(e) => setDilemmaA(e.target.value)}
-                style={dilemmaFieldStyle}
-              />
-              <input
-                aria-label="Opzione B"
-                placeholder="Opzione B"
-                value={dilemmaB}
-                onChange={(e) => setDilemmaB(e.target.value)}
-                style={dilemmaFieldStyle}
-              />
-              <Button variant="ghost" onClick={submitDilemma} disabled={!canSubmitDilemma}>
-                Aggiungi dilemma{mySubmitted > 0 ? ` (${mySubmitted}/${MAX_SUBMISSIONS_PER_PLAYER})` : ''}
-              </Button>
-              {submitDilemmaError && <Alert>{submitDilemmaError}</Alert>}
-            </>
-          )}
-        </Card>
+        <SubmitDilemmaCard
+          submittedCount={game?.submittedCount ?? 0}
+          mySubmitted={mySubmitted}
+          text={dilemmaText}
+          optionA={dilemmaA}
+          optionB={dilemmaB}
+          onTextChange={setDilemmaText}
+          onOptionAChange={setDilemmaA}
+          onOptionBChange={setDilemmaB}
+          onSubmit={submitDilemma}
+          error={submitDilemmaError}
+        />
 
         {isLeader ? (
           <Card

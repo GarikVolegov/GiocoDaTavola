@@ -308,4 +308,18 @@ describe('PlayerApp', () => {
     });
     expect(screen.getByText(/guarda il risultato sullo schermo/i)).toBeInTheDocument();
   });
+
+  it('shows the lobby with the add-dilemma card after joining (no game state yet)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', { players: [{ id: 'p1', nickname: 'Alice' }] });
+    });
+    expect(screen.getByText(/sei nella stanza/i)).toBeInTheDocument();
+    expect(screen.getByText(/aggiungi un dilemma/i)).toBeInTheDocument();
+  });
 });
