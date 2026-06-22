@@ -1304,6 +1304,24 @@ export class RoomStore {
   }
 
   /**
+   * The current speaker (defender in DEFENSE, intervenor in INTERVENTI) signals
+   * they are done. Valid only from the speaker and only once the per-turn minimum
+   * has elapsed; the caller (index.ts) then advances the turn like the timer would.
+   */
+  finishTurn(code: string, playerId: string): FinishTurnResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.phase !== 'DEFENSE' && room.phase !== 'INTERVENTI') {
+      return { ok: false, error: 'NOT_FINISHING_PHASE' };
+    }
+    if (this.currentSpeakerId(room) !== playerId) return { ok: false, error: 'NOT_SPEAKER' };
+    if (room.turnMinEndsAt != null && this.now() < room.turnMinEndsAt) {
+      return { ok: false, error: 'TOO_EARLY' };
+    }
+    return { ok: true, room };
+  }
+
+  /**
    * Record (or change) a player's secret prediction of the post-defense majority
    * during PREDICT. Overwritable until the phase ends, like a vote. Predictions
    * never leave the server individually — only the aggregate count, plus each

@@ -2260,3 +2260,17 @@ describe('raiseHand', () => {
     expect(store.raiseHand(code, speaker)).toEqual({ ok: false, error: 'NOT_RAISE_PHASE' });
   });
 });
+
+describe('finishTurn', () => {
+  it('is rejected before the minimum, accepted after, and only from the speaker', () => {
+    let now = 1_000;
+    const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']);
+    const speaker = store.get(code)!.defenders[0].id;
+    const other = [...store.get(code)!.players.keys()].find((id) => id !== speaker)!;
+    expect(store.finishTurn(code, other)).toEqual({ ok: false, error: 'NOT_SPEAKER' });
+    expect(store.finishTurn(code, speaker)).toEqual({ ok: false, error: 'TOO_EARLY' });
+    now = 1_000 + 30_000;
+    expect(store.finishTurn(code, speaker)).toMatchObject({ ok: true });
+  });
+});
