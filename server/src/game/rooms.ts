@@ -1279,6 +1279,7 @@ export class RoomStore {
   /** The id of the player currently speaking (defender in DEFENSE, arguer in DUEL_ARGUE), or null. */
   private currentSpeakerId(room: Room): string | null {
     if (room.phase === 'DEFENSE') return room.defenders[room.defenseTurnIndex]?.id ?? null;
+    if (room.phase === 'INTERVENTI') return room.interventiQueue[room.interventiIndex] ?? null;
     if (room.phase === 'DUEL_ARGUE') return duelPlayers(room)[room.duelTurnIndex]?.id ?? null;
     return null;
   }
@@ -1294,7 +1295,7 @@ export class RoomStore {
   react(code: string, playerId: string, emoji: string): ReactResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'DEFENSE' && room.phase !== 'DUEL_ARGUE') {
+    if (room.phase !== 'DEFENSE' && room.phase !== 'INTERVENTI' && room.phase !== 'DUEL_ARGUE') {
       return { ok: false, error: 'NOT_REACTING_PHASE' };
     }
     if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };

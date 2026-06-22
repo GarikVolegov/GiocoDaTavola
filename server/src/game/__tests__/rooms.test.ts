@@ -2317,3 +2317,18 @@ describe('advancePhase weaving DEFENSE/INTERVENTI', () => {
     expect(store.get(code)!.phase).toBe('VOTE_2');
   });
 });
+
+describe('reactions during INTERVENTI', () => {
+  it('attributes an emoji to the current intervenor', () => {
+    const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'A', 'A']);
+    const defender = store.get(code)!.defenders[0].id;
+    const others = [...store.get(code)!.players.keys()].filter((id) => id !== defender);
+    store.raiseHand(code, others[0]);
+    store.advancePhase(code); // → INTERVENTI, intervenor = others[0]
+    expect(store.get(code)!.phase).toBe('INTERVENTI');
+    const res = store.react(code, others[1], '👏');
+    expect(res).toMatchObject({ ok: true, emoji: '👏' });
+    expect(store.get(code)!.stats.get(others[0])?.reactionsReceived).toBe(1);
+  });
+});
