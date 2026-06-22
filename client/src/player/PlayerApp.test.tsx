@@ -247,4 +247,26 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/quanto mi conosci/i)).toBeInTheDocument();
     expect(screen.getByText('Bea')).toBeInTheDocument(); // the target to guess
   });
+
+  it('shows who is arguing for a spectator at DUEL_ARGUE', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DUEL_ARGUE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        duelTurn: { speaker: { id: 'p2', nickname: 'Bea', side: 'A' }, turn: 1, totalTurns: 4 },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/sta argomentando/i)).toBeInTheDocument();
+    expect(screen.getByText('Bea')).toBeInTheDocument();
+  });
 });
