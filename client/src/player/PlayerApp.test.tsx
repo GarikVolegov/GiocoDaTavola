@@ -269,4 +269,43 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/sta argomentando/i)).toBeInTheDocument();
     expect(screen.getByText('Bea')).toBeInTheDocument();
   });
+
+  it('shows the dilemma at DILEMMA_REVEAL (status view)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DILEMMA_REVEAL',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/mare o montagna/i)).toBeInTheDocument();
+  });
+
+  it('points to the shared screen at FINAL_DUEL (status view)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'FINAL_DUEL',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/guarda il risultato sullo schermo/i)).toBeInTheDocument();
+  });
 });
