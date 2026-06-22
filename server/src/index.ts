@@ -12,6 +12,7 @@ import { saveAwards, awardsToPersist, saveGameRecords, gamesToPersist } from './
 import { verifyClerkToken } from './clerk';
 import { serializeRoom, deserializeRoom } from './game/roomSnapshot';
 import { persistSnapshot, loadAllSnapshots, deleteSnapshot } from './snapshotStore';
+import { createRateLimiter } from './rateLimit';
 
 // Load server/.env (e.g. AI_BASE_URL / AI_MODEL for self-hosted LLM defenses) if
 // present. Zero-dependency: uses Node's built-in env-file loader (Node 20.12+).
@@ -28,6 +29,9 @@ const io = new Server(httpServer, {
 
 // Authoritative in-memory room store (no DB).
 const rooms = new RoomStore();
+// Throttle room create/join per socket: at most 10 attempts / 10s, so one
+// socket can't spam the room space or flood joins.
+const joinLimiter = createRateLimiter(10, 10_000);
 // Available dilemmas per tappa, computed once at boot — surfaced to the host so
 // the percorso setup can show an accurate (capped) length estimate. Static data.
 const TAPPA_COUNTS = tappaCounts(loadDilemmas());
@@ -422,6 +426,10 @@ io.on('connection', (socket) => {
   // A player creates a room from their phone: they join as a player AND become
   // the room's leader (the controls live on their phone; the TV is optional).
   socket.on('player:createRoom', (payload: { nickname?: string }) => {
+    if (!joinLimiter.allow(socket.id)) {
+      socket.emit('player:joinError', { error: 'RATE_LIMITED' });
+      return;
+    }
     const nickname = String(payload?.nickname ?? '');
     const { code } = rooms.create();
     const playerId = `p_${randomUUID()}`;
@@ -520,6 +528,10 @@ io.on('connection', (socket) => {
   // A player joins from their phone with a room code + nickname. An optional
   // `token` from a previous session reclaims the same seat (reconnection).
   socket.on('player:join', (payload: { code?: string; nickname?: string; token?: string }) => {
+    if (!joinLimiter.allow(socket.id)) {
+      socket.emit('player:joinError', { error: 'RATE_LIMITED' });
+      return;
+    }
     const code = String(payload?.code ?? '').trim().toUpperCase();
     const nickname = String(payload?.nickname ?? '');
     const sentToken = typeof payload?.token === 'string' ? payload.token : undefined;
