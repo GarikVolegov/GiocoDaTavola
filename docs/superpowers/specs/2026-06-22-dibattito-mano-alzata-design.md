@@ -1,3 +1,8 @@
+> ⚠️ **SUPERATO** (2026-06-22) da
+> [2026-06-22-difese-interventi-mano-alzata-design.md](2026-06-22-difese-interventi-mano-alzata-design.md).
+> Mai implementato. Conservato per storia: descrive un design diverso (dibattito continuo
+> alternato A→B con coda per lato, niente tetto, voti senza timer) che NON è quello scelto.
+
 # Design — Round auto-paced: Dibattito a mano alzata + voto senza timer
 
 Data: 2026-06-22 · Modalità: **gruppo** (il duello mantiene il suo DUEL_ARGUE per ora)
