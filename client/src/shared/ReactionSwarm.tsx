@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { getSocket } from '../shared/socket';
-import { SocketEvents, type RoomReactionPayload } from '../shared/events';
+import { getSocket } from './socket';
+import { SocketEvents, type RoomReactionPayload } from './events';
 import styles from './ReactionSwarm.module.css';
 
 interface FloatingReaction {

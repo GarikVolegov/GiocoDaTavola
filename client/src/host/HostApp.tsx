@@ -15,7 +15,7 @@ import {
   type PercorsoView,
 } from '../shared/events';
 import { Card, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing } from '../shared/ui';
-import ReactionSwarm from './ReactionSwarm';
+import ReactionSwarm from '../shared/ReactionSwarm';
 
 const screen = {
   display: 'flex',
