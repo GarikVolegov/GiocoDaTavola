@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { RoomStore } from '../game/rooms';
-import { awardsToPersist, saveAwards } from '../persistence';
+import { awardsToPersist, saveAwards, gamesToPersist, saveGameRecords } from '../persistence';
 import { dbEnabled } from '../db';
 
 // Drive a tiny 1-player game where the single player wins every award, then tag
@@ -51,5 +51,36 @@ describe('saveAwards (no DATABASE_URL in tests)', () => {
   it('is disabled and resolves without throwing', async () => {
     expect(dbEnabled()).toBe(false);
     await expect(saveAwards([])).resolves.toBeUndefined();
+  });
+});
+
+describe('gamesToPersist', () => {
+  it('returns one record per tagged player with that game\'s stats', () => {
+    const store = new RoomStore();
+    const code = finishedRoom(store, true);
+    const rows = gamesToPersist(store.get(code)!);
+    expect(rows.length).toBe(1);
+    const r = rows[0];
+    expect(r.clerkUserId).toBe('user_ann');
+    expect(r.gameCode).toBe(code);
+    expect(r.mode).toBe('gruppo');
+    expect(r.nickname).toBe('Ann');
+    expect(r.playerCount).toBe(3);
+    expect(r.rounds).toBeGreaterThan(0);
+    expect(typeof r.persuasion).toBe('number');
+    expect(r.awardsCount).toBeGreaterThan(0); // Ann wins the tie-broken awards
+  });
+
+  it('returns [] when no player is tagged', () => {
+    const store = new RoomStore();
+    const code = finishedRoom(store, false);
+    expect(gamesToPersist(store.get(code)!)).toEqual([]);
+  });
+});
+
+describe('saveGameRecords (no DATABASE_URL in tests)', () => {
+  it('is disabled and resolves without throwing', async () => {
+    expect(dbEnabled()).toBe(false);
+    await expect(saveGameRecords([])).resolves.toBeUndefined();
   });
 });

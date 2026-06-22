@@ -34,6 +34,23 @@ export async function migrate(): Promise<void> {
   await pool.query(`CREATE INDEX IF NOT EXISTS awards_user_idx ON awards(clerk_user_id, won_at DESC);`);
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS awards_uniq ON awards(clerk_user_id, award_id, game_code);`);
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS game_records (
+      id             bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      clerk_user_id  text NOT NULL REFERENCES users(clerk_user_id) ON DELETE CASCADE,
+      game_code      text NOT NULL,
+      mode           text NOT NULL,
+      nickname       text NOT NULL,
+      rounds         int  NOT NULL DEFAULT 0,
+      persuasion     int  NOT NULL DEFAULT 0,
+      changed_count  int  NOT NULL DEFAULT 0,
+      majority_count int  NOT NULL DEFAULT 0,
+      awards_count   int  NOT NULL DEFAULT 0,
+      player_count   int  NOT NULL DEFAULT 0,
+      played_at      timestamptz NOT NULL DEFAULT now()
+    );`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS game_records_user_idx ON game_records(clerk_user_id, played_at DESC);`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS game_records_uniq ON game_records(clerk_user_id, game_code);`);
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS room_snapshots (
       code       text PRIMARY KEY,
       snapshot   text NOT NULL,

@@ -495,6 +495,33 @@ export interface MyAward {
   wonAt: string;
 }
 
+/** Aggregate per-user stats for the dashboard (GET /api/me/dashboard). */
+export interface MyStats {
+  gamesPlayed: number;
+  totalPersuasion: number;
+  bestPersuasion: number;
+  awardsCount: number;
+}
+
+/** One finished-game record in the dashboard history. */
+export interface MyGameRecord {
+  id: string;
+  gameCode: string;
+  mode: string;
+  nickname: string;
+  persuasion: number;
+  rounds: number;
+  awardsCount: number;
+  playedAt: string;
+}
+
+/** Payload of GET /api/me/dashboard: stats + recent games + a small awards preview. */
+export interface MyDashboard {
+  stats: MyStats;
+  recentGames: MyGameRecord[];
+  recentAwards: Pick<MyAward, 'id' | 'awardId' | 'title' | 'emoji' | 'description' | 'nickname' | 'wonAt'>[];
+}
+
 export interface PlayerVotePayload {
   choice: VoteChoice;
 }

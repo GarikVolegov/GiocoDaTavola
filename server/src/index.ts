@@ -7,7 +7,7 @@ import { randomUUID } from 'crypto';
 import { RoomStore, isVotingPhase, type Room } from './game/rooms';
 import { generateBotDefense, aiDefenseEnabled } from './game/aiDefense';
 import { migrate, dbEnabled, pool } from './db';
-import { saveAwards, awardsToPersist } from './persistence';
+import { saveAwards, awardsToPersist, saveGameRecords, gamesToPersist } from './persistence';
 import { verifyClerkToken } from './clerk';
 import { serializeRoom, deserializeRoom } from './game/roomSnapshot';
 import { persistSnapshot, loadAllSnapshots, deleteSnapshot } from './snapshotStore';
@@ -298,6 +298,7 @@ function advanceAndBroadcast(code: string): void {
   }
   if (room && room.phase === 'FINAL_AWARDS') {
     saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards failed', e));
+    saveGameRecords(gamesToPersist(room)).catch((e) => console.error('[db] saveGameRecords failed', e));
   }
 }
 
@@ -332,6 +333,74 @@ app.get('/api/me/awards', async (req, res) => {
       description: r.description,
       gameCode: r.game_code,
       gameMode: r.game_mode,
+      nickname: r.nickname,
+      wonAt: r.won_at,
+    })),
+  });
+});
+
+// The caller's dashboard data in one round-trip: aggregate stats, recent games,
+// and a small awards preview. Same Bearer-token auth as /api/me/awards.
+app.get('/api/me/dashboard', async (req, res) => {
+  const header = req.header('authorization') ?? '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const userId = await verifyClerkToken(token);
+  if (!userId) {
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
+  const empty = {
+    stats: { gamesPlayed: 0, totalPersuasion: 0, bestPersuasion: 0, awardsCount: 0 },
+    recentGames: [],
+    recentAwards: [],
+  };
+  if (!dbEnabled() || !pool) {
+    res.json(empty);
+    return;
+  }
+  const [agg, games, awards, awardsCount] = await Promise.all([
+    pool.query(
+      `SELECT count(*)::int AS games_played,
+              coalesce(sum(persuasion), 0)::int AS total_persuasion,
+              coalesce(max(persuasion), 0)::int AS best_persuasion
+       FROM game_records WHERE clerk_user_id = $1`,
+      [userId],
+    ),
+    pool.query(
+      `SELECT id, game_code, mode, nickname, persuasion, rounds, awards_count, played_at
+       FROM game_records WHERE clerk_user_id = $1 ORDER BY played_at DESC LIMIT 20`,
+      [userId],
+    ),
+    pool.query(
+      `SELECT id, award_id, title, emoji, description, nickname, won_at
+       FROM awards WHERE clerk_user_id = $1 ORDER BY won_at DESC LIMIT 6`,
+      [userId],
+    ),
+    pool.query(`SELECT count(*)::int AS n FROM awards WHERE clerk_user_id = $1`, [userId]),
+  ]);
+  res.json({
+    stats: {
+      gamesPlayed: agg.rows[0].games_played,
+      totalPersuasion: agg.rows[0].total_persuasion,
+      bestPersuasion: agg.rows[0].best_persuasion,
+      awardsCount: awardsCount.rows[0].n,
+    },
+    recentGames: games.rows.map((r) => ({
+      id: String(r.id),
+      gameCode: r.game_code,
+      mode: r.mode,
+      nickname: r.nickname,
+      persuasion: r.persuasion,
+      rounds: r.rounds,
+      awardsCount: r.awards_count,
+      playedAt: r.played_at,
+    })),
+    recentAwards: awards.rows.map((r) => ({
+      id: String(r.id),
+      awardId: r.award_id,
+      title: r.title,
+      emoji: r.emoji,
+      description: r.description,
       nickname: r.nickname,
       wonAt: r.won_at,
     })),
@@ -656,6 +725,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(session.code);
     if (room && room.phase === 'FINAL_AWARDS') {
       saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards (identify) failed', e));
+      saveGameRecords(gamesToPersist(room)).catch((e) => console.error('[db] saveGameRecords (identify) failed', e));
     }
   });
 
