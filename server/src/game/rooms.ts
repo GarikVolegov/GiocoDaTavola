@@ -54,6 +54,9 @@ const CODE_LENGTH = 4;
 /** Max players allowed in a single room (in-person party game). */
 export const MAX_PLAYERS = 8;
 
+/** Max nickname length — truncated (not rejected) for a forgiving UX. */
+export const NICKNAME_MAX = 24;
+
 /** Max player-submitted dilemmas a single player may add in the lobby. */
 export const MAX_SUBMISSIONS_PER_PLAYER = 2;
 /** Length caps for a player-submitted dilemma (prompt / each option). */
@@ -2118,7 +2121,7 @@ export class RoomStore {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
 
-    const name = nickname.trim();
+    const name = nickname.trim().slice(0, NICKNAME_MAX);
     if (!name) return { ok: false, error: 'NICKNAME_REQUIRED' };
 
     const existing = room.players.get(playerId);

@@ -7,6 +7,7 @@ import {
   isVotingPhase,
   PHASE_DURATIONS_MS,
   MAX_PLAYERS,
+  NICKNAME_MAX,
   MIN_PLAYERS_TO_START,
   DILEMMA_COUNT_OPTIONS,
   REACTIONS,
@@ -146,6 +147,14 @@ describe('RoomStore players (lobby)', () => {
     const ok = store.join(code, 'sock-2', '  Bob  ');
     expect(ok.ok).toBe(true);
     if (ok.ok) expect(ok.player.nickname).toBe('Bob');
+  });
+
+  it('caps an over-long nickname to NICKNAME_MAX chars', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    const res = store.join(code, 'sock-1', 'x'.repeat(100));
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.player.nickname.length).toBe(NICKNAME_MAX);
   });
 
   it(`blocks joining beyond ${MAX_PLAYERS} players with ROOM_FULL`, () => {
