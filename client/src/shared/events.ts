@@ -34,6 +34,8 @@ export const SocketEvents = {
   PlayerVoted: 'player:voted',
   /** Server rejects the vote (wrong phase, not in room, bad choice). */
   PlayerVoteError: 'player:voteError',
+  /** Player explicitly confirms their (pre-filled) second vote (VOTE_2). */
+  PlayerConfirmVote: 'player:confirmVote',
   /** Player taps a live audience reaction (DEFENSE / DUEL_ARGUE). */
   PlayerReact: 'player:react',
   /** Server re-broadcasts a single reaction emoji to everyone (the host's swarm). */
@@ -336,6 +338,8 @@ export interface GameStatePayload {
    * voted what (votes are secret). The A/B split is revealed later (SPLIT_REVEAL).
    */
   votedCount: number;
+  /** How many players have confirmed their second vote (VOTE_2). Aggregate only. */
+  confirmedCount: number;
   /**
    * How many players have made a secret prediction this round (PREDICT phase).
    * Aggregate count only — never who predicted what.

@@ -256,6 +256,7 @@ describe('PHASE_DURATIONS_MS', () => {
     expect(PHASE_DURATIONS_MS.FINAL_AWARDS).toBeNull();
     // Self-paced: advance on "everyone acted", not on a timer.
     expect(PHASE_DURATIONS_MS.VOTE_1).toBeNull();
+    expect(PHASE_DURATIONS_MS.VOTE_2).toBeNull();
     expect(PHASE_DURATIONS_MS.PREDICT).toBeNull();
     expect(PHASE_DURATIONS_MS.SPEAKER_VOTE).toBeNull();
     const timed: GamePhase[] = [

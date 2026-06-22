@@ -46,7 +46,7 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   SPLIT_REVEAL: 6_000,
   PREDICT: null,
   DEFENSE: 60_000,
-  VOTE_2: 20_000,
+  VOTE_2: null,
   SPEAKER_VOTE: null,
   PHASE_RESULTS: 8_000,
   FINAL_AWARDS: null,
