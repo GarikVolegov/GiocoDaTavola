@@ -100,4 +100,31 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/hai sentito le difese/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /confermo/i })).toBeInTheDocument();
   });
+
+  it('lists the other defenders to vote at SPEAKER_VOTE (excluding self)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'SPEAKER_VOTE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        speakerCandidates: [
+          { id: 'p1', side: 'A', nickname: 'Alice' }, // self — filtered out
+          { id: 'p2', side: 'A', nickname: 'Bea' },
+          { id: 'p3', side: 'B', nickname: 'Carlo' },
+        ],
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText('Chi è stato più convincente?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Bea/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Carlo/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Alice/ })).toBeNull();
+  });
 });

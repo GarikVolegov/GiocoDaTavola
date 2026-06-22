@@ -14,6 +14,14 @@ sola, invece di un big-bang. Stop per review dopo ogni fetta.
   wiring PlayerApp→VoteView, non il componente isolato → provano che il refactor
   preserva il comportamento). 345 test, gate verdi.
 
+## Fetta 2 — Estrazione `SpeakerVoteView` da PlayerApp ✅
+- Nuovo `client/src/player/views/SpeakerVoteView.tsx`: schermata "chi è stato più
+  convincente?" (SPEAKER_VOTE), presentational (callback `onVote`). Il parent filtra
+  i candidati (esclude sé stesso) e passa la lista.
+- `PlayerApp.tsx`: blocco inline (~60 righe) → `<SpeakerVoteView .../>`. Da 1693 a 1645 righe.
+- Copertura: render-test SPEAKER_VOTE in `PlayerApp.test.tsx` (candidati elencati,
+  sé stesso escluso). 346 test, gate verdi.
+
 ## Prossime fette (proposte, non ancora fatte)
 - Estrarre le altre viste di fase di PlayerApp (DEFENSE/INTERVENTI, SPEAKER_VOTE,
   PREDICT, ACCUSE, lo switch finale TAPPA/SPLIT/RESULTS/AWARDS), aggiungendo un
