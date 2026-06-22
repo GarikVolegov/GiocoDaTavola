@@ -422,6 +422,8 @@ export interface DefenseState {
   minEndsAt: number | null;
   /** Whether the current speaker may end now (minimum elapsed). */
   canFinish: boolean;
+  /** When the current turn started (epoch ms); source for the count-up timer. */
+  startedAt: number | null;
 }
 
 /**
