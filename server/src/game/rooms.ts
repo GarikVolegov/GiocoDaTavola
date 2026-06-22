@@ -6,6 +6,11 @@ import { botDefenseArgument } from './botDefense';
 import {
   type GamePhase,
   PHASE_DURATIONS_MS,
+  DEFENSE_MIN_MS,
+  INTERVENTO_MIN_MS,
+  DEFENSE_MAX_MS,
+  INTERVENTI_MAX_MS,
+  TURN_BOT_MS,
   isVotingPhase,
   isSplitRevealed,
   isDefensePhase,
@@ -626,6 +631,26 @@ export class RoomStore {
   }
 
   /**
+   * Set the current turn's minimum-floor + safety-cap timers for the speaker in
+   * DEFENSE/INTERVENTI. A human speaker gets a MIN (below which "Ho finito" is
+   * rejected) plus a generous cap; a bot or absent speaker can't tap, so they get
+   * only TURN_BOT_MS and no floor. Overrides whatever expiryFor set generically.
+   */
+  private armTurn(room: Room): void {
+    const interventi = room.phase === 'INTERVENTI';
+    const speakerId = this.currentSpeakerId(room);
+    const speaker = speakerId ? room.players.get(speakerId) : undefined;
+    const now = this.now();
+    if (speaker && !speaker.isBot) {
+      room.turnMinEndsAt = now + (interventi ? INTERVENTO_MIN_MS : DEFENSE_MIN_MS);
+      room.phaseExpiresAt = now + (interventi ? INTERVENTI_MAX_MS : DEFENSE_MAX_MS);
+    } else {
+      room.turnMinEndsAt = null;
+      room.phaseExpiresAt = now + TURN_BOT_MS;
+    }
+  }
+
+  /**
    * Auto-select one defender per side from that side's secret voters (side A
    * before B). A side with 0 votes is skipped. Which of a side's voters speaks
    * is chosen via the injectable rng, so tests can pin the pick.
@@ -1160,6 +1185,8 @@ export class RoomStore {
       room.defenders = this.selectDefenders(room);
       room.defenseTurnIndex = 0;
       room.defenseArgument = this.argumentForCurrentDefender(room);
+      room.raisedHands = [];
+      this.armTurn(room);
     }
     // Entering VOTE_1: bots cast their (random) first vote so the human(s) only
     // wait on themselves; the per-choice split stays secret until SPLIT_REVEAL.
