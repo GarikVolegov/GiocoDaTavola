@@ -1119,13 +1119,44 @@ export class RoomStore {
       return { ok: true, room };
     }
 
-    // DEFENSE runs one timed turn per defender. While turns remain, advance to
-    // the next speaker (re-arming the per-turn timer) instead of leaving the
-    // phase; only once every defender has spoken do we fall through to VOTE_2.
+    // A finished INTERVENTI mini-turn: walk the frozen queue, then resume the
+    // defenders (next defender or fall through to VOTE_2). Per-defender interventi.
+    if (room.phase === 'INTERVENTI') {
+      if (room.interventiIndex < room.interventiQueue.length - 1) {
+        room.interventiIndex++;
+        this.armTurn(room);
+        return { ok: true, room };
+      }
+      room.interventiQueue = [];
+      room.interventiIndex = 0;
+      if (room.defenseTurnIndex < room.defenders.length - 1) {
+        room.phase = 'DEFENSE';
+        room.defenseTurnIndex++;
+        room.raisedHands = [];
+        room.defenseArgument = this.argumentForCurrentDefender(room);
+        this.armTurn(room);
+        return { ok: true, room };
+      }
+      // No defenders left: fall through to the normal DEFENSE -> VOTE_2 transition.
+      room.phase = 'DEFENSE';
+    }
+
+    // A finished DEFENSE turn: if the defender drew raised hands, run their
+    // interventi first; else advance to the next defender; else fall through to
+    // VOTE_2 via the normal transition below.
+    if (room.phase === 'DEFENSE' && room.raisedHands.length > 0) {
+      room.phase = 'INTERVENTI';
+      room.interventiQueue = [...room.raisedHands];
+      room.interventiIndex = 0;
+      room.raisedHands = [];
+      this.armTurn(room);
+      return { ok: true, room };
+    }
     if (room.phase === 'DEFENSE' && room.defenseTurnIndex < room.defenders.length - 1) {
       room.defenseTurnIndex++;
-      room.phaseExpiresAt = this.expiryFor('DEFENSE');
+      room.raisedHands = [];
       room.defenseArgument = this.argumentForCurrentDefender(room);
+      this.armTurn(room);
       return { ok: true, room };
     }
 

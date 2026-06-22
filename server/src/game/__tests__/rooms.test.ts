@@ -2274,3 +2274,46 @@ describe('finishTurn', () => {
     expect(store.finishTurn(code, speaker)).toMatchObject({ ok: true });
   });
 });
+
+describe('advancePhase weaving DEFENSE/INTERVENTI', () => {
+  it('a defender with raised hands enters INTERVENTI, walks the queue, then resumes', () => {
+    const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'A', 'A']); // one defender (side A)
+    const defender = store.get(code)!.defenders[0].id;
+    const others = [...store.get(code)!.players.keys()].filter((id) => id !== defender);
+    store.raiseHand(code, others[0]);
+    store.raiseHand(code, others[1]);
+    store.advancePhase(code);
+    expect(store.get(code)!.phase).toBe('INTERVENTI');
+    expect(store.get(code)!.interventiQueue).toEqual([others[0], others[1]]);
+    expect(store.get(code)!.interventiIndex).toBe(0);
+    expect(store.get(code)!.raisedHands).toEqual([]);
+    store.advancePhase(code);
+    expect(store.get(code)!.phase).toBe('INTERVENTI');
+    expect(store.get(code)!.interventiIndex).toBe(1);
+    store.advancePhase(code);
+    expect(store.get(code)!.phase).toBe('VOTE_2');
+  });
+
+  it('a defender with NO raised hands skips INTERVENTI', () => {
+    const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'A', 'A']);
+    store.advancePhase(code);
+    expect(store.get(code)!.phase).toBe('VOTE_2');
+  });
+
+  it('runs interventi per-defender (two sides)', () => {
+    const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']); // two defenders (A then B)
+    const d0 = store.get(code)!.defenders[0].id;
+    const other = [...store.get(code)!.players.keys()].find((id) => id !== d0)!;
+    store.raiseHand(code, other);
+    store.advancePhase(code);
+    expect(store.get(code)!.phase).toBe('INTERVENTI');
+    store.advancePhase(code);
+    expect(store.get(code)!.phase).toBe('DEFENSE');
+    expect(store.get(code)!.defenseTurnIndex).toBe(1);
+    store.advancePhase(code);
+    expect(store.get(code)!.phase).toBe('VOTE_2');
+  });
+});
