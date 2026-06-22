@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Deck, loadDilemmas, dilemmasForRegister, type Dilemma } from '../deck';
+import { Deck, loadDilemmas, dilemmasForRegister, dilemmasForTappa, type Dilemma } from '../deck';
 
 // A small fixed deck for exercising draw behavior without depending on the
 // real data file.
@@ -146,6 +146,52 @@ describe('spunti per lato', () => {
         expect(s.trim()).not.toBe('');
       }
     }
+  });
+});
+
+describe('dilemmasForTappa (modalità Percorso)', () => {
+  const tagged: Dilemma[] = [
+    { id: 't1a', text: 'T1?', optionA: 'a', optionB: 'b', register: 'vita', tappa: 1, spuntiA: ['x', 'y'], spuntiB: ['x', 'y'] },
+    { id: 't1b', text: 'T1b?', optionA: 'a', optionB: 'b', register: 'vita', tappa: 1, spuntiA: ['x', 'y'], spuntiB: ['x', 'y'] },
+    { id: 't2a', text: 'T2?', optionA: 'a', optionB: 'b', register: 'vita', tappa: 2, spuntiA: ['x', 'y'], spuntiB: ['x', 'y'] },
+    { id: 'untagged', text: 'U?', optionA: 'a', optionB: 'b', register: 'business', spuntiA: ['x', 'y'], spuntiB: ['x', 'y'] },
+  ];
+
+  it('restituisce solo i dilemmi della tappa richiesta', () => {
+    expect(dilemmasForTappa(tagged, 1).map((d) => d.id)).toEqual(['t1a', 't1b']);
+    expect(dilemmasForTappa(tagged, 2).map((d) => d.id)).toEqual(['t2a']);
+  });
+
+  it('ignora i dilemmi senza tappa (riservati alla modalità classica)', () => {
+    const all = dilemmasForTappa(tagged, 1).concat(dilemmasForTappa(tagged, 2));
+    expect(all.some((d) => d.id === 'untagged')).toBe(false);
+  });
+
+  it('restituisce un array vuoto per una tappa senza dilemmi', () => {
+    expect(dilemmasForTappa(tagged, 4)).toEqual([]);
+  });
+});
+
+describe('contenuti Percorso (tappe)', () => {
+  const all = loadDilemmas();
+
+  it('ogni tappa ha almeno 10 dilemmi (basta per ~3h dal livello 1)', () => {
+    for (const t of [1, 2, 3, 4] as const) {
+      expect(dilemmasForTappa(all, t).length).toBeGreaterThanOrEqual(10);
+    }
+  });
+
+  it('ogni dilemma con tappa ha una tappa valida (1..4) e spunti per lato', () => {
+    for (const d of all) {
+      if (d.tappa === undefined) continue;
+      expect([1, 2, 3, 4]).toContain(d.tappa);
+      expect(d.spuntiA.length).toBeGreaterThanOrEqual(2);
+      expect(d.spuntiB.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('i dilemmi business non fanno parte del percorso', () => {
+    expect(all.filter((d) => d.register === 'business' && d.tappa !== undefined)).toHaveLength(0);
   });
 });
 

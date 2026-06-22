@@ -21,6 +21,10 @@ export type GamePhase =
   | 'VOTE_2'
   | 'SPEAKER_VOTE'
   | 'PHASE_RESULTS'
+  // "Percorso" mode: the chapter card shown entering a new tappa, and the
+  // end-of-tappa recap/pause (handled by nextPercorsoPhase, not nextPhase).
+  | 'TAPPA_INTRO'
+  | 'TAPPA_RECAP'
   // "L'Infiltrato" end-game accusation, inserted before FINAL_AWARDS only when a
   // room has an infiltrator (handled in advancePhase, not the pure sequence).
   | 'ACCUSE'
@@ -52,6 +56,10 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   VOTE_2: null,
   SPEAKER_VOTE: null,
   PHASE_RESULTS: 8_000,
+  // Percorso: the chapter card auto-advances; the end-of-tappa recap has no timer
+  // so it doubles as a break — the host resumes with "Continua ▶" when ready.
+  TAPPA_INTRO: 8_000,
+  TAPPA_RECAP: null,
   ACCUSE: 30_000,
   FINAL_AWARDS: null,
   DUEL_PICK: 20_000,
@@ -142,6 +150,52 @@ export function nextPhase(
     return { phase: DILEMMA_SEQUENCE[i + 1], dilemmaIndex };
   }
   // LOBBY and FINAL_AWARDS have no automatic successor.
+  return { phase: current, dilemmaIndex };
+}
+
+/**
+ * Pure state-machine transition for "Percorso" mode (the long, themed ascent).
+ * The per-dilemma sequence (DILEMMA_REVEAL…PHASE_RESULTS) is identical to the
+ * classic game; only the chapter framing differs:
+ *  - PHASE_INTRO opens the first TAPPA_INTRO (chapter card);
+ *  - TAPPA_INTRO opens the next dilemma (incrementing the index);
+ *  - PHASE_RESULTS continues within the tappa, or — at a tappa boundary or the
+ *    very end — detours through TAPPA_RECAP (the recap/pause);
+ *  - TAPPA_RECAP either announces the next tappa or ends at FINAL_AWARDS.
+ * `plannedTappe[i]` is the tappa of the (1-based) dilemma i+1.
+ */
+export function nextPercorsoPhase(
+  current: GamePhase,
+  dilemmaIndex: number,
+  plannedTappe: number[],
+): PhaseTransition {
+  const total = plannedTappe.length;
+  if (current === 'PHASE_INTRO') {
+    return { phase: 'TAPPA_INTRO', dilemmaIndex: 0 };
+  }
+  if (current === 'TAPPA_INTRO') {
+    return { phase: 'DILEMMA_REVEAL', dilemmaIndex: dilemmaIndex + 1 };
+  }
+  if (current === 'TAPPA_RECAP') {
+    return dilemmaIndex < total
+      ? { phase: 'TAPPA_INTRO', dilemmaIndex }
+      : { phase: 'FINAL_AWARDS', dilemmaIndex };
+  }
+  if (current === 'PHASE_RESULTS') {
+    if (dilemmaIndex < total) {
+      const sameTappa = plannedTappe[dilemmaIndex] === plannedTappe[dilemmaIndex - 1];
+      return sameTappa
+        ? { phase: 'DILEMMA_REVEAL', dilemmaIndex: dilemmaIndex + 1 }
+        : { phase: 'TAPPA_RECAP', dilemmaIndex };
+    }
+    // Last dilemma done: recap the final tappa before the awards.
+    return { phase: 'TAPPA_RECAP', dilemmaIndex };
+  }
+  // In-dilemma phases run exactly like the classic sequence.
+  const i = DILEMMA_SEQUENCE.indexOf(current);
+  if (i >= 0 && i < DILEMMA_SEQUENCE.length - 1) {
+    return { phase: DILEMMA_SEQUENCE[i + 1], dilemmaIndex };
+  }
   return { phase: current, dilemmaIndex };
 }
 

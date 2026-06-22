@@ -8,6 +8,13 @@ import { join } from 'path';
 /** Content register: 'misto' is a filter meaning "any". */
 export type ContentRegister = 'vita' | 'business' | 'misto';
 
+/**
+ * A 1-based "tappa" (life chapter / depth level) for the "Percorso" mode. Higher
+ * = a later, deeper chapter of life. Absent on a dilemma means it is NOT part of
+ * a percorso (classic 3/5/7 mode ignores this field entirely).
+ */
+export type Tappa = 1 | 2 | 3 | 4;
+
 export interface Dilemma {
   id: string;
   text: string;
@@ -15,6 +22,8 @@ export interface Dilemma {
   optionB: string;
   /** Which content register this dilemma belongs to. */
   register: 'vita' | 'business';
+  /** Percorso chapter/level (1..4); absent ⇒ classic-only dilemma. */
+  tappa?: Tappa;
   /** 2–3 talking points for someone defending side A (optionA). */
   spuntiA: string[];
   /** 2–3 talking points for someone defending side B (optionB). */
@@ -25,6 +34,14 @@ export interface Dilemma {
 export function dilemmasForRegister(all: Dilemma[], register: ContentRegister): Dilemma[] {
   if (register === 'misto') return all;
   return all.filter((d) => d.register === register);
+}
+
+/**
+ * Dilemmas belonging to a given percorso tappa. Dilemmas without a `tappa` are
+ * never returned — they belong to the classic (untagged) pool only.
+ */
+export function dilemmasForTappa(all: Dilemma[], tappa: Tappa): Dilemma[] {
+  return all.filter((d) => d.tappa === tappa);
 }
 
 /**

@@ -5,6 +5,7 @@
     "optionA": "Mollo tutto e ci punto al 100%",
     "optionB": "La porto avanti la sera, tenendo il lavoro sicuro",
     "register": "vita",
+    "tappa": 2,
     "spuntiA": [
       "Il costo di non provarci è il rimpianto",
       "Sul campo impari più in fretta",
@@ -39,6 +40,7 @@
     "optionA": "Li investo tutti per farli crescere",
     "optionB": "Li tengo da parte per dormire tranquillo",
     "register": "vita",
+    "tappa": 2,
     "spuntiA": [
       "Il denaro fermo perde valore ogni anno",
       "Il momento migliore per investire è adesso",
@@ -124,6 +126,7 @@
     "optionA": "Faccio ciò che amo, costi quel che costi",
     "optionB": "Prima la sicurezza economica, la passione poi",
     "register": "vita",
+    "tappa": 2,
     "spuntiA": [
       "Chi ama il suo lavoro non lavora neanche un giorno",
       "La passione genera energia che il denaro non compra",
@@ -141,6 +144,7 @@
     "optionA": "Accetto: ci si fida tra amici",
     "optionB": "Rifiuto: gli affari rovinano le amicizie",
     "register": "vita",
+    "tappa": 2,
     "spuntiA": [
       "La fiducia reciproca è la base migliore per una partnership",
       "Con un amico condividi valori e visione già allineati",
@@ -192,6 +196,7 @@
     "optionA": "Fama subito: l'occasione non torna",
     "optionB": "Crescita lenta: voglio basi solide",
     "register": "vita",
+    "tappa": 2,
     "spuntiA": [
       "La visibilità apre porte che la qualità da sola non apre",
       "Un momento di fama può lanciare una carriera intera",
@@ -243,6 +248,7 @@
     "optionA": "Mi formo e miglioro le mie competenze",
     "optionB": "Stacco totalmente per ricaricarmi",
     "register": "vita",
+    "tappa": 1,
     "spuntiA": [
       "Il margine tra chi avanza e chi resta fermo si costruisce nei ritagli di tempo",
       "Investire in sé stessi è il rendimento più alto che esiste",
@@ -362,6 +368,7 @@
     "optionA": "Rischio: chi non risica non rosica",
     "optionB": "Mi godo ciò che ho: l'avidità rovina",
     "register": "vita",
+    "tappa": 2,
     "spuntiA": [
       "La crescita richiede sempre un atto di fede verso l'incerto",
       "Chi non risica nulla non ottiene nulla di straordinario",
@@ -379,6 +386,7 @@
     "optionA": "Lo seguo: ne sa più di me",
     "optionB": "Seguo la mia strada, anche se rischio",
     "register": "vita",
+    "tappa": 2,
     "spuntiA": [
       "L'esperienza del mentore ha già attraversato errori che tu non puoi ancora vedere",
       "L'umiltà di imparare anche quando pensi di sapere è rara e preziosa",
@@ -396,6 +404,7 @@
     "optionA": "Punto al successo: poi avrò tempo per tutto",
     "optionB": "Le persone prima: il tempo non torna",
     "register": "vita",
+    "tappa": 3,
     "spuntiA": [
       "Il successo costruisce le condizioni per vivere meglio con chi ami",
       "Le fondamenta solide oggi proteggono chi ti sta vicino domani",
@@ -413,6 +422,7 @@
     "optionA": "Lo tengo per me",
     "optionB": "Lo dico all'interessato: ha diritto di saperlo",
     "register": "vita",
+    "tappa": 3,
     "spuntiA": [
       "Un segreto condiviso in fiducia va rispettato sempre",
       "Tradire la confidenza distrugge la fiducia tra amici",
@@ -430,6 +440,7 @@
     "optionA": "Lo porto alla polizia",
     "optionB": "Chi trova tiene",
     "register": "vita",
+    "tappa": 3,
     "spuntiA": [
       "Qualcuno ha perso qualcosa di importante e si sentirà sollevato nel riaverlo",
       "Fare la cosa giusta anche quando nessuno guarda definisce chi sei",
@@ -447,6 +458,7 @@
     "optionA": "Gliele do: non ho niente da nascondere",
     "optionB": "No: la privacy resta sacra",
     "register": "vita",
+    "tappa": 3,
     "spuntiA": [
       "La trasparenza totale elimina ogni ombra di sospetto",
       "Se non hai niente da nascondere, condividere è un gesto d'amore",
@@ -464,6 +476,7 @@
     "optionA": "Lo faccio notare",
     "optionB": "Fortuna mia: pago e via",
     "register": "vita",
+    "tappa": 1,
     "spuntiA": [
       "Un cameriere può perdere di tasca propria quegli errori",
       "L'onestà non si pratica solo quando conviene",
@@ -481,6 +494,7 @@
     "optionA": "Glielo do come fosse un regalo",
     "optionB": "Dico di no, per il bene di entrambi",
     "register": "vita",
+    "tappa": 3,
     "spuntiA": [
       "Un vero amico aiuta anche quando il rimborso è improbabile",
       "Il valore dell'amicizia supera quello del denaro",
@@ -498,6 +512,7 @@
     "optionA": "La pubblico, ci ridiamo su",
     "optionB": "La cancello: prima l'amicizia",
     "register": "vita",
+    "tappa": 1,
     "spuntiA": [
       "Il ridere insieme di sé stessi rafforza i legami",
       "Una foto esilarante diventa un ricordo condiviso per sempre",
@@ -515,6 +530,7 @@
     "optionA": "Lo faccio: voglio sapere tutto",
     "optionB": "No grazie: certe cose è meglio non saperle",
     "register": "vita",
+    "tappa": 4,
     "spuntiA": [
       "La verità, anche dolorosa, vale più di una vita nell'illusione",
       "Sapere cosa pensano davvero le persone ti dà un vantaggio enorme",
@@ -532,6 +548,7 @@
     "optionA": "Ci sto male ma li sostengo",
     "optionB": "È un tradimento dell'amicizia",
     "register": "vita",
+    "tappa": 3,
     "spuntiA": [
       "Gli amici hanno vite proprie che non ti appartengono",
       "Un'amicizia vera supera anche i momenti più difficili",
@@ -549,6 +566,7 @@
     "optionA": "Ci vado: che esperienza",
     "optionB": "Senza compagnia non vale niente",
     "register": "vita",
+    "tappa": 1,
     "spuntiA": [
       "Le esperienze vissute da soli insegnano ad apprezzare sé stessi",
       "Un pasto eccezionale parla da solo, senza bisogno di pubblico",
@@ -566,6 +584,7 @@
     "optionA": "Gliela dico: merita la verità",
     "optionB": "Lo proteggo col silenzio",
     "register": "vita",
+    "tappa": 3,
     "spuntiA": [
       "Nascondere la verità è una forma di paternalismo che nega l'autonomia altrui",
       "Prima o poi verrà a sapere: meglio da te che da un estraneo",
@@ -583,6 +602,7 @@
     "optionA": "Pianifico ogni dettaglio",
     "optionB": "Parto e vada come vada",
     "register": "vita",
+    "tappa": 1,
     "spuntiA": [
       "Pianificare significa non sprecare giorni preziosi a risolvere problemi",
       "I momenti migliori spesso nascono da attività programmate con cura",
@@ -600,6 +620,7 @@
     "optionA": "Accetto: i dati ce li hanno già",
     "optionB": "Rifiuto: la privacy non si vende",
     "register": "vita",
+    "tappa": 2,
     "spuntiA": [
       "I tuoi dati vengono già raccolti gratuitamente: almeno ti pagano",
       "Con 1000€ puoi fare qualcosa di concreto per te",
@@ -617,6 +638,7 @@
     "optionA": "Mi adeguo per stare insieme",
     "optionB": "Propongo altro, a costo di discutere",
     "register": "vita",
+    "tappa": 1,
     "spuntiA": [
       "La compagnia vale più del posto",
       "Cedere su piccole cose è il lubrificante delle amicizie",
@@ -634,6 +656,7 @@
     "optionA": "La rifaccio: voglio l'altra vita",
     "optionB": "Tengo tutto: i ricordi valgono troppo",
     "register": "vita",
+    "tappa": 4,
     "spuntiA": [
       "Una vita diversa potrebbe includere gioie che non riesci nemmeno a immaginare",
       "I rimpianti pesanti meritano la possibilità di essere corretti",
@@ -651,6 +674,7 @@
     "optionA": "Sì, l'amore vale la fatica",
     "optionB": "No, non sarei giusto verso di lui",
     "register": "vita",
+    "tappa": 3,
     "spuntiA": [
       "Un animale che ha bisogno di cure trova in te esattamente quello di cui ha bisogno",
       "La fatica dell'amore non è mai sprecata",
@@ -668,6 +692,7 @@
     "optionA": "Glielo dico con tatto",
     "optionB": "Faccio finta di niente",
     "register": "vita",
+    "tappa": 1,
     "spuntiA": [
       "Un vero amico ti dice le cose che nessun altro dice",
       "Risparmiare all'amico un imbarazzo maggiore davanti agli altri è un favore",
@@ -685,6 +710,7 @@
     "optionA": "Vado alla festa: si vive una volta",
     "optionB": "A nanna: domani conta di più",
     "register": "vita",
+    "tappa": 1,
     "spuntiA": [
       "Le feste con gli amici creano ricordi che le occasioni professionali raramente eguagliano",
       "Presentarsi esausti a un'opportunità è peggio che non presentarsi",
@@ -702,6 +728,7 @@
     "optionA": "Glielo do e perdo il treno",
     "optionB": "Prendo il treno: occasione persa",
     "register": "vita",
+    "tappa": 1,
     "spuntiA": [
       "Le connessioni umane inaspettate cambiano la vita",
       "Un treno perso si recupera: una persona speciale no",
@@ -719,6 +746,7 @@
     "optionA": "Quando",
     "optionB": "Come",
     "register": "vita",
+    "tappa": 4,
     "spuntiA": [
       "Sapere quando ti permette di pianificare ogni cosa importante",
       "La data certa trasforma ogni giorno che precede in un dono consapevole",
@@ -736,6 +764,7 @@
     "optionA": "Glielo dico chiaro e tondo",
     "optionB": "Li lavo io per quieto vivere",
     "register": "vita",
+    "tappa": 1,
     "spuntiA": [
       "Vivere insieme richiede regole condivise: dirle è il primo passo",
       "Il silenzio accumula risentimento che esplode peggio dopo",
@@ -753,6 +782,7 @@
     "optionA": "Un'esperienza da ricordare",
     "optionB": "Un oggetto che dura nel tempo",
     "register": "vita",
+    "tappa": 1,
     "spuntiA": [
       "I ricordi di un'esperienza durano più di qualsiasi oggetto",
       "Le esperienze creano storie condivise che rafforzano i legami",
@@ -1017,6 +1047,204 @@
       "Le riunioni inutili sono il nemico numero uno della produttività",
       "Un'email chiara e strutturata è più rispettosa del tempo altrui",
       "Tutto ciò che non richiede dialogo in tempo reale non merita una riunione"
+    ]
+  },
+  {
+    "id": "p01",
+    "text": "Ti offrono la promozione dei sogni, ma in un’altra città.",
+    "optionA": "Accetto: la carriera prima di tutto",
+    "optionB": "Resto: la mia vita è qui",
+    "register": "vita",
+    "tappa": 2,
+    "spuntiA": [
+      "Le occasioni grosse non aspettano",
+      "Ci si trasferisce, gli affetti veri restano",
+      "Crescere a volte chiede di partire"
+    ],
+    "spuntiB": [
+      "Una vita non è solo lavoro",
+      "Le radici valgono più di un titolo",
+      "Il prezzo nascosto del trasloco è altissimo"
+    ]
+  },
+  {
+    "id": "p02",
+    "text": "Stipendio doppio ma lavorando il triplo.",
+    "optionA": "Accetto: è il momento di spingere",
+    "optionB": "No: il tempo vale più dei soldi",
+    "register": "vita",
+    "tappa": 2,
+    "spuntiA": [
+      "C’è una stagione per accumulare",
+      "Il doppio oggi compra libertà domani",
+      "Da giovani si ha più energia da spendere"
+    ],
+    "spuntiB": [
+      "Il tempo perso non torna",
+      "I soldi non comprano le sere a casa",
+      "Bruciarsi costa più di quanto rende"
+    ]
+  },
+  {
+    "id": "p03",
+    "text": "Un genitore anziano ha bisogno di te, ma rinunceresti a un’occasione importante.",
+    "optionA": "Resto: la famiglia viene prima",
+    "optionB": "Vado: devo vivere anche la mia vita",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Chi c’è stato per te merita che tu ci sia",
+      "Certe occasioni non valgono un rimpianto",
+      "La cura è il senso vero dei legami"
+    ],
+    "spuntiB": [
+      "Annullarsi non aiuta nessuno",
+      "Si può amare anche da lontano",
+      "Una vita rinviata diventa rancore"
+    ]
+  },
+  {
+    "id": "p04",
+    "text": "Scopri che un familiare ha mentito a tutti per proteggere qualcuno.",
+    "optionA": "Dico la verità, costi quel che costi",
+    "optionB": "Taccio: certe bugie tengono unita la famiglia",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "La fiducia si fonda sulla verità",
+      "I segreti marciscono col tempo",
+      "Meglio una ferita pulita che una nascosta"
+    ],
+    "spuntiB": [
+      "Non tutte le verità vanno dette",
+      "A volte il silenzio è un atto d’amore",
+      "Smontare una bugia può distruggere tutto"
+    ]
+  },
+  {
+    "id": "p05",
+    "text": "A fine vita, cosa vorresti aver fatto di più?",
+    "optionA": "Aver osato di più",
+    "optionB": "Aver amato di più",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Si rimpiange ciò che non si è provato",
+      "Il coraggio dà sapore ai ricordi",
+      "Le occasioni perse pesano più degli errori"
+    ],
+    "spuntiB": [
+      "Restano le persone, non i traguardi",
+      "L’amore è l’unica cosa che si moltiplica",
+      "Nessuno, alla fine, rimpiange di aver voluto bene"
+    ]
+  },
+  {
+    "id": "p06",
+    "text": "Puoi lasciare una sola cosa a chi verrà dopo di te.",
+    "optionA": "Un patrimonio che li renda liberi",
+    "optionB": "Un esempio che li ispiri",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "La libertà economica apre ogni porta",
+      "Togliere il bisogno è già un grande dono",
+      "I valori senza mezzi restano sogni"
+    ],
+    "spuntiB": [
+      "Si eredita più un esempio che un conto",
+      "I soldi finiscono, l’ispirazione no",
+      "Chi sei conta più di cosa lasci"
+    ]
+  },
+  {
+    "id": "p07",
+    "text": "Vita lunga e tranquilla o breve e intensa?",
+    "optionA": "Lunga e serena",
+    "optionB": "Breve e intensa",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Il tempo è la ricchezza più rara",
+      "La serenità è una conquista, non una resa",
+      "Le cose belle hanno bisogno di durare"
+    ],
+    "spuntiB": [
+      "Meglio bruciare che spegnersi piano",
+      "Conta la profondità, non la lunghezza",
+      "Una vita intensa lascia il segno"
+    ]
+  },
+  {
+    "id": "p08",
+    "text": "Preferiresti essere ricordato da molti o amato da pochi?",
+    "optionA": "Ricordato da molti",
+    "optionB": "Amato da pochi",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Lasciare un segno è dare un senso",
+      "Chi ispira tanti non muore davvero",
+      "L’impatto vale più dell’intimità"
+    ],
+    "spuntiB": [
+      "Pochi veri valgono più di mille volti",
+      "L’amore vicino scalda, la fama no",
+      "Si vive davvero negli occhi di chi ci ama"
+    ]
+  },
+  {
+    "id": "p09",
+    "text": "Sai di avere un anno di vita: lo diresti a tutti o a nessuno?",
+    "optionA": "Lo dico: voglio vivere senza maschere",
+    "optionB": "Lo tengo per me: voglio normalità",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "La verità libera le ultime giornate",
+      "Gli altri meritano di salutarti",
+      "Vivere senza finzioni è un dono"
+    ],
+    "spuntiB": [
+      "Non voglio sguardi di pietà",
+      "La normalità è l’ultimo lusso",
+      "Certi pesi è giusto portarli da soli"
+    ]
+  },
+  {
+    "id": "p10",
+    "text": "Cosa rende una vita «riuscita»?",
+    "optionA": "Aver realizzato il proprio potenziale",
+    "optionB": "Aver reso felici gli altri",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Sprecare i propri talenti è il vero fallimento",
+      "Diventare ciò che potevi essere è un dovere verso te stesso",
+      "Una vita piena parte da sé"
+    ],
+    "spuntiB": [
+      "Ciò che resta è la felicità lasciata agli altri",
+      "Si misura una vita da quanto bene ha fatto",
+      "Nessuno è riuscito da solo"
+    ]
+  },
+  {
+    "id": "p11",
+    "text": "Rifaresti esattamente la stessa vita, errori compresi?",
+    "optionA": "Sì: gli errori mi hanno fatto",
+    "optionB": "No: alcune cose le cambierei",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Senza quegli errori non saresti tu",
+      "Ogni cicatrice racconta una lezione",
+      "Accettarsi è la pace più grande"
+    ],
+    "spuntiB": [
+      "Imparare significa voler fare meglio",
+      "Alcuni dolori si potevano risparmiare",
+      "Desiderare di cambiare non è rinnegarsi"
     ]
   }
 ]

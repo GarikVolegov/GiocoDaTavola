@@ -1,7 +1,7 @@
 // In-memory store of game rooms. The server is authoritative; rooms live here
 // only for the lifetime of the process (no DB).
 
-import { Deck, dilemmasForRegister, loadDilemmas, type Dilemma, type ContentRegister } from './deck';
+import { Deck, dilemmasForRegister, loadDilemmas, type Dilemma, type ContentRegister, type Tappa } from './deck';
 import { botDefenseArgument } from './botDefense';
 import {
   type GamePhase,
@@ -11,7 +11,15 @@ import {
   isDefensePhase,
   nextPhase,
   nextDuelPhase,
+  nextPercorsoPhase,
 } from './phases';
+import {
+  buildPercorsoPlan,
+  isDurata,
+  clampTappa,
+  N_TAPPE,
+  type Durata,
+} from './percorso';
 import { ensureStats, computeAwards as computeAwardsFor, type Award, type PlayerStats } from './awards';
 import { computeBlindSpot, type BlindSpot } from './blindspots';
 import {
@@ -27,6 +35,9 @@ import {
 // Re-export the phase state machine so existing importers (tests, index.ts)
 // keep importing GamePhase / PHASE_DURATIONS_MS / nextPhase / … from './rooms'.
 export * from './phases';
+// Re-export the percorso planning helpers (TAPPE, buildPercorsoPlan, …) so
+// index.ts can surface tappe metadata + counts without a separate import path.
+export * from './percorso';
 // Re-export the scoring types so consumers keep importing them from './rooms'.
 export type { Award, AwardId, PlayerStats } from './awards';
 export type { BlindSpot, BlindSpotId } from './blindspots';
@@ -169,10 +180,26 @@ export interface Room {
   players: Map<string, Player>;
   /** Current phase of the game state machine. */
   phase: GamePhase;
-  /** Number of dilemmas chosen at start; null until the game starts. */
+  /** Number of dilemmas chosen at start; null until the game starts. In percorso it equals the planned ascent's length. */
   dilemmaCount: number | null;
-  /** Content register chosen at start; null until the game starts. */
+  /** Content register chosen at start; null until the game starts (and always null in percorso). */
   register: ContentRegister | null;
+  /** Session format: 'classic' (3/5/7) or 'percorso' (themed ascent). Default 'classic'. */
+  format: 'classic' | 'percorso';
+  /** Percorso: the tappa the host chose to start from (1..4); null in classic. */
+  startTappa: Tappa | null;
+  /** Percorso: the duration preset chosen at start; null in classic. */
+  durata: Durata | null;
+  /** Percorso: the precomputed ordered dilemmas of the ascent; empty in classic. */
+  plannedDilemmas: Dilemma[];
+  /** Percorso: parallel to plannedDilemmas — the tappa of each planned dilemma (ascending). */
+  plannedTappe: number[];
+  /** Percorso: the tappa currently in play (1..4); null in classic / before start. */
+  currentTappa: Tappa | null;
+  /** Percorso: dilemmas played in the current tappa so far (recap accumulator; reset on TAPPA_INTRO). */
+  tappaDilemmas: number;
+  /** Percorso: rounds in the current tappa whose leading side flipped (recap accumulator). Aggregate only. */
+  tappaSwings: number;
   /** Which dilemma (1-based) is being played; 0 before the first reveal. */
   dilemmaIndex: number;
   /** Epoch ms when the current phase auto-advances; null if it has no timer. */
@@ -310,6 +337,7 @@ export type StartGameError =
   | 'WRONG_PLAYER_COUNT'
   | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
+  | 'INVALID_PERCORSO'
   | 'INFILTRATO_NEEDS_PLAYERS'
   | 'SQUADRE_NEEDS_PLAYERS'
   | 'ALREADY_STARTED';
@@ -337,6 +365,27 @@ export type Team = 'blu' | 'arancio';
 export interface TeamState {
   assignments: Array<{ playerId: string; nickname: string; team: Team }>;
   scores: { blu: number; arancio: number };
+}
+
+/** Per-tappa progress within a percorso (planned total + dilemmas reached). */
+export interface PercorsoTappaProgress {
+  id: number;
+  total: number;
+  done: number;
+}
+
+/** Secret-safe percorso view broadcast to host/phones (no individual votes). */
+export interface PercorsoView {
+  startTappa: number;
+  durata: Durata;
+  currentTappa: number | null;
+  totalDilemmas: number;
+  /** 1-based index of the dilemma in play across the whole ascent (0 before the first). */
+  dilemmaIndex: number;
+  tappe: PercorsoTappaProgress[];
+  /** Current tappa recap: dilemmas played so far + leading-side flips (aggregate). */
+  tappaDilemmas: number;
+  tappaSwings: number;
 }
 
 /** Public reveal of the infiltrator outcome at FINAL_AWARDS (null in normal games). */
@@ -807,6 +856,14 @@ export class RoomStore {
       phase: 'LOBBY',
       dilemmaCount: null,
       register: null,
+      format: 'classic',
+      startTappa: null,
+      durata: null,
+      plannedDilemmas: [],
+      plannedTappe: [],
+      currentTappa: null,
+      tappaDilemmas: 0,
+      tappaSwings: 0,
       dilemmaIndex: 0,
       phaseExpiresAt: null,
       deck: null,
@@ -857,12 +914,32 @@ export class RoomStore {
     mode: string = 'gruppo',
     infiltrato: boolean = false,
     squadre: boolean = false,
+    percorso?: { startTappa: number; durata: string },
   ): StartGameResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
     if (room.phase !== 'LOBBY') return { ok: false, error: 'ALREADY_STARTED' };
-    if (!isDilemmaCount(dilemmaCount)) return { ok: false, error: 'INVALID_DILEMMA_COUNT' };
-    if (!isContentRegister(register)) return { ok: false, error: 'INVALID_REGISTER' };
+    // "Percorso": the long themed ascent. Its dilemma count + content come from a
+    // plan we build (and validate) up front, before mutating any room state. It is
+    // a group experience, so it always runs in gruppo mode.
+    const usePercorso = percorso != null;
+    let plan: { dilemmas: Dilemma[]; tappe: number[] } | null = null;
+    if (usePercorso) {
+      mode = 'gruppo';
+      if (
+        !Number.isInteger(percorso.startTappa) ||
+        percorso.startTappa < 1 ||
+        percorso.startTappa > N_TAPPE ||
+        !isDurata(percorso.durata)
+      ) {
+        return { ok: false, error: 'INVALID_PERCORSO' };
+      }
+      plan = buildPercorsoPlan(this.makeDeck('misto').cards, percorso.startTappa, percorso.durata, this.rng);
+      if (plan.dilemmas.length === 0) return { ok: false, error: 'INVALID_PERCORSO' };
+    } else {
+      if (!isDilemmaCount(dilemmaCount)) return { ok: false, error: 'INVALID_DILEMMA_COUNT' };
+      if (!isContentRegister(register)) return { ok: false, error: 'INVALID_REGISTER' };
+    }
     if (!isGameMode(mode)) return { ok: false, error: 'INVALID_REGISTER' };
     const humans = [...room.players.values()].filter((p) => !p.isBot);
     const humanCount = humans.length;
@@ -901,20 +978,45 @@ export class RoomStore {
     }
 
     room.mode = mode;
-    room.dilemmaCount = dilemmaCount;
-    room.register = register;
     room.dilemmaIndex = 0;
     room.phase = 'PHASE_INTRO';
     room.phaseExpiresAt = this.expiryFor('PHASE_INTRO');
-    room.deck = this.makeDeck(register);
     room.currentDilemma = null;
-    // Play the group's own dilemmas first (shuffled), then the official deck fills
-    // the rest — so a submitted dilemma is sure to appear (within dilemmaCount).
-    room.submittedQueue = this.shuffle(room.submittedDilemmas);
+    room.currentTappa = null;
+    room.tappaDilemmas = 0;
+    room.tappaSwings = 0;
+    if (usePercorso && plan) {
+      // Percorso: the precomputed ascent drives everything; no register/deck and
+      // (for now) no player-submitted dilemmas — the climb is the curated content.
+      room.format = 'percorso';
+      room.startTappa = clampTappa(percorso.startTappa);
+      room.durata = percorso.durata as Durata;
+      room.plannedDilemmas = plan.dilemmas;
+      room.plannedTappe = plan.tappe;
+      room.currentTappa = plan.tappe[0] as Tappa;
+      room.dilemmaCount = plan.dilemmas.length;
+      room.register = null;
+      room.deck = null;
+      room.submittedQueue = [];
+    } else {
+      room.format = 'classic';
+      room.startTappa = null;
+      room.durata = null;
+      room.plannedDilemmas = [];
+      room.plannedTappe = [];
+      room.dilemmaCount = dilemmaCount;
+      // Validated above in this same (classic) branch via isContentRegister.
+      room.register = register as ContentRegister;
+      room.deck = this.makeDeck(register as ContentRegister);
+      // Play the group's own dilemmas first (shuffled), then the official deck fills
+      // the rest — so a submitted dilemma is sure to appear (within dilemmaCount).
+      room.submittedQueue = this.shuffle(room.submittedDilemmas);
+    }
     // Pick the surprise "Avvocato del Diavolo" round up front (group mode only).
-    room.devilRoundIndex = mode === 'gruppo' ? this.pickDevilRound(dilemmaCount) : null;
+    const totalRounds = room.dilemmaCount ?? 0;
+    room.devilRoundIndex = mode === 'gruppo' ? this.pickDevilRound(totalRounds) : null;
     // …and (longer games only) a "Quanto mi conosci" round, distinct from the devil one.
-    room.knowRoundIndex = mode === 'gruppo' ? this.pickKnowRound(dilemmaCount, room.devilRoundIndex) : null;
+    room.knowRoundIndex = mode === 'gruppo' ? this.pickKnowRound(totalRounds, room.devilRoundIndex) : null;
     room.stats = new Map();
     room.duelScore = new Map();
     room.duelAgreements = 0;
@@ -957,11 +1059,17 @@ export class RoomStore {
       return { ok: true, room };
     }
 
-    let transition = nextPhase(room.phase, room.dilemmaIndex, room.dilemmaCount ?? 0);
+    // Percorso threads the same per-dilemma sequence through chapter cards/recaps;
+    // classic uses the flat loop. Both share the detours below.
+    const step = (phase: GamePhase, idx: number) =>
+      room.format === 'percorso'
+        ? nextPercorsoPhase(phase, idx, room.plannedTappe)
+        : nextPhase(phase, idx, room.dilemmaCount ?? 0);
+    let transition = step(room.phase, room.dilemmaIndex);
     // The peer "best speaker" vote needs at least two defenders to choose between;
     // with 0 or 1 it's degenerate, so skip straight to the results.
     if (transition.phase === 'SPEAKER_VOTE' && room.defenders.length < 2) {
-      transition = nextPhase('SPEAKER_VOTE', transition.dilemmaIndex, room.dilemmaCount ?? 0);
+      transition = step('SPEAKER_VOTE', transition.dilemmaIndex);
     }
     // Detour the end of an infiltrator game through the accusation phase.
     if (transition.phase === 'FINAL_AWARDS' && room.infiltratorId) {
@@ -970,11 +1078,28 @@ export class RoomStore {
     room.phase = transition.phase;
     room.dilemmaIndex = transition.dilemmaIndex;
     room.phaseExpiresAt = this.expiryFor(transition.phase);
+    // Percorso: entering a chapter card sets the upcoming tappa (the dilemma the
+    // card precedes is dilemmaIndex+1) and resets the per-tappa recap counters.
+    if (transition.phase === 'TAPPA_INTRO') {
+      room.currentTappa = (room.plannedTappe[transition.dilemmaIndex] ?? room.currentTappa) as Tappa | null;
+      room.tappaDilemmas = 0;
+      room.tappaSwings = 0;
+    }
+    // Percorso: the end-of-tappa recap reflects the tappa just finished.
+    if (transition.phase === 'TAPPA_RECAP') {
+      room.currentTappa = (room.plannedTappe[transition.dilemmaIndex - 1] ?? room.currentTappa) as Tappa | null;
+    }
     // Entering a new dilemma reveal draws the next (non-repeating) dilemma and
     // resets the round's secret votes so each dilemma starts from a clean tally.
     if (transition.phase === 'DILEMMA_REVEAL') {
-      // Player-submitted dilemmas (shuffled at start) come first; then the deck.
-      room.currentDilemma = room.submittedQueue.shift() ?? room.deck?.draw() ?? null;
+      if (room.format === 'percorso') {
+        // The ascent is precomputed: walk it by index, and track the live tappa.
+        room.currentDilemma = room.plannedDilemmas[transition.dilemmaIndex - 1] ?? null;
+        room.currentTappa = (room.plannedTappe[transition.dilemmaIndex - 1] ?? null) as Tappa | null;
+      } else {
+        // Player-submitted dilemmas (shuffled at start) come first; then the deck.
+        room.currentDilemma = room.submittedQueue.shift() ?? room.deck?.draw() ?? null;
+      }
       room.votes.clear();
       room.votes1.clear();
       room.confirmedVote2.clear();
@@ -1016,6 +1141,12 @@ export class RoomStore {
     // while the votes/votes1/defenders are still intact (cleared next reveal).
     if (transition.phase === 'PHASE_RESULTS') {
       this.recordRoundStats(room);
+      // Percorso: accumulate the tappa's aggregate recap (count + leading-side
+      // flips). Aggregate only — no per-player data leaks into the recap.
+      if (room.format === 'percorso') {
+        room.tappaDilemmas++;
+        if (this.leadFlipped(room)) room.tappaSwings++;
+      }
     }
     return { ok: true, room };
   }
@@ -1493,6 +1624,38 @@ export class RoomStore {
     const room = this.rooms.get(code);
     if (!room || !isSplitRevealed(room.phase)) return null;
     return this.voteTally(code);
+  }
+
+  /**
+   * The secret-safe percorso view for the host/phones: the chosen start + duration,
+   * the live tappa, overall progress, and per-tappa totals/done — plus the current
+   * tappa's aggregate recap (dilemmas + leading-side flips). Never any individual
+   * vote. null when the room isn't a percorso. `done` per tappa is derived from the
+   * 1-based dilemmaIndex against the ascending plan.
+   */
+  publicPercorso(code: string): PercorsoView | null {
+    const room = this.rooms.get(code);
+    if (!room || room.format !== 'percorso' || room.startTappa == null || room.durata == null) {
+      return null;
+    }
+    const ids = [...new Set(room.plannedTappe)].sort((a, b) => a - b);
+    let offset = 0;
+    const tappe = ids.map((id) => {
+      const total = room.plannedTappe.filter((t) => t === id).length;
+      const done = Math.max(0, Math.min(total, room.dilemmaIndex - offset));
+      offset += total;
+      return { id, total, done };
+    });
+    return {
+      startTappa: room.startTappa,
+      durata: room.durata,
+      currentTappa: room.currentTappa,
+      totalDilemmas: room.dilemmaCount ?? room.plannedDilemmas.length,
+      dilemmaIndex: room.dilemmaIndex,
+      tappe,
+      tappaDilemmas: room.tappaDilemmas,
+      tappaSwings: room.tappaSwings,
+    };
   }
 
   /**
