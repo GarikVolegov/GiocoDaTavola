@@ -2113,6 +2113,14 @@ export class RoomStore {
     room.accusations.delete(playerId);
     room.teams.delete(playerId);
     room.speakerVotes.delete(playerId);
+    // Drop a leaver from the raised-hand / interventi queues so they never speak or
+    // display; keep interventiIndex pointing at the same upcoming speaker.
+    room.raisedHands = room.raisedHands.filter((id) => id !== playerId);
+    const qi = room.interventiQueue.indexOf(playerId);
+    if (qi >= 0) {
+      room.interventiQueue.splice(qi, 1);
+      if (qi < room.interventiIndex) room.interventiIndex--;
+    }
     const removed = room.players.delete(playerId);
     if (removed && room.leaderId === playerId) {
       const nextHuman = [...room.players.values()].find((p) => !p.isBot);

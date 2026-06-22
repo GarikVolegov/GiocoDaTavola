@@ -2390,3 +2390,16 @@ describe('publicDefense count vs names', () => {
     expect(store.publicDefense(code)!.canFinish).toBe(true);
   });
 });
+
+describe('leave prunes raised hands', () => {
+  it('drops a leaver from the live queue', () => {
+    const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'A', 'A']);
+    const defender = store.get(code)!.defenders[0].id;
+    const others = [...store.get(code)!.players.keys()].filter((id) => id !== defender);
+    store.raiseHand(code, others[0]);
+    store.raiseHand(code, others[1]);
+    store.leave(code, others[0]);
+    expect(store.get(code)!.raisedHands).toEqual([others[1]]);
+  });
+});
