@@ -46,7 +46,7 @@ export default function Landing() {
   return (
     <main className={styles.page}>
       <nav className={styles.nav}>
-        <Logo size={26} />
+        <Logo size={26} className={styles.navLogo} />
         <div className={styles.navLinks}>
           <a href="#come">Come si gioca</a>
           <a href="#modalita">Modalità</a>
@@ -58,7 +58,10 @@ export default function Landing() {
           <Show when="signed-in">
             <UserButton />
           </Show>
-          <Button variant="primary" size="md" onClick={create}>Crea una partita</Button>
+          <Button variant="primary" size="md" onClick={create} className={styles.navCta}>
+            <span className={styles.ctaFull}>Crea una partita</span>
+            <span className={styles.ctaShort}>Crea</span>
+          </Button>
         </div>
       </nav>
 

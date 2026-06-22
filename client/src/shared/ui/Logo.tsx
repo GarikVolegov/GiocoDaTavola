@@ -7,6 +7,8 @@ interface LogoProps {
   payoff?: boolean;
   /** wrap in the dark brand panel */
   panel?: boolean;
+  /** extra class on the lockup span — lets callers tweak size (e.g. --logo-size) responsively */
+  className?: string;
 }
 
 /**
@@ -14,10 +16,11 @@ interface LogoProps {
  * dilemma) + the wordmark in Space Grotesk, optional serif payoff. Inline SVG so
  * it's crisp wherever the font is loaded. Replaces the old <img> logo.
  */
-export function Logo({ size = 30, payoff = false, panel = false }: LogoProps) {
+export function Logo({ size = 30, payoff = false, panel = false, className }: LogoProps) {
+  const cls = [styles.lockup, panel && styles.panel, className].filter(Boolean).join(' ');
   return (
     <span
-      className={panel ? `${styles.lockup} ${styles.panel}` : styles.lockup}
+      className={cls}
       style={{ ['--logo-size' as never]: `${size}px` }}
       aria-label="SCHIERATI"
     >

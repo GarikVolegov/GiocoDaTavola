@@ -26,6 +26,8 @@
   border-radius: var(--radius-md); padding: .5rem .9rem; font-size: .9rem; font-weight: 600;
   font-family: var(--font-body); cursor: pointer; }
 .navAuth:hover { border-color: var(--faction-a); }
+/* nav CTA shows its full label by default; the short "Crea" only on small screens */
+.ctaShort { display: none; }
 
 /* hero */
 .hero { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr .95fr; gap: var(--space-7);
@@ -70,8 +72,9 @@
 @media (max-width: 1024px) {
   .hero { grid-template-columns: 1fr; gap: var(--space-5); padding: var(--space-5) 0 var(--space-6); }
   .watermark { opacity: .04; right: -10%; }
-  /* showcase reflows: TV full width on top, the two phones share a row below */
-  .stage { order: -1; flex-wrap: wrap; align-items: stretch; min-height: 0; }
+  /* intro text first, then the showcase below it (no order flip on mobile);
+     showcase reflows: TV full width on top, the two phones share a row below */
+  .stage { flex-wrap: wrap; align-items: stretch; min-height: 0; }
   .tv { order: -1; flex: 1 1 100%; }
   .phone { flex: 1 1 calc(50% - var(--space-3) / 2); }
 }
@@ -87,6 +90,17 @@
   .navLinks a { display: none; }
   .ctaRow { flex-direction: column; align-items: stretch; }
   .ctaRow > * { flex: 1 1 100%; width: 100%; }
+
+  /* compact single-row nav: shrink the logo, gaps and CTA so both "Accedi" and
+     "Crea" stay on-screen down to ~320px phones (they were overflowing + clipped) */
+  .nav { padding: var(--space-4) var(--space-3); }
+  .navLinks { gap: var(--space-3); }
+  /* override Logo's inline --logo-size (inline style → needs !important) */
+  .navLogo { --logo-size: 22px !important; }
+  .nav .navCta { padding: var(--space-2) var(--space-4); }
+  .navAuth { padding: .4rem .7rem; font-size: .85rem; }
+  .ctaFull { display: none; }
+  .ctaShort { display: inline; }
 }
 
 /* shared section chrome */
