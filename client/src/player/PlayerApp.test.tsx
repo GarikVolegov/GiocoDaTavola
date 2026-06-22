@@ -157,4 +157,48 @@ describe('PlayerApp', () => {
     expect(screen.getByRole('button', { name: /Carlo/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Alice/ })).toBeNull();
   });
+
+  it('shows the speaker + raise-hand for a spectator at DEFENSE', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: { speakerId: 'p2', speaker: { id: 'p2', nickname: 'Bea', side: 'A' } },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/sta parlando/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /alza la mano/i })).toBeInTheDocument();
+  });
+
+  it('shows the finish affordance when it is your turn at DEFENSE', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: { speakerId: 'p1', speaker: { id: 'p1', nickname: 'Alice', side: 'A' }, startedAt: Date.now() },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/tocca a te/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ho finito/i })).toBeInTheDocument();
+  });
 });

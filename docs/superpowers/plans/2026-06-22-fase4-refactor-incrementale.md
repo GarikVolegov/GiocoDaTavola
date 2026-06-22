@@ -30,6 +30,17 @@ sola, invece di un big-bang. Stop per review dopo ogni fetta.
   (senza globals RTL non fa auto-cleanup → il DOM dei test precedenti restava e i
   bottoni collidevano). 347 test, gate verdi.
 
+## Fetta 4 — Estrazione `DefenseView` (+ `ReactionBar`) da PlayerApp ✅
+- `client/src/player/views/ReactionBar.tsx`: estratto il componente locale (usato
+  anche da DUEL_ARGUE, ora importato).
+- `client/src/player/views/DefenseView.tsx`: schermata DEFENSE/INTERVENTI (turno
+  proprio vs spettatore: difendi/spunti/timer/"Ho finito" · "sta parlando"/mano
+  alzata/coda/ReactionBar). Computa i derivati internamente dai prop grezzi.
+- `PlayerApp.tsx`: blocco inline (~145 righe) → `<DefenseView .../>`; rimossi gli
+  import diventati orfani (`formatMSS`, `ReactionSwarm`, `REACTIONS`). Da 1602 a 1445 righe.
+- Copertura: render-test DEFENSE spettatore (sta parlando + alza la mano) e turno
+  proprio (tocca a te + Ho finito). 352 test, gate verdi.
+
 ## Prossime fette (proposte, non ancora fatte)
 - Estrarre le altre viste di fase di PlayerApp (DEFENSE/INTERVENTI, SPEAKER_VOTE,
   PREDICT, ACCUSE, lo switch finale TAPPA/SPLIT/RESULTS/AWARDS), aggiungendo un

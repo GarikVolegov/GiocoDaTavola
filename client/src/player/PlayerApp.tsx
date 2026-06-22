@@ -2,8 +2,6 @@ import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from 
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import { useElapsed } from '../shared/useElapsed';
-import { formatMSS } from '../shared/time';
-import ReactionSwarm from '../shared/ReactionSwarm';
 import {
   SocketEvents,
   JOIN_ERROR_MESSAGES,
@@ -27,7 +25,6 @@ import {
   tappaMeta,
   estimatePercorsoDilemmi,
   type Durata,
-  REACTIONS,
   REACTION_MIN_INTERVAL_MS,
   type GameMode,
   type SessionFormat,
@@ -65,39 +62,10 @@ import { useAuth, Show, SignInButton } from '@clerk/react';
 import VoteView from './views/VoteView';
 import SpeakerVoteView from './views/SpeakerVoteView';
 import AccuseView from './views/AccuseView';
+import DefenseView from './views/DefenseView';
+import ReactionBar from './views/ReactionBar';
 import { wrap } from './views/layout';
 
-// A row of tap-to-send reaction emojis, shown to the audience during a defense /
-// duel turn so non-speakers stay engaged. Throttled by the caller.
-function ReactionBar({ onReact }: { onReact: (emoji: Reaction) => void }) {
-  return (
-    <div
-      role="group"
-      aria-label="Reagisci"
-      style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}
-    >
-      {REACTIONS.map((emoji) => (
-        <button
-          key={emoji}
-          type="button"
-          onClick={() => onReact(emoji)}
-          aria-label={`Reagisci ${emoji}`}
-          style={{
-            fontSize: '1.8rem',
-            lineHeight: 1,
-            padding: '0.55rem 0.7rem',
-            borderRadius: '999px',
-            cursor: 'pointer',
-            background: 'rgba(242,243,255,0.08)',
-            border: '1px solid rgba(242,243,255,0.18)',
-          }}
-        >
-          {emoji}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 // Read a prefilled room code from the QR join URL (`/join?room=CODE`).
 function urlRoom(): string {
@@ -580,148 +548,23 @@ export default function PlayerApp() {
   }
 
   if (joinedCode && (phase === 'DEFENSE' || phase === 'INTERVENTI')) {
-    const d = game?.defense ?? null;
-    const speaker = d?.speaker ?? null; // the defender (DEFENSE only)
-    const myTurn = d?.speakerId != null && d.speakerId === playerId;
-    const sideOption = speaker
-      ? speaker.side === 'A'
-        ? game?.dilemma?.optionA
-        : game?.dilemma?.optionB
-      : undefined;
-    const myQueuePos = d?.queue ? d.queue.findIndex((q) => q.id === playerId) : -1;
-
-    const finishButton = (
-      <>
-        <button
-          type="button"
-          onClick={sendFinish}
-          disabled={!canFinishNow}
-          style={{
-            fontSize: '1.2rem',
-            fontWeight: 800,
-            padding: '0.9rem 1.6rem',
-            borderRadius: '0.9rem',
-            border: 'none',
-            cursor: canFinishNow ? 'pointer' : 'not-allowed',
-            opacity: canFinishNow ? 1 : 0.5,
-          }}
-        >
-          {canFinishNow ? 'Ho finito ▶' : `Ho finito tra ${minRemaining ?? ''}s`}
-        </button>
-        {remaining != null && (
-          <p style={{ fontSize: '0.85rem', opacity: 0.6, margin: 0 }}>max {remaining}s</p>
-        )}
-      </>
-    );
-
     return (
-      <main style={wrap}>
-        <ReactionSwarm />
-        <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
-
-        {myTurn ? (
-          <>
-            {phase === 'INTERVENTI' ? (
-              <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te: intervieni! 🙋</p>
-            ) : speaker?.devil ? (
-              <p style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#ffd36b' }}>
-                🎭 Avvocato del Diavolo!
-              </p>
-            ) : (
-              <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te! 🎤</p>
-            )}
-
-            {phase === 'DEFENSE' && speaker && (
-              <>
-                {game?.dilemma && (
-                  <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0, maxWidth: '22rem' }}>
-                    {game.dilemma.text}
-                  </p>
-                )}
-                {speaker.devil ? (
-                  <p style={{ fontSize: '1.1rem', opacity: 0.95, margin: 0, maxWidth: '22rem' }}>
-                    Hai votato <strong>{speaker.side === 'A' ? 'B' : 'A'}</strong>, ma ora convinci tutti
-                    che <strong>{speaker.side}</strong>
-                    {sideOption ? ` (${sideOption})` : ''} è la scelta giusta!
-                  </p>
-                ) : (
-                  <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
-                    Difendi <strong>{speaker.side}</strong>
-                    {sideOption ? `: ${sideOption}` : ''}
-                  </p>
-                )}
-                {d?.spunti && d.spunti.length > 0 && (
-                  <div style={{ width: 'min(90vw, 22rem)', textAlign: 'left' }}>
-                    <p style={{ fontSize: '0.9rem', fontWeight: 700, opacity: 0.8, margin: '0 0 0.3rem' }}>
-                      Spunti per te:
-                    </p>
-                    <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                      {d.spunti.map((s, i) => (
-                        <li key={`${i}-${s}`} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </>
-            )}
-            {game?.defense?.startedAt != null && (
-              <div
-                aria-label="Tempo trascorso"
-                style={{ fontSize: '3rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-              >
-                {formatMSS(speakerElapsed ?? 0)}
-              </div>
-            )}
-            {finishButton}
-          </>
-        ) : speaker == null && phase === 'DEFENSE' ? (
-          <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
-            Nessuna difesa per questo dilemma.
-          </p>
-        ) : (
-          <>
-            {phase === 'DEFENSE' && game?.isDevilRound && (
-              <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#ffd36b' }}>
-                🎭 Round Avvocato del Diavolo — difende il contrario!
-              </p>
-            )}
-            <p style={{ fontSize: '1.3rem', margin: 0 }}>
-              {phase === 'INTERVENTI' ? (
-                <>Interviene <strong>{d?.intervenor?.nickname ?? '…'}</strong> 🙋</>
-              ) : (
-                <>Sta parlando <strong>{speaker?.nickname ?? '…'}</strong> 🎤</>
-              )}
-            </p>
-
-            {phase === 'DEFENSE' && d?.speakerId != null && (
-              <button
-                type="button"
-                onClick={toggleHand}
-                style={{
-                  fontSize: '1.05rem',
-                  fontWeight: 700,
-                  padding: '0.7rem 1.3rem',
-                  borderRadius: '0.8rem',
-                  border: handRaised ? '2px solid #ffd36b' : '2px solid rgba(255,255,255,0.3)',
-                  background: handRaised ? 'rgba(255,211,107,0.18)' : 'transparent',
-                  color: 'inherit',
-                  cursor: 'pointer',
-                }}
-              >
-                {handRaised ? '✋ Abbassa la mano' : '✋ Alza la mano'}
-              </button>
-            )}
-            {phase === 'INTERVENTI' && myQueuePos >= 0 && (
-              <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0 }}>
-                Sei in coda: {myQueuePos + 1}º
-              </p>
-            )}
-
-            <ReactionBar onReact={sendReaction} />
-          </>
-        )}
-        {skipButton}
-      </main>
+      <DefenseView
+        phase={phase}
+        defense={game?.defense ?? null}
+        dilemma={game?.dilemma}
+        isDevilRound={game?.isDevilRound ?? false}
+        playerId={playerId}
+        handRaised={handRaised}
+        canFinishNow={canFinishNow}
+        minRemaining={minRemaining}
+        remaining={remaining}
+        speakerElapsed={speakerElapsed}
+        onFinish={sendFinish}
+        onToggleHand={toggleHand}
+        onReact={sendReaction}
+        skipButton={skipButton}
+      />
     );
   }
 
