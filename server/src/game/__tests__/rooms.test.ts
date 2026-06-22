@@ -50,6 +50,15 @@ function defenseRoom(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B']): s
   return code;
 }
 
+// From a DEFENSE state, walk to the NEXT round's DEFENSE, re-casting VOTE_1
+// votes for sock-0..n (votes are cleared each DILEMMA_REVEAL, so re-vote).
+function nextDefense(store: RoomStore, code: string, sides: VoteChoice[]) {
+  let g = 0;
+  while (store.get(code)?.phase !== 'VOTE_1' && g++ < 50) store.advancePhase(code);
+  sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
+  while (store.get(code)?.phase !== 'DEFENSE' && g++ < 50) store.advancePhase(code);
+}
+
 // helper: spin up a 2-human duel and advance to the first DUEL_PICK.
 function startDuel(store: RoomStore, code: string) {
   store.create();
@@ -884,11 +893,13 @@ describe('RoomStore per-player stats (Fase A)', () => {
     // Round 1: as above (sock-1 switches to A).
     playRound(store, code, { 'sock-0': 'A', 'sock-1': 'B', 'sock-2': 'B' }, { 'sock-1': 'A' });
     // Round 2: everyone votes A, nobody changes -> majority A, no swing.
+    // With fair rotation: sock-0 and sock-1 have defended (count=1), while sock-2
+    // hasn't (count=0). So round 2 picks sock-2 for A (lowest count).
     playRound(store, code, { 'sock-0': 'A', 'sock-1': 'A', 'sock-2': 'A' });
     const stats = store.get(code)!.stats;
-    expect(stats.get('sock-0')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 2, minorityCount: 0, persuasion: 1, defendedCount: 2 });
+    expect(stats.get('sock-0')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 2, minorityCount: 0, persuasion: 1, defendedCount: 1 });
     expect(stats.get('sock-1')).toEqual({ rounds: 2, changedCount: 1, majorityCount: 2, minorityCount: 0, persuasion: 0, defendedCount: 1 });
-    expect(stats.get('sock-2')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 1, minorityCount: 1, persuasion: 0, defendedCount: 0 });
+    expect(stats.get('sock-2')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 1, minorityCount: 1, persuasion: 0, defendedCount: 1 });
   });
 
   it('counts a round each defender defended (defendedCount)', () => {
@@ -2127,5 +2138,21 @@ describe('RoomStore VOTE_2 confirm (auto-paced)', () => {
     while (store.get(code)?.dilemmaIndex !== 2 && g++ < 30) store.advancePhase(code);
     expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL');
     expect(store.confirmedCount(code)).toBe(0);
+  });
+});
+
+describe('RoomStore defense — equa rotazione difensori', () => {
+  it('dà priorità a chi non ha ancora difeso un lato rispetto a chi lo ha già fatto', () => {
+    // rng=()=>0.999 mette il round Avvocato del Diavolo ULTIMO (round 3), così i
+    // round 1-2 sono normali (nessun ribaltamento di lato), e a parità il
+    // tiebreak pesca l'ultimo candidato (come fa già il test US-010 esistente).
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0.999);
+    const code = defenseRoom(store, ['A', 'B', 'B']); // round 1
+    expect(store.get(code)?.defenders.find((d) => d.side === 'B')?.id).toBe('sock-2');
+
+    nextDefense(store, code, ['A', 'B', 'B']); // round 2 (normale)
+    // sock-2 ha già difeso B (count 1); sock-1 non ha mai parlato (count 0):
+    // tocca a sock-1, anche se l'rng da solo ripescherebbe sock-2.
+    expect(store.get(code)?.defenders.find((d) => d.side === 'B')?.id).toBe('sock-1');
   });
 });

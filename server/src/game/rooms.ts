@@ -322,6 +322,13 @@ export interface Room {
    * DILEMMA_REVEAL; pruned when a player leaves.
    */
   speakerVotes: Map<string, string>;
+  /**
+   * Quante volte ogni player (per id) è stato scelto come difensore nella
+   * partita corrente. Guida l'equa rotazione in `selectDefenders` (priorità a
+   * chi ha difeso meno). Vuota alla creazione, azzerata a `startGame`. Resta
+   * lato server: è solo un conteggio, non espone voti.
+   */
+  defenseCounts: Map<string, number>;
 }
 
 export type JoinError = 'ROOM_NOT_FOUND' | 'NICKNAME_REQUIRED' | 'ROOM_FULL';
@@ -615,9 +622,17 @@ export class RoomStore {
         .filter(([, choice]) => choice === side)
         .map(([id]) => id);
       if (voters.length === 0) continue; // side with no votes -> no defender
-      const chosen = voters[Math.floor(this.rng() * voters.length)];
+      // Equità: tra i votanti di questo lato scegli SEMPRE chi ha difeso meno
+      // volte finora, così su una partita tutti ottengono un turno. Un lato può
+      // essere difeso solo da chi l'ha votato: si pesca il meno-utilizzato tra
+      // loro, con pareggio risolto dall'rng iniettabile (resta imprevedibile e
+      // riproduce il vecchio comportamento quando i conteggi sono pari).
+      const min = Math.min(...voters.map((id) => room.defenseCounts.get(id) ?? 0));
+      const candidates = voters.filter((id) => (room.defenseCounts.get(id) ?? 0) === min);
+      const chosen = candidates[Math.floor(this.rng() * candidates.length)];
       const player = room.players.get(chosen);
       if (!player) continue;
+      room.defenseCounts.set(chosen, (room.defenseCounts.get(chosen) ?? 0) + 1);
       if (devil) {
         // "Avvocato del Diavolo": argue the OPPOSITE side. Everything downstream
         // (bot/AI argument, attribution, persuasion, public display) keys off
@@ -896,6 +911,7 @@ export class RoomStore {
       predictions: new Map(),
       swingBets: new Map(),
       speakerVotes: new Map(),
+      defenseCounts: new Map(),
     };
     this.rooms.set(code, room);
     return room;
@@ -1018,6 +1034,7 @@ export class RoomStore {
     // …and (longer games only) a "Quanto mi conosci" round, distinct from the devil one.
     room.knowRoundIndex = mode === 'gruppo' ? this.pickKnowRound(totalRounds, room.devilRoundIndex) : null;
     room.stats = new Map();
+    room.defenseCounts = new Map();
     room.duelScore = new Map();
     room.duelAgreements = 0;
     room.duelTurnIndex = 0;
