@@ -322,4 +322,25 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/sei nella stanza/i)).toBeInTheDocument();
     expect(screen.getByText(/aggiungi un dilemma/i)).toBeInTheDocument();
   });
+
+  it('shows the leader setup panel when you are the leader', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', { players: [{ id: 'p1', nickname: 'Alice' }] });
+      serverEmit('game:state', {
+        phase: 'LOBBY',
+        dilemmaCount: 0,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        leaderId: 'p1',
+      });
+    });
+    expect(screen.getByText(/componi la serata/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /avvia partita/i })).toBeInTheDocument();
+  });
 });

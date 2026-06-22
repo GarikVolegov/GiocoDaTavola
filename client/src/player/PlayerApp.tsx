@@ -10,18 +10,8 @@ import {
   PERSONA_LABELS,
   OBJECTIVE,
   HOW_TO_PLAY,
-  SESSION_FORMATS,
-  FORMAT_LABELS,
   FORMAT_DILEMMA_COUNT,
-  CONTENT_REGISTERS,
-  REGISTER_LABELS,
   MIN_PLAYERS_TO_START,
-  GAME_MODES,
-  MODE_LABELS,
-  TAPPE,
-  DURATE,
-  DURATA_LABELS,
-  estimatePercorsoDilemmi,
   type Durata,
   REACTION_MIN_INTERVAL_MS,
   type GameMode,
@@ -44,8 +34,6 @@ import {
   type PlayerSpeakerVotedPayload,
   type Reaction,
   type BlindSpot,
-  MIN_INFILTRATO_HUMANS,
-  MIN_SQUADRE_PLAYERS,
   SUBMIT_DILEMMA_ERROR_MESSAGES,
   type PlayerDilemmaSubmittedPayload,
   type PlayerSubmitDilemmaErrorPayload,
@@ -54,7 +42,7 @@ import {
   type PlayerInfiltratoRolePayload,
   type PlayerAccusedPayload,
 } from '../shared/events';
-import { Card, Pill, Button, Alert, JoinQr } from '../shared/ui';
+import { Card, JoinQr } from '../shared/ui';
 import { useAuth } from '@clerk/react';
 import VoteView from './views/VoteView';
 import SpeakerVoteView from './views/SpeakerVoteView';
@@ -64,6 +52,7 @@ import PredictView from './views/PredictView';
 import DuelArgueView from './views/DuelArgueView';
 import StatusView from './views/StatusView';
 import SubmitDilemmaCard from './views/SubmitDilemmaCard';
+import LeaderSetup from './views/LeaderSetup';
 import { wrap } from './views/layout';
 
 
@@ -740,196 +729,31 @@ export default function PlayerApp() {
         />
 
         {isLeader ? (
-          <Card
-            glow="accent"
-            style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.8rem', alignItems: 'center' }}
-          >
-            <h3 style={{ fontSize: '1.05rem', margin: 0 }}>Sei il leader — componi la serata</h3>
-
-            <div style={{ width: '100%' }}>
-              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Tipo di partita</p>
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Tipo di partita">
-                <Pill selected={!percorsoOn} onClick={() => setPercorsoOn(false)} aria-label="Classica: 3, 5 o 7 dilemmi">
-                  <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                    <span style={{ fontWeight: 700 }}>Classica</span>
-                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>3 · 5 · 7 dilemmi</span>
-                  </span>
-                </Pill>
-                <Pill
-                  selected={percorsoOn}
-                  onClick={() => {
-                    setPercorsoOn(true);
-                    setGameMode('gruppo');
-                  }}
-                  aria-label="Percorso: salita a tappe, 1-3 ore"
-                >
-                  <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                    <span style={{ fontWeight: 700 }}>🧗 Percorso</span>
-                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>salita a tappe · 1–3h</span>
-                  </span>
-                </Pill>
-              </div>
-            </div>
-
-            {!percorsoOn && (
-              <>
-                <div style={{ width: '100%' }}>
-                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità</p>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Modalità">
-                    {GAME_MODES.map((m) => (
-                      <Pill
-                        key={m}
-                        selected={gameMode === m}
-                        onClick={() => setGameMode(m)}
-                        aria-label={`${MODE_LABELS[m].nome}, ${MODE_LABELS[m].descr}`}
-                      >
-                        <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                          <span style={{ fontWeight: 700 }}>{MODE_LABELS[m].nome}</span>
-                          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{MODE_LABELS[m].descr}</span>
-                        </span>
-                      </Pill>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ width: '100%' }}>
-                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Argomenti</p>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Registro">
-                    {CONTENT_REGISTERS.map((r) => (
-                      <Pill
-                        key={r}
-                        selected={register === r}
-                        onClick={() => setRegister(r)}
-                        aria-label={REGISTER_LABELS[r]}
-                      >
-                        {REGISTER_LABELS[r]}
-                      </Pill>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ width: '100%' }}>
-                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Durata</p>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Formato">
-                    {SESSION_FORMATS.map((f) => (
-                      <Pill
-                        key={f}
-                        selected={format === f}
-                        onClick={() => setFormat(f)}
-                        aria-label={`${FORMAT_LABELS[f].nome}, ${FORMAT_LABELS[f].round} round, ${FORMAT_LABELS[f].durata}`}
-                      >
-                        <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                          <span style={{ fontWeight: 700 }}>{FORMAT_LABELS[f].nome}</span>
-                          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
-                            {FORMAT_LABELS[f].round} round · {FORMAT_LABELS[f].durata}
-                          </span>
-                        </span>
-                      </Pill>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {percorsoOn && (
-              <>
-                <div style={{ width: '100%' }}>
-                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Tappa di partenza</p>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Tappa di partenza">
-                    {TAPPE.map((t) => (
-                      <Pill
-                        key={t.id}
-                        selected={startTappa === t.id}
-                        onClick={() => setStartTappa(t.id)}
-                        aria-label={`${t.nome}: ${t.sottotitolo}`}
-                      >
-                        <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                          <span style={{ fontWeight: 700 }}>{t.emoji} {t.nome}</span>
-                          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{t.sottotitolo}</span>
-                        </span>
-                      </Pill>
-                    ))}
-                  </div>
-                  <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
-                    Si sale fino a 🌅 I Bilanci.
-                  </p>
-                </div>
-
-                <div style={{ width: '100%' }}>
-                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Durata</p>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Durata percorso">
-                    {DURATE.map((d) => (
-                      <Pill
-                        key={d}
-                        selected={durata === d}
-                        onClick={() => setDurata(d)}
-                        aria-label={`${DURATA_LABELS[d].nome}, ${DURATA_LABELS[d].durata}`}
-                      >
-                        <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                          <span style={{ fontWeight: 700 }}>{DURATA_LABELS[d].nome}</span>
-                          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{DURATA_LABELS[d].durata}</span>
-                        </span>
-                      </Pill>
-                    ))}
-                  </div>
-                  <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
-                    ~{estimatePercorsoDilemmi(game?.tappaCounts, startTappa, durata)} dilemmi · {DURATA_LABELS[durata].durata}
-                  </p>
-                </div>
-              </>
-            )}
-
-            {(percorsoOn || gameMode === 'gruppo') && (
-              <div style={{ width: '100%' }}>
-                <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità speciale</p>
-                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <Pill
-                    selected={infiltratoOn}
-                    onClick={() => {
-                      setInfiltratoOn((v) => !v);
-                      setSquadreOn(false);
-                    }}
-                    aria-label="L'Infiltrato (un giocatore segreto)"
-                  >
-                    🕵️ L'Infiltrato {infiltratoOn ? 'ON' : 'OFF'}
-                  </Pill>
-                  <Pill
-                    selected={squadreOn}
-                    onClick={() => {
-                      setSquadreOn((v) => !v);
-                      setInfiltratoOn(false);
-                    }}
-                    aria-label="Squadre (Blu contro Arancio)"
-                  >
-                    🔵🟠 Squadre {squadreOn ? 'ON' : 'OFF'}
-                  </Pill>
-                </div>
-                <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
-                  {squadreOn
-                    ? `Blu contro Arancio: vince chi convince di più · servono ≥${MIN_SQUADRE_PLAYERS} giocatori`
-                    : `Un giocatore segreto deve ribaltare il gruppo · servono ≥${MIN_INFILTRATO_HUMANS} persone`}
-                </p>
-              </div>
-            )}
-
-            <Button variant="ghost" onClick={addBot} disabled={!canAddBot}>
-              + Aggiungi bot 🤖
-            </Button>
-
-            <Button variant="primary" size="lg" onClick={startGame} disabled={!canStart}>
-              Avvia partita
-            </Button>
-            {!canStart && (
-              <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem' }}>
-                {gameMode === 'duello'
-                  ? 'Il 1v1 richiede esattamente 2 giocatori.'
-                  : humanCount < 1
-                    ? 'Serve almeno una persona (i bot da soli non bastano).'
-                    : `Servono almeno ${MIN_PLAYERS_TO_START} partecipanti: aggiungi giocatori o bot 🤖`}
-              </p>
-            )}
-            {startError && <Alert>{startError}</Alert>}
-          </Card>
+          <LeaderSetup
+            percorsoOn={percorsoOn}
+            setPercorsoOn={setPercorsoOn}
+            gameMode={gameMode}
+            setGameMode={setGameMode}
+            register={register}
+            setRegister={setRegister}
+            format={format}
+            setFormat={setFormat}
+            startTappa={startTappa}
+            setStartTappa={setStartTappa}
+            durata={durata}
+            setDurata={setDurata}
+            infiltratoOn={infiltratoOn}
+            setInfiltratoOn={setInfiltratoOn}
+            squadreOn={squadreOn}
+            setSquadreOn={setSquadreOn}
+            tappaCounts={game?.tappaCounts}
+            humanCount={humanCount}
+            canAddBot={canAddBot}
+            onAddBot={addBot}
+            canStart={canStart}
+            onStart={startGame}
+            startError={startError}
+          />
         ) : (
           <p style={{ opacity: 0.7, margin: 0 }}>In attesa che il leader avvii la partita…</p>
         )}
