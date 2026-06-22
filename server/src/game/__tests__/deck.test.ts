@@ -190,8 +190,12 @@ describe('contenuti Percorso (tappe)', () => {
     }
   });
 
-  it('i dilemmi business non fanno parte del percorso', () => {
-    expect(all.filter((d) => d.register === 'business' && d.tappa !== undefined)).toHaveLength(0);
+  it('il percorso attinge da entrambi i registri (collocazione Percorso + Classica)', () => {
+    const tagged = all.filter((d) => d.tappa !== undefined);
+    // I dilemmi taggati possono essere sia 'vita' sia 'business': lo stesso dilemma
+    // vive nella salita (per tappa) e nelle partite classiche (per registro).
+    expect(tagged.some((d) => d.register === 'vita')).toBe(true);
+    expect(tagged.some((d) => d.register === 'business')).toBe(true);
   });
 });
 

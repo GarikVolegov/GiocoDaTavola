@@ -117,7 +117,10 @@ const base = data.filter((d) => !/^p\d+$/.test(d.id));
 const rebuilt = base.map((d) => {
   const tappa = TAPPA[d.id];
   const out = { id: d.id, text: d.text, optionA: d.optionA, optionB: d.optionB, register: d.register };
+  // Preserve a tappa set elsewhere (e.g. the h-series hard dilemmas) so re-running
+  // this tagger never strips tappe it doesn't know about.
   if (tappa) out.tappa = tappa;
+  else if (d.tappa != null) out.tappa = d.tappa;
   out.spuntiA = d.spuntiA;
   out.spuntiB = d.spuntiB;
   return out;
