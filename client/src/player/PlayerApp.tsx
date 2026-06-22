@@ -18,6 +18,12 @@ import {
   MIN_PLAYERS_TO_START,
   GAME_MODES,
   MODE_LABELS,
+  TAPPE,
+  DURATE,
+  DURATA_LABELS,
+  tappaMeta,
+  estimatePercorsoDilemmi,
+  type Durata,
   REACTIONS,
   REACTION_MIN_INTERVAL_MS,
   type GameMode,
@@ -179,6 +185,11 @@ export default function PlayerApp() {
   const [gameMode, setGameMode] = useState<GameMode>('gruppo');
   const [infiltratoOn, setInfiltratoOn] = useState(false);
   const [squadreOn, setSquadreOn] = useState(false);
+  // "Percorso": the long themed ascent (gruppo-only). When on, the classic
+  // register/durata pickers are replaced by a start-tappa + duration choice.
+  const [percorsoOn, setPercorsoOn] = useState(false);
+  const [startTappa, setStartTappa] = useState(1);
+  const [durata, setDurata] = useState<Durata>('medio');
   const [startError, setStartError] = useState<string | null>(null);
   // Current credentials, kept in a ref so the socket 'connect' handler can
   // re-claim the seat after a network blip without re-subscribing.
@@ -428,6 +439,19 @@ export default function PlayerApp() {
   // Leader controls (gated server-side; non-leader emits are ignored).
   const startGame = () => {
     setStartError(null);
+    // Percorso is a gruppo-only experience; it carries its own config (start tappa
+    // + duration) and the server derives the dilemma count from the planned ascent.
+    if (percorsoOn) {
+      getSocket().emit(SocketEvents.LeaderStartGame, {
+        format: 'percorso',
+        startTappa,
+        durata,
+        mode: 'gruppo',
+        infiltrato: infiltratoOn,
+        squadre: squadreOn,
+      });
+      return;
+    }
     getSocket().emit(SocketEvents.LeaderStartGame, {
       dilemmaCount: FORMAT_DILEMMA_COUNT[format],
       register,
@@ -481,7 +505,7 @@ export default function PlayerApp() {
   // Phases that run a server-side countdown the leader may skip (everything past
   // the lobby except the terminal award/duel screens).
   const phaseHasTimer = (p: GameStatePayload['phase']) =>
-    p !== 'LOBBY' && p !== 'FINAL_AWARDS' && p !== 'FINAL_DUEL';
+    p !== 'LOBBY' && p !== 'FINAL_AWARDS' && p !== 'FINAL_DUEL' && p !== 'TAPPA_RECAP';
 
   // The leader's "skip the rest of this phase" button — only shown to the leader
   // during a phase that has a countdown. Rendered in each in-game branch.
@@ -1049,7 +1073,49 @@ export default function PlayerApp() {
             {remaining}s
           </div>
         )}
-        {phase === 'PHASE_INTRO' ? (
+        {phase === 'TAPPA_INTRO' ? (
+          game?.percorso ? (() => {
+            const meta = tappaMeta(game.percorso.currentTappa);
+            return (
+              <Card
+                glow="accent"
+                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.4rem', textAlign: 'center' }}
+              >
+                <p style={{ fontSize: '3rem', margin: 0 }}>{meta.emoji}</p>
+                <p style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>{meta.nome}</p>
+                <p style={{ fontSize: '0.95rem', opacity: 0.85, margin: 0 }}>{meta.sottotitolo}</p>
+                <p style={{ fontSize: '0.85rem', opacity: 0.7, margin: 0 }}>{meta.descrizione}</p>
+              </Card>
+            );
+          })() : null
+        ) : phase === 'TAPPA_RECAP' ? (
+          game?.percorso ? (() => {
+            const p = game.percorso;
+            const meta = tappaMeta(p.currentTappa);
+            const isLast = p.dilemmaIndex >= p.totalDilemmas;
+            return (
+              <Card
+                glow="accent"
+                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'center' }}
+              >
+                <p style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0 }}>{meta.emoji} {meta.nome} — fatto!</p>
+                <p style={{ fontSize: '0.95rem', opacity: 0.85, margin: 0 }}>
+                  {p.tappaDilemmas} {p.tappaDilemmas === 1 ? 'dilemma' : 'dilemmi'} · {p.tappaSwings} {p.tappaSwings === 1 ? 'ribaltone' : 'ribaltoni'}
+                </p>
+                <p style={{ fontSize: '0.9rem', opacity: 0.7, margin: 0 }}>
+                  {isLast ? 'Avete raggiunto la vetta 🏔️' : 'Pausa: riprendete quando volete.'}
+                </p>
+                {isLeader ? (
+                  <Button variant="primary" onClick={advance}>
+                    {isLast ? 'Vai ai premi ▶' : 'Continua ▶'}
+                  </Button>
+                ) : (
+                  <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem' }}>In attesa del leader…</p>
+                )}
+              </Card>
+            );
+          })() : null
+        ) : phase === 'PHASE_INTRO' ? (
           <>
             {infiltratoRole && (
               <Card
@@ -1328,62 +1394,139 @@ export default function PlayerApp() {
             <h3 style={{ fontSize: '1.05rem', margin: 0 }}>Sei il leader — componi la serata</h3>
 
             <div style={{ width: '100%' }}>
-              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità</p>
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Modalità">
-                {GAME_MODES.map((m) => (
-                  <Pill
-                    key={m}
-                    selected={gameMode === m}
-                    onClick={() => setGameMode(m)}
-                    aria-label={`${MODE_LABELS[m].nome}, ${MODE_LABELS[m].descr}`}
-                  >
-                    <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                      <span style={{ fontWeight: 700 }}>{MODE_LABELS[m].nome}</span>
-                      <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{MODE_LABELS[m].descr}</span>
-                    </span>
-                  </Pill>
-                ))}
+              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Tipo di partita</p>
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Tipo di partita">
+                <Pill selected={!percorsoOn} onClick={() => setPercorsoOn(false)} aria-label="Classica: 3, 5 o 7 dilemmi">
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
+                    <span style={{ fontWeight: 700 }}>Classica</span>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>3 · 5 · 7 dilemmi</span>
+                  </span>
+                </Pill>
+                <Pill
+                  selected={percorsoOn}
+                  onClick={() => {
+                    setPercorsoOn(true);
+                    setGameMode('gruppo');
+                  }}
+                  aria-label="Percorso: salita a tappe, 1-3 ore"
+                >
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
+                    <span style={{ fontWeight: 700 }}>🧗 Percorso</span>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>salita a tappe · 1–3h</span>
+                  </span>
+                </Pill>
               </div>
             </div>
 
-            <div style={{ width: '100%' }}>
-              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Argomenti</p>
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Registro">
-                {CONTENT_REGISTERS.map((r) => (
-                  <Pill
-                    key={r}
-                    selected={register === r}
-                    onClick={() => setRegister(r)}
-                    aria-label={REGISTER_LABELS[r]}
-                  >
-                    {REGISTER_LABELS[r]}
-                  </Pill>
-                ))}
-              </div>
-            </div>
+            {!percorsoOn && (
+              <>
+                <div style={{ width: '100%' }}>
+                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità</p>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Modalità">
+                    {GAME_MODES.map((m) => (
+                      <Pill
+                        key={m}
+                        selected={gameMode === m}
+                        onClick={() => setGameMode(m)}
+                        aria-label={`${MODE_LABELS[m].nome}, ${MODE_LABELS[m].descr}`}
+                      >
+                        <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
+                          <span style={{ fontWeight: 700 }}>{MODE_LABELS[m].nome}</span>
+                          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{MODE_LABELS[m].descr}</span>
+                        </span>
+                      </Pill>
+                    ))}
+                  </div>
+                </div>
 
-            <div style={{ width: '100%' }}>
-              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Durata</p>
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Formato">
-                {SESSION_FORMATS.map((f) => (
-                  <Pill
-                    key={f}
-                    selected={format === f}
-                    onClick={() => setFormat(f)}
-                    aria-label={`${FORMAT_LABELS[f].nome}, ${FORMAT_LABELS[f].round} round, ${FORMAT_LABELS[f].durata}`}
-                  >
-                    <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                      <span style={{ fontWeight: 700 }}>{FORMAT_LABELS[f].nome}</span>
-                      <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
-                        {FORMAT_LABELS[f].round} round · {FORMAT_LABELS[f].durata}
-                      </span>
-                    </span>
-                  </Pill>
-                ))}
-              </div>
-            </div>
+                <div style={{ width: '100%' }}>
+                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Argomenti</p>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Registro">
+                    {CONTENT_REGISTERS.map((r) => (
+                      <Pill
+                        key={r}
+                        selected={register === r}
+                        onClick={() => setRegister(r)}
+                        aria-label={REGISTER_LABELS[r]}
+                      >
+                        {REGISTER_LABELS[r]}
+                      </Pill>
+                    ))}
+                  </div>
+                </div>
 
-            {gameMode === 'gruppo' && (
+                <div style={{ width: '100%' }}>
+                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Durata</p>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Formato">
+                    {SESSION_FORMATS.map((f) => (
+                      <Pill
+                        key={f}
+                        selected={format === f}
+                        onClick={() => setFormat(f)}
+                        aria-label={`${FORMAT_LABELS[f].nome}, ${FORMAT_LABELS[f].round} round, ${FORMAT_LABELS[f].durata}`}
+                      >
+                        <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
+                          <span style={{ fontWeight: 700 }}>{FORMAT_LABELS[f].nome}</span>
+                          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+                            {FORMAT_LABELS[f].round} round · {FORMAT_LABELS[f].durata}
+                          </span>
+                        </span>
+                      </Pill>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {percorsoOn && (
+              <>
+                <div style={{ width: '100%' }}>
+                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Tappa di partenza</p>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Tappa di partenza">
+                    {TAPPE.map((t) => (
+                      <Pill
+                        key={t.id}
+                        selected={startTappa === t.id}
+                        onClick={() => setStartTappa(t.id)}
+                        aria-label={`${t.nome}: ${t.sottotitolo}`}
+                      >
+                        <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
+                          <span style={{ fontWeight: 700 }}>{t.emoji} {t.nome}</span>
+                          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{t.sottotitolo}</span>
+                        </span>
+                      </Pill>
+                    ))}
+                  </div>
+                  <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
+                    Si sale fino a 🌅 I Bilanci.
+                  </p>
+                </div>
+
+                <div style={{ width: '100%' }}>
+                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Durata</p>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Durata percorso">
+                    {DURATE.map((d) => (
+                      <Pill
+                        key={d}
+                        selected={durata === d}
+                        onClick={() => setDurata(d)}
+                        aria-label={`${DURATA_LABELS[d].nome}, ${DURATA_LABELS[d].durata}`}
+                      >
+                        <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
+                          <span style={{ fontWeight: 700 }}>{DURATA_LABELS[d].nome}</span>
+                          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{DURATA_LABELS[d].durata}</span>
+                        </span>
+                      </Pill>
+                    ))}
+                  </div>
+                  <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
+                    ~{estimatePercorsoDilemmi(game?.tappaCounts, startTappa, durata)} dilemmi · {DURATA_LABELS[durata].durata}
+                  </p>
+                </div>
+              </>
+            )}
+
+            {(percorsoOn || gameMode === 'gruppo') && (
               <div style={{ width: '100%' }}>
                 <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità speciale</p>
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
