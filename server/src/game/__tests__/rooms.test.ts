@@ -651,19 +651,33 @@ describe('RoomStore defense (US-010)', () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
     const code = defenseRoom(store, ['A', 'B', 'B']);
     expect(store.publicDefense(code)).toEqual({
+      kind: 'defense',
       speaker: { id: 'sock-0', nickname: 'P0', side: 'A' },
+      intervenor: null,
+      speakerId: 'sock-0',
       turn: 1,
       totalTurns: 2,
       argument: null,
       spunti: ['pro A1 #1', 'pro A1 #2'],
+      raisedCount: 0,
+      queue: null,
+      minEndsAt: 30_000,
+      canFinish: false,
     });
     store.advancePhase(code); // next turn -> side B speaker
     expect(store.publicDefense(code)).toEqual({
+      kind: 'defense',
       speaker: { id: 'sock-1', nickname: 'P1', side: 'B' },
+      intervenor: null,
+      speakerId: 'sock-1',
       turn: 2,
       totalTurns: 2,
       argument: null,
       spunti: ['pro B1 #1', 'pro B1 #2'],
+      raisedCount: 0,
+      queue: null,
+      minEndsAt: 30_000,
+      canFinish: false,
     });
     store.advancePhase(code); // VOTE_2 -> defense no longer public
     expect(store.publicDefense(code)).toBeNull();
@@ -699,7 +713,20 @@ describe('RoomStore defense (US-010)', () => {
     store.advancePhase(code); // PREDICT
     store.advancePhase(code); // DEFENSE (no defenders)
     expect(store.get(code)?.phase).toBe('DEFENSE');
-    expect(store.publicDefense(code)).toEqual({ speaker: null, turn: 0, totalTurns: 0, argument: null, spunti: null });
+    expect(store.publicDefense(code)).toEqual({
+      kind: 'defense',
+      speaker: null,
+      intervenor: null,
+      speakerId: null,
+      turn: 0,
+      totalTurns: 0,
+      argument: null,
+      spunti: null,
+      raisedCount: 0,
+      queue: null,
+      minEndsAt: null,
+      canFinish: true,
+    });
     store.advancePhase(code); // -> VOTE_2
     expect(store.get(code)?.phase).toBe('VOTE_2');
   });
@@ -2330,5 +2357,36 @@ describe('reactions during INTERVENTI', () => {
     const res = store.react(code, others[1], '👏');
     expect(res).toMatchObject({ ok: true, emoji: '👏' });
     expect(store.get(code)!.stats.get(others[0])?.reactionsReceived).toBe(1);
+  });
+});
+
+describe('publicDefense count vs names', () => {
+  it('exposes only the count during DEFENSE, names from INTERVENTI', () => {
+    const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'A', 'A']);
+    const defender = store.get(code)!.defenders[0].id;
+    const others = [...store.get(code)!.players.keys()].filter((id) => id !== defender);
+    store.raiseHand(code, others[0]);
+    store.raiseHand(code, others[1]);
+    const d1 = store.publicDefense(code)!;
+    expect(d1.kind).toBe('defense');
+    expect(d1.raisedCount).toBe(2);
+    expect(d1.queue).toBeNull();
+    expect(d1.speakerId).toBe(defender);
+
+    store.advancePhase(code); // → INTERVENTI
+    const d2 = store.publicDefense(code)!;
+    expect(d2.kind).toBe('intervento');
+    expect(d2.queue?.map((q) => q.id)).toEqual([others[0], others[1]]);
+    expect(d2.speakerId).toBe(others[0]);
+    expect(d2.intervenor?.id).toBe(others[0]);
+  });
+  it('canFinish flips once the floor passes', () => {
+    let now = 1_000;
+    const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'A', 'A']);
+    expect(store.publicDefense(code)!.canFinish).toBe(false);
+    now = 1_000 + 30_000;
+    expect(store.publicDefense(code)!.canFinish).toBe(true);
   });
 });

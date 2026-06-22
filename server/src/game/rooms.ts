@@ -14,6 +14,7 @@ import {
   isVotingPhase,
   isSplitRevealed,
   isDefensePhase,
+  isInterventiPhase,
   nextPhase,
   nextDuelPhase,
   nextPercorsoPhase,
@@ -159,21 +160,35 @@ export interface Defender {
   devil?: boolean;
 }
 
-/** Public view of the defense phase: who is speaking + turn progress. */
+/** Public view of the defense/interventi phase: who is speaking + turn/queue state. */
 export interface DefenseState {
-  /** The defender currently speaking; null if nobody voted (no defenders). */
+  /** 'defense' = a chosen defender is speaking; 'intervento' = a queued mini-turn. */
+  kind: 'defense' | 'intervento';
+  /** The defender currently speaking (only in 'defense'); null in 'intervento'/no defenders. */
   speaker: Defender | null;
-  /** 1-based index of the current turn (0 when there are no defenders). */
+  /** The current intervenor (only in 'intervento'); null in 'defense'. */
+  intervenor: { id: string; nickname: string } | null;
+  /** Id of whoever is talking now (defender or intervenor), so the phone can match "your turn". */
+  speakerId: string | null;
+  /** 1-based index of the current turn (defense turn, or intervenor position). */
   turn: number;
-  /** Total number of defense turns this round (0, 1, or 2). */
+  /** Total turns: defenders this round, or queued intervenors during INTERVENTI. */
   totalTurns: number;
   /**
    * The current speaker's canned argument when they are a bot (Fase B), shown on
-   * the host screen since a bot can't speak aloud; null when a human is speaking.
+   * the host screen since a bot can't speak aloud; null when a human is speaking / in interventi.
    */
   argument: string | null;
-  /** Talking points for the current speaker's side; null outside DEFENSE/no speaker. */
+  /** Talking points for the defender's side; null in interventi / no speaker. */
   spunti: string[] | null;
+  /** Live count of raised hands during the current defender's turn (0 in INTERVENTI). */
+  raisedCount: number;
+  /** Ordered intervenor names — only from INTERVENTI on; null during DEFENSE. */
+  queue: { id: string; nickname: string }[] | null;
+  /** When the current turn's minimum elapses (epoch ms); null for bot/absent speakers. */
+  minEndsAt: number | null;
+  /** Whether the current speaker may end now (minimum elapsed). */
+  canFinish: boolean;
 }
 
 export interface Room {
@@ -1822,13 +1837,43 @@ export class RoomStore {
   }
 
   /**
-   * Public defense view (who's speaking + turn progress), only during DEFENSE;
-   * null otherwise. The defenders' identities/side are intentionally public —
-   * no other secret votes are revealed.
+   * Public defense/interventi view (who's speaking + turn/queue state), only during
+   * DEFENSE or INTERVENTI; null otherwise. The defenders' (and, once interventi
+   * begin, the intervenors') identities are intentionally public — no other secret
+   * votes are revealed. During DEFENSE only the aggregate raised-hand COUNT leaves
+   * the server; the ordered names appear only from INTERVENTI on.
    */
   publicDefense(code: string): DefenseState | null {
     const room = this.rooms.get(code);
-    if (!room || !isDefensePhase(room.phase)) return null;
+    if (!room) return null;
+    if (!isDefensePhase(room.phase) && !isInterventiPhase(room.phase)) return null;
+    const canFinish = room.turnMinEndsAt == null || this.now() >= room.turnMinEndsAt;
+
+    if (room.phase === 'INTERVENTI') {
+      const speakerId = room.interventiQueue[room.interventiIndex] ?? null;
+      const sp = speakerId ? room.players.get(speakerId) : undefined;
+      const queue = room.interventiQueue
+        .map((id) => {
+          const p = room.players.get(id);
+          return p ? { id: p.id, nickname: p.nickname } : null;
+        })
+        .filter((x): x is { id: string; nickname: string } => x != null);
+      return {
+        kind: 'intervento',
+        speaker: null,
+        intervenor: sp ? { id: sp.id, nickname: sp.nickname } : null,
+        speakerId,
+        turn: room.interventiIndex + 1,
+        totalTurns: room.interventiQueue.length,
+        argument: null,
+        spunti: null,
+        raisedCount: 0,
+        queue,
+        minEndsAt: room.turnMinEndsAt,
+        canFinish,
+      };
+    }
+
     const totalTurns = room.defenders.length;
     const speaker = room.defenders[room.defenseTurnIndex] ?? null;
     const spunti =
@@ -1838,11 +1883,18 @@ export class RoomStore {
           : room.currentDilemma.spuntiB
         : null;
     return {
+      kind: 'defense',
       speaker,
+      intervenor: null,
+      speakerId: speaker?.id ?? null,
       turn: totalTurns === 0 ? 0 : room.defenseTurnIndex + 1,
       totalTurns,
       argument: room.defenseArgument,
       spunti,
+      raisedCount: room.raisedHands.length,
+      queue: null,
+      minEndsAt: room.turnMinEndsAt,
+      canFinish,
     };
   }
 
