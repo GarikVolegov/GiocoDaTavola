@@ -608,6 +608,32 @@ io.on('connection', (socket) => {
     if (result.ok) io.to(session.code).emit('room:reaction', { emoji: result.emoji });
   });
 
+  // A player raises/lowers their hand during a defender's turn (DEFENSE). Toggle:
+  // the server echoes the new state to the sender only; everyone else sees just the
+  // aggregate ✋ count via game:state — never who raised, until INTERVENTI.
+  socket.on('player:raiseHand', () => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const result = rooms.raiseHand(session.code, session.playerId);
+    if (!result.ok) return;
+    socket.emit('player:handRaised', { raised: result.raised });
+    broadcastGameState(session.code);
+  });
+
+  // The current speaker (defender or intervenor) ends their turn from their phone,
+  // valid only once the per-turn minimum has elapsed. Advances exactly like the
+  // safety-cap timer would; rejection goes back only to the sender.
+  socket.on('player:finishTurn', () => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const result = rooms.finishTurn(session.code, session.playerId);
+    if (!result.ok) {
+      socket.emit('player:finishTurnError', { error: result.error });
+      return;
+    }
+    advanceAndBroadcast(session.code);
+  });
+
   // A player makes (or changes) their secret prediction during PREDICT. Like the
   // first vote, the phase ends early once every present human has predicted; the
   // per-choice predictions stay secret (only the aggregate count is broadcast).
