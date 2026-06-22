@@ -36,10 +36,18 @@ export const SocketEvents = {
   PlayerVoteError: 'player:voteError',
   /** Player explicitly confirms their (pre-filled) second vote (VOTE_2). */
   PlayerConfirmVote: 'player:confirmVote',
-  /** Player taps a live audience reaction (DEFENSE / DUEL_ARGUE). */
+  /** Player taps a live audience reaction (DEFENSE / INTERVENTI / DUEL_ARGUE). */
   PlayerReact: 'player:react',
-  /** Server re-broadcasts a single reaction emoji to everyone (the host's swarm). */
+  /** Server re-broadcasts a single reaction emoji to everyone (the swarm on every screen). */
   RoomReaction: 'room:reaction',
+  /** Player raises/lowers their hand during a defender's turn (DEFENSE). */
+  PlayerRaiseHand: 'player:raiseHand',
+  /** Server confirms the player's current raised-hand state back to them only. */
+  PlayerHandRaised: 'player:handRaised',
+  /** Current speaker (defender/intervenor) signals they are done (after the minimum). */
+  PlayerFinishTurn: 'player:finishTurn',
+  /** Server rejects the finish (too early / not the speaker / wrong phase). */
+  PlayerFinishTurnError: 'player:finishTurnError',
   /** Player secretly predicts the post-defense majority (PREDICT phase). */
   PlayerPredict: 'player:predict',
   /** Server confirms the player's current prediction back to them only. */
@@ -248,6 +256,7 @@ export type GamePhase =
   | 'SPLIT_REVEAL'
   | 'PREDICT'
   | 'DEFENSE'
+  | 'INTERVENTI'
   | 'VOTE_2'
   | 'SPEAKER_VOTE'
   | 'PHASE_RESULTS'
@@ -384,18 +393,35 @@ export interface Defender {
   devil?: boolean;
 }
 
-/** Public defense view: who is currently speaking + the turn progress. */
+/**
+ * Public defense/interventi view: who is speaking + turn/queue state. Mirror of the
+ * server's `DefenseState` in server/src/game/rooms.ts — keep them in sync.
+ */
 export interface DefenseState {
-  /** The defender currently speaking; null when nobody voted (no defenders). */
+  /** 'defense' = a chosen defender is speaking; 'intervento' = a queued mini-turn. */
+  kind: 'defense' | 'intervento';
+  /** The defender currently speaking (only in 'defense'); null in 'intervento'/no defenders. */
   speaker: Defender | null;
-  /** 1-based index of the current turn (0 when there are no defenders). */
+  /** The current intervenor (only in 'intervento'); null in 'defense'. */
+  intervenor: { id: string; nickname: string } | null;
+  /** Id of whoever is talking now (defender or intervenor), so the phone can match "your turn". */
+  speakerId: string | null;
+  /** 1-based index of the current turn (defense turn, or intervenor position). */
   turn: number;
-  /** Total number of defense turns this round (0, 1, or 2). */
+  /** Total turns: defenders this round, or queued intervenors during INTERVENTI. */
   totalTurns: number;
-  /** The bot defender's canned argument (Fase B); null for human speakers. */
+  /** The bot defender's canned argument (Fase B); null for humans / interventi. */
   argument: string | null;
-  /** Talking points for the current speaker's side; null outside DEFENSE. */
+  /** Talking points for the defender's side; null in interventi / no speaker. */
   spunti: string[] | null;
+  /** Live count of raised hands during the current defender's turn (0 in INTERVENTI). */
+  raisedCount: number;
+  /** Ordered intervenor names — only from INTERVENTI on; null during DEFENSE. */
+  queue: { id: string; nickname: string }[] | null;
+  /** When the current turn's minimum elapses (epoch ms); null for bot/absent speakers. */
+  minEndsAt: number | null;
+  /** Whether the current speaker may end now (minimum elapsed). */
+  canFinish: boolean;
 }
 
 /**
@@ -821,6 +847,7 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   SPLIT_REVEAL: 'Come si è diviso il gruppo',
   PREDICT: 'Pronostico',
   DEFENSE: 'Le difese',
+  INTERVENTI: 'Interventi',
   VOTE_2: 'Secondo voto',
   SPEAKER_VOTE: 'Miglior oratore',
   PHASE_RESULTS: 'Risultati',
