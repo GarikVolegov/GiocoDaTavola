@@ -62,6 +62,7 @@ function nextDefense(store: RoomStore, code: string, sides: VoteChoice[]) {
   let g = 0;
   while (store.get(code)?.phase !== 'VOTE_1' && g++ < 50) store.advancePhase(code);
   sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
+  g = 0;
   while (store.get(code)?.phase !== 'DEFENSE' && g++ < 50) store.advancePhase(code);
 }
 
@@ -2161,6 +2162,42 @@ describe('RoomStore defense — equa rotazione difensori', () => {
     // tocca a sock-1, anche se l'rng da solo ripescherebbe sock-2.
     expect(store.get(code)?.defenders.find((d) => d.side === 'B')?.id).toBe('sock-1');
   });
+
+  it("continua a scegliere l'unico votante di un lato a ogni round", () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0.999);
+    const code = defenseRoom(store, ['A', 'B', 'B']); // solo sock-0 vota A
+    expect(store.get(code)?.defenders.find((d) => d.side === 'A')?.id).toBe('sock-0');
+    nextDefense(store, code, ['A', 'B', 'B']);
+    expect(store.get(code)?.defenders.find((d) => d.side === 'A')?.id).toBe('sock-0');
+  });
+
+  it('conta anche il turno nel round Avvocato del Diavolo', () => {
+    // rng=()=>0 -> devilRoundIndex=2. Round 1 senza voti (nessun difensore),
+    // round 2 (devil) con voti: chi è scelto a difendere DEVE incrementare il
+    // contatore anche se argomenta il lato opposto.
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3);
+    let g = 0;
+    while (store.get(code)!.dilemmaIndex !== 2 && g++ < 50) store.advancePhase(code);
+    store.advancePhase(code); // VOTE_1 (round 2 = devil)
+    (['A', 'B', 'B'] as VoteChoice[]).forEach((side, i) => store.vote(code, `sock-${i}`, side));
+    while (store.get(code)?.phase !== 'DEFENSE' && g++ < 50) store.advancePhase(code);
+    const counts = store.get(code)!.defenseCounts;
+    // A-voter (sock-0) e il primo B-voter (sock-1) sono stati scelti: count 1 ciascuno.
+    expect(counts.get('sock-0')).toBe(1);
+    expect(counts.get('sock-1')).toBe(1);
+  });
+
+  it('parte da conteggi vuoti quando inizia la partita', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    expect(store.get(code)!.defenseCounts.size).toBe(0); // alla creazione
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3);
+    expect(store.get(code)!.defenseCounts.size).toBe(0); // appena avviata, prima di ogni DEFENSE
+  });
 });
 
 describe('INTERVENTI phase constants + room fields', () => {
@@ -2184,5 +2221,17 @@ describe('INTERVENTI phase constants + room fields', () => {
     expect(room.interventiQueue).toEqual([]);
     expect(room.interventiIndex).toBe(0);
     expect(room.turnMinEndsAt).toBeNull();
+  });
+});
+
+describe('armTurn on DEFENSE entry', () => {
+  it('a human defender gets the 30s floor and 180s cap', () => {
+    const now = 1_000;
+    const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']);
+    const room = store.get(code)!;
+    expect(room.phase).toBe('DEFENSE');
+    expect(room.turnMinEndsAt).toBe(now + 30_000);
+    expect(room.phaseExpiresAt).toBe(now + 180_000);
   });
 });
