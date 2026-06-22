@@ -8,5 +8,14 @@ export default defineConfig({
     // per-file via a `// @vitest-environment jsdom` docblock.
     environment: 'node',
     setupFiles: ['client/vitest.setup.ts'],
+    // Coverage runs only under `--coverage` (e.g. `npm run coverage`, CI). Scoped
+    // to the game logic + rate limiter: thresholds guard against regression below
+    // today's level (server game code is ~93% statements / ~95% lines).
+    coverage: {
+      provider: 'v8',
+      include: ['server/src/game/**', 'server/src/rateLimit.ts'],
+      reporter: ['text-summary'],
+      thresholds: { statements: 90, branches: 82, functions: 90, lines: 92 },
+    },
   },
 });

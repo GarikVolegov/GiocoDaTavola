@@ -25,8 +25,11 @@ const app = express();
 // Exported so integration tests can listen on an ephemeral port without the
 // module auto-starting on its own (see the NODE_ENV guard around listen below).
 export const httpServer = createServer(app);
+// In prod set CLIENT_ORIGIN to the deploy origin to restrict Socket.IO CORS;
+// unset (dev) falls back to '*'. The client is served same-origin in prod, so a
+// single origin is enough.
 const io = new Server(httpServer, {
-  cors: { origin: '*' },
+  cors: { origin: process.env.CLIENT_ORIGIN || '*' },
 });
 
 // Authoritative in-memory room store (no DB).
@@ -317,8 +320,19 @@ function advanceAndBroadcast(code: string): void {
   }
 }
 
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true });
+app.get('/api/health', async (_req, res) => {
+  // Report DB reachability too: 'disabled' when DB-less, 'ok'/'down' otherwise.
+  // A down DB still returns ok:true (the game runs in-memory without it).
+  let db: 'disabled' | 'ok' | 'down' = 'disabled';
+  if (dbEnabled() && pool) {
+    try {
+      await pool.query('SELECT 1');
+      db = 'ok';
+    } catch {
+      db = 'down';
+    }
+  }
+  res.json({ ok: true, db });
 });
 
 // The caller's own saved awards. Bearer token (Clerk) → userId → their rows only.

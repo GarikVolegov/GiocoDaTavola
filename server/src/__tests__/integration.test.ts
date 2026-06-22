@@ -129,4 +129,12 @@ describe('socket integration', () => {
 
     expect(secondJoin.player.id).toBe(firstJoin.player.id); // same seat reclaimed
   }, 15000);
+
+  it('reports health with DB status (disabled when DB-less)', async () => {
+    const res = await fetch(`http://localhost:${port}/api/health`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; db: string };
+    expect(body.ok).toBe(true);
+    expect(body.db).toBe('disabled'); // no DATABASE_URL in tests
+  });
 });

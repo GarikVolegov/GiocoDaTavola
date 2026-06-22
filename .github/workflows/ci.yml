@@ -22,5 +22,7 @@ jobs:
         run: npm run lint
       - name: Test
         run: npm test
+      - name: Coverage (game logic thresholds)
+        run: npm run coverage
       - name: Build
         run: npm run build
