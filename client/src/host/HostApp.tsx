@@ -7,10 +7,12 @@ import {
   PERSONA_LABELS,
   OBJECTIVE,
   JOIN_ERROR_MESSAGES,
+  tappaMeta,
   type LobbyUpdatePayload,
   type GameStatePayload,
   type PlayerJoinErrorPayload,
   type PublicPlayer,
+  type PercorsoView,
 } from '../shared/events';
 import { Card, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing } from '../shared/ui';
 import ReactionSwarm from './ReactionSwarm';
@@ -29,6 +31,41 @@ const screen = {
 // Read a room code from the spectator URL (`/host?code=XXXX`).
 function urlCode(): string {
   return new URLSearchParams(window.location.search).get('code')?.toUpperCase() ?? '';
+}
+
+// The "mappa-salita": the percorso's tappe as a climb, current one highlighted,
+// with per-tappa progress (done/total). Read-only, no votes — pure progress.
+function PercorsoMap({ percorso }: { percorso: PercorsoView }) {
+  return (
+    <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', flexWrap: 'wrap', alignItems: 'stretch' }}>
+      {percorso.tappe.map((t) => {
+        const meta = tappaMeta(t.id);
+        const current = percorso.currentTappa === t.id;
+        const complete = t.done >= t.total;
+        return (
+          <div
+            key={t.id}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '0.2rem',
+              padding: 'var(--space-2) var(--space-4)',
+              borderRadius: 'var(--radius-md)',
+              border: current ? '2px solid var(--gold)' : '1px solid var(--border)',
+              background: current ? 'var(--gold-soft)' : 'var(--surface)',
+              opacity: current || complete ? 1 : 0.55,
+              minWidth: '6rem',
+            }}
+          >
+            <span style={{ fontSize: '1.8rem' }}>{meta.emoji}</span>
+            <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{meta.nome}</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t.done}/{t.total}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 // Shared screen (TV / tablet / laptop): a READ-ONLY spectator. It attaches to an
@@ -145,12 +182,45 @@ export default function HostApp() {
     return (
       <main style={screen}>
         <ReactionSwarm />
+        {/* Percorso: the climb map (current tappa highlighted) sits above the phase. */}
+        {game.percorso && <PercorsoMap percorso={game.percorso} />}
         {inDilemma && (
           <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
-            Dilemma {game.dilemmaIndex}/{game.dilemmaCount}
+            {game.percorso
+              ? `${tappaMeta(game.percorso.currentTappa).emoji} ${tappaMeta(game.percorso.currentTappa).nome} · Dilemma ${game.dilemmaIndex}/${game.dilemmaCount}`
+              : `Dilemma ${game.dilemmaIndex}/${game.dilemmaCount}`}
           </p>
         )}
         <h1 style={{ fontSize: '2.5rem', margin: 0, fontFamily: phase === 'PHASE_INTRO' ? 'var(--font-serif)' : 'var(--font-display)', fontWeight: phase === 'PHASE_INTRO' ? 500 : 700, ...(phase === 'PHASE_INTRO' && { letterSpacing: 'var(--tracking-serif)' }) }}>{PHASE_LABELS[phase]}</h1>
+
+        {phase === 'TAPPA_INTRO' && game.percorso && (() => {
+          const meta = tappaMeta(game.percorso.currentTappa);
+          return (
+            <Card glow="accent" style={{ maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', textAlign: 'center', alignItems: 'center' }}>
+              <span style={{ fontSize: '4rem' }}>{meta.emoji}</span>
+              <h2 style={{ fontSize: '2rem', margin: 0, fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>{meta.nome}</h2>
+              <p style={{ fontSize: '1.3rem', opacity: 0.85, margin: 0 }}>{meta.sottotitolo}</p>
+              <p style={{ fontSize: '1.1rem', opacity: 0.7, margin: 0 }}>{meta.descrizione}</p>
+            </Card>
+          );
+        })()}
+
+        {phase === 'TAPPA_RECAP' && game.percorso && (() => {
+          const p = game.percorso;
+          const meta = tappaMeta(p.currentTappa);
+          const isLast = p.dilemmaIndex >= p.totalDilemmas;
+          return (
+            <Card glow="accent" style={{ maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', textAlign: 'center', alignItems: 'center' }}>
+              <h2 style={{ fontSize: '1.8rem', margin: 0 }}>{meta.emoji} {meta.nome} — completata!</h2>
+              <p style={{ fontSize: '1.4rem', margin: 0 }}>
+                {p.tappaDilemmas} {p.tappaDilemmas === 1 ? 'dilemma' : 'dilemmi'} · {p.tappaSwings} {p.tappaSwings === 1 ? 'ribaltone' : 'ribaltoni'}
+              </p>
+              <p style={{ fontSize: '1.2rem', opacity: 0.8, margin: 0 }}>
+                {isLast ? 'Avete raggiunto la vetta 🏔️' : 'Pausa: il leader riprende quando volete.'}
+              </p>
+            </Card>
+          );
+        })()}
 
         {phase === 'PHASE_INTRO' && (
           <>

@@ -137,6 +137,81 @@ export const REGISTER_LABELS: Record<ContentRegister, string> = {
   misto: 'Misto',
 };
 
+// ---------------------------------------------------------------------------
+// "Percorso" mode — long themed ascent through life chapters (mirror server
+// percorso.ts). Keep TAPPE / DURATA constants and the estimate in sync.
+// ---------------------------------------------------------------------------
+
+/** Number of tappe (life chapters) in a full percorso. */
+export const N_TAPPE = 4;
+export type Tappa = 1 | 2 | 3 | 4;
+
+export interface TappaMeta {
+  id: Tappa;
+  key: 'basi' | 'bivi' | 'legami' | 'bilanci';
+  nome: string;
+  emoji: string;
+  sottotitolo: string;
+  descrizione: string;
+}
+
+/** The fixed climb (mirror of server TAPPE). */
+export const TAPPE: readonly TappaMeta[] = [
+  { id: 1, key: 'basi', nome: 'Le Basi', emoji: '🌱', sottotitolo: 'Giovinezza & prime scelte', descrizione: 'Scelte di partenza, leggere e quotidiane.' },
+  { id: 2, key: 'bivi', nome: 'I Bivi', emoji: '🔀', sottotitolo: 'Carriera, soldi & relazioni', descrizione: 'I bivi che indirizzano la vita.' },
+  { id: 3, key: 'legami', nome: 'I Legami', emoji: '🤝', sottotitolo: 'Famiglia & responsabilità', descrizione: 'Lealtà, sacrifici, io vs gli altri.' },
+  { id: 4, key: 'bilanci', nome: 'I Bilanci', emoji: '🌅', sottotitolo: 'Eredità & senso', descrizione: 'I dilemmi più profondi ed esistenziali.' },
+];
+
+/** Look up a tappa's metadata (falls back to the first tappa). */
+export function tappaMeta(id: number | null | undefined): TappaMeta {
+  return TAPPE.find((t) => t.id === id) ?? TAPPE[0];
+}
+
+/** Duration presets (mirror server percorso.ts). */
+export const DURATE = ['corto', 'medio', 'lungo'] as const;
+export type Durata = (typeof DURATE)[number];
+export const DURATA_BUDGET: Record<Durata, number> = { corto: 10, medio: 20, lungo: 30 };
+export const DURATA_LABELS: Record<Durata, { nome: string; durata: string }> = {
+  corto: { nome: 'Corto', durata: '~1h' },
+  medio: { nome: 'Medio', durata: '~2h' },
+  lungo: { nome: 'Lungo', durata: '~3h' },
+};
+
+/** Available dilemmas per tappa (server-provided in the lobby state). */
+export type TappaCounts = Record<number, number>;
+
+/** Per-tappa allocation of a duration's budget (mirror server allocateBudget). */
+export function allocateBudget(startTappa: number, durata: Durata): Record<number, number> {
+  const start = Math.min(N_TAPPE, Math.max(1, Math.floor(startTappa)));
+  const budget = DURATA_BUDGET[durata];
+  const range: number[] = [];
+  for (let t = start; t <= N_TAPPE; t++) range.push(t);
+  const count = range.length;
+  const base = Math.floor(budget / count);
+  const rem = budget % count;
+  const alloc: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  range.forEach((t, i) => {
+    alloc[t] = base + (i >= count - rem ? 1 : 0);
+  });
+  return alloc;
+}
+
+/** Realistic (capped-by-availability) dilemma count for the host's live estimate. */
+export function estimatePercorsoDilemmi(
+  counts: TappaCounts | null | undefined,
+  startTappa: number,
+  durata: Durata,
+): number {
+  const alloc = allocateBudget(startTappa, durata);
+  let total = 0;
+  for (let t = 1; t <= N_TAPPE; t++) {
+    const available = counts?.[t] ?? Number.MAX_SAFE_INTEGER;
+    total += Math.min(alloc[t], available);
+  }
+  return total;
+}
+
 /** Minimum connected players required before the host can start. */
 export const MIN_PLAYERS_TO_START = 3;
 
@@ -176,6 +251,9 @@ export type GamePhase =
   | 'VOTE_2'
   | 'SPEAKER_VOTE'
   | 'PHASE_RESULTS'
+  // "Percorso" mode chapter framing (mirror server phases.ts).
+  | 'TAPPA_INTRO'
+  | 'TAPPA_RECAP'
   | 'ACCUSE'
   | 'FINAL_AWARDS'
   // 1v1 "Duello" mode phases (mirror server rooms.ts).
@@ -234,9 +312,17 @@ export const JOIN_ERROR_MESSAGES: Record<JoinError, string> = {
 };
 
 export interface StartGamePayload {
-  dilemmaCount: number;
-  register: ContentRegister;
-  /** Game mode; defaults to 'gruppo' server-side when omitted. */
+  /** Session format: 'classic' (3/5/7, default) or 'percorso' (themed ascent). */
+  format?: 'classic' | 'percorso';
+  /** Classic: number of dilemmas. Ignored (and may be omitted) in percorso. */
+  dilemmaCount?: number;
+  /** Classic: content register. Ignored (and may be omitted) in percorso. */
+  register?: ContentRegister;
+  /** Percorso: tappa to start the ascent from (1..4). */
+  startTappa?: number;
+  /** Percorso: duration preset. */
+  durata?: Durata;
+  /** Game mode; defaults to 'gruppo' server-side when omitted (always gruppo in percorso). */
   mode?: GameMode;
   /** Enable "L'Infiltrato" (gruppo + ≥4 humans); defaults off. */
   infiltrato?: boolean;
@@ -391,11 +477,36 @@ export interface DuelSummary {
   agreements: number;
 }
 
+/** Per-tappa progress within a percorso (mirror server PercorsoTappaProgress). */
+export interface PercorsoTappaProgress {
+  id: number;
+  total: number;
+  done: number;
+}
+
+/** Secret-safe percorso view (mirror server PercorsoView); null in classic. */
+export interface PercorsoView {
+  startTappa: number;
+  durata: Durata;
+  currentTappa: number | null;
+  totalDilemmas: number;
+  dilemmaIndex: number;
+  tappe: PercorsoTappaProgress[];
+  tappaDilemmas: number;
+  tappaSwings: number;
+}
+
 export interface GameStatePayload {
   phase: GamePhase;
   dilemmaCount: number | null;
-  /** Content register chosen at start; null in the lobby. */
+  /** Content register chosen at start; null in the lobby (and always null in percorso). */
   register: ContentRegister | null;
+  /** Session format of the room. */
+  format: 'classic' | 'percorso';
+  /** Percorso view (progress + tappe), or null in classic / before start. */
+  percorso: PercorsoView | null;
+  /** Available dilemmas per tappa — static setup data for the percorso estimate. */
+  tappaCounts: TappaCounts;
   /** Which dilemma (1-based) is in play; 0 before the first reveal. */
   dilemmaIndex: number;
   /** Epoch ms when the phase auto-advances; null if it has no timer. */
@@ -713,6 +824,8 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   VOTE_2: 'Secondo voto',
   SPEAKER_VOTE: 'Miglior oratore',
   PHASE_RESULTS: 'Risultati',
+  TAPPA_INTRO: 'Nuova tappa',
+  TAPPA_RECAP: 'Fine tappa',
   ACCUSE: "Chi era l'infiltrato?",
   FINAL_AWARDS: 'Premi finali',
   DUEL_PICK: 'Scegliete',
