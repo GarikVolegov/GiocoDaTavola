@@ -181,6 +181,13 @@ export interface Room {
    */
   votes1: Map<string, VoteChoice>;
   /**
+   * Players who EXPLICITLY confirmed (or changed) their second vote during VOTE_2.
+   * VOTE_2 starts pre-filled with the first vote, so "has a vote" is not "has
+   * confirmed"; this set drives the auto-advance (no timer). Bots are added on
+   * entry to VOTE_2. Cleared on DILEMMA_REVEAL; pruned on leave.
+   */
+  confirmedVote2: Set<string>;
+  /**
    * The auto-selected defenders for the current round (one per side that got
    * votes, side A before B). Recomputed on entry to DEFENSE from the secret
    * votes; only these chosen identities are ever made public.
@@ -551,6 +558,7 @@ export class RoomStore {
       currentDilemma: null,
       votes: new Map(),
       votes1: new Map(),
+      confirmedVote2: new Set(),
       defenders: [],
       defenseTurnIndex: 0,
       defenseArgument: null,
@@ -654,6 +662,7 @@ export class RoomStore {
       room.currentDilemma = room.deck?.draw() ?? null;
       room.votes.clear();
       room.votes1.clear();
+      room.confirmedVote2.clear();
       room.predictions.clear();
       room.speakerVotes.clear();
     }
@@ -676,6 +685,10 @@ export class RoomStore {
     if (transition.phase === 'VOTE_2') {
       room.votes1 = new Map(room.votes);
       this.applyBotSecondVotes(room);
+      // Fresh round of confirmations; bots have already "decided", so confirm them
+      // so they never block the (timer-less) auto-advance.
+      room.confirmedVote2 = new Set();
+      for (const p of room.players.values()) if (p.isBot) room.confirmedVote2.add(p.id);
     }
     // Entering PHASE_RESULTS: fold this round's outcome into the per-player stats
     // while the votes/votes1/defenders are still intact (cleared next reveal).
@@ -698,6 +711,8 @@ export class RoomStore {
     if (!isVoteChoice(choice)) return { ok: false, error: 'INVALID_CHOICE' };
 
     room.votes.set(playerId, choice);
+    // Casting/changing during VOTE_2 is itself a confirmation.
+    if (room.phase === 'VOTE_2') room.confirmedVote2.add(playerId);
     return { ok: true, room };
   }
 
@@ -1051,6 +1066,34 @@ export class RoomStore {
     return present.every((p) => room.votes.has(p.id));
   }
 
+  /** Mark a player's (pre-filled) second vote as explicitly confirmed. VOTE_2 only. */
+  confirmVote(code: string, playerId: string): { ok: true; room: Room } | { ok: false; error: 'ROOM_NOT_FOUND' | 'NOT_VOTE2_PHASE' | 'NOT_IN_ROOM' } {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.phase !== 'VOTE_2') return { ok: false, error: 'NOT_VOTE2_PHASE' };
+    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
+    room.confirmedVote2.add(playerId);
+    return { ok: true, room };
+  }
+
+  /** How many players have confirmed their second vote this round (aggregate only). */
+  confirmedCount(code: string): number {
+    return this.rooms.get(code)?.confirmedVote2.size ?? 0;
+  }
+
+  /**
+   * True once every CONNECTED player has confirmed their second vote (and at least
+   * one is present). Disconnected players (grace period) are ignored so a locked
+   * phone doesn't block; bots are pre-confirmed on entry to VOTE_2.
+   */
+  allConfirmed(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room) return false;
+    const present = [...room.players.values()].filter((p) => p.connected !== false);
+    if (present.length === 0) return false;
+    return present.every((p) => room.confirmedVote2.has(p.id));
+  }
+
   /**
    * Flag a player present/absent without touching their slot or secret vote.
    * Called by index.ts on socket disconnect (false) and on reconnect (true);
@@ -1106,6 +1149,7 @@ export class RoomStore {
     // Drop any votes so the tally + allVoted + swing only count present players.
     room.votes.delete(playerId);
     room.votes1.delete(playerId);
+    room.confirmedVote2.delete(playerId);
     room.predictions.delete(playerId);
     room.speakerVotes.delete(playerId);
     const removed = room.players.delete(playerId);
