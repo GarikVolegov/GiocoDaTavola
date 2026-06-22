@@ -1,0 +1,104 @@
+/* A selectable choice button used by every phone "pick one" screen (vote, predict,
+   speaker-vote, know-guess, swing-bet, accuse). Carries the faction identity and a
+   clear selected state, all from design tokens — no hardcoded colors. */
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: var(--weight-bold);
+  font-family: var(--font-body);
+  color: var(--text);
+  border: 2px solid transparent;
+  background: var(--surface-2);
+  transition: transform var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+.center {
+  justify-content: center;
+}
+
+/* Faction identity: visible even when unselected (so A=blue / B=terracotta reads
+   at a glance); selected intensifies the border + adds the colored bloom. */
+.a {
+  background: var(--faction-a-soft);
+  border-color: var(--faction-a-line);
+}
+.a.selected {
+  border-color: var(--faction-a);
+  box-shadow: var(--glow-a);
+}
+.b {
+  background: var(--faction-b-soft);
+  border-color: var(--faction-b-line);
+}
+.b.selected {
+  border-color: var(--faction-b);
+  box-shadow: var(--glow-b);
+}
+.accent {
+  background: var(--gold-soft);
+  border-color: var(--gold-line);
+}
+.accent.selected {
+  border-color: var(--gold);
+  box-shadow: var(--glow-accent);
+}
+
+.letter {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0.9;
+}
+.a .letter {
+  color: var(--faction-a);
+}
+.b .letter {
+  color: var(--faction-b);
+}
+.accent .letter {
+  color: var(--gold);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.center .body {
+  align-items: center;
+  text-align: center;
+}
+.label {
+  font-size: var(--text-md);
+}
+.hint {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
+}
+
+.option:not(:disabled):hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+.option:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option {
+    transition: none;
+  }
+  .option:not(:disabled):hover {
+    transform: none;
+  }
+}

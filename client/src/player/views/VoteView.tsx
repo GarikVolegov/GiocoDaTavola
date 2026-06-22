@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { PHASE_LABELS, type VoteChoice } from '../../shared/events';
+import { Button, VoteOption, Alert } from '../../shared/ui';
 import { wrap } from './layout';
 
 type VotePhase = 'VOTE_1' | 'VOTE_2' | 'DUEL_PICK' | 'DUEL_REPICK';
@@ -69,41 +70,19 @@ export default function VoteView({
         aria-label="Il tuo voto"
         style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(90vw, 22rem)' }}
       >
-        {(['A', 'B'] as const).map((letter) => {
-          const selected = vote === letter;
-          const accent = letter === 'A' ? '84,134,196' : '199,122,69';
-          return (
-            <button
-              key={letter}
-              type="button"
-              onClick={() => onVote(letter)}
-              aria-pressed={selected}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                textAlign: 'left',
-                padding: '1rem 1.1rem',
-                borderRadius: '0.8rem',
-                cursor: 'pointer',
-                fontWeight: 700,
-                color: 'inherit',
-                background: selected ? `rgba(${accent},0.32)` : `rgba(${accent},0.12)`,
-                border: `2px solid rgba(${accent},${selected ? 0.9 : 0.4})`,
-              }}
-            >
-              <span style={{ fontSize: '1.6rem', fontWeight: 800, opacity: 0.85 }}>{letter}</span>
-              <span style={{ fontSize: '1.1rem' }}>
-                {dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
-              </span>
-            </button>
-          );
-        })}
+        {(['A', 'B'] as const).map((letter) => (
+          <VoteOption
+            key={letter}
+            faction={letter === 'A' ? 'a' : 'b'}
+            letter={letter}
+            label={dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
+            selected={vote === letter}
+            onClick={() => onVote(letter)}
+          />
+        ))}
       </div>
       {voteError ? (
-        <p role="alert" style={{ color: '#ff6b6b', margin: 0, fontWeight: 600 }}>
-          {voteError}
-        </p>
+        <Alert>{voteError}</Alert>
       ) : vote ? (
         <p style={{ opacity: 0.8, margin: 0 }}>
           Hai votato <strong>{vote}</strong>. Puoi cambiare finché c’è tempo.
@@ -113,20 +92,9 @@ export default function VoteView({
       )}
       {phase === 'VOTE_2' && (
         <>
-          <button
-            type="button"
-            onClick={onConfirm}
-            style={{
-              marginTop: '0.25rem',
-              fontSize: '1.05rem',
-              fontWeight: 700,
-              padding: '0.7rem 1.6rem',
-              borderRadius: '0.7rem',
-              cursor: 'pointer',
-            }}
-          >
+          <Button variant="primary" onClick={onConfirm} style={{ marginTop: '0.25rem' }}>
             Confermo ✓
-          </button>
+          </Button>
           <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
             Confermati {confirmedCount}/{playerCount} · si va avanti quando tutti confermano
           </p>
