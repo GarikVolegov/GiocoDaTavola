@@ -22,7 +22,9 @@ if (fs.existsSync(envFile)) {
 }
 
 const app = express();
-const httpServer = createServer(app);
+// Exported so integration tests can listen on an ephemeral port without the
+// module auto-starting on its own (see the NODE_ENV guard around listen below).
+export const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: { origin: '*' },
 });
@@ -832,7 +834,9 @@ if (fs.existsSync(clientDist)) {
 }
 
 const PORT = Number(process.env.PORT) || 3000;
-httpServer.listen(PORT, () => {
+// Skip auto-listen under test: integration tests import `httpServer` and call
+// listen(0) themselves on an ephemeral port. Vitest sets NODE_ENV=test.
+if (process.env.NODE_ENV !== 'test') httpServer.listen(PORT, () => {
   console.log(`[server] listening on http://localhost:${PORT}`);
   console.log(
     `[server] AI bot defenses: ${aiDefenseEnabled() ? `on (${process.env.AI_MODEL || 'gemma3:4b'} @ ${process.env.AI_BASE_URL})` : 'off (templated fallback)'}`,
