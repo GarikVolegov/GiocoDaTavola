@@ -2416,5 +2416,965 @@
       "La gentilezza vale più della cruda verità",
       "Un amico dolce scalda le giornate"
     ]
+  },
+  {
+    "id": "r01",
+    "text": "Preferiresti essere sottovalutato da tutti ma sapere quanto vali, o sopravvalutato dovendo reggere l’aspettativa?",
+    "optionA": "Sottovalutato: mi basta saperlo io",
+    "optionB": "Sopravvalutato: l’aspettativa mi spinge",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "La stima vera è quella per sé",
+      "Vivo libero dal giudizio"
+    ],
+    "spuntiB": [
+      "L’asticella alta tira fuori il meglio",
+      "Le occasioni vanno a chi credi capace"
+    ]
+  },
+  {
+    "id": "r02",
+    "text": "Vivresti dove è sempre la tua stagione preferita ma da solo, o nel clima che odi ma con tutti i tuoi cari?",
+    "optionA": "La mia stagione, anche da solo",
+    "optionB": "Con i miei cari, anche nel clima peggiore",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "L’ambiente giusto cambia l’umore",
+      "La solitudine si gestisce, il freddo no"
+    ],
+    "spuntiB": [
+      "Le persone scaldano più del sole",
+      "Da soli anche l’estate è grigia"
+    ]
+  },
+  {
+    "id": "r03",
+    "text": "Potresti rendere perfetta una sola foto della tua vita, o lasciarle tutte imperfette ma vere?",
+    "optionA": "Una perfetta, finalmente",
+    "optionB": "Tutte vere, difetti compresi",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "Un ricordo impeccabile è per sempre",
+      "Almeno una cosa senza difetti"
+    ],
+    "spuntiB": [
+      "I difetti le rendono vive",
+      "Ritoccare è già falsare il ricordo"
+    ]
+  },
+  {
+    "id": "r04",
+    "text": "Per un anno diresti sempre “sì” a ogni proposta, o sempre “no”?",
+    "optionA": "Sempre sì: mi apro al mondo",
+    "optionB": "Sempre no: proteggo il mio tempo",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "Il sì porta avventure inaspettate",
+      "Le occasioni nascono dicendo sì"
+    ],
+    "spuntiB": [
+      "Dire no è scegliere sé stessi",
+      "Troppi sì ti fanno vivere la vita altrui"
+    ]
+  },
+  {
+    "id": "r05",
+    "text": "Avresti un solo talento portato all’eccellenza, o saresti discretamente bravo in tutto?",
+    "optionA": "Eccellente in una cosa sola",
+    "optionB": "Discreto in tutto",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "L’eccellenza lascia un segno",
+      "Meglio un fuoriclasse che un tuttofare"
+    ],
+    "spuntiB": [
+      "La versatilità apre mille porte",
+      "Bravo in tutto, mai in difficoltà"
+    ]
+  },
+  {
+    "id": "r06",
+    "text": "Ricominceresti da capo in una città dove nessuno ti conosce, o resteresti dove tutti sanno chi sei?",
+    "optionA": "Da capo, libero dal passato",
+    "optionB": "Dove mi conoscono, con la mia storia",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "Ripartire da zero è rinascere",
+      "Nessun pregiudizio addosso"
+    ],
+    "spuntiB": [
+      "La mia storia è una ricchezza",
+      "Essere conosciuti è sentirsi a casa"
+    ]
+  },
+  {
+    "id": "r07",
+    "text": "Rinunceresti per sempre a lamentarti, o a dare consigli non richiesti?",
+    "optionA": "Mai più lamentele",
+    "optionB": "Mai più consigli non richiesti",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "Senza lamentele si vive più leggeri",
+      "Lamentarsi non risolve nulla"
+    ],
+    "spuntiB": [
+      "I consigli non richiesti rovinano i rapporti",
+      "Ascoltare batte il pontificare"
+    ]
+  },
+  {
+    "id": "r08",
+    "text": "Conserveresti per sempre il piacere del cibo o quello della musica, dovendo rinunciare all’altro?",
+    "optionA": "Il cibo",
+    "optionB": "La musica",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "Il gusto è un piacere quotidiano",
+      "Mangiare unisce le persone"
+    ],
+    "spuntiB": [
+      "La musica accompagna ogni emozione",
+      "Una canzone riporta interi anni"
+    ]
+  },
+  {
+    "id": "r09",
+    "text": "Un solo micro-superpotere: sapere sempre l’ora esatta senza guardare, o trovare sempre parcheggio?",
+    "optionA": "L’ora sempre in testa",
+    "optionB": "Parcheggio sempre libero",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "Non sarei mai in ritardo",
+      "Una magia utile ogni giorno"
+    ],
+    "spuntiB": [
+      "Mi risparmierebbe stress e tempo",
+      "In città vale oro"
+    ]
+  },
+  {
+    "id": "r10",
+    "text": "Per un anno: niente caffè e alcol, o niente serie TV e social?",
+    "optionA": "Via caffè e alcol",
+    "optionB": "Via serie e social",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "La mente lucida vale il sacrificio",
+      "Il corpo ringrazia"
+    ],
+    "spuntiB": [
+      "Tempo libero ritrovato",
+      "Meno schermi, più vita"
+    ]
+  },
+  {
+    "id": "r11",
+    "text": "Vorresti essere ricordato per una grande impresa fatta una volta, o per mille piccole gentilezze quotidiane?",
+    "optionA": "Una grande impresa",
+    "optionB": "Mille gentilezze",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "Un’impresa può cambiare la storia",
+      "Lasciare un segno grande ispira"
+    ],
+    "spuntiB": [
+      "Le piccole cose scaldano davvero",
+      "La bontà quotidiana cambia vite vicine"
+    ]
+  },
+  {
+    "id": "r12",
+    "text": "Al ristorante ordineresti sempre il piatto che ami, o ogni volta qualcosa di nuovo rischiando di pentirtene?",
+    "optionA": "Il sicuro che amo",
+    "optionB": "Sempre qualcosa di nuovo",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "Perché rischiare un piacere certo?",
+      "Conosco ciò che mi rende felice"
+    ],
+    "spuntiB": [
+      "La scoperta vale il rischio",
+      "Sempre uguale è già noia"
+    ]
+  },
+  {
+    "id": "r13",
+    "text": "Lasceresti un posto sicuro e ben pagato per una tua startup con il 20% di riuscire?",
+    "optionA": "Rischio: il rimpianto pesa più del fallimento",
+    "optionB": "Resto: la sicurezza prima dei sogni",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Il 20% non capita due volte",
+      "Da giovani si può ripartire"
+    ],
+    "spuntiB": [
+      "L’80% di fallire è troppo",
+      "La famiglia non vive di sogni"
+    ]
+  },
+  {
+    "id": "r14",
+    "text": "Assumeresti l’amico bravo ma rischiando di incrinare l’amicizia, o un estraneo più adatto?",
+    "optionA": "L’amico: la fiducia vale tanto",
+    "optionB": "L’estraneo: lavoro e amicizia separati",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Con un amico ci si capisce al volo",
+      "La fiducia è il bene più raro"
+    ],
+    "spuntiB": [
+      "Mischiarli rovina entrambi",
+      "Il ruolo va a chi è più adatto"
+    ]
+  },
+  {
+    "id": "r15",
+    "text": "Un collega si prende i tuoi meriti col capo.",
+    "optionA": "Lo espongo subito",
+    "optionB": "Gioco di pazienza: i nodi vengono al pettine",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Tacere lo autorizza a continuare",
+      "Il mio lavoro merita il mio nome"
+    ],
+    "spuntiB": [
+      "Smascherarlo mi fa sembrare meschino",
+      "La verità emerge da sé"
+    ]
+  },
+  {
+    "id": "r16",
+    "text": "Accetteresti una promozione che ti rende capo dei tuoi attuali amici-colleghi?",
+    "optionA": "Sì: la crescita prima di tutto",
+    "optionB": "No: non voglio comandare gli amici",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Rifiutare per paura è autosabotaggio",
+      "Si può guidare con rispetto"
+    ],
+    "spuntiB": [
+      "Il potere incrina le amicizie",
+      "Preferisco la pari dignità"
+    ]
+  },
+  {
+    "id": "r17",
+    "text": "Useresti una scappatoia legale che danneggia un concorrente onesto pur di vincere l’appalto?",
+    "optionA": "Sì: gli affari sono affari",
+    "optionB": "No: vincere così non è vincere",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Se è legale, è gioco",
+      "Chi esita perde"
+    ],
+    "spuntiB": [
+      "Danneggiare l’onesto avvelena il mercato",
+      "Il rispetto vale più dell’appalto"
+    ]
+  },
+  {
+    "id": "r18",
+    "text": "Sceglieresti un lavoro con uno scopo che senti, o uno che paga il doppio ma ti lascia indifferente?",
+    "optionA": "Lo scopo",
+    "optionB": "Il doppio stipendio",
+    "register": "vita",
+    "tappa": 2,
+    "spuntiA": [
+      "Lavorare con senso riempie la vita",
+      "I soldi non danno uno scopo"
+    ],
+    "spuntiB": [
+      "Il denaro è libertà concreta",
+      "Lo scopo lo trovo fuori dal lavoro"
+    ]
+  },
+  {
+    "id": "r19",
+    "text": "Faresti 3 ore di pendolarismo al giorno per il lavoro dei sogni, o un lavoro mediocre a 10 minuti da casa?",
+    "optionA": "Pendolo per il sogno",
+    "optionB": "Vicino, vita più sana",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Il lavoro giusto vale il viaggio",
+      "Tre ore passano, una carriera resta"
+    ],
+    "spuntiB": [
+      "Tre ore al giorno sono una vita buttata",
+      "Il tempo a casa non si recupera"
+    ]
+  },
+  {
+    "id": "r20",
+    "text": "Diresti a un cliente che non gli serve ciò che vuole comprare, perdendo la vendita?",
+    "optionA": "Sì: l’onestà fidelizza",
+    "optionB": "No: chiede lui, vendo io",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Un cliente onesto torna",
+      "La reputazione vale più di una vendita"
+    ],
+    "spuntiB": [
+      "Non sta a me decidere per lui",
+      "Gli affari non sono beneficenza"
+    ]
+  },
+  {
+    "id": "r21",
+    "text": "Investiresti tutti i risparmi in te stesso (formazione, impresa) o li terresti al sicuro?",
+    "optionA": "Su me stesso: il miglior investimento",
+    "optionB": "Al sicuro: coi risparmi non si scherza",
+    "register": "vita",
+    "tappa": 2,
+    "spuntiA": [
+      "Nessun rendimento batte le tue capacità",
+      "Chi non investe in sé non cresce"
+    ],
+    "spuntiB": [
+      "Un cuscinetto dà libertà",
+      "Scommettere tutto è imprudente"
+    ]
+  },
+  {
+    "id": "r22",
+    "text": "Resteresti in un’azienda che ami ma che non ti valorizza, o andresti dove ti pagano di più senza passione?",
+    "optionA": "Resto dove amo",
+    "optionB": "Vado dove valgo",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "La passione è rara, i soldi no",
+      "Stare bene al lavoro è metà vita"
+    ],
+    "spuntiB": [
+      "Chi non ti valorizza non ti merita",
+      "Il mercato dice quanto vali"
+    ]
+  },
+  {
+    "id": "r23",
+    "text": "Accetteresti uno stipendio più basso per lavorare in un’azienda davvero etica?",
+    "optionA": "Sì: i valori prima dei soldi",
+    "optionB": "No: l’etica non paga le bollette",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Lavorare contro i propri valori logora",
+      "Si dorme meglio la notte"
+    ],
+    "spuntiB": [
+      "Nessuna azienda è davvero pulita",
+      "I valori non pagano l’affitto"
+    ]
+  },
+  {
+    "id": "r24",
+    "text": "Ti faresti pagare metà stipendio in una criptovaluta promettente ma volatile?",
+    "optionA": "Sì: oso, può decuplicare",
+    "optionB": "No: lo stipendio non si scommette",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Le grandi occasioni sembrano folli all’inizio",
+      "Chi non rischia non cambia classe"
+    ],
+    "spuntiB": [
+      "Lo stipendio deve essere certo",
+      "La volatilità è una trappola"
+    ]
+  },
+  {
+    "id": "r25",
+    "text": "Da capo, limiteresti l’AI per tutelare i posti, o la imporresti per restare competitivo?",
+    "optionA": "La impongo: o ci adattiamo o chiudiamo",
+    "optionB": "La limito: prima le persone",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Chi resta indietro sparisce",
+      "Negare il progresso è illusorio"
+    ],
+    "spuntiB": [
+      "Un’azienda è fatta di persone",
+      "Efficienza senza umanità è vuota"
+    ]
+  },
+  {
+    "id": "r26",
+    "text": "Manderesti i figli alla scuola migliore lontana e costosa, o a quella normale vicino casa risparmiando per loro?",
+    "optionA": "La migliore, costi quel che costi",
+    "optionB": "Quella normale, coi risparmi per il loro futuro",
+    "register": "vita",
+    "tappa": 2,
+    "spuntiA": [
+      "L’istruzione è il regalo più grande",
+      "Le occasioni giuste cambiano una vita"
+    ],
+    "spuntiB": [
+      "Non è la scuola a fare la persona",
+      "Meglio un gruzzolo per i loro sogni"
+    ]
+  },
+  {
+    "id": "r27",
+    "text": "Terresti chi rende poco ma ci mette l’anima, o il talento arrogante che produce il doppio?",
+    "optionA": "Tengo il cuore, non l’arrogante",
+    "optionB": "Tengo i risultati, non i sentimenti",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "L’atteggiamento contagia la squadra",
+      "La lealtà va premiata"
+    ],
+    "spuntiB": [
+      "I risultati pagano gli stipendi",
+      "Un’azienda non è beneficenza"
+    ]
+  },
+  {
+    "id": "r28",
+    "text": "Smetteresti di lavorare per sempre se potessi vivere di rendita, o continueresti comunque?",
+    "optionA": "Smetto: la vita è altro",
+    "optionB": "Continuo: il lavoro mi dà identità",
+    "register": "vita",
+    "tappa": 2,
+    "spuntiA": [
+      "Tempo libero infinito è il sogno",
+      "Mille modi di riempire le giornate"
+    ],
+    "spuntiB": [
+      "Senza scopo ci si spegne",
+      "Il lavoro dà struttura e orgoglio"
+    ]
+  },
+  {
+    "id": "r29",
+    "text": "Renderesti pubblici gli stipendi di tutti in azienda per equità, o li terresti segreti per evitare invidie?",
+    "optionA": "Trasparenza totale",
+    "optionB": "Meglio riservati",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "La trasparenza riduce le ingiustizie",
+      "Il segreto protegge chi sottopaga"
+    ],
+    "spuntiB": [
+      "I confronti avvelenano il clima",
+      "Lo stipendio è una cosa personale"
+    ]
+  },
+  {
+    "id": "r30",
+    "text": "Diresti al tuo capo una verità scomoda che potrebbe costarti il posto?",
+    "optionA": "La dico: il silenzio è complicità",
+    "optionB": "Taccio: prima la prudenza",
+    "register": "vita",
+    "tappa": 2,
+    "spuntiA": [
+      "Tacere mi rende parte del problema",
+      "Un posto che esige silenzio non vale"
+    ],
+    "spuntiB": [
+      "Perdere il lavoro non aiuta nessuno",
+      "Ci sono modi più sicuri di farsi sentire"
+    ]
+  },
+  {
+    "id": "r31",
+    "text": "Presteresti una grossa somma a un familiare che forse non la restituirà, rischiando il rapporto?",
+    "optionA": "Sì: la famiglia prima dei soldi",
+    "optionB": "No: i soldi rovinano i rapporti",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Un familiare in difficoltà si aiuta",
+      "I soldi si recuperano, il sangue no"
+    ],
+    "spuntiB": [
+      "I prestiti spezzano le famiglie",
+      "Aiutare non è farsi sfruttare"
+    ]
+  },
+  {
+    "id": "r32",
+    "text": "Diresti a un amico che il suo partner non lo merita, rischiando di perderlo?",
+    "optionA": "Glielo dico: è mio dovere",
+    "optionB": "Taccio: deve capirlo da solo",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Un vero amico avverte",
+      "Il silenzio lo lascia soffrire"
+    ],
+    "spuntiB": [
+      "In amore nessuno ascolta i consigli",
+      "Rischio solo di perderlo"
+    ]
+  },
+  {
+    "id": "r33",
+    "text": "Perdoneresti un tradimento se la coppia funzionasse in tutto il resto?",
+    "optionA": "Sì: una persona non è un solo errore",
+    "optionB": "No: la fiducia rotta non torna",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Buttare anni per un errore è uno spreco",
+      "Le persone possono cambiare"
+    ],
+    "spuntiB": [
+      "Senza fiducia non c’è coppia",
+      "Chi tradisce una volta può rifarlo"
+    ]
+  },
+  {
+    "id": "r34",
+    "text": "Resteresti amico di chi ha fatto carriera passando sopra a tutti, te compreso?",
+    "optionA": "Sì: lo conosco da una vita",
+    "optionB": "No: ha mostrato chi è",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Il passato comune conta",
+      "Le persone sono più di una scelta"
+    ],
+    "spuntiB": [
+      "Chi calpesta gli altri calpesterà te",
+      "L’amicizia ha bisogno di rispetto"
+    ]
+  },
+  {
+    "id": "r35",
+    "text": "Diresti a un genitore che una sua scelta ti ha ferito per anni, o lo terresti per te per sempre?",
+    "optionA": "Glielo dico: ho bisogno di verità tra noi",
+    "optionB": "Taccio: a che servirebbe ormai",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "I non detti avvelenano i legami",
+      "Dirlo libera entrambi"
+    ],
+    "spuntiB": [
+      "Riaprire vecchie ferite non guarisce",
+      "C’è chi non può più cambiare"
+    ]
+  },
+  {
+    "id": "r36",
+    "text": "Lasceresti il tuo grande amore per non separarlo dalla sua terra e famiglia, o gli chiederesti di seguirti?",
+    "optionA": "Lo lascio andare: il suo bene prima",
+    "optionB": "Gli chiedo di scegliere me",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Amare è volere la sua felicità",
+      "Strapparlo dalle radici lo spegnerebbe"
+    ],
+    "spuntiB": [
+      "Un amore vero affronta i sacrifici",
+      "Chiedere di scegliere non è egoismo"
+    ]
+  },
+  {
+    "id": "r37",
+    "text": "Cresceresti il figlio di un fratello che non può occuparsene, stravolgendo la tua vita?",
+    "optionA": "Sì: è sangue del mio sangue",
+    "optionB": "No: non posso farmene carico",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Un bambino non si lascia indietro",
+      "La famiglia si stringe nelle difficoltà"
+    ],
+    "spuntiB": [
+      "Devo essere onesto sui miei limiti",
+      "Caricarmi più del dovuto rovina tutti"
+    ]
+  },
+  {
+    "id": "r38",
+    "text": "Diresti a un amico malato tutta la verità sulla sua gravità, o lo lasceresti sperare?",
+    "optionA": "La verità: ha diritto di sapere",
+    "optionB": "La speranza: a volte cura più della verità",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Sapere gli permette di scegliere",
+      "Mentire è togliergli il controllo"
+    ],
+    "spuntiB": [
+      "La speranza dà forza",
+      "Non sta a me togliergli la luce"
+    ]
+  },
+  {
+    "id": "r39",
+    "text": "Riallacceresti con un genitore assente che ora ti cerca, o chiuderesti per sempre?",
+    "optionA": "Gli do una possibilità",
+    "optionB": "Troppo tardi: chiudo",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Le persone meritano una seconda occasione",
+      "Il rancore pesa più del perdono"
+    ],
+    "spuntiB": [
+      "Non si torna come se nulla fosse",
+      "Proteggermi viene prima"
+    ]
+  },
+  {
+    "id": "r40",
+    "text": "Diresti a tua sorella che il suo sogno è irrealistico, o la sosterresti pur sapendo che fallirà?",
+    "optionA": "Sono sincero: la proteggo dal muro",
+    "optionB": "La sostengo: deve provarci",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Illuderla è crudele",
+      "La verità da chi ti ama protegge"
+    ],
+    "spuntiB": [
+      "Nessuno può spegnere un sogno",
+      "Si impara solo provando"
+    ]
+  },
+  {
+    "id": "r41",
+    "text": "Tradiresti un piccolo segreto di un amico per salvarlo da un grosso guaio che lui non vede?",
+    "optionA": "Sì: prima la sua incolumità",
+    "optionB": "No: la fiducia è sacra",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "A volte si tradisce per amore",
+      "Lasciarlo cadere sarebbe peggio"
+    ],
+    "spuntiB": [
+      "Un patto è un patto",
+      "Decidere per lui è non rispettarlo"
+    ]
+  },
+  {
+    "id": "r42",
+    "text": "Andresti contro tutta la tua famiglia per stare con la persona che ami ma che loro odiano?",
+    "optionA": "Sì: l’amore è mio",
+    "optionB": "No: la famiglia conta troppo",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "La mia vita la scelgo io",
+      "Chi ama davvero lotta"
+    ],
+    "spuntiB": [
+      "Rompere coi tuoi lascia ferite eterne",
+      "Forse vedono ciò che io non vedo"
+    ]
+  },
+  {
+    "id": "r43",
+    "text": "Cresceresti i figli nella tua visione del mondo, o li lasceresti del tutto liberi di scegliere?",
+    "optionA": "Trasmetto ciò in cui credo",
+    "optionB": "Liberi di trovare la loro strada",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Educare è dare radici e valori",
+      "Non scegliere è già una scelta"
+    ],
+    "spuntiB": [
+      "Imporre una visione è una gabbia",
+      "Devono costruirsi da soli"
+    ]
+  },
+  {
+    "id": "r44",
+    "text": "Diresti a un amico che suo figlio fa cose pericolose di nascosto, rischiando la sua rabbia?",
+    "optionA": "Glielo dico: la sicurezza prima",
+    "optionB": "Taccio: non sono affari miei",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Un genitore deve sapere",
+      "Tacere e pentirsi è peggio"
+    ],
+    "spuntiB": [
+      "Rischio di rovinare l’amicizia",
+      "Potrei aver capito male"
+    ]
+  },
+  {
+    "id": "r45",
+    "text": "Resteresti vicino a un amico “tossico” che ami, o ti allontaneresti per proteggerti?",
+    "optionA": "Resto: non si abbandona chi soffre",
+    "optionB": "Mi allontano: prima la mia salute",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Gli amici si aiutano nel buio",
+      "Andarmene lo lascerebbe solo"
+    ],
+    "spuntiB": [
+      "Affondare con lui non lo salva",
+      "Anche io ho diritto di stare bene"
+    ]
+  },
+  {
+    "id": "r46",
+    "text": "Sacrificheresti la tua felicità per garantire quella di chi ami?",
+    "optionA": "Sì: la loro gioia è la mia",
+    "optionB": "No: martirizzarsi non aiuta nessuno",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Amare è mettere l’altro prima",
+      "Nella loro felicità trovo la mia"
+    ],
+    "spuntiB": [
+      "Un martire crea solo sensi di colpa",
+      "Non posso dare ciò che non ho"
+    ]
+  },
+  {
+    "id": "r47",
+    "text": "Vivresti una vita comoda ma senza lasciare traccia, o una difficile che cambia qualcosa per gli altri?",
+    "optionA": "Comoda e serena",
+    "optionB": "Difficile ma utile",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "La serenità è una conquista",
+      "Non devo nulla al mondo"
+    ],
+    "spuntiB": [
+      "Lasciare un segno dà senso",
+      "Una vita solo per sé è sprecata"
+    ]
+  },
+  {
+    "id": "r48",
+    "text": "Conosceresti la verità su tutto ciò che ti riguarda, anche la più dolorosa, o resteresti felicemente all’oscuro?",
+    "optionA": "Tutta la verità",
+    "optionB": "Meglio felice e ignaro",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Vivere nell’illusione non è vivere",
+      "Solo il vero permette di scegliere"
+    ],
+    "spuntiB": [
+      "Certe verità tolgono la pace per sempre",
+      "L’ignoranza a volte è un dono"
+    ]
+  },
+  {
+    "id": "r49",
+    "text": "Daresti la vita per uno sconosciuto se fossi l’unico a poterlo salvare?",
+    "optionA": "Sì: una vita vale una vita",
+    "optionB": "No: la mia non vale meno della sua",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "L’eroismo è esserci al momento giusto",
+      "Non vivrei sapendo di non aver agito"
+    ],
+    "spuntiB": [
+      "Ho persone che dipendono da me",
+      "Nessuno deve morire per un estraneo"
+    ]
+  },
+  {
+    "id": "r50",
+    "text": "Preferiresti una morte serena ma vicina, o una lunga vita con la mente che lentamente svanisce?",
+    "optionA": "Breve ma lucido",
+    "optionB": "Lunga, anche se la mente cede",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Voglio andarmene da me stesso",
+      "La dignità conta più del tempo"
+    ],
+    "spuntiB": [
+      "Finché c’è vita c’è tempo coi miei",
+      "Anche giorni confusi sono giorni con loro"
+    ]
+  },
+  {
+    "id": "r51",
+    "text": "Confesseresti in punto di morte un segreto che ferirebbe chi ami ma libererebbe te?",
+    "optionA": "Confesso: voglio andarmene leggero",
+    "optionB": "Taccio: non scarico il mio peso su loro",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "La verità libera chi resta dall’inganno",
+      "Morire con una maschera è triste"
+    ],
+    "spuntiB": [
+      "Confessare così è solo egoismo",
+      "Li lascerei con una ferita eterna"
+    ]
+  },
+  {
+    "id": "r52",
+    "text": "Rinasceresti come una persona diversa con una vita migliore, o resteresti te in una vita normale?",
+    "optionA": "Diverso, ma con una vita migliore",
+    "optionB": "Sempre me, qualunque cosa",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Una vita migliore vale il cambio",
+      "Essere altro è un’occasione, non una perdita"
+    ],
+    "spuntiB": [
+      "Senza la mia identità non sono io",
+      "La mia vita imperfetta è mia"
+    ]
+  },
+  {
+    "id": "r53",
+    "text": "Dedicheresti la vita a una causa più grande di te, sacrificando affetti e tranquillità?",
+    "optionA": "Sì: c’è qualcosa che conta più di me",
+    "optionB": "No: la mia vita viene prima",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Vivere per qualcosa di grande dà senso",
+      "Si ricordano i pochi che osano"
+    ],
+    "spuntiB": [
+      "Sacrificare gli affetti è un prezzo troppo alto",
+      "Salvare il mondo lasciando soli i tuoi è un controsenso"
+    ]
+  },
+  {
+    "id": "r54",
+    "text": "Daresti fondo a tutti i tuoi risparmi per allungare di un anno la vita di chi ami, senza garanzie?",
+    "optionA": "Sì: un anno con lei vale tutto",
+    "optionB": "No: non si svuota una vita per un forse",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Un anno in più è un dono inestimabile",
+      "I soldi servono a questo"
+    ],
+    "spuntiB": [
+      "Rovinarsi non aiuta nessuno dei due",
+      "Un “forse” non vale un futuro distrutto"
+    ]
+  },
+  {
+    "id": "r55",
+    "text": "Perdoneresti chi ti ha tolto tutto, se fosse l’unico modo per ritrovare la pace?",
+    "optionA": "Perdono: la pace vale più della vendetta",
+    "optionB": "No: certe cose non si perdonano",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Il rancore incatena a chi ti ha ferito",
+      "Perdonare è liberare sé stessi"
+    ],
+    "spuntiB": [
+      "Perdonare l’imperdonabile è tradirsi",
+      "La memoria è una forma di giustizia"
+    ]
+  },
+  {
+    "id": "r56",
+    "text": "Vorresti una vita senza alcun rimpianto ma senza aver mai osato, o piena di rimpianti per aver tentato tutto?",
+    "optionA": "Senza rimpianti, vita prudente",
+    "optionB": "Con rimpianti, ma avendo osato",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "La pace dell’animo non ha prezzo",
+      "Meglio sereni che pieni di ferite"
+    ],
+    "spuntiB": [
+      "Si rimpiange ciò che non si è fatto",
+      "Una vita senza rischi è una vita a metà"
+    ]
+  },
+  {
+    "id": "r57",
+    "text": "Toglieresti ogni dolore dal mondo, anche se sparisse con esso la gioia più intensa?",
+    "optionA": "Sì: nessuno meriterebbe più di soffrire",
+    "optionB": "No: senza dolore sparirebbe il senso della gioia",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Eliminare la sofferenza è il bene più grande",
+      "Nessuna gioia vale il dolore di tutti"
+    ],
+    "spuntiB": [
+      "Senza ombre non c’è luce",
+      "Una felicità piatta non è felicità"
+    ]
+  },
+  {
+    "id": "r58",
+    "text": "Vivresti per sempre giovane e sano, anche dovendo vedere il mondo cambiare lasciandoti indietro?",
+    "optionA": "Sì: la vita è il dono supremo",
+    "optionB": "No: un tempo che non è più il mio non lo voglio",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Ogni epoca ha la sua bellezza",
+      "Restare è meglio che finire"
+    ],
+    "spuntiB": [
+      "Vivere fuori dal proprio tempo è esilio",
+      "Ogni cosa ha la sua stagione"
+    ]
+  },
+  {
+    "id": "r59",
+    "text": "Diresti a un figlio adottato che non sa di esserlo la verità, rischiando di stravolgerlo?",
+    "optionA": "Glielo dico: ha diritto alle sue origini",
+    "optionB": "Taccio: la verità non aggiunge nulla all’amore",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Le origini sono parte dell’identità",
+      "I segreti prima o poi esplodono"
+    ],
+    "spuntiB": [
+      "L’amore dato conta più del sangue",
+      "A volte la verità ferisce e basta"
+    ]
+  },
+  {
+    "id": "r60",
+    "text": "Rinunceresti a realizzare il tuo sogno se questo garantisse la felicità dei tuoi figli?",
+    "optionA": "Sì: il loro bene prima del mio sogno",
+    "optionB": "No: un genitore realizzato è il miglior esempio",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "I figli sono il mio vero sogno",
+      "Rinunciare per loro non è una sconfitta"
+    ],
+    "spuntiB": [
+      "Un genitore spento insegna la rinuncia",
+      "Realizzarmi è insegnare a sognare"
+    ]
   }
 ]
