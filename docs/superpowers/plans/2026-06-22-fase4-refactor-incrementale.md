@@ -22,6 +22,14 @@ sola, invece di un big-bang. Stop per review dopo ogni fetta.
 - Copertura: render-test SPEAKER_VOTE in `PlayerApp.test.tsx` (candidati elencati,
   sé stesso escluso). 346 test, gate verdi.
 
+## Fetta 3 — Estrazione `AccuseView` da PlayerApp ✅
+- Nuovo `client/src/player/views/AccuseView.tsx`: schermata "chi è l'Infiltrato?"
+  (ACCUSE), presentational (callback `onAccuse`). Il parent filtra i `players`.
+- `PlayerApp.tsx`: blocco inline (~55 righe) → `<AccuseView .../>`. Da 1645 a 1602 righe.
+- Copertura: render-test ACCUSE. Aggiunto `afterEach(cleanup)` in `PlayerApp.test.tsx`
+  (senza globals RTL non fa auto-cleanup → il DOM dei test precedenti restava e i
+  bottoni collidevano). 347 test, gate verdi.
+
 ## Prossime fette (proposte, non ancora fatte)
 - Estrarre le altre viste di fase di PlayerApp (DEFENSE/INTERVENTI, SPEAKER_VOTE,
   PREDICT, ACCUSE, lo switch finale TAPPA/SPLIT/RESULTS/AWARDS), aggiungendo un

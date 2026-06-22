@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, act, cleanup } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 // A fake shared socket the test can drive: the component registers handlers via
@@ -50,6 +50,7 @@ import PlayerApp from './PlayerApp';
 
 describe('PlayerApp', () => {
   beforeEach(() => resetHandlers());
+  afterEach(() => cleanup()); // unmount between tests so DOM doesn't leak across them
 
   it('shows the join screen before joining', () => {
     render(<PlayerApp />);
@@ -123,6 +124,35 @@ describe('PlayerApp', () => {
       });
     });
     expect(screen.getByText('Chi è stato più convincente?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Bea/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Carlo/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Alice/ })).toBeNull();
+  });
+
+  it('lists the other players to accuse at ACCUSE (excluding self)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+          { id: 'p3', nickname: 'Carlo' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'ACCUSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/chi ha cercato di ribaltare/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Bea/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Carlo/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Alice/ })).toBeNull();
