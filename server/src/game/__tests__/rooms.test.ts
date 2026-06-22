@@ -251,18 +251,19 @@ describe('RoomStore.startGame', () => {
 });
 
 describe('PHASE_DURATIONS_MS', () => {
-  it('has no timer for LOBBY and FINAL_AWARDS, positive timers for the rest', () => {
+  it('has no timer for LOBBY/FINAL_AWARDS and the self-paced vote phases', () => {
     expect(PHASE_DURATIONS_MS.LOBBY).toBeNull();
     expect(PHASE_DURATIONS_MS.FINAL_AWARDS).toBeNull();
+    // Self-paced: advance on "everyone acted", not on a timer.
+    expect(PHASE_DURATIONS_MS.VOTE_1).toBeNull();
+    expect(PHASE_DURATIONS_MS.VOTE_2).toBeNull();
+    expect(PHASE_DURATIONS_MS.PREDICT).toBeNull();
+    expect(PHASE_DURATIONS_MS.SPEAKER_VOTE).toBeNull();
     const timed: GamePhase[] = [
       'PHASE_INTRO',
       'DILEMMA_REVEAL',
-      'VOTE_1',
       'SPLIT_REVEAL',
-      'PREDICT',
       'DEFENSE',
-      'VOTE_2',
-      'SPEAKER_VOTE',
       'PHASE_RESULTS',
     ];
     for (const phase of timed) {
@@ -2038,5 +2039,93 @@ describe('RoomStore.activeCodes (snapshot)', () => {
     expect(store.activeCodes().sort()).toEqual([a, b].sort());
     store.delete(a);
     expect(store.activeCodes()).toEqual([b]);
+  });
+});
+
+describe('RoomStore VOTE_2 confirm (auto-paced)', () => {
+  function toVote2(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B']): string {
+    const { code } = store.create();
+    for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3);
+    let g = 0;
+    while (store.get(code)?.phase !== 'VOTE_1' && g++ < 12) store.advancePhase(code);
+    sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
+    g = 0;
+    while (store.get(code)?.phase !== 'VOTE_2' && g++ < 12) store.advancePhase(code);
+    return code;
+  }
+
+  it('starts VOTE_2 with nobody confirmed even though votes are pre-filled', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = toVote2(store);
+    expect(store.get(code)?.phase).toBe('VOTE_2');
+    expect(store.voteCount(code)).toBe(3); // pre-filled defaults present
+    expect(store.confirmedCount(code)).toBe(0); // but nobody confirmed yet
+    expect(store.allConfirmed(code)).toBe(false);
+  });
+
+  it('confirmVote marks a player confirmed; allConfirmed when all present did', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = toVote2(store);
+    expect(store.confirmVote(code, 'sock-0').ok).toBe(true);
+    expect(store.confirmVote(code, 'sock-1').ok).toBe(true);
+    expect(store.allConfirmed(code)).toBe(false);
+    store.confirmVote(code, 'sock-2');
+    expect(store.allConfirmed(code)).toBe(true);
+    expect(store.confirmedCount(code)).toBe(3);
+  });
+
+  it('changing the vote in VOTE_2 also counts as a confirmation', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = toVote2(store);
+    store.vote(code, 'sock-0', 'B'); // change -> confirms
+    expect(store.confirmedCount(code)).toBe(1);
+  });
+
+  it('rejects confirmVote outside VOTE_2, unknown room, and intruders', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = toVote2(store);
+    expect(store.confirmVote('ZZZZ', 'sock-0')).toEqual({ ok: false, error: 'ROOM_NOT_FOUND' });
+    expect(store.confirmVote(code, 'ghost')).toEqual({ ok: false, error: 'NOT_IN_ROOM' });
+    store.advancePhase(code); // leave VOTE_2
+    expect(store.confirmVote(code, 'sock-0')).toEqual({ ok: false, error: 'NOT_VOTE2_PHASE' });
+  });
+
+  it('a leaving player does not block all-confirmed', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = toVote2(store);
+    store.confirmVote(code, 'sock-0');
+    store.confirmVote(code, 'sock-1');
+    expect(store.allConfirmed(code)).toBe(false);
+    store.leave(code, 'sock-2'); // the only unconfirmed present player leaves
+    expect(store.allConfirmed(code)).toBe(true);
+  });
+
+  it('bots are auto-confirmed on entry to VOTE_2', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    store.join(code, 'sock-0', 'H0');
+    store.addBot(code);
+    store.addBot(code);
+    store.startGame(code, 3);
+    let g = 0;
+    while (store.get(code)?.phase !== 'VOTE_1' && g++ < 12) store.advancePhase(code);
+    store.vote(code, 'sock-0', 'A');
+    g = 0;
+    while (store.get(code)?.phase !== 'VOTE_2' && g++ < 12) store.advancePhase(code);
+    // 2 bots already confirmed; only the human is pending.
+    expect(store.confirmedCount(code)).toBe(2);
+    store.confirmVote(code, 'sock-0');
+    expect(store.allConfirmed(code)).toBe(true);
+  });
+
+  it('clears confirmations for the next dilemma', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = toVote2(store);
+    store.confirmVote(code, 'sock-0');
+    let g = 0;
+    while (store.get(code)?.dilemmaIndex !== 2 && g++ < 30) store.advancePhase(code);
+    expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL');
+    expect(store.confirmedCount(code)).toBe(0);
   });
 });

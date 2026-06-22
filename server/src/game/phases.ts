@@ -43,12 +43,14 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   LOBBY: null,
   PHASE_INTRO: 5_000,
   DILEMMA_REVEAL: 6_000,
-  VOTE_1: 20_000,
+  // Self-paced votes: no timer — advance once every present player has acted
+  // (early-advance in index.ts), with the leader's "Salta ▶" as the only override.
+  VOTE_1: null,
   SPLIT_REVEAL: 6_000,
-  PREDICT: 12_000,
+  PREDICT: null,
   DEFENSE: 60_000,
-  VOTE_2: 20_000,
-  SPEAKER_VOTE: 12_000,
+  VOTE_2: null,
+  SPEAKER_VOTE: null,
   PHASE_RESULTS: 8_000,
   ACCUSE: 30_000,
   FINAL_AWARDS: null,

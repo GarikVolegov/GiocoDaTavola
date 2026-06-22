@@ -97,6 +97,8 @@ function refreshAfterRosterChange(code: string): void {
   if (!room) return;
   if ((room.phase === 'VOTE_1' || room.phase === 'DUEL_PICK') && rooms.allVoted(code)) {
     advanceAndBroadcast(code);
+  } else if (room.phase === 'VOTE_2' && rooms.allConfirmed(code)) {
+    advanceAndBroadcast(code); // a leaver was the last unconfirmed -> don't block
   } else {
     broadcastGameState(code);
   }
@@ -123,6 +125,7 @@ function gameStatePayload(room: Room) {
     // How many players have voted this round. Aggregate count only — the per-
     // choice split stays secret until SPLIT_REVEAL.
     votedCount: room.votes.size,
+    confirmedCount: rooms.confirmedCount(room.code),
     // How many players have made a secret prediction this round (PREDICT phase).
     // Aggregate count only — never who predicted what.
     predictedCount: room.predictions.size,
@@ -483,16 +486,30 @@ io.on('connection', (socket) => {
     }
     // Confirm the player's own current choice back to just them.
     socket.emit('player:voted', { choice: result.room.votes.get(playerId) });
-    // VOTE_1 / DUEL_PICK start empty and end early once everyone has voted.
-    // VOTE_2 / DUEL_REPICK start pre-filled with the first vote (the default),
-    // so "all voted" is already true — they run their full timer to give everyone
-    // time to change their mind.
+    // No timer on the vote phases — advance as soon as everyone present has acted.
+    // VOTE_1 / DUEL_PICK: everyone has voted. VOTE_2: changing the vote also confirms
+    // it (store), so advance once everyone has confirmed.
     const phase = result.room.phase;
     if ((phase === 'VOTE_1' || phase === 'DUEL_PICK') && rooms.allVoted(code)) {
-      advanceAndBroadcast(code); // everyone voted -> skip the rest of the timer
+      advanceAndBroadcast(code);
+    } else if (phase === 'VOTE_2' && rooms.allConfirmed(code)) {
+      advanceAndBroadcast(code);
     } else {
-      broadcastGameState(code); // refresh the voted count for the host
+      broadcastGameState(code); // refresh the count for the host
     }
+  });
+
+  // A player confirms their pre-filled second vote (VOTE_2) without changing it.
+  // Like a vote it never leaves the server individually — only the aggregate
+  // confirmed count — and the phase auto-advances once everyone present confirmed.
+  socket.on('player:confirmVote', () => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code } = session;
+    const result = rooms.confirmVote(code, session.playerId);
+    if (!result.ok) return;
+    if (rooms.allConfirmed(code)) advanceAndBroadcast(code);
+    else broadcastGameState(code);
   });
 
   // A player taps a live reaction during DEFENSE / DUEL_ARGUE. The store validates
