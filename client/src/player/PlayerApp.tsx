@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
+import ReactionSwarm from '../shared/ReactionSwarm';
 import {
   SocketEvents,
   JOIN_ERROR_MESSAGES,
@@ -173,6 +174,7 @@ export default function PlayerApp() {
   const [infiltratoRole, setInfiltratoRole] = useState<PlayerInfiltratoRolePayload | null>(null);
   const [myAccusation, setMyAccusation] = useState<string | null>(null);
   const [speakerVote, setSpeakerVote] = useState<string | null>(null);
+  const [handRaised, setHandRaised] = useState(false);
   // Player-written dilemmas (lobby): the draft form + how many we've added.
   const [dilemmaText, setDilemmaText] = useState('');
   const [dilemmaA, setDilemmaA] = useState('');
@@ -241,6 +243,7 @@ export default function PlayerApp() {
     const onInfiltratoRole = (payload: PlayerInfiltratoRolePayload) => setInfiltratoRole(payload);
     const onAccused = ({ accusedId }: PlayerAccusedPayload) => setMyAccusation(accusedId);
     const onSpeakerVoted = ({ defenderId }: PlayerSpeakerVotedPayload) => setSpeakerVote(defenderId);
+    const onHandRaised = ({ raised }: { raised: boolean }) => setHandRaised(raised);
     const onDilemmaSubmitted = ({ count }: PlayerDilemmaSubmittedPayload) => {
       setMySubmitted(count);
       setSubmitDilemmaError(null);
@@ -261,6 +264,7 @@ export default function PlayerApp() {
     socket.on(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
     socket.on(SocketEvents.PlayerSubmitDilemmaError, onSubmitDilemmaError);
     socket.on(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
+    socket.on(SocketEvents.PlayerHandRaised, onHandRaised);
     // On every (re)connect, if we hold a token, reclaim the same seat. Covers
     // socket-level reconnects (network blip) without a page reload.
     const onConnect = () => {
@@ -305,6 +309,7 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
       socket.off(SocketEvents.PlayerSubmitDilemmaError, onSubmitDilemmaError);
       socket.off(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
+      socket.off(SocketEvents.PlayerHandRaised, onHandRaised);
       socket.off('connect', onConnect);
     };
   }, []);
@@ -323,6 +328,9 @@ export default function PlayerApp() {
 
   const phase = game?.phase ?? 'LOBBY';
   const remaining = useCountdown(game?.phaseExpiresAt ?? null);
+  // Self-paced turn (DEFENSE/INTERVENTI): the floor countdown gates "Ho finito".
+  const minRemaining = useCountdown(game?.defense?.minEndsAt ?? null);
+  const canFinishNow = game?.defense?.minEndsAt == null || (minRemaining ?? 0) <= 0;
 
   // Each new dilemma round starts with a clean (unselected) vote + prediction.
   useEffect(() => {
@@ -354,8 +362,8 @@ export default function PlayerApp() {
   // Buzz the phone the moment it becomes this player's turn to speak (defense or
   // duel) so they look up from the screen — easy to miss on a shared TV.
   const turnSpeakerId =
-    phase === 'DEFENSE'
-      ? game?.defense?.speaker?.id ?? null
+    phase === 'DEFENSE' || phase === 'INTERVENTI'
+      ? game?.defense?.speakerId ?? null
       : phase === 'DUEL_ARGUE'
         ? game?.duelTurn?.speaker?.id ?? null
         : null;
@@ -363,6 +371,12 @@ export default function PlayerApp() {
   useEffect(() => {
     if (myTurnToSpeak) buzz([60, 40, 60]);
   }, [myTurnToSpeak]);
+
+  // A stale "raised" must never stick across turns/phases: the server clears the
+  // raised-hand queue at the start of each defender turn, so mirror that locally.
+  useEffect(() => {
+    setHandRaised(false);
+  }, [turnSpeakerId, phase]);
 
   const castVote = (choice: VoteChoice) => {
     setVote(choice); // optimistic; reverts via player:voted/voteError
@@ -404,6 +418,17 @@ export default function PlayerApp() {
     lastReactRef.current = now;
     buzz(15);
     getSocket().emit(SocketEvents.PlayerReact, { emoji });
+  };
+
+  // Raise/lower the hand to queue for an intervention (server is the source of
+  // truth; the echo sets handRaised). End the current self-paced turn ("Ho finito").
+  const toggleHand = () => {
+    buzz(15);
+    getSocket().emit(SocketEvents.PlayerRaiseHand);
+  };
+  const sendFinish = () => {
+    buzz(25);
+    getSocket().emit(SocketEvents.PlayerFinishTurn);
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -644,78 +669,136 @@ export default function PlayerApp() {
     );
   }
 
-  if (joinedCode && phase === 'DEFENSE') {
-    const speaker = game?.defense?.speaker ?? null;
-    const myTurn = speaker != null && speaker.id === playerId;
+  if (joinedCode && (phase === 'DEFENSE' || phase === 'INTERVENTI')) {
+    const d = game?.defense ?? null;
+    const speaker = d?.speaker ?? null; // the defender (DEFENSE only)
+    const myTurn = d?.speakerId != null && d.speakerId === playerId;
     const sideOption = speaker
       ? speaker.side === 'A'
         ? game?.dilemma?.optionA
         : game?.dilemma?.optionB
       : undefined;
+    const myQueuePos = d?.queue ? d.queue.findIndex((q) => q.id === playerId) : -1;
+
+    const finishButton = (
+      <>
+        <button
+          type="button"
+          onClick={sendFinish}
+          disabled={!canFinishNow}
+          style={{
+            fontSize: '1.2rem',
+            fontWeight: 800,
+            padding: '0.9rem 1.6rem',
+            borderRadius: '0.9rem',
+            border: 'none',
+            cursor: canFinishNow ? 'pointer' : 'not-allowed',
+            opacity: canFinishNow ? 1 : 0.5,
+          }}
+        >
+          {canFinishNow ? 'Ho finito ▶' : `Ho finito tra ${minRemaining ?? ''}s`}
+        </button>
+        {remaining != null && (
+          <p style={{ fontSize: '0.85rem', opacity: 0.6, margin: 0 }}>max {remaining}s</p>
+        )}
+      </>
+    );
+
     return (
       <main style={wrap}>
-        <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS.DEFENSE}</h1>
-        {remaining != null && (
-          <div
-            aria-label="Tempo rimanente"
-            style={{ fontSize: '3rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-          >
-            {remaining}s
-          </div>
-        )}
-        {speaker == null ? (
-          <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
-            Nessuna difesa per questo dilemma.
-          </p>
-        ) : myTurn ? (
+        <ReactionSwarm />
+        <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
+
+        {myTurn ? (
           <>
-            {speaker.devil ? (
+            {phase === 'INTERVENTI' ? (
+              <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te: intervieni! 🙋</p>
+            ) : speaker?.devil ? (
               <p style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#ffd36b' }}>
                 🎭 Avvocato del Diavolo!
               </p>
             ) : (
               <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te! 🎤</p>
             )}
-            {game?.dilemma && (
-              <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0, maxWidth: '22rem' }}>
-                {game.dilemma.text}
-              </p>
+
+            {phase === 'DEFENSE' && speaker && (
+              <>
+                {game?.dilemma && (
+                  <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0, maxWidth: '22rem' }}>
+                    {game.dilemma.text}
+                  </p>
+                )}
+                {speaker.devil ? (
+                  <p style={{ fontSize: '1.1rem', opacity: 0.95, margin: 0, maxWidth: '22rem' }}>
+                    Hai votato <strong>{speaker.side === 'A' ? 'B' : 'A'}</strong>, ma ora convinci tutti
+                    che <strong>{speaker.side}</strong>
+                    {sideOption ? ` (${sideOption})` : ''} è la scelta giusta!
+                  </p>
+                ) : (
+                  <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
+                    Difendi <strong>{speaker.side}</strong>
+                    {sideOption ? `: ${sideOption}` : ''}
+                  </p>
+                )}
+                {d?.spunti && d.spunti.length > 0 && (
+                  <div style={{ width: 'min(90vw, 22rem)', textAlign: 'left' }}>
+                    <p style={{ fontSize: '0.9rem', fontWeight: 700, opacity: 0.8, margin: '0 0 0.3rem' }}>
+                      Spunti per te:
+                    </p>
+                    <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      {d.spunti.map((s, i) => (
+                        <li key={`${i}-${s}`} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
             )}
-            {speaker.devil ? (
-              <p style={{ fontSize: '1.1rem', opacity: 0.95, margin: 0, maxWidth: '22rem' }}>
-                Hai votato <strong>{speaker.side === 'A' ? 'B' : 'A'}</strong>, ma ora convinci tutti
-                che <strong>{speaker.side}</strong>
-                {sideOption ? ` (${sideOption})` : ''} è la scelta giusta!
-              </p>
-            ) : (
-              <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
-                Difendi <strong>{speaker.side}</strong>
-                {sideOption ? `: ${sideOption}` : ''}
-              </p>
-            )}
-            {game?.defense?.spunti && game.defense.spunti.length > 0 && (
-              <div style={{ width: 'min(90vw, 22rem)', textAlign: 'left' }}>
-                <p style={{ fontSize: '0.9rem', fontWeight: 700, opacity: 0.8, margin: '0 0 0.3rem' }}>
-                  Spunti per te:
-                </p>
-                <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  {game.defense.spunti.map((s, i) => (
-                    <li key={`${i}-${s}`} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{s}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {finishButton}
           </>
+        ) : speaker == null && phase === 'DEFENSE' ? (
+          <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
+            Nessuna difesa per questo dilemma.
+          </p>
         ) : (
           <>
-            {game?.isDevilRound && (
+            {phase === 'DEFENSE' && game?.isDevilRound && (
               <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#ffd36b' }}>
                 🎭 Round Avvocato del Diavolo — difende il contrario!
               </p>
             )}
             <p style={{ fontSize: '1.3rem', margin: 0 }}>
-              Sta parlando <strong>{speaker.nickname}</strong> 🎤
+              {phase === 'INTERVENTI' ? (
+                <>Interviene <strong>{d?.intervenor?.nickname ?? '…'}</strong> 🙋</>
+              ) : (
+                <>Sta parlando <strong>{speaker?.nickname ?? '…'}</strong> 🎤</>
+              )}
             </p>
+
+            {phase === 'DEFENSE' && d?.speakerId != null && (
+              <button
+                type="button"
+                onClick={toggleHand}
+                style={{
+                  fontSize: '1.05rem',
+                  fontWeight: 700,
+                  padding: '0.7rem 1.3rem',
+                  borderRadius: '0.8rem',
+                  border: handRaised ? '2px solid #ffd36b' : '2px solid rgba(255,255,255,0.3)',
+                  background: handRaised ? 'rgba(255,211,107,0.18)' : 'transparent',
+                  color: 'inherit',
+                  cursor: 'pointer',
+                }}
+              >
+                {handRaised ? '✋ Abbassa la mano' : '✋ Alza la mano'}
+              </button>
+            )}
+            {phase === 'INTERVENTI' && myQueuePos >= 0 && (
+              <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0 }}>
+                Sei in coda: {myQueuePos + 1}º
+              </p>
+            )}
+
             <ReactionBar onReact={sendReaction} />
           </>
         )}
