@@ -70,7 +70,7 @@ export function ResultsPanel({ swing }: { swing: PublicSwing }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
           {swing.attribution.map((imp) => (
             <p key={imp.defender.id} style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>
-              Le difese di <span style={{ color: '#ffd36b' }}>{imp.defender.nickname}</span> hanno
+              Le difese di <span style={{ color: 'var(--gold)' }}>{imp.defender.nickname}</span> hanno
               spostato {imp.votes} {imp.votes === 1 ? 'voto' : 'voti'} verso {imp.defender.side}
             </p>
           ))}
@@ -98,7 +98,7 @@ export function AwardsPanel({ awards }: { awards: Award[] }) {
         >
           <span style={{ fontSize: '2.5rem' }}>{a.emoji}</span>
           <span style={{ fontSize: '1.3rem', fontWeight: 800 }}>{a.title}</span>
-          <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ffd36b' }}>{a.winner.nickname}</span>
+          <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--gold)' }}>{a.winner.nickname}</span>
           <span style={{ fontSize: '0.95rem', opacity: 0.8 }}>{a.description}</span>
         </Card>
       ))}

@@ -17,7 +17,7 @@ import {
   type PublicPlayer,
   type PercorsoView,
 } from '../shared/events';
-import { Card, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing } from '../shared/ui';
+import { Card, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing, Button, TextInput, Alert } from '../shared/ui';
 import ReactionSwarm from '../shared/ReactionSwarm';
 
 const screen = {
@@ -25,7 +25,7 @@ const screen = {
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  minHeight: '100vh',
+  minHeight: '100dvh',
   textAlign: 'center',
   padding: '2rem',
   gap: '1.5rem',
@@ -161,7 +161,8 @@ export default function HostApp() {
           onSubmit={submitCode}
           style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}
         >
-          <input
+          <TextInput
+            mono
             value={codeInput}
             onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
             placeholder="ABCD"
@@ -170,28 +171,13 @@ export default function HostApp() {
             spellCheck={false}
             maxLength={4}
             aria-label="Codice stanza"
-            style={{
-              fontSize: '2rem',
-              letterSpacing: '0.3rem',
-              textAlign: 'center',
-              padding: '0.6rem 0.8rem',
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-              textTransform: 'uppercase',
-              width: '8rem',
-            }}
+            style={{ fontSize: '2rem', width: '8rem' }}
           />
-          <button
-            type="submit"
-            style={{ fontSize: '1.2rem', fontWeight: 700, padding: '0.7rem 1.4rem', borderRadius: '0.6rem', cursor: 'pointer' }}
-          >
+          <Button type="submit" size="lg">
             Collega TV
-          </button>
+          </Button>
         </form>
-        {attachError && (
-          <p role="alert" style={{ color: '#ff6b6b', margin: 0, fontWeight: 600 }}>
-            {attachError}
-          </p>
-        )}
+        {attachError && <Alert>{attachError}</Alert>}
       </main>
     );
   }
@@ -321,7 +307,7 @@ export default function HostApp() {
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}
             >
               {game.isDevilRound && (
-                <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#ffd36b' }}>
+                <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: 'var(--gold)' }}>
                   🎭 Avvocato del Diavolo — si difende il lato OPPOSTO al proprio voto!
                 </p>
               )}
@@ -332,7 +318,7 @@ export default function HostApp() {
               )}
               <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
                 {defense.argument ? '🤖' : 'Sta parlando'}{' '}
-                <span style={{ color: '#ffd36b' }}>{defense.speaker.nickname}</span> {defense.argument ? '' : '🎤'}
+                <span style={{ color: 'var(--gold)' }}>{defense.speaker.nickname}</span> {defense.argument ? '' : '🎤'}
               </p>
               <div
                 style={{
@@ -381,7 +367,7 @@ export default function HostApp() {
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}
           >
             <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
-              Interviene <span style={{ color: '#ffd36b' }}>{defense.intervenor?.nickname ?? '…'}</span> 🙋
+              Interviene <span style={{ color: 'var(--gold)' }}>{defense.intervenor?.nickname ?? '…'}</span> 🙋
             </p>
             {defense.queue && defense.queue.length > 0 && (
               <ol style={{ margin: 0, paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: '0.3rem' }}>
@@ -416,13 +402,13 @@ export default function HostApp() {
               padding: '1rem 1.6rem',
               borderRadius: '1rem',
               textAlign: 'center',
-              background: 'rgba(168,130,255,0.16)',
-              border: '2px solid rgba(168,130,255,0.5)',
+              background: 'var(--gold-soft)',
+              border: '2px solid var(--gold-line)',
             }}
           >
             <p style={{ margin: 0, fontSize: '1.8rem', fontWeight: 800 }}>
               🕵️ L'infiltrato era{' '}
-              <span style={{ color: '#ffd36b' }}>{game.infiltratoResult.infiltratorNickname}</span>
+              <span style={{ color: 'var(--gold)' }}>{game.infiltratoResult.infiltratorNickname}</span>
             </p>
             <p style={{ margin: '0.4rem 0 0', fontSize: '1.3rem' }}>
               {game.infiltratoResult.won
@@ -440,8 +426,8 @@ export default function HostApp() {
               padding: '1rem 1.6rem',
               borderRadius: '1rem',
               textAlign: 'center',
-              background: 'rgba(79,140,255,0.12)',
-              border: '2px solid rgba(79,140,255,0.4)',
+              background: 'var(--faction-a-soft)',
+              border: '2px solid var(--faction-a-line)',
             }}
           >
             <p style={{ margin: 0, fontSize: '2rem', fontWeight: 800 }}>
@@ -511,7 +497,7 @@ export default function HostApp() {
               Turno {duelTurn.turn}/{duelTurn.totalTurns}
             </p>
             <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
-              Argomenta <span style={{ color: '#ffd36b' }}>{duelTurn.speaker.nickname}</span> 🎤
+              Argomenta <span style={{ color: 'var(--gold)' }}>{duelTurn.speaker.nickname}</span> 🎤
             </p>
             <div
               style={{
@@ -544,7 +530,7 @@ export default function HostApp() {
             ) : duelResult.convinced.length > 0 ? (
               duelResult.convinced.map((c) => (
                 <p key={c.convinced.id} style={{ fontSize: 'clamp(1.5rem, 4.5vw, 2.4rem)', fontWeight: 800, margin: 0 }}>
-                  <span style={{ color: '#ffd36b' }}>{c.persuader.nickname}</span> ha convinto {c.convinced.nickname}! 🎯
+                  <span style={{ color: 'var(--gold)' }}>{c.persuader.nickname}</span> ha convinto {c.convinced.nickname}! 🎯
                 </p>
               ))
             ) : (
@@ -566,7 +552,7 @@ export default function HostApp() {
                   style={{ flex: '1 1 12rem', minWidth: '10rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', alignItems: 'center', textAlign: 'center' }}
                 >
                   <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{s.nickname}</span>
-                  <span style={{ fontSize: '2.2rem', fontWeight: 800, color: '#ffd36b' }}>{s.persuasions}</span>
+                  <span style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--gold)' }}>{s.persuasions}</span>
                   <span style={{ fontSize: '0.95rem', opacity: 0.8 }}>
                     {s.persuasions === 1 ? 'persuasione' : 'persuasioni'}
                   </span>
