@@ -1,13 +1,31 @@
 // Pure presentation components for the game's PUBLIC phases — the views that
 // look the same on every phone and on the optional TV (/host). Props-typed from
 // events.ts; they carry only aggregate, non-secret data (never who voted what).
-import type { PublicDilemma, VoteSplit, PublicSwing, Award } from '../events';
+import { COMPLESSITA_LABELS, type PublicDilemma, type VoteSplit, type PublicSwing, type Award } from '../events';
 import { Card } from './index';
 
 /** The dilemma prompt + its two options. Used in DILEMMA_REVEAL / VOTE_*. */
 export function DilemmaCard({ dilemma }: { dilemma: PublicDilemma }) {
   return (
     <Card glow="accent" style={{ width: 'min(92vw, 40rem)' }}>
+      {dilemma.complessita && (
+        <span
+          style={{
+            display: 'inline-block',
+            margin: '0 0 0.5rem',
+            padding: '0.15rem 0.6rem',
+            borderRadius: 'var(--radius-pill, 999px)',
+            border: '1px solid var(--gold-line, rgba(201,163,90,0.5))',
+            color: 'var(--gold, #C9A35A)',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {COMPLESSITA_LABELS[dilemma.complessita]}
+        </span>
+      )}
       <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: '0 0 0.6rem' }}>{dilemma.text}</p>
       <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap' }}>
         <span><strong>A</strong> · {dilemma.optionA}</span>

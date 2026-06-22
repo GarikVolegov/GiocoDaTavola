@@ -1,7 +1,7 @@
 // In-memory store of game rooms. The server is authoritative; rooms live here
 // only for the lifetime of the process (no DB).
 
-import { Deck, dilemmasForRegister, loadDilemmas, type Dilemma, type ContentRegister, type Tappa } from './deck';
+import { Deck, dilemmasForRegister, loadDilemmas, COMPLESSITA_RANK, type Dilemma, type ContentRegister, type Tappa } from './deck';
 import { botDefenseArgument } from './botDefense';
 import {
   type GamePhase,
@@ -1086,15 +1086,15 @@ export class RoomStore {
       room.format = 'classic';
       room.startTappa = null;
       room.durata = null;
-      room.plannedDilemmas = [];
       room.plannedTappe = [];
-      room.dilemmaCount = dilemmaCount;
       // Validated above in this same (classic) branch via isContentRegister.
       room.register = register as ContentRegister;
       room.deck = this.makeDeck(register as ContentRegister);
-      // Play the group's own dilemmas first (shuffled), then the official deck fills
-      // the rest — so a submitted dilemma is sure to appear (within dilemmaCount).
-      room.submittedQueue = this.shuffle(room.submittedDilemmas);
+      // Precompute the ordered sequence: submitted dilemmas first, then the deck,
+      // finally escalating by complexity (alto → max → power) over the game.
+      room.plannedDilemmas = this.buildClassicPlan(room.deck, room.submittedDilemmas, dilemmaCount);
+      room.dilemmaCount = room.plannedDilemmas.length || dilemmaCount;
+      room.submittedQueue = []; // baked into plannedDilemmas
     }
     // Pick the surprise "Avvocato del Diavolo" round up front (group mode only).
     const totalRounds = room.dilemmaCount ?? 0;
@@ -1213,8 +1213,13 @@ export class RoomStore {
         room.currentDilemma = room.plannedDilemmas[transition.dilemmaIndex - 1] ?? null;
         room.currentTappa = (room.plannedTappe[transition.dilemmaIndex - 1] ?? null) as Tappa | null;
       } else {
-        // Player-submitted dilemmas (shuffled at start) come first; then the deck.
-        room.currentDilemma = room.submittedQueue.shift() ?? room.deck?.draw() ?? null;
+        // Classic: walk the precomputed complexity-escalating plan; fall back to
+        // the deck only if (for any reason) the plan is empty.
+        room.currentDilemma =
+          room.plannedDilemmas[transition.dilemmaIndex - 1] ??
+          room.submittedQueue.shift() ??
+          room.deck?.draw() ??
+          null;
       }
       room.votes.clear();
       room.votes1.clear();
@@ -1484,6 +1489,27 @@ export class RoomStore {
       [out[i], out[j]] = [out[j], out[i]];
     }
     return out;
+  }
+
+  /**
+   * Build the ordered CLASSIC sequence: the group's own dilemmas first (shuffled),
+   * then drawn from the deck to reach `count`, finally ordered by ascending
+   * complexity so the game escalates alto → max → power. Submitted dilemmas have
+   * no complexity, so they count as 'alto' (the warm-up). Within a tier the random
+   * draw order is preserved (stable sort) for variety across games.
+   */
+  private buildClassicPlan(deck: Deck, submitted: Dilemma[], count: number): Dilemma[] {
+    const chosen: Dilemma[] = [...this.shuffle(submitted).slice(0, count)];
+    while (chosen.length < count) {
+      const d = deck.draw();
+      if (!d) break;
+      chosen.push(d);
+    }
+    const rank = (d: Dilemma) => COMPLESSITA_RANK[d.complessita ?? 'alto'];
+    return chosen
+      .map((d, i) => ({ d, i }))
+      .sort((a, b) => rank(a.d) - rank(b.d) || a.i - b.i)
+      .map((x) => x.d);
   }
 
   /**

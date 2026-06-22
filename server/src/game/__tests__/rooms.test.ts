@@ -1308,7 +1308,9 @@ describe('startGame con registro', () => {
     addPlayers(store, code, 3);
     const res = store.startGame(code, 3, 'vita');
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.room.deck?.remainingCount).toBe(1);
+    // Classic precomputes the ordered plan from the chosen register's deck, so the
+    // plan contains exactly the (single) vita dilemma available.
+    if (res.ok) expect(res.room.plannedDilemmas.map((d) => d.id)).toEqual(['x1']);
   });
 });
 

@@ -364,11 +364,23 @@ export interface InfiltratoResult {
 }
 
 /** Public dilemma shown on the shared screen: the prompt + its two options. */
+/** Debate-complexity tier (mirror server deck.ts): alto < max < power. */
+export type Complessita = 'alto' | 'max' | 'power';
+
+/** Host/phone badge labels for each complexity tier. */
+export const COMPLESSITA_LABELS: Record<Complessita, string> = {
+  alto: '◆ Alto',
+  max: '◆◆ Max',
+  power: '◆◆◆ Power',
+};
+
 export interface PublicDilemma {
   id: string;
   text: string;
   optionA: string;
   optionB: string;
+  /** Debate-complexity tier; shown as a small badge. May be absent on legacy data. */
+  complessita?: Complessita;
 }
 
 /** Aggregate A vs B vote counts. No identities — counts only. */
