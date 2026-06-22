@@ -187,8 +187,8 @@ export default function HostApp() {
         )}
 
         {phase === 'VOTE_2' && (
-          <p style={{ fontSize: '1.4rem', fontWeight: 600, margin: 0, opacity: 0.9 }}>
-            Si vota di nuovo: confermate o cambiate idea dopo le difese 📱
+          <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
+            Confermate il voto dal telefono ✓ · {game.confirmedCount}/{players.length}
           </p>
         )}
 

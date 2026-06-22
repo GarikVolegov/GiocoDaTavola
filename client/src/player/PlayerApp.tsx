@@ -489,6 +489,27 @@ export default function PlayerApp() {
         ) : (
           <p style={{ opacity: 0.7, margin: 0 }}>Tocca A o B per votare.</p>
         )}
+        {phase === 'VOTE_2' && (
+          <>
+            <button
+              type="button"
+              onClick={() => getSocket().emit(SocketEvents.PlayerConfirmVote)}
+              style={{
+                marginTop: '0.25rem',
+                fontSize: '1.05rem',
+                fontWeight: 700,
+                padding: '0.7rem 1.6rem',
+                borderRadius: '0.7rem',
+                cursor: 'pointer',
+              }}
+            >
+              Confermo ✓
+            </button>
+            <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
+              Confermati {game?.confirmedCount ?? 0}/{players.length} · si va avanti quando tutti confermano
+            </p>
+          </>
+        )}
         {skipButton}
       </main>
     );
