@@ -6,6 +6,7 @@
     "optionB": "La porto avanti la sera, tenendo il lavoro sicuro",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Il costo di non provarci è il rimpianto",
       "Sul campo impari più in fretta",
@@ -23,6 +24,7 @@
     "optionA": "Lo faccio: i soldi servono ora",
     "optionB": "Mai: la reputazione vale più dei soldi",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Senza cassa non arrivi a domani",
       "Tutti aggiustano un po' la narrazione",
@@ -41,6 +43,7 @@
     "optionB": "Li tengo da parte per dormire tranquillo",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Il denaro fermo perde valore ogni anno",
       "Il momento migliore per investire è adesso",
@@ -58,6 +61,7 @@
     "optionA": "Glielo do: trattenerlo conviene",
     "optionB": "Lo lascio andare: nessuno è insostituibile",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Sostituire un talento costa tre volte il suo stipendio",
       "Un dipendente apprezzato lavora il doppio con più motivazione",
@@ -75,6 +79,7 @@
     "optionA": "Lavorando più di tutti gli altri",
     "optionB": "Lavorando più furbo, non più ore",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Nessun risultato straordinario arriva senza sacrificio straordinario",
       "Le ore investite costruiscono competenze che non si comprano",
@@ -92,6 +97,7 @@
     "optionA": "Cedo: meglio poco che niente",
     "optionB": "Tengo il prezzo: il mio lavoro vale",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Un cliente che paga meno è comunque un cliente che paga",
       "Il cash flow conta più del margine in certi momenti",
@@ -109,6 +115,7 @@
     "optionA": "Mi prendo tutta la colpa, anche degli altri",
     "optionB": "Spiego cos'è andato storto, senza scusarmi troppo",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Un leader che protegge il team guadagna lealtà duratura",
       "Assumersi la responsabilità è la mossa che disarma i critici",
@@ -127,6 +134,7 @@
     "optionB": "Prima la sicurezza economica, la passione poi",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Chi ama il suo lavoro non lavora neanche un giorno",
       "La passione genera energia che il denaro non compra",
@@ -145,6 +153,7 @@
     "optionB": "Rifiuto: gli affari rovinano le amicizie",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "La fiducia reciproca è la base migliore per una partnership",
       "Con un amico condividi valori e visione già allineati",
@@ -162,6 +171,7 @@
     "optionA": "Lo faccio: l'azienda viene prima",
     "optionB": "Trovo un altro modo, costi quel che costi",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "La sostenibilità dell'azienda protegge tutti gli altri posti",
       "Mantenere chi non può crescere insieme a te è un disservizio verso entrambi",
@@ -179,6 +189,7 @@
     "optionA": "Copio e miglioro: perché reinventare la ruota",
     "optionB": "Creo qualcosa di originale, anche se più dura",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Il mercato già esiste: non devi educare i clienti",
       "Migliorare ciò che funziona è spesso più difficile che inventarlo",
@@ -197,6 +208,7 @@
     "optionB": "Crescita lenta: voglio basi solide",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "La visibilità apre porte che la qualità da sola non apre",
       "Un momento di fama può lanciare una carriera intera",
@@ -214,6 +226,7 @@
     "optionA": "Lo denuncio subito",
     "optionB": "Gli parlo prima in privato",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Il furto è furto, indipendentemente dall'importo",
       "Tacere rende complice chi sa",
@@ -231,6 +244,7 @@
     "optionA": "Amati: la fiducia muove le persone",
     "optionB": "Temuti: il rispetto tiene tutto in ordine",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Le persone per un leader amato vanno oltre il loro dovere",
       "La paura produce obbedienza, non innovazione",
@@ -243,29 +257,12 @@
     ]
   },
   {
-    "id": "d15",
-    "text": "Hai poco tempo libero. Come lo usi?",
-    "optionA": "Mi formo e miglioro le mie competenze",
-    "optionB": "Stacco totalmente per ricaricarmi",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Il margine tra chi avanza e chi resta fermo si costruisce nei ritagli di tempo",
-      "Investire in sé stessi è il rendimento più alto che esiste",
-      "Le competenze accumulate oggi aprono porte domani"
-    ],
-    "spuntiB": [
-      "Un cervello ricaricato produce molto più di uno esausto",
-      "Il riposo non è tempo sprecato: è produttività futura",
-      "La sostenibilità a lungo termine dipende dal recupero"
-    ]
-  },
-  {
     "id": "d16",
     "text": "Un investitore vuole il 60% della tua azienda.",
     "optionA": "Accetto: meglio una fetta piccola di una torta grande",
     "optionB": "Rifiuto: voglio restare padrone in casa mia",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Il capitale giusto può moltiplicare il valore di ciò che ti resta",
       "Senza risorse la crescita è limitata: con esse è esponenziale",
@@ -283,6 +280,7 @@
     "optionA": "La dico: nessuno si fa male davvero",
     "optionB": "Resto onesto, anche se perdo l'affare",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Una piccola omissione strategica non è la stessa cosa di una frode",
       "Chiudere un affare permette di mantenere il lavoro di tutto il team",
@@ -300,6 +298,7 @@
     "optionA": "Cambio tutto e mi reinvento",
     "optionB": "Resisto e punto su chi mi è rimasto fedele",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Chi non si adatta si estingue: vale per le aziende come per le specie",
       "La reinvenzione è dolorosa ma l'alternativa è la lenta irrilevanza",
@@ -317,6 +316,7 @@
     "optionA": "Di pancia: l'istinto raramente sbaglia",
     "optionB": "Coi dati: i numeri non mentono",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "L'esperienza accumulata si cristallizza nell'istinto",
       "I dati raccontano il passato, l'intuizione anticipa il futuro",
@@ -334,6 +334,7 @@
     "optionA": "Mi alleo: insieme siamo più forti",
     "optionB": "Vado da solo: meglio nemico che falso amico",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Un accordo strategico può creare valore che nessuno dei due avrebbe da solo",
       "Il mercato premia spesso chi sa collaborare prima della concorrenza",
@@ -351,6 +352,7 @@
     "optionA": "Li lascio provare e sbagliare",
     "optionB": "Blocco tutto: non posso permettere l'errore",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Chi sbaglia e capisce perché cresce più di chi non prova mai",
       "Bloccare le idee del team uccide la motivazione e l'iniziativa",
@@ -369,6 +371,7 @@
     "optionB": "Mi godo ciò che ho: l'avidità rovina",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "La crescita richiede sempre un atto di fede verso l'incerto",
       "Chi non risica nulla non ottiene nulla di straordinario",
@@ -387,6 +390,7 @@
     "optionB": "Seguo la mia strada, anche se rischio",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "L'esperienza del mentore ha già attraversato errori che tu non puoi ancora vedere",
       "L'umiltà di imparare anche quando pensi di sapere è rara e preziosa",
@@ -405,6 +409,7 @@
     "optionB": "Le persone prima: il tempo non torna",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Il successo costruisce le condizioni per vivere meglio con chi ami",
       "Le fondamenta solide oggi proteggono chi ti sta vicino domani",
@@ -423,6 +428,7 @@
     "optionB": "Lo dico all'interessato: ha diritto di saperlo",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un segreto condiviso in fiducia va rispettato sempre",
       "Tradire la confidenza distrugge la fiducia tra amici",
@@ -441,6 +447,7 @@
     "optionB": "Chi trova tiene",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Qualcuno ha perso qualcosa di importante e si sentirà sollevato nel riaverlo",
       "Fare la cosa giusta anche quando nessuno guarda definisce chi sei",
@@ -459,6 +466,7 @@
     "optionB": "No: la privacy resta sacra",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "La trasparenza totale elimina ogni ombra di sospetto",
       "Se non hai niente da nascondere, condividere è un gesto d'amore",
@@ -477,6 +485,7 @@
     "optionB": "Fortuna mia: pago e via",
     "register": "vita",
     "tappa": 1,
+    "complessita": "alto",
     "spuntiA": [
       "Un cameriere può perdere di tasca propria quegli errori",
       "L'onestà non si pratica solo quando conviene",
@@ -495,6 +504,7 @@
     "optionB": "Dico di no, per il bene di entrambi",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un vero amico aiuta anche quando il rimborso è improbabile",
       "Il valore dell'amicizia supera quello del denaro",
@@ -507,48 +517,13 @@
     ]
   },
   {
-    "id": "d30",
-    "text": "Hai una foto bruttissima ma esilarante di un amico.",
-    "optionA": "La pubblico, ci ridiamo su",
-    "optionB": "La cancello: prima l'amicizia",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Il ridere insieme di sé stessi rafforza i legami",
-      "Una foto esilarante diventa un ricordo condiviso per sempre",
-      "Se l'amicizia è solida, una foto non la scalfisce"
-    ],
-    "spuntiB": [
-      "L'amico potrebbe non condividere il tuo senso dell'umorismo",
-      "Pubblicare senza consenso viola la sua fiducia",
-      "Una risata momentanea non vale il disagio che potrebbe causare"
-    ]
-  },
-  {
-    "id": "d31",
-    "text": "Per un giorno puoi leggere i pensieri di chiunque.",
-    "optionA": "Lo faccio: voglio sapere tutto",
-    "optionB": "No grazie: certe cose è meglio non saperle",
-    "register": "vita",
-    "tappa": 4,
-    "spuntiA": [
-      "La verità, anche dolorosa, vale più di una vita nell'illusione",
-      "Sapere cosa pensano davvero le persone ti dà un vantaggio enorme",
-      "L'ignoranza non è protezione: è solo ignoranza"
-    ],
-    "spuntiB": [
-      "Conoscere i pensieri altrui può distruggere relazioni costruite anni fa",
-      "La mente umana è privata per una buona ragione",
-      "Non tutti i segreti meritano di essere scoperti"
-    ]
-  },
-  {
     "id": "d32",
     "text": "Il tuo migliore amico inizia a uscire con il tuo ex.",
     "optionA": "Ci sto male ma li sostengo",
     "optionB": "È un tradimento dell'amicizia",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Gli amici hanno vite proprie che non ti appartengono",
       "Un'amicizia vera supera anche i momenti più difficili",
@@ -561,30 +536,13 @@
     ]
   },
   {
-    "id": "d33",
-    "text": "Cena stellata gratis, ma devi andarci completamente da solo.",
-    "optionA": "Ci vado: che esperienza",
-    "optionB": "Senza compagnia non vale niente",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Le esperienze vissute da soli insegnano ad apprezzare sé stessi",
-      "Un pasto eccezionale parla da solo, senza bisogno di pubblico",
-      "La solitudine è un lusso raro che si impara ad amare"
-    ],
-    "spuntiB": [
-      "Il cibo è un atto sociale: senza condivisione perde metà del sapore",
-      "I ricordi più belli si costruiscono con gli altri, non da soli",
-      "Un'esperienza che non puoi raccontare a qualcuno perde magia"
-    ]
-  },
-  {
     "id": "d34",
     "text": "Sai una verità che farebbe stare malissimo un amico.",
     "optionA": "Gliela dico: merita la verità",
     "optionB": "Lo proteggo col silenzio",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Nascondere la verità è una forma di paternalismo che nega l'autonomia altrui",
       "Prima o poi verrà a sapere: meglio da te che da un estraneo",
@@ -597,30 +555,13 @@
     ]
   },
   {
-    "id": "d35",
-    "text": "Vacanza: tutto pianificato o zaino in spalla e improvvisazione?",
-    "optionA": "Pianifico ogni dettaglio",
-    "optionB": "Parto e vada come vada",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Pianificare significa non sprecare giorni preziosi a risolvere problemi",
-      "I momenti migliori spesso nascono da attività programmate con cura",
-      "Un piano flessibile lascia spazio all'imprevisto senza il caos"
-    ],
-    "spuntiB": [
-      "I migliori ricordi di viaggio nascono dagli imprevisti",
-      "L'improvvisazione ti porta dove i turisti non arrivano mai",
-      "La vacanza pianificata al millimetro non è riposo: è un altro lavoro"
-    ]
-  },
-  {
     "id": "d36",
     "text": "Un'app ti regala 1000€ in cambio di tutti i tuoi dati personali.",
     "optionA": "Accetto: i dati ce li hanno già",
     "optionB": "Rifiuto: la privacy non si vende",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "I tuoi dati vengono già raccolti gratuitamente: almeno ti pagano",
       "Con 1000€ puoi fare qualcosa di concreto per te",
@@ -633,30 +574,13 @@
     ]
   },
   {
-    "id": "d37",
-    "text": "Il gruppo vuole andare nel locale che detesti.",
-    "optionA": "Mi adeguo per stare insieme",
-    "optionB": "Propongo altro, a costo di discutere",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "La compagnia vale più del posto",
-      "Cedere su piccole cose è il lubrificante delle amicizie",
-      "Chi si adatta facilmente è sempre il benvenuto nel gruppo"
-    ],
-    "spuntiB": [
-      "Se non dici mai la tua, il gruppo non sa mai cosa vuoi davvero",
-      "Un'alternativa proposta bene può piacere a tutti",
-      "La propria voce ha valore e va espressa anche in piccole cose"
-    ]
-  },
-  {
     "id": "d38",
     "text": "Puoi rifare una scelta del passato, ma cancelli i ricordi venuti dopo.",
     "optionA": "La rifaccio: voglio l'altra vita",
     "optionB": "Tengo tutto: i ricordi valgono troppo",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Una vita diversa potrebbe includere gioie che non riesci nemmeno a immaginare",
       "I rimpianti pesanti meritano la possibilità di essere corretti",
@@ -675,6 +599,7 @@
     "optionB": "No, non sarei giusto verso di lui",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un animale che ha bisogno di cure trova in te esattamente quello di cui ha bisogno",
       "La fatica dell'amore non è mai sprecata",
@@ -687,66 +612,13 @@
     ]
   },
   {
-    "id": "d40",
-    "text": "Un amico ha l'alito pesante e non se ne accorge.",
-    "optionA": "Glielo dico con tatto",
-    "optionB": "Faccio finta di niente",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Un vero amico ti dice le cose che nessun altro dice",
-      "Risparmiare all'amico un imbarazzo maggiore davanti agli altri è un favore",
-      "Dirlo con gentilezza è un atto di rispetto, non di crudeltà"
-    ],
-    "spuntiB": [
-      "Non è un problema tuo e potrebbe metterlo in imbarazzo inutilmente",
-      "Alcune cose si risolvono da soli senza bisogno di intervenire",
-      "L'amicizia sopravvive meglio senza certe conversazioni scomode"
-    ]
-  },
-  {
-    "id": "d41",
-    "text": "Festa imperdibile stasera o sveglia all'alba per un'occasione unica domani.",
-    "optionA": "Vado alla festa: si vive una volta",
-    "optionB": "A nanna: domani conta di più",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Le feste con gli amici creano ricordi che le occasioni professionali raramente eguagliano",
-      "Presentarsi esausti a un'opportunità è peggio che non presentarsi",
-      "La vita è fatta di presenze: essere lì conta"
-    ],
-    "spuntiB": [
-      "Un'opportunità rara merita di arrivare freschi e lucidi",
-      "Puoi divertirti altri mille giorni: certe porte si aprono una volta sola",
-      "Rinunciare a una festa è un sacrificio piccolo per un guadagno grande"
-    ]
-  },
-  {
-    "id": "d42",
-    "text": "Un estraneo simpaticissimo ti chiede il numero mentre corri a prendere il treno.",
-    "optionA": "Glielo do e perdo il treno",
-    "optionB": "Prendo il treno: occasione persa",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Le connessioni umane inaspettate cambiano la vita",
-      "Un treno perso si recupera: una persona speciale no",
-      "I momenti di coraggio spontaneo aprono storie meravigliose"
-    ],
-    "spuntiB": [
-      "I tuoi impegni esistenti vengono prima di un incontro casuale",
-      "Se era destino, troverà un altro modo per ritrovarti",
-      "Agire d'impulso su un estraneo ha rischi che non si vedono subito"
-    ]
-  },
-  {
     "id": "d43",
     "text": "Potessi scegliere, preferiresti sapere quando o come morirai?",
     "optionA": "Quando",
     "optionB": "Come",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Sapere quando ti permette di pianificare ogni cosa importante",
       "La data certa trasforma ogni giorno che precede in un dono consapevole",
@@ -759,47 +631,12 @@
     ]
   },
   {
-    "id": "d44",
-    "text": "Il coinquilino non lava mai i piatti.",
-    "optionA": "Glielo dico chiaro e tondo",
-    "optionB": "Li lavo io per quieto vivere",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Vivere insieme richiede regole condivise: dirle è il primo passo",
-      "Il silenzio accumula risentimento che esplode peggio dopo",
-      "Comunicare chiaramente rispetta entrambi"
-    ],
-    "spuntiB": [
-      "Una convivenza serena vale più di avere ragione",
-      "Lavare i piatti costa meno energia di una discussione",
-      "Non ogni battaglia vale il prezzo del conflitto"
-    ]
-  },
-  {
-    "id": "d45",
-    "text": "Per un regalo importante punti su…",
-    "optionA": "Un'esperienza da ricordare",
-    "optionB": "Un oggetto che dura nel tempo",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "I ricordi di un'esperienza durano più di qualsiasi oggetto",
-      "Le esperienze creano storie condivise che rafforzano i legami",
-      "Un'esperienza è sempre personale e difficilmente duplicabile"
-    ],
-    "spuntiB": [
-      "Un oggetto bello è un pensiero presente ogni giorno",
-      "Le esperienze finiscono: un oggetto continua a raccontare chi te l'ha regalato",
-      "Certe persone preferiscono il tangibile all'effimero"
-    ]
-  },
-  {
     "id": "d46",
     "text": "In riunione il capo presenta la tua idea come sua.",
     "optionA": "Lo correggo davanti a tutti",
     "optionB": "Mordo il freno e ne parlo dopo in privato",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Lasciare che passi in silenzio crea un precedente difficile da invertire",
       "Gli altri in sala devono sapere chi genera le idee",
@@ -817,6 +654,7 @@
     "optionA": "Accetto: i soldi sono soldi",
     "optionB": "Rinuncio: non vendo i miei valori",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Il denaro extra ti permette di fare del bene altrove",
       "Non sei responsabile dei metodi dell'azienda: lo sono i vertici",
@@ -834,6 +672,7 @@
     "optionA": "Lo copro: oggi a lui, domani a me",
     "optionB": "Non mento per nessuno",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "La solidarietà tra colleghi è il tessuto connettivo del lavoro quotidiano",
       "Aiutare nei momenti difficili crea debiti di riconoscenza reali",
@@ -851,6 +690,7 @@
     "optionA": "Rispondo: meglio non accumulare",
     "optionB": "Stacco: il weekend è sacro",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Rispondere subito evita che il problema cresca nel frattempo",
       "Cinque minuti ora valgono un'ora di stress lunedì mattina",
@@ -868,6 +708,7 @@
     "optionA": "Casa: libertà e concentrazione",
     "optionB": "Ufficio: si lavora meglio insieme",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "La concentrazione profonda è quasi impossibile in open space",
       "L'autonomia sul proprio ambiente aumenta la qualità della vita",
@@ -885,6 +726,7 @@
     "optionA": "Il più bravo: vincono i risultati",
     "optionB": "Il più amato: tiene unito il gruppo",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "I risultati sono misurabili e difendibili: le simpatie no",
       "Premiare il merito manda un messaggio chiaro a tutto il team",
@@ -902,6 +744,7 @@
     "optionA": "Lo perdo: il mio team viene prima",
     "optionB": "Stringo i denti: quei soldi servono",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Un team trattato male lavora peggio: perdi in produttività ciò che guadagni in fattura",
       "Tollerare il maltrattamento invia un messaggio tossico sulla cultura aziendale",
@@ -919,6 +762,7 @@
     "optionA": "Il fenomeno: il talento decide",
     "optionB": "Il piacevole: il clima conta di più",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Un talento raro alza il livello dell'intero team",
       "L'arroganza spesso si gestisce: la mediocrità no",
@@ -936,6 +780,7 @@
     "optionA": "Sì, evito una scena dolorosa",
     "optionB": "Mai: certe cose si dicono in faccia",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Un'email permette alla persona di elaborare in privato senza dover contenere le emozioni",
       "In certi contesti remoti o internazionali è l'unica opzione pratica",
@@ -953,6 +798,7 @@
     "optionA": "Lo vendo: è legale e la gente lo vuole",
     "optionB": "Lo ritiro finché non è pulito",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "La legalità è la soglia minima condivisa dalla società: se è legale, è accettabile",
       "Ritirarti lascia il mercato a chi inquina ancora di più senza scrupoli",
@@ -970,6 +816,7 @@
     "optionA": "Durissimo ma davvero utile",
     "optionB": "Gentile ma un po' vago",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Un feedback onesto è l'unico che produce cambiamento reale",
       "Il collega merita la verità: è l'unico modo per crescere",
@@ -987,6 +834,7 @@
     "optionA": "Lo faccio: mi fido ciecamente",
     "optionB": "Lavoro e amicizia non si mischiano",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Lavorare con qualcuno di cui ti fidi elimina una quantità enorme di attrito",
       "La lealtà reciproca tra amici è un vantaggio competitivo reale",
@@ -1004,6 +852,7 @@
     "optionA": "Mollo e inseguo il sogno",
     "optionB": "Tengo il sicuro: il sogno aspetta",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "I sogni hanno finestre temporali: alcune si chiudono e non riaprono",
       "Rimpiangere di non aver provato è più pesante di aver fallito",
@@ -1021,6 +870,7 @@
     "optionA": "Tradisco: nessuno lo saprà",
     "optionB": "Resto leale, costi quel che costi",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "Se nessuno lo viene mai a sapere, il danno è limitato e il guadagno reale",
       "Le aziende trattano i dipendenti come risorse: perché non fare lo stesso?",
@@ -1038,6 +888,7 @@
     "optionA": "Sì, di persona è più chiaro",
     "optionB": "No, mando l'email e tutti ringraziano",
     "register": "business",
+    "complessita": "alto",
     "spuntiA": [
       "La comunicazione sincrona risolve in dieci minuti ciò che le email rimpallinano per ore",
       "Vedersi di persona cattura le sfumature che i testi perdono",
@@ -1056,6 +907,7 @@
     "optionB": "Mi rifiuto: tradire chi mi ha fatto crescere mi snatura",
     "register": "business",
     "tappa": 2,
+    "complessita": "max",
     "spuntiA": [
       "Cinquanta famiglie pesano più di una",
       "La gratitudine non può condannare tutti gli altri",
@@ -1074,6 +926,7 @@
     "optionB": "Smetto: sapere e vendere comunque è complicità",
     "register": "business",
     "tappa": 2,
+    "complessita": "max",
     "spuntiA": [
       "Gli adulti sono liberi di scegliere",
       "Se non lo vendo io, lo vende un altro",
@@ -1092,6 +945,7 @@
     "optionB": "No: un genitore spento non è un regalo per nessuno",
     "register": "vita",
     "tappa": 2,
+    "complessita": "max",
     "spuntiA": [
       "Amare è anche sacrificarsi in silenzio",
       "La sicurezza dei figli non ha prezzo",
@@ -1110,6 +964,7 @@
     "optionB": "Rifiuto: un successo rubato non è successo",
     "register": "vita",
     "tappa": 2,
+    "complessita": "max",
     "spuntiA": [
       "Nessuno arriva in alto con le mani pulite",
       "Rifiutare non ridà il posto all’altro",
@@ -1128,6 +983,7 @@
     "optionB": "No: una ricchezza senza i miei affetti è povertà",
     "register": "vita",
     "tappa": 2,
+    "complessita": "max",
     "spuntiA": [
       "I legami si ricostruiscono, l’occasione no",
       "Il denaro apre porte che l’amore non apre",
@@ -1146,6 +1002,7 @@
     "optionB": "Chiudo un occhio: davanti a un figlio malato la regola tace",
     "register": "business",
     "tappa": 2,
+    "complessita": "max",
     "spuntiA": [
       "Le eccezioni distruggono ogni regola",
       "Oggi è il figlio, domani sarà una scusa qualsiasi",
@@ -1164,6 +1021,7 @@
     "optionB": "Taccio: non distruggo innocenti per colpire pochi colpevoli",
     "register": "business",
     "tappa": 2,
+    "complessita": "max",
     "spuntiA": [
       "Il silenzio fa di me un complice",
       "Chi subisce l’illecito conta più dei colleghi",
@@ -1182,6 +1040,7 @@
     "optionB": "No: senza radici la libertà è solo solitudine",
     "register": "vita",
     "tappa": 2,
+    "complessita": "max",
     "spuntiA": [
       "Le radici spesso sono catene travestite",
       "Si vive una volta: la voglio libera",
@@ -1200,6 +1059,7 @@
     "optionB": "Lo convinco a costituirsi: amare non è coprire",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un genitore non abbandona, mai",
       "La legge punisce, un padre protegge",
@@ -1218,6 +1078,7 @@
     "optionB": "Non vale niente: la fedeltà è resistere alla tentazione",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Conta ciò che ha fatto, non ciò che immagina",
       "Nessuno controlla del tutto i propri desideri",
@@ -1236,6 +1097,7 @@
     "optionB": "Dico la verità: non posso ingannare la giustizia",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un amico nei guai si aiuta, non si giudica",
       "Il carcere lo distruggerebbe",
@@ -1254,6 +1116,7 @@
     "optionB": "Taccio: non tocca a me spaccare la loro coppia",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "L’amicizia vera non lascia vivere nell’inganno",
       "Tacere mi rende complice del tradimento",
@@ -1272,6 +1135,7 @@
     "optionB": "Sono sincero: un perdono falso non serve a nessuno",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "A volte una bugia è l’ultimo atto d’amore",
       "La pace di un morente vale più del mio orgoglio",
@@ -1290,6 +1154,7 @@
     "optionB": "Ho il diritto di rifarmi una vita",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "L’amore vero non scappa davanti al dolore",
       "L’ho promesso, e le promesse contano",
@@ -1308,6 +1173,7 @@
     "optionB": "Il mio partner: la persona con cui ho scelto la vita",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un figlio ha tutta la vita davanti",
       "L’istinto di un genitore non si discute",
@@ -1326,6 +1192,7 @@
     "optionB": "Voglio conoscere e riavvicinare il mio figlio biologico",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Padre è chi cresce, non chi dona il DNA",
       "Dieci anni d’amore battono il sangue",
@@ -1344,6 +1211,7 @@
     "optionB": "Taccio: un segreto è un segreto",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un segreto non vale più di una vita ingannata",
       "Tacere mi rende complice dell’inganno",
@@ -1362,6 +1230,7 @@
     "optionB": "In struttura: lì stanno meglio e la mia famiglia regge",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Non si parcheggia chi ti ha cresciuto",
       "I figli imparano la cura guardandoti",
@@ -1380,6 +1249,7 @@
     "optionB": "Lo lascio andare: rispetto la sua scelta",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "L’amore non si arrende al primo no",
       "Forse aspetta proprio che io non molli",
@@ -1398,6 +1268,7 @@
     "optionB": "Parlo: un legame vero non regge sul non detto",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "L’amore a volte è portare un peso da soli",
       "Non ogni verità serve a qualcosa",
@@ -1416,6 +1287,7 @@
     "optionB": "No: non prometto ciò che forse non reggo",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un amore facile non cambia una vita",
       "Se non io, chi?",
@@ -1434,6 +1306,7 @@
     "optionB": "La vita: finché c’è, va custodita",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Costringere a soffrire non è amore",
       "La sua vita appartiene a lei, non a me",
@@ -1452,6 +1325,7 @@
     "optionB": "Lo tengo: anche le ferite mi hanno fatto",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Non tutto il dolore insegna qualcosa",
       "Liberarsi del peso è un diritto",
@@ -1470,6 +1344,7 @@
     "optionB": "Rifiuto: una felicità a quel prezzo non è felicità",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Ogni nostra comodità ha un costo nascosto",
       "Rinunciare non salverebbe quello sconosciuto",
@@ -1488,6 +1363,7 @@
     "optionB": "Non voglio: vivrei tutto col timore della fine",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Si eviterebbero anni buttati",
       "Sapere protegge dal male inutile",
@@ -1506,6 +1382,7 @@
     "optionB": "No: gli ideali non si abbracciano la notte",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Chi tradisce ciò in cui crede è già morto dentro",
       "Certi principi valgono una vita",
@@ -1524,6 +1401,7 @@
     "optionB": "No: preferisco essere me, errori compresi",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Certi rimpianti meritano una seconda occasione",
       "Crescere significa diventare altro",
@@ -1542,6 +1420,7 @@
     "optionB": "Non perdono: quella rabbia è giustizia che mi devo",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Il perdono libera chi lo dà, non chi lo riceve",
       "La rabbia mi incatena al mio carnefice",
@@ -1560,6 +1439,7 @@
     "optionB": "No: la mia vita è anche mia, non solo sua",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Amare è dare anche il proprio tempo",
       "Cosa sono dieci anni di fronte a chi amo?",
@@ -1578,6 +1458,7 @@
     "optionB": "La rifiuto: preferisco soffrire ma sentire davvero",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Chi sceglie di soffrire è un illuso",
       "La felicità è il fine di tutto",
@@ -1596,6 +1477,7 @@
     "optionB": "Taccio: certe verità non valgono la solitudine",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Amici che ti vogliono muto non sono amici",
       "Vivere nella finzione è già perderli",
@@ -1614,6 +1496,7 @@
     "optionB": "Non voglio: meglio cercare un senso che sapere che non c’è",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Vivere nella verità è l’unica vita degna",
       "Se nessun senso è dato, lo creo io",
@@ -1632,6 +1515,7 @@
     "optionB": "La smaschero: una causa fondata sul falso va fermata",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Conta il bene che produce, non come è nata",
       "Smontarla farebbe più male che bene",
@@ -1650,6 +1534,7 @@
     "optionB": "No: certe cose è giusto custodirle",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Un amore basato su una maschera è fragile",
       "Imparerà che sbagliare è umano",
@@ -1668,6 +1553,7 @@
     "optionB": "Rifiuto: amare intensamente vale ogni dolore",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Una vita senza dolore è un sollievo, non una perdita",
       "Ho amato abbastanza da sapere quanto costa",
@@ -1686,6 +1572,7 @@
     "optionB": "Resto: la mia vita è qui",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Le occasioni grosse non aspettano",
       "Ci si trasferisce, gli affetti veri restano",
@@ -1704,6 +1591,7 @@
     "optionB": "No: il tempo vale più dei soldi",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "C’è una stagione per accumulare",
       "Il doppio oggi compra libertà domani",
@@ -1722,6 +1610,7 @@
     "optionB": "Vado: devo vivere anche la mia vita",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Chi c’è stato per te merita che tu ci sia",
       "Certe occasioni non valgono un rimpianto",
@@ -1740,6 +1629,7 @@
     "optionB": "Taccio: certe bugie tengono unita la famiglia",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "La fiducia si fonda sulla verità",
       "I segreti marciscono col tempo",
@@ -1758,6 +1648,7 @@
     "optionB": "Aver amato di più",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Si rimpiange ciò che non si è provato",
       "Il coraggio dà sapore ai ricordi",
@@ -1776,6 +1667,7 @@
     "optionB": "Un esempio che li ispiri",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "La libertà economica apre ogni porta",
       "Togliere il bisogno è già un grande dono",
@@ -1794,6 +1686,7 @@
     "optionB": "Breve e intensa",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Il tempo è la ricchezza più rara",
       "La serenità è una conquista, non una resa",
@@ -1812,6 +1705,7 @@
     "optionB": "Amato da pochi",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Lasciare un segno è dare un senso",
       "Chi ispira tanti non muore davvero",
@@ -1830,6 +1724,7 @@
     "optionB": "Lo tengo per me: voglio normalità",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "La verità libera le ultime giornate",
       "Gli altri meritano di salutarti",
@@ -1848,6 +1743,7 @@
     "optionB": "Aver reso felici gli altri",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Sprecare i propri talenti è il vero fallimento",
       "Diventare ciò che potevi essere è un dovere verso te stesso",
@@ -1866,6 +1762,7 @@
     "optionB": "No: alcune cose le cambierei",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Senza quegli errori non saresti tu",
       "Ogni cicatrice racconta una lezione",
@@ -1884,6 +1781,7 @@
     "optionB": "Vado avanti: ho già investito troppo per ripartire",
     "register": "vita",
     "tappa": 1,
+    "complessita": "alto",
     "spuntiA": [
       "Più aspetti, più diventa difficile cambiare davvero",
       "Vivere il sogno di altri è un debito che non finisce mai",
@@ -1902,6 +1800,7 @@
     "optionB": "Resto: certi legami valgono un compromesso",
     "register": "vita",
     "tappa": 1,
+    "complessita": "alto",
     "spuntiA": [
       "Un’amicizia che ti chiede di rimpicciolirti non ti fa bene",
       "Crescere significa anche lasciare ciò che non cresce con te",
@@ -1920,6 +1819,7 @@
     "optionB": "Sto zitto: certe cose si capiscono solo sbagliando",
     "register": "vita",
     "tappa": 1,
+    "complessita": "alto",
     "spuntiA": [
       "Un amico che tace mentre vai a sbattere non è un amico",
       "A volte un avvertimento in tempo cambia tutto",
@@ -1938,6 +1838,7 @@
     "optionB": "Lo tengo per me: certe cose vanno protette dal lavoro",
     "register": "vita",
     "tappa": 1,
+    "complessita": "alto",
     "spuntiA": [
       "Pochi hanno la fortuna di amare ciò che fanno",
       "Non provarci è già una forma di rimpianto",
@@ -1956,6 +1857,7 @@
     "optionB": "Non firmo: si comincia sempre da un piccolo “arrotondamento”",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Da solo non cambi una cultura aziendale, ti escludi e basta",
       "Esistono battaglie più importanti su cui spendere credibilità",
@@ -1974,6 +1876,7 @@
     "optionB": "Lo rallento: nessuno si fa scavare la fossa da solo",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Chi forma chi lo supera lascia un’eredità, non un’ombra",
       "Trattenere il talento lo fa andare altrove, contro di te",
@@ -1992,6 +1895,7 @@
     "optionB": "Rinuncio: non c’è carriera che ricompri questo momento",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "I momenti perfetti non arrivano mai, le occasioni sì",
       "Realizzarmi mi rende anche un partner e un genitore migliore",
@@ -2010,6 +1914,7 @@
     "optionB": "Sto al gioco: non sono io il poliziotto del mondo",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Il silenzio di tutti è ciò che tiene in piedi l’inganno",
       "Non potrei lavorare sapendo di vivere su una bugia",
@@ -2028,6 +1933,7 @@
     "optionB": "Resto: le radici valgono più di un reddito migliore",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Più mezzi significano più possibilità per loro",
       "I bambini si adattano più di quanto pensiamo",
@@ -2046,6 +1952,7 @@
     "optionB": "Lo dissuado anche a costo del contratto",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Non sta a me fare il tutore dei miei clienti",
       "Se non glielo do io, lo trova altrove peggio",
@@ -2064,6 +1971,7 @@
     "optionB": "Vado: la lealtà a senso unico è solo ingenuità",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Chi sono lo decido io, non chi mi sta di fronte",
       "La coerenza è una ricchezza che non ha prezzo",
@@ -2082,6 +1990,7 @@
     "optionB": "Chi ne ha più bisogno: a parità conta anche la vita delle persone",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Scegliere il merito è giusto verso tutti",
       "Un’azienda forte poi può aiutare davvero",
@@ -2100,6 +2009,7 @@
     "optionB": "Insisto: forse la felicità arriva, o mi aspettavo troppo",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Riconoscere un errore presto evita di moltiplicarlo",
       "La vita è troppo corta per inseguire una meta vuota",
@@ -2118,6 +2028,7 @@
     "optionB": "Licenzio pochi: meglio salvare davvero la maggioranza",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "La solidarietà tiene viva un’azienda più dei numeri",
       "Sacrificare pochi per comodità incrina la fiducia di tutti",
@@ -2136,6 +2047,7 @@
     "optionB": "Resto: buttare una competenza costruita in anni è folle",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Una competenza non ti obbliga a usarla per sempre",
       "Il disagio del principiante passa, l’insoddisfazione no",
@@ -2154,6 +2066,7 @@
     "optionB": "Lo lascio cadere: gli affari non premiano i buoni",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Un mercato senza rivali si addormenta",
       "La reputazione di chi aiuta apre più porte di una conquista",
@@ -2172,6 +2085,7 @@
     "optionB": "Trovo un’altra soluzione: non sacrifico la mia vita che nasce",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Chi ti ha cresciuto merita di non essere lasciato solo",
       "I figli imparano la cura guardando come tratti i tuoi",
@@ -2190,6 +2104,7 @@
     "optionB": "Lascio il passato dov’è: conta chi è oggi",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un non detto scoperto avvelena ogni momento futuro",
       "Ho diritto a una relazione senza zone d’ombra",
@@ -2208,6 +2123,7 @@
     "optionB": "Lo dico al partner: tra genitori non ci sono fazioni",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Se tradisco la sua fiducia non si confiderà mai più",
       "Un figlio deve sapere di avere almeno un porto sicuro",
@@ -2226,6 +2142,7 @@
     "optionB": "Mi tiro fuori: non mento per nessuno",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un amico chiede fiducia, non un interrogatorio",
       "Non conosco i fatti: giudicare sarebbe arroganza",
@@ -2244,6 +2161,7 @@
     "optionB": "Me ne vado: restare per paura è ingiusto per entrambi",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "L’amore-passione lascia il posto a qualcosa di più profondo",
       "Buttare anni e legami per un’idea è ingenuo",
@@ -2262,6 +2180,7 @@
     "optionB": "Lo sostengo: è la sua vita, non la mia",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un amico vero dice anche ciò che fa arrabbiare",
       "Sostenere un errore per quieto vivere è codardia",
@@ -2280,6 +2199,7 @@
     "optionB": "Intervengo: la loro sicurezza viene prima dell’orgoglio",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Togliere l’autonomia a un anziano lo spegne prima del corpo",
       "Una vita sicura ma in gabbia non è una vita",
@@ -2298,6 +2218,7 @@
     "optionB": "Resto al suo fianco in silenzio: la fiducia prima",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Certi problemi si superano solo col sostegno di tutti",
       "Coprirlo da solo significa affondare con lui",
@@ -2316,6 +2237,7 @@
     "optionB": "Non lo seguo: annullarmi non aiuterebbe nessuno dei due",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Una carriera si ricostruisce, un grande amore no",
       "Sostenere il sogno dell’altro è amore concreto",
@@ -2334,6 +2256,7 @@
     "optionB": "Mi allontano: certi valori non sono dettagli",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un’amicizia che resiste alle differenze è la più forte",
       "Tagliare chi la pensa diversamente ci isola tutti",
@@ -2352,6 +2275,7 @@
     "optionB": "Continuo: non si gira la faccia a un figlio che soffre",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Salvarlo sempre gli impedisce di crescere",
       "Un amore che evita ogni caduta cresce figli eterni bambini",
@@ -2370,6 +2294,7 @@
     "optionB": "Dico la verità: vivere su un’illusione non è giusto",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un ricordo che dà pace vale più di una verità inutile",
       "La verità senza scopo è solo crudeltà",
@@ -2388,6 +2313,7 @@
     "optionB": "Resto fedele a me stesso: un figlio non si fa per non deludere",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Negare un figlio a chi lo desidera può uccidere l’amore",
       "A volte si scopre di volere ciò che si temeva",
@@ -2406,6 +2332,7 @@
     "optionB": "Rinuncio: la mia felicità non vale la ferita di chi amo",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Reprimere un amore vero avvelena ogni rapporto",
       "Vivere per non ferire gli altri è non vivere",
@@ -2424,6 +2351,7 @@
     "optionB": "Addolcisco la verità: la durezza non aiuta",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Una sincerità annacquata non cambia nulla",
       "Chi chiede la verità merita di riceverla intera",
@@ -2442,6 +2370,7 @@
     "optionB": "Provo a ricucire: un’esclusione lascia strascichi per anni",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Nel suo giorno la sua serenità viene prima",
       "Imporle una presenza dolorosa è egoismo nostro",
@@ -2460,6 +2389,7 @@
     "optionB": "Aspetto: scusarmi avendo ragione è una resa che peserà",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Chi fa il primo passo è il più forte, non il più debole",
       "Avere ragione da soli non scalda il letto",
@@ -2478,6 +2408,7 @@
     "optionB": "Metto un limite: non posso affondare con lui",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Gli amici si vedono nei momenti bui",
       "Un limite ora potrebbe sembrargli un abbandono",
@@ -2496,6 +2427,7 @@
     "optionB": "Rinuncio: nessun traguardo vale l’assenza dalle loro vite",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Un genitore realizzato insegna a sognare",
       "I sogni rinviati diventano rancori che pesano su tutti",
@@ -2514,6 +2446,7 @@
     "optionB": "Qualche bugia buona, ma loro felici",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Una vita autentica è l’unica davvero tua",
       "Le bugie “buone” tolgono agli altri il diritto di scegliere",
@@ -2532,6 +2465,7 @@
     "optionB": "Vivo il presente: una vita rimandata non torna",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Ciò che lasci è la tua parte di eternità",
       "Vivere solo per l’oggi è vivere senza radici nel futuro",
@@ -2550,6 +2484,7 @@
     "optionB": "Sì: non posso separare la persona dalle sue azioni",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Il bene che mi ha fatto è reale e non si cancella",
       "Nessuno è solo il suo atto peggiore",
@@ -2568,6 +2503,7 @@
     "optionB": "No: certe ferite chiedono giustizia, non oblio",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Il rancore tiene legati al proprio carnefice",
       "Perdonare non è dimenticare, è liberarsi",
@@ -2586,6 +2522,7 @@
     "optionB": "Vita piena anche se più breve: conta come vivi",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Più tempo significa più amori, persone, esperienze",
       "La disciplina di oggi è la libertà di domani",
@@ -2604,6 +2541,7 @@
     "optionB": "Non prometto ciò che non posso davvero sostenere",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Un’ultima promessa è un debito d’amore",
       "Mantenere la parola data dà senso al dolore",
@@ -2622,6 +2560,7 @@
     "optionB": "Qualche illusione, se mi rende migliore e più felice",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Vivere nell’illusione è non vivere davvero",
       "Solo dalla verità nascono scelte vere",
@@ -2640,6 +2579,7 @@
     "optionB": "Sì: la verità ridimensiona il mio orgoglio",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "La fortuna apre la porta, ma poi tocca a te",
       "Conta cosa hai fatto dell’occasione",
@@ -2658,6 +2598,7 @@
     "optionB": "La verità: crescere vale più di stare bene un momento",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Regalare un momento di gioia non è mai sbagliato",
       "Il dolore non va anticipato se non serve",
@@ -2676,6 +2617,7 @@
     "optionB": "Resto: a questo punto ferire chi amo non ne vale la pena",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Non è mai troppo tardi per riprendersi la propria vita",
       "Compiacere all’infinito è una prigione che ti scegli",
@@ -2694,6 +2636,7 @@
     "optionB": "Lo custodisco: la loro pace vale il mio silenzio",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Un segreto portato da soli logora una vita intera",
       "La verità appartiene anche a chi riguarda",
@@ -2712,6 +2655,7 @@
     "optionB": "Continuo: non posso abbandonare chi conta su di me",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Annullarsi per gli altri prima o poi crolla",
       "Non si può versare da una brocca vuota",
@@ -2730,6 +2674,7 @@
     "optionB": "Preferisco non sapere: voglio vivere senza quel peso",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Sapere come mi vedono potrebbe cambiarmi in meglio",
       "Vivere su un’idea falsa di sé è un inganno",
@@ -2748,6 +2693,7 @@
     "optionB": "Lascio stare: certe cose è giusto lasciarle dove sono",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Le parole non dette diventano i rimpianti più pesanti",
       "Anche una ferita riaperta può finalmente guarire",
@@ -2766,6 +2712,7 @@
     "optionB": "Cambio: vivere una vita non mia è il prezzo più alto di tutti",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Le scelte fatte hanno creato persone e legami reali",
       "La felicità che distrugge gli altri non è felicità",
@@ -2784,6 +2731,7 @@
     "optionB": "No: oggi tagliarsi fuori è isolarsi",
     "register": "vita",
     "tappa": 1,
+    "complessita": "alto",
     "spuntiA": [
       "La pace mentale vale più dei like",
       "Le amicizie vere reggono senza app",
@@ -2802,6 +2750,7 @@
     "optionB": "No: certe cose è meglio dimenticarle",
     "register": "vita",
     "tappa": 1,
+    "complessita": "alto",
     "spuntiA": [
       "Ricordare tutto è un superpotere",
       "I ricordi sfumano, i dati no",
@@ -2820,6 +2769,7 @@
     "optionB": "No: casa è l’ultimo posto senza orecchie",
     "register": "vita",
     "tappa": 1,
+    "complessita": "alto",
     "spuntiA": [
       "Mi semplifica davvero le giornate",
       "Tanto siamo già ascoltati ovunque",
@@ -2838,6 +2788,7 @@
     "optionB": "No: è un inganno verso chi mi paga",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Lo strumento non toglie valore al risultato",
       "Chi non si adatta resta indietro",
@@ -2856,6 +2807,7 @@
     "optionB": "Rifiuto: nessuna cifra compra la mia libertà",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Lavoro bene, non ho nulla da temere",
       "Il 30% in più cambia la vita",
@@ -2874,6 +2826,7 @@
     "optionB": "Spremo il mio mestiere finché rende",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Chi anticipa il cambiamento lo cavalca",
       "Aspettare è arrivare ultimi",
@@ -2892,6 +2845,7 @@
     "optionB": "No: non mi fido di una scatola nera",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "I numeri non hanno emozioni che sbagliano",
       "Capire ogni cosa è un lusso che costa",
@@ -2910,6 +2864,7 @@
     "optionB": "No: il lavoro è anche le persone",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Niente pendolarismo è una vita migliore",
       "Si può legare anche a distanza",
@@ -2928,6 +2883,7 @@
     "optionB": "No: la loro impronta digitale è una scelta loro",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Condividere la gioia è naturale",
       "Sono i miei ricordi da custodire",
@@ -2946,6 +2902,7 @@
     "optionB": "Non mi espongo: non sta a me",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Le persone cambiano, il branco no",
       "Un amico si difende quando è solo",
@@ -2964,6 +2921,7 @@
     "optionB": "No: nel momento in cui controllo, la fiducia è già morta",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "La verità vale più della mia tranquillità",
       "Se non nasconde nulla, nulla cambia",
@@ -2982,6 +2940,7 @@
     "optionB": "Il più tardi possibile: prima la protezione",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Restare fuori dal gruppo isola più del telefono",
       "Lo userà comunque: meglio guidarlo",
@@ -3000,6 +2959,7 @@
     "optionB": "No: non è giusto scegliere per chi non c’è ancora",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Ogni generazione ha temuto la fine",
       "La vita trova sempre una strada",
@@ -3018,6 +2978,7 @@
     "optionB": "No: lasciatemi andare davvero",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Un conforto per chi resta non fa male",
       "La memoria è un dono ai vivi",
@@ -3036,6 +2997,7 @@
     "optionB": "No: sopravvivere a tutti è una condanna",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Avrei tempo per mille vite",
       "Conoscerei figli e nipoti lontani",
@@ -3048,374 +3010,13 @@
     ]
   },
   {
-    "id": "l01",
-    "text": "Preferiresti avere sempre ragione ma perdere ogni discussione, o vincere sempre pur avendo torto?",
-    "optionA": "Aver ragione, anche se non me la riconoscono",
-    "optionB": "Vincere: la percezione è tutto",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "La verità conta più dell’applauso",
-      "So io come stanno le cose",
-      "Vincere col torto è vuoto"
-    ],
-    "spuntiB": [
-      "Nel mondo conta come appari",
-      "Aver ragione e perdere è frustrante",
-      "La percezione muove tutto"
-    ]
-  },
-  {
-    "id": "l02",
-    "text": "Se potessi, leggeresti il finale di una storia prima di iniziarla?",
-    "optionA": "Sì: mi godo il viaggio senza ansia",
-    "optionB": "No: la sorpresa è metà del piacere",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Senza ansia gusto i dettagli",
-      "Una bella storia resta bella, spoiler o no",
-      "Controllare il finale è rilassante"
-    ],
-    "spuntiB": [
-      "La sorpresa è il sale del racconto",
-      "Sapere prima rovina la tensione",
-      "Vivere senza spoiler è vivere meglio"
-    ]
-  },
-  {
-    "id": "l03",
-    "text": "Preferiresti capire sempre quando qualcuno ti mente, o non riuscire mai a mentire tu?",
-    "optionA": "Voglio fiutare ogni bugia",
-    "optionB": "Preferisco essere sempre sincero",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Sapere chi mente mi protegge",
-      "La verità altrui è potere",
-      "Meglio disilluso che ingenuo"
-    ],
-    "spuntiB": [
-      "Una bugia a volte salva la serata",
-      "Non poter mentire mi rende libero",
-      "Smascherare tutti rovina i rapporti"
-    ]
-  },
-  {
-    "id": "l04",
-    "text": "Un lavoro noioso coi colleghi migliori del mondo, o il lavoro dei sogni ma in totale solitudine?",
-    "optionA": "Colleghi top, anche se mi annoio",
-    "optionB": "Lavoro dei sogni, anche da solo",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Le persone fanno la giornata",
-      "Si ride anche nel lavoro più piatto",
-      "Da soli anche il sogno stanca"
-    ],
-    "spuntiB": [
-      "Fare ciò che amo mi riempie",
-      "I colleghi vanno e vengono, la passione resta",
-      "Il talento ha bisogno del suo spazio"
-    ]
-  },
-  {
-    "id": "l05",
-    "text": "Rivivresti all’infinito lo stesso anno bellissimo, o una vita normale che non si ripete mai?",
-    "optionA": "L’anno perfetto, per sempre",
-    "optionB": "La vita vera, imperfetta e unica",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "La perfezione vale la ripetizione",
-      "Niente dolore, solo il meglio",
-      "Chi rifiuterebbe il paradiso?"
-    ],
-    "spuntiB": [
-      "Ripetersi non è vivere",
-      "L’imprevisto dà sapore",
-      "Anche il bello stanca, se eterno"
-    ]
-  },
-  {
-    "id": "l06",
-    "text": "Resteresti giovane nel corpo con una mente che invecchia, o giovane di mente in un corpo che cede?",
-    "optionA": "Corpo giovane, mente che matura",
-    "optionB": "Mente giovane, corpo che invecchia",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Il corpo è ciò che vivo ogni giorno",
-      "Energia e salute battono tutto",
-      "Una mente saggia in un corpo sano è il sogno"
-    ],
-    "spuntiB": [
-      "La curiosità giovane tiene vivi",
-      "La mente fa chi sei",
-      "Un corpo stanco ma una testa accesa vince"
-    ]
-  },
-  {
-    "id": "l07",
-    "text": "Diresti sempre la tua vera età a tutti, o terresti tutti nel dubbio per sempre?",
-    "optionA": "Sempre la verità: l’età è un numero",
-    "optionB": "Nel dubbio: è più divertente",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Niente da nascondere, niente da temere",
-      "L’età non mi definisce",
-      "La sincerità è riposante"
-    ],
-    "spuntiB": [
-      "Un po’ di mistero è simpatico",
-      "Ti trattano come ti vedono",
-      "Il dubbio è un gioco innocuo"
-    ]
-  },
-  {
-    "id": "l09",
-    "text": "Conosceresti la risposta a qualsiasi domanda, ma senza poterla mai condividere con nessuno?",
-    "optionA": "Sì: sapere mi basta",
-    "optionB": "No: il sapere ha senso solo se condiviso",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Conoscere è già un privilegio",
-      "Mi guiderebbe in ogni scelta",
-      "Il sapere è un piacere anche privato"
-    ],
-    "spuntiB": [
-      "Sapere e tacere è una prigione",
-      "La conoscenza serve se illumina altri",
-      "Che gusto avere ragione da soli e zitti?"
-    ]
-  },
-  {
-    "id": "l10",
-    "text": "Potresti dimenticare a comando qualsiasi cosa, o non dimenticare mai più nulla?",
-    "optionA": "Dimenticare ciò che voglio",
-    "optionB": "Ricordare tutto per sempre",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Cancellare il dolore a comando è pace",
-      "Si vive meglio leggeri",
-      "L’oblio è un dono sottovalutato"
-    ],
-    "spuntiB": [
-      "Ogni ricordo è un pezzo di me",
-      "Non perderei più nomi e volti",
-      "Ricordare tutto è non perdere nulla"
-    ]
-  },
-  {
-    "id": "l11",
-    "text": "A parità di prezzo: casa piccola nel cuore della vita, o casa enorme isolata nella natura?",
-    "optionA": "Piccola, ma al centro di tutto",
-    "optionB": "Grande, ma lontano dal caos",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "La vita succede fuori, non in salotto",
-      "Tutto a portata di passo",
-      "Lo spazio non riempie le serate"
-    ],
-    "spuntiB": [
-      "Spazio e silenzio sono il vero lusso",
-      "La natura cura più di una piazza",
-      "In centro paghi il caos a caro prezzo"
-    ]
-  },
-  {
-    "id": "l12",
-    "text": "Lavoreresti 3 giorni a settimana per metà stipendio, o 6 giorni per il doppio?",
-    "optionA": "3 giorni: il tempo è la vera ricchezza",
-    "optionB": "6 giorni: ora costruisco, poi godo",
-    "register": "vita",
-    "tappa": 2,
-    "spuntiA": [
-      "Il tempo libero non si ricompra",
-      "Vivo adesso, non da pensionato",
-      "Meno soldi, più vita"
-    ],
-    "spuntiB": [
-      "C’è una stagione per spingere",
-      "Il doppio oggi è libertà domani",
-      "Il lavoro dà anche uno scopo"
-    ]
-  },
-  {
-    "id": "l13",
-    "text": "Vorresti che tutti ti dicessero sempre ciò che pensano davvero di te, o non saperlo mai?",
-    "optionA": "Voglio sapere tutto, anche se fa male",
-    "optionB": "Meglio non sapere e vivere sereno",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Solo così posso migliorare",
-      "Le verità scomode sono utili",
-      "Preferisco il vero al comodo"
-    ],
-    "spuntiB": [
-      "Certi giudizi rovinano i rapporti",
-      "Non tutto ciò che pensano è giusto",
-      "A volte ignorare è serenità"
-    ]
-  },
-  {
-    "id": "l15",
-    "text": "Un amico fidato ma di una sincerità brutale, o un amico dolcissimo che ti dice sempre ciò che vuoi sentire?",
-    "optionA": "Brutale, ma vero",
-    "optionB": "Dolce, anche se mi indora la pillola",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Un amico vero ti dice ciò che serve",
-      "Le verità scomode fanno crescere",
-      "Le carezze non risolvono nulla"
-    ],
-    "spuntiB": [
-      "A volte serve solo conforto",
-      "La gentilezza vale più della cruda verità",
-      "Un amico dolce scalda le giornate"
-    ]
-  },
-  {
-    "id": "r01",
-    "text": "Preferiresti essere sottovalutato da tutti ma sapere quanto vali, o sopravvalutato dovendo reggere l’aspettativa?",
-    "optionA": "Sottovalutato: mi basta saperlo io",
-    "optionB": "Sopravvalutato: l’aspettativa mi spinge",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "La stima vera è quella per sé",
-      "Vivo libero dal giudizio"
-    ],
-    "spuntiB": [
-      "L’asticella alta tira fuori il meglio",
-      "Le occasioni vanno a chi credi capace"
-    ]
-  },
-  {
-    "id": "r02",
-    "text": "Vivresti dove è sempre la tua stagione preferita ma da solo, o nel clima che odi ma con tutti i tuoi cari?",
-    "optionA": "La mia stagione, anche da solo",
-    "optionB": "Con i miei cari, anche nel clima peggiore",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "L’ambiente giusto cambia l’umore",
-      "La solitudine si gestisce, il freddo no"
-    ],
-    "spuntiB": [
-      "Le persone scaldano più del sole",
-      "Da soli anche l’estate è grigia"
-    ]
-  },
-  {
-    "id": "r03",
-    "text": "Potresti rendere perfetta una sola foto della tua vita, o lasciarle tutte imperfette ma vere?",
-    "optionA": "Una perfetta, finalmente",
-    "optionB": "Tutte vere, difetti compresi",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Un ricordo impeccabile è per sempre",
-      "Almeno una cosa senza difetti"
-    ],
-    "spuntiB": [
-      "I difetti le rendono vive",
-      "Ritoccare è già falsare il ricordo"
-    ]
-  },
-  {
-    "id": "r04",
-    "text": "Per un anno diresti sempre “sì” a ogni proposta, o sempre “no”?",
-    "optionA": "Sempre sì: mi apro al mondo",
-    "optionB": "Sempre no: proteggo il mio tempo",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Il sì porta avventure inaspettate",
-      "Le occasioni nascono dicendo sì"
-    ],
-    "spuntiB": [
-      "Dire no è scegliere sé stessi",
-      "Troppi sì ti fanno vivere la vita altrui"
-    ]
-  },
-  {
-    "id": "r05",
-    "text": "Avresti un solo talento portato all’eccellenza, o saresti discretamente bravo in tutto?",
-    "optionA": "Eccellente in una cosa sola",
-    "optionB": "Discreto in tutto",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "L’eccellenza lascia un segno",
-      "Meglio un fuoriclasse che un tuttofare"
-    ],
-    "spuntiB": [
-      "La versatilità apre mille porte",
-      "Bravo in tutto, mai in difficoltà"
-    ]
-  },
-  {
-    "id": "r06",
-    "text": "Ricominceresti da capo in una città dove nessuno ti conosce, o resteresti dove tutti sanno chi sei?",
-    "optionA": "Da capo, libero dal passato",
-    "optionB": "Dove mi conoscono, con la mia storia",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Ripartire da zero è rinascere",
-      "Nessun pregiudizio addosso"
-    ],
-    "spuntiB": [
-      "La mia storia è una ricchezza",
-      "Essere conosciuti è sentirsi a casa"
-    ]
-  },
-  {
-    "id": "r07",
-    "text": "Rinunceresti per sempre a lamentarti, o a dare consigli non richiesti?",
-    "optionA": "Mai più lamentele",
-    "optionB": "Mai più consigli non richiesti",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Senza lamentele si vive più leggeri",
-      "Lamentarsi non risolve nulla"
-    ],
-    "spuntiB": [
-      "I consigli non richiesti rovinano i rapporti",
-      "Ascoltare batte il pontificare"
-    ]
-  },
-  {
-    "id": "r11",
-    "text": "Vorresti essere ricordato per una grande impresa fatta una volta, o per mille piccole gentilezze quotidiane?",
-    "optionA": "Una grande impresa",
-    "optionB": "Mille gentilezze",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Un’impresa può cambiare la storia",
-      "Lasciare un segno grande ispira"
-    ],
-    "spuntiB": [
-      "Le piccole cose scaldano davvero",
-      "La bontà quotidiana cambia vite vicine"
-    ]
-  },
-  {
     "id": "r13",
     "text": "Lasceresti un posto sicuro e ben pagato per una tua startup con il 20% di riuscire?",
     "optionA": "Rischio: il rimpianto pesa più del fallimento",
     "optionB": "Resto: la sicurezza prima dei sogni",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Il 20% non capita due volte",
       "Da giovani si può ripartire"
@@ -3432,6 +3033,7 @@
     "optionB": "L’estraneo: lavoro e amicizia separati",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Con un amico ci si capisce al volo",
       "La fiducia è il bene più raro"
@@ -3448,6 +3050,7 @@
     "optionB": "Gioco di pazienza: i nodi vengono al pettine",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Tacere lo autorizza a continuare",
       "Il mio lavoro merita il mio nome"
@@ -3464,6 +3067,7 @@
     "optionB": "No: non voglio comandare gli amici",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Rifiutare per paura è autosabotaggio",
       "Si può guidare con rispetto"
@@ -3480,6 +3084,7 @@
     "optionB": "No: vincere così non è vincere",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Se è legale, è gioco",
       "Chi esita perde"
@@ -3496,6 +3101,7 @@
     "optionB": "Il doppio stipendio",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Lavorare con senso riempie la vita",
       "I soldi non danno uno scopo"
@@ -3512,6 +3118,7 @@
     "optionB": "Vicino, vita più sana",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Il lavoro giusto vale il viaggio",
       "Tre ore passano, una carriera resta"
@@ -3528,6 +3135,7 @@
     "optionB": "No: chiede lui, vendo io",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Un cliente onesto torna",
       "La reputazione vale più di una vendita"
@@ -3544,6 +3152,7 @@
     "optionB": "Al sicuro: coi risparmi non si scherza",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Nessun rendimento batte le tue capacità",
       "Chi non investe in sé non cresce"
@@ -3560,6 +3169,7 @@
     "optionB": "Vado dove valgo",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "La passione è rara, i soldi no",
       "Stare bene al lavoro è metà vita"
@@ -3576,6 +3186,7 @@
     "optionB": "No: l’etica non paga le bollette",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Lavorare contro i propri valori logora",
       "Si dorme meglio la notte"
@@ -3592,6 +3203,7 @@
     "optionB": "No: lo stipendio non si scommette",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Le grandi occasioni sembrano folli all’inizio",
       "Chi non rischia non cambia classe"
@@ -3608,6 +3220,7 @@
     "optionB": "La limito: prima le persone",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Chi resta indietro sparisce",
       "Negare il progresso è illusorio"
@@ -3624,6 +3237,7 @@
     "optionB": "Quella normale, coi risparmi per il loro futuro",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "L’istruzione è il regalo più grande",
       "Le occasioni giuste cambiano una vita"
@@ -3640,6 +3254,7 @@
     "optionB": "Tengo i risultati, non i sentimenti",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "L’atteggiamento contagia la squadra",
       "La lealtà va premiata"
@@ -3656,6 +3271,7 @@
     "optionB": "Continuo: il lavoro mi dà identità",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Tempo libero infinito è il sogno",
       "Mille modi di riempire le giornate"
@@ -3672,6 +3288,7 @@
     "optionB": "Meglio riservati",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "La trasparenza riduce le ingiustizie",
       "Il segreto protegge chi sottopaga"
@@ -3688,6 +3305,7 @@
     "optionB": "Taccio: prima la prudenza",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Tacere mi rende parte del problema",
       "Un posto che esige silenzio non vale"
@@ -3704,6 +3322,7 @@
     "optionB": "No: i soldi rovinano i rapporti",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un familiare in difficoltà si aiuta",
       "I soldi si recuperano, il sangue no"
@@ -3720,6 +3339,7 @@
     "optionB": "Taccio: deve capirlo da solo",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un vero amico avverte",
       "Il silenzio lo lascia soffrire"
@@ -3736,6 +3356,7 @@
     "optionB": "No: la fiducia rotta non torna",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Buttare anni per un errore è uno spreco",
       "Le persone possono cambiare"
@@ -3752,6 +3373,7 @@
     "optionB": "No: ha mostrato chi è",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Il passato comune conta",
       "Le persone sono più di una scelta"
@@ -3768,6 +3390,7 @@
     "optionB": "Taccio: a che servirebbe ormai",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "I non detti avvelenano i legami",
       "Dirlo libera entrambi"
@@ -3784,6 +3407,7 @@
     "optionB": "Gli chiedo di scegliere me",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Amare è volere la sua felicità",
       "Strapparlo dalle radici lo spegnerebbe"
@@ -3800,6 +3424,7 @@
     "optionB": "No: non posso farmene carico",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un bambino non si lascia indietro",
       "La famiglia si stringe nelle difficoltà"
@@ -3816,6 +3441,7 @@
     "optionB": "La speranza: a volte cura più della verità",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Sapere gli permette di scegliere",
       "Mentire è togliergli il controllo"
@@ -3832,6 +3458,7 @@
     "optionB": "Troppo tardi: chiudo",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Le persone meritano una seconda occasione",
       "Il rancore pesa più del perdono"
@@ -3848,6 +3475,7 @@
     "optionB": "La sostengo: deve provarci",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Illuderla è crudele",
       "La verità da chi ti ama protegge"
@@ -3864,6 +3492,7 @@
     "optionB": "No: la fiducia è sacra",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "A volte si tradisce per amore",
       "Lasciarlo cadere sarebbe peggio"
@@ -3880,6 +3509,7 @@
     "optionB": "No: la famiglia conta troppo",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "La mia vita la scelgo io",
       "Chi ama davvero lotta"
@@ -3896,6 +3526,7 @@
     "optionB": "Liberi di trovare la loro strada",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Educare è dare radici e valori",
       "Non scegliere è già una scelta"
@@ -3912,6 +3543,7 @@
     "optionB": "Taccio: non sono affari miei",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un genitore deve sapere",
       "Tacere e pentirsi è peggio"
@@ -3928,6 +3560,7 @@
     "optionB": "Mi allontano: prima la mia salute",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Gli amici si aiutano nel buio",
       "Andarmene lo lascerebbe solo"
@@ -3944,6 +3577,7 @@
     "optionB": "No: martirizzarsi non aiuta nessuno",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Amare è mettere l’altro prima",
       "Nella loro felicità trovo la mia"
@@ -3960,6 +3594,7 @@
     "optionB": "Difficile ma utile",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "La serenità è una conquista",
       "Non devo nulla al mondo"
@@ -3976,6 +3611,7 @@
     "optionB": "Meglio felice e ignaro",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Vivere nell’illusione non è vivere",
       "Solo il vero permette di scegliere"
@@ -3992,6 +3628,7 @@
     "optionB": "No: la mia non vale meno della sua",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "L’eroismo è esserci al momento giusto",
       "Non vivrei sapendo di non aver agito"
@@ -4008,6 +3645,7 @@
     "optionB": "Lunga, anche se la mente cede",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Voglio andarmene da me stesso",
       "La dignità conta più del tempo"
@@ -4024,6 +3662,7 @@
     "optionB": "Taccio: non scarico il mio peso su loro",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "La verità libera chi resta dall’inganno",
       "Morire con una maschera è triste"
@@ -4040,6 +3679,7 @@
     "optionB": "Sempre me, qualunque cosa",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Una vita migliore vale il cambio",
       "Essere altro è un’occasione, non una perdita"
@@ -4056,6 +3696,7 @@
     "optionB": "No: la mia vita viene prima",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Vivere per qualcosa di grande dà senso",
       "Si ricordano i pochi che osano"
@@ -4072,6 +3713,7 @@
     "optionB": "No: non si svuota una vita per un forse",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Un anno in più è un dono inestimabile",
       "I soldi servono a questo"
@@ -4088,6 +3730,7 @@
     "optionB": "No: certe cose non si perdonano",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Il rancore incatena a chi ti ha ferito",
       "Perdonare è liberare sé stessi"
@@ -4104,6 +3747,7 @@
     "optionB": "Con rimpianti, ma avendo osato",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "La pace dell’animo non ha prezzo",
       "Meglio sereni che pieni di ferite"
@@ -4120,6 +3764,7 @@
     "optionB": "No: senza dolore sparirebbe il senso della gioia",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Eliminare la sofferenza è il bene più grande",
       "Nessuna gioia vale il dolore di tutti"
@@ -4136,6 +3781,7 @@
     "optionB": "No: un tempo che non è più il mio non lo voglio",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Ogni epoca ha la sua bellezza",
       "Restare è meglio che finire"
@@ -4152,6 +3798,7 @@
     "optionB": "Taccio: la verità non aggiunge nulla all’amore",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Le origini sono parte dell’identità",
       "I segreti prima o poi esplodono"
@@ -4168,6 +3815,7 @@
     "optionB": "No: un genitore realizzato è il miglior esempio",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "I figli sono il mio vero sogno",
       "Rinunciare per loro non è una sconfitta"
@@ -4184,6 +3832,7 @@
     "optionB": "Non li deludo: anche la loro fiducia conta",
     "register": "vita",
     "tappa": 1,
+    "complessita": "alto",
     "spuntiA": [
       "Vivere per l’approvazione altrui non è vivere",
       "Chi ti ama davvero accetterà le tue scelte",
@@ -4202,6 +3851,7 @@
     "optionB": "Entro nel gruppo: certe occasioni non tornano",
     "register": "vita",
     "tappa": 1,
+    "complessita": "alto",
     "spuntiA": [
       "Un gruppo che chiede tradimenti non vale niente",
       "La lealtà si vede proprio quando costa",
@@ -4220,6 +3870,7 @@
     "optionB": "Mi adatto un po’: tutti recitano una parte",
     "register": "vita",
     "tappa": 1,
+    "complessita": "alto",
     "spuntiA": [
       "Ciò che ottieni fingendo va difeso fingendo per sempre",
       "Voglio essere scelto per chi sono",
@@ -4238,6 +3889,7 @@
     "optionB": "Stavolta penso a me: non posso essere sempre l’ultimo",
     "register": "vita",
     "tappa": 1,
+    "complessita": "alto",
     "spuntiA": [
       "Esserci nei momenti giusti è ciò che conta",
       "Il mio tempo lo recupero, lui forse no",
@@ -4256,6 +3908,7 @@
     "optionB": "Conta vincere: il risultato è ciò che resta",
     "register": "vita",
     "tappa": 1,
+    "complessita": "alto",
     "spuntiA": [
       "Saprei io di non aver vinto davvero",
       "Una vittoria rubata avvelena l’orgoglio",
@@ -4274,6 +3927,7 @@
     "optionB": "Resto: non si butta ciò che funziona per un’idea",
     "register": "vita",
     "tappa": 1,
+    "complessita": "alto",
     "spuntiA": [
       "Accontentarsi è una resa lenta",
       "Le promesse a se stessi sono le più importanti",
@@ -4292,6 +3946,7 @@
     "optionB": "Rifiuto: entrare così significa diventarne complice",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Il cambiamento si fa da dentro, non da fuori",
       "Rifiutare lascia tutto com’è e basta",
@@ -4310,6 +3965,7 @@
     "optionB": "Rifiuto: nessuno stipendio ricompra chi divento",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "C’è una stagione per stringere i denti",
       "Il denaro accumulato sono scelte future",
@@ -4328,6 +3984,7 @@
     "optionB": "Lo tengo: anni di fedeltà meritano lealtà",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Tenere chi frena penalizza tutti gli altri",
       "La gentilezza che danneggia il gruppo è egoismo",
@@ -4346,6 +4003,7 @@
     "optionB": "Tengo così: è il mercato, non un mio crimine",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Costruire sul sottopagato è ricchezza marcia",
       "Ciò che è legale non è sempre giusto",
@@ -4364,6 +4022,7 @@
     "optionB": "Rinuncio: i risparmi dei figli sono intoccabili",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Salute e tempo non si comprano dopo",
       "Un genitore che vive ispira più di un’eredità",
@@ -4382,6 +4041,7 @@
     "optionB": "Accetto: in fondo è il gioco della concorrenza",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Chi tradisce un datore ne tradirà un altro",
       "La reputazione vale più di un salto di carriera",
@@ -4400,6 +4060,7 @@
     "optionB": "Resto fedele a me: non diventerò ciò che odiavo",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Il potere senza fermezza non dura",
       "Da fuori è facile giudicare chi decide",
@@ -4418,6 +4079,7 @@
     "optionB": "Mi prendo il merito: il progetto vale più del galateo",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Il successo costruito su un furto crolla dentro",
       "Chi ha lavorato merita il suo nome",
@@ -4436,6 +4098,7 @@
     "optionB": "Continuo: ho sacrificato troppo per fermarmi ora",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "I soldi senza le persone sono numeri vuoti",
       "Non è mai troppo tardi per tornare",
@@ -4454,6 +4117,7 @@
     "optionB": "Accetto: senza quel contratto chiudo",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Il primo compromesso è sempre il più facile",
       "Chi chiede questo ne chiederà altri",
@@ -4472,6 +4136,7 @@
     "optionB": "Tengo la carriera: realizzarmi mi rende migliore anche con loro",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Il tempo coi propri cari non si recupera",
       "Un talento sprecato pesa meno di un’assenza",
@@ -4490,6 +4155,7 @@
     "optionB": "La tengo: certe eredità non si mettono in vendita",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Un sogno ereditato può diventare una catena",
       "La libertà economica apre infinite strade",
@@ -4508,6 +4174,7 @@
     "optionB": "Mi faccio i fatti miei: non tocca a me rischiare",
     "register": "vita",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Tacere quando non ti riguarda è il seme dell’ingiustizia",
       "Domani il bersaglio potrei essere io",
@@ -4526,6 +4193,7 @@
     "optionB": "Resto: non abbandono chi mi ha reso ciò che sono",
     "register": "business",
     "tappa": 2,
+    "complessita": "alto",
     "spuntiA": [
       "Un’azienda che non cresce condanna tutti, dopo",
       "La responsabilità è verso la sopravvivenza dell’insieme",
@@ -4544,6 +4212,7 @@
     "optionB": "Taccio: non voglio gettarli nell’angoscia",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un rischio noto si può affrontare, uno ignoto no",
       "Tacere una verità di salute non spetta a me",
@@ -4562,6 +4231,7 @@
     "optionB": "Tengo la mia parte: equità non è egoismo",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Tra fratelli il bisogno viene prima dei conti",
       "I soldi passano, i legami restano",
@@ -4580,6 +4250,7 @@
     "optionB": "Tengo il punto: non posso sradicarmi del tutto",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "In una coppia, a turno, qualcuno cede",
       "I miei legami reggono anche a distanza",
@@ -4598,6 +4269,7 @@
     "optionB": "Mi rifiuto: non sostengo ciò che ritengo sbagliato",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Essere presente conta più di avere ragione",
       "Imporre le mie convinzioni lo allontana",
@@ -4616,6 +4288,7 @@
     "optionB": "Non posso solo ascoltare: c’è una vittima",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Chi confessa fa il primo passo verso il cambiamento",
       "Tradire la sua fiducia lo chiuderebbe del tutto",
@@ -4634,6 +4307,7 @@
     "optionB": "Non vado: la mia pace viene prima del suo bisogno",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "L’occasione di chiudere i conti non torna",
       "Il rimpianto di non esserci è il più crudele",
@@ -4652,6 +4326,7 @@
     "optionB": "Lascio le cose come stanno: forse è felice così",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un sacrificio taciuto prima o poi presenta il conto",
       "Voglio un partner libero, non in debito",
@@ -4670,6 +4345,7 @@
     "optionB": "Sono onesto: non metto la mia parola su una bugia",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un amico merita una spinta nei momenti difficili",
       "Tutti meritano un’occasione di dimostrarsi",
@@ -4688,6 +4364,7 @@
     "optionB": "Sto con mia madre: il sangue e la storia contano",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "La famiglia che costruisco viene prima",
       "Chi ho scelto merita la mia lealtà",
@@ -4706,6 +4383,7 @@
     "optionB": "Mi allontano: l’amicizia non è solo le emergenze",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Si giudica un amico da come c’è quando serve",
       "Nessuno è perfetto tutti i giorni",
@@ -4724,6 +4402,7 @@
     "optionB": "Taccio: deve vivere la sua vita, non la mia paura",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un genitore avverte, anche a costo di sbagliare",
       "Il silenzio davanti a un errore è abbandono",
@@ -4742,6 +4421,7 @@
     "optionB": "Non dono: non devo il mio corpo a chi mi ha ferito",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Salvare una vita è più grande di ogni torto",
       "Il rancore non vale quanto un respiro",
@@ -4760,6 +4440,7 @@
     "optionB": "Faccio una scelta: non posso vivere nel mezzo per sempre",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Entrambi sono pezzi diversi e veri di me",
       "Mediare è faticoso ma giusto",
@@ -4778,6 +4459,7 @@
     "optionB": "Li onoro vivendo la mia vita pienamente",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Chi si è sacrificato merita riconoscenza concreta",
       "A volte assecondare è il modo di dire grazie",
@@ -4796,6 +4478,7 @@
     "optionB": "Mi rifiuto: i suoi figli meritano un padre vero, non un mito",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "La dignità di una persona va protetta",
       "Non sta a me svelare le sue fragilità",
@@ -4814,6 +4497,7 @@
     "optionB": "Tengo l’amicizia: chi mi chiede di tagliarla mi controlla",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Costruire un futuro chiede a volte di lasciare qualcosa",
       "Se l’amicizia crea conflitto continuo, ha un costo reale",
@@ -4832,6 +4516,7 @@
     "optionB": "Lo proteggo: è troppo piccolo per certe cose",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "I bambini reggono la verità meglio delle bugie",
       "Una mezza bugia scoperta rompe la fiducia",
@@ -4850,6 +4535,7 @@
     "optionB": "Trovo un altro modo: la mia famiglia viene prima",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "L’amicizia vera si misura nei guai",
       "Un tetto offerto può salvare una vita",
@@ -4868,6 +4554,7 @@
     "optionB": "Lo freno: la stabilità di entrambi viene prima",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un partner non realizzato porta rancore nella coppia",
       "Credere nei suoi sogni è una forma d’amore",
@@ -4886,6 +4573,7 @@
     "optionB": "Taccio: spaccare la famiglia farebbe più male a tutti",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Un’armonia che copre il dolore è finta",
       "Chi soffre in silenzio ha bisogno di un alleato",
@@ -4904,6 +4592,7 @@
     "optionB": "Mi tengo dei dubbi: non voglio pesare su una scelta sua",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Chi chiede sincerità su una scelta grande merita tutta la verità",
       "Filtrare l’opinione è non fidarsi di lui",
@@ -4922,6 +4611,7 @@
     "optionB": "Penso ai vivi: le decisioni servono a chi resta",
     "register": "vita",
     "tappa": 3,
+    "complessita": "max",
     "spuntiA": [
       "Rispettare le ultime volontà è sacro",
       "Tradirlo ora sarebbe un secondo addio",
@@ -4940,6 +4630,7 @@
     "optionB": "Lunga e solida: la sicurezza è rispetto per chi amo",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Una vita lunga ma vuota non è un vantaggio",
       "Si rimpiange ciò che non si è osato",
@@ -4958,6 +4649,7 @@
     "optionB": "Sì: una generosità per sé non è vera generosità",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Chi riceve aiuto non bada al perché",
       "Il bene è bene, qualunque sia la radice",
@@ -4976,6 +4668,7 @@
     "optionB": "Lascio andare: il rimorso eterno è un’altra prigione",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Riparare dà senso anche all’errore",
       "Finché si è in tempo, si deve provare",
@@ -4994,6 +4687,7 @@
     "optionB": "Taccio: non si fa giustizia colpendo innocenti",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Un torto taciuto resta una ferita aperta",
       "La verità è dovuta a chi ha subìto",
@@ -5012,6 +4706,7 @@
     "optionB": "Rinuncio: nessun desiderio vale perdere me stesso",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Si può ottenere molto e restare sé stessi",
       "Rinunciare per paura di cambiare è codardia",
@@ -5030,6 +4725,7 @@
     "optionB": "Serena anche se dimenticabile: vivere bene conta più del ricordo",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Alla fine restano solo le storie che ci portiamo dentro",
       "Una vita piatta non lascia nulla, nemmeno a sé",
@@ -5048,6 +4744,7 @@
     "optionB": "Dove fa più bene: una vita vale ovunque sia",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Chi non cura i suoi non cura nessuno",
       "Il legame crea doveri speciali",
@@ -5066,6 +4763,7 @@
     "optionB": "Non voglio: il ricordo del nostro amore mi basta",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Vivere su un amore forse mai ricambiato è un inganno",
       "La verità, anche dura, libera",
@@ -5084,6 +4782,7 @@
     "optionB": "Resto: non sacrifico chi è qui per chi parte",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Certi addii negati diventano rimpianti eterni",
       "L’ultima volta è davvero l’ultima",
@@ -5102,6 +4801,7 @@
     "optionB": "Preferisco non sapere: vivere per il giudizio è una prigione",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Solo conoscendo i miei difetti posso superarli",
       "Vivere su un’immagine illusoria è inganno",
@@ -5120,6 +4820,7 @@
     "optionB": "Ordinaria, ma in pace",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "L’intensità vale qualsiasi inquietudine",
       "Una vita ordinaria è un’occasione sprecata",
@@ -5138,6 +4839,7 @@
     "optionB": "Mi godo il bene fatto: conta il risultato",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Prendersi meriti non propri è una bugia",
       "L’onestà su di sé vale più dell’ammirazione",
@@ -5156,6 +4858,7 @@
     "optionB": "Meglio l’apice: certe cose è bello lasciarle perfette",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Vivere per il ricordo altrui è già morire",
       "Ogni stagione della vita ha il suo valore",
@@ -5174,6 +4877,7 @@
     "optionB": "La difendo: non si butta ciò su cui sei costruito",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Una vita su basi false è destinata a cadere",
       "Rifondarsi è doloroso ma onesto",
@@ -5192,6 +4896,7 @@
     "optionB": "I momenti: alla fine restano le persone",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Un ultimo traguardo dà senso al finale",
       "Lasciare qualcosa è sfidare l’oblio",
@@ -5210,6 +4915,7 @@
     "optionB": "Non perdono: sarebbe svalutare ciò che ho passato",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Guarire non è tradire, è andare avanti",
       "Il rancore punisce solo chi lo porta",
@@ -5228,6 +4934,7 @@
     "optionB": "Li lascio faticare: la forza nasce dalle difficoltà",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Quale genitore non proteggerebbe i figli dal dolore?",
       "Avere meno ostacoli è un vantaggio reale",
@@ -5246,6 +4953,7 @@
     "optionB": "Accetto: a volte la pace è smettere di rincorrere",
     "register": "vita",
     "tappa": 4,
+    "complessita": "power",
     "spuntiA": [
       "Non è mai troppo tardi per un attimo vero",
       "Il rischio di fallire vale più della certezza del rimpianto",
@@ -5255,6 +4963,690 @@
       "A un certo punto la pace è accettare",
       "Rincorrere all’infinito è un’altra fuga",
       "Riconciliarsi con la propria vita è una vittoria"
+    ]
+  },
+  {
+    "id": "c01",
+    "text": "Il tuo gruppo di amici esclude sistematicamente una persona. Ridere con loro ti tiene dentro; difenderla ti mette ai margini.",
+    "optionA": "La difendo: non rido sulla pelle di qualcuno",
+    "optionB": "Lascio correre: non tocca a me cambiare il gruppo",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Chi tace davanti all’esclusione la avalla",
+      "Domani l’escluso potrei essere io",
+      "Un gruppo che esclude non merita la mia complicità"
+    ],
+    "spuntiB": [
+      "Mettersi contro tutti cambia poco e isola",
+      "Non conosco i motivi del gruppo",
+      "Non sono il giudice delle dinamiche altrui"
+    ]
+  },
+  {
+    "id": "c02",
+    "text": "Puoi copiare a un esame importante senza rischi: ti darebbe il voto che ti serve per il futuro che sogni.",
+    "optionA": "Non copio: un titolo non meritato non vale",
+    "optionB": "Copio: conta il risultato, non come ci arrivo",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Un voto rubato è una competenza che non ho",
+      "La scorciatoia di oggi è la fragilità di domani",
+      "Il rispetto di me vale più di un numero"
+    ],
+    "spuntiB": [
+      "Il sistema premia chi ottiene, non chi è puro",
+      "Un’occasione persa per scrupolo non torna",
+      "Tutti, prima o poi, prendono una scorciatoia"
+    ]
+  },
+  {
+    "id": "c03",
+    "text": "Un amico ti chiede di mentire ai suoi genitori per coprirlo in qualcosa che non condividi.",
+    "optionA": "Lo copro: la lealtà tra amici viene prima",
+    "optionB": "Non mento: non mi metto contro i suoi per lui",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Un amico non si lascia solo davanti ai genitori",
+      "Non sta a me giudicare le sue scelte",
+      "La fiducia si dimostra proprio così"
+    ],
+    "spuntiB": [
+      "Mentire ai suoi mi rende complice",
+      "Coprirlo non lo aiuta, lo incoraggia",
+      "La lealtà non può chiedermi di ingannare altri"
+    ]
+  },
+  {
+    "id": "c04",
+    "text": "Puoi staccarti dal gruppo sicuro e crescere in fretta da solo, o restare dove ti senti protetto ma un po’ fermo.",
+    "optionA": "Vado per la mia strada: crescere chiede coraggio",
+    "optionB": "Resto nel gruppo: da solo arrivi prima ma arrivi solo",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Il gruppo comodo a volte è una gabbia",
+      "Si cresce uscendo dalla zona sicura",
+      "Le occasioni vere chiedono di rischiare"
+    ],
+    "spuntiB": [
+      "Da soli si va veloci, insieme si va lontano",
+      "Il sostegno del gruppo vale più della fretta",
+      "Crescere senza nessuno accanto è arido"
+    ]
+  },
+  {
+    "id": "c05",
+    "text": "Per inseguire una passione incerta rinunceresti a un percorso sicuro che però non ti entusiasma?",
+    "optionA": "Inseguo la passione: la sicurezza spenta è una resa",
+    "optionB": "Scelgo il sicuro: i sogni si coltivano su basi solide",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Da giovani si può rischiare e ripartire",
+      "Una vita spenta dalla sicurezza è uno spreco",
+      "Il rimpianto pesa più del fallimento"
+    ],
+    "spuntiB": [
+      "Senza basi, la passione diventa precarietà",
+      "Si può coltivare un sogno avendo un reddito",
+      "L’entusiasmo da solo non paga le bollette"
+    ]
+  },
+  {
+    "id": "c06",
+    "text": "Vedi qualcuno subire un sopruso in pubblico. Intervenire ti espone; tirarti indietro ti lascia in pace.",
+    "optionA": "Intervengo: girarsi dall’altra parte è complicità",
+    "optionB": "Non mi espongo: non sono affari miei",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Il male prospera quando i presenti tacciono",
+      "Vorrei che qualcuno intervenisse per me",
+      "Restare a guardare è una scelta, non neutralità"
+    ],
+    "spuntiB": [
+      "Intervenire può far degenerare tutto",
+      "Non conosco il contesto reale",
+      "Non devo a estranei di mettermi a rischio"
+    ]
+  },
+  {
+    "id": "c07",
+    "text": "Un’amicizia ti chiede sempre più tempo ed energie, ma dà poco in cambio.",
+    "optionA": "Continuo a investirci: l’amicizia non è un bilancio",
+    "optionB": "Mi tiro indietro: i rapporti a senso unico svuotano",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Chi ama non tiene il conto",
+      "Forse ne ha bisogno proprio ora",
+      "La generosità non aspetta il contraccambio"
+    ],
+    "spuntiB": [
+      "Un legame a senso unico non è amicizia",
+      "Anche le mie energie hanno un limite",
+      "Dare senza ricevere mai logora"
+    ]
+  },
+  {
+    "id": "c08",
+    "text": "Puoi dire a un amico una verità che lo aiuterebbe ma che lo farà stare male con te, o tenertela per quieto vivere.",
+    "optionA": "Gliela dico: un amico serve anche a questo",
+    "optionB": "Taccio: non vale rovinare il rapporto",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Tacere per comodità non è gentilezza",
+      "La verità da chi ti vuole bene è un dono",
+      "Un amico vero rischia di dispiacere"
+    ],
+    "spuntiB": [
+      "Non ogni verità va detta a tutti i costi",
+      "Il rapporto vale più di avere ragione",
+      "A volte le persone non sono pronte ad ascoltare"
+    ]
+  },
+  {
+    "id": "c09",
+    "text": "Ti offrono di entrare in un giro che ti darebbe popolarità, ma dovresti comportarti in un modo che non ti appartiene.",
+    "optionA": "Rinuncio: la popolarità che mi snatura non vale",
+    "optionB": "Mi adeguo: a volte bisogna stare al gioco",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Fingere per piacere è una prigione",
+      "La popolarità comprata col falso è vuota",
+      "Voglio piacere per chi sono"
+    ],
+    "spuntiB": [
+      "Un po’ di adattamento apre le porte",
+      "Tutti recitano una parte in società",
+      "Le occasioni nascono dove si è dentro, non fuori"
+    ]
+  },
+  {
+    "id": "c10",
+    "text": "Hai fatto un errore che nessuno ha notato e potresti tranquillamente nascondere, ma confessarlo ti costerebbe.",
+    "optionA": "Lo confesso: la mia onestà non dipende da chi guarda",
+    "optionB": "Lo nascondo: a volte tacere è più saggio",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Chi sono lo dimostro quando nessuno guarda",
+      "Un errore nascosto pesa più di uno ammesso",
+      "La fiducia si costruisce sull’onestà scomoda"
+    ],
+    "spuntiB": [
+      "Non ogni errore va sbandierato",
+      "Confessare a volte fa più danni che bene",
+      "Risolvere in silenzio è anche responsabilità"
+    ]
+  },
+  {
+    "id": "c11",
+    "text": "I tuoi amici vogliono fare qualcosa che ritieni sbagliato. Opporti rischia l’esclusione; assecondare tradisce ciò che pensi.",
+    "optionA": "Mi oppongo: i miei principi non si votano",
+    "optionB": "Sto al gruppo: non vale rompere per ogni cosa",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Seguire il branco per paura è perdersi",
+      "Chi non difende ciò che pensa lo perde",
+      "A volte essere il diverso è giusto"
+    ],
+    "spuntiB": [
+      "L’appartenenza ha un valore reale",
+      "Non ogni divergenza merita uno scontro",
+      "Si può dissentire senza spaccare tutto"
+    ]
+  },
+  {
+    "id": "c12",
+    "text": "Puoi avere un guadagno facile facendo qualcosa di legale ma che senti scorretto verso qualcuno.",
+    "optionA": "Rinuncio: legale non significa giusto",
+    "optionB": "Lo faccio: se è legale, il problema è degli altri",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "La mia coscienza non guarda solo alla legge",
+      "Un guadagno che mi pesa non è un guadagno",
+      "Il rispetto degli altri viene prima del profitto facile"
+    ],
+    "spuntiB": [
+      "Non posso vivere col senso di colpa per tutto",
+      "Le regole definiscono il lecito",
+      "Se non lo faccio io, lo fa un altro"
+    ]
+  },
+  {
+    "id": "c13",
+    "text": "Un familiare ti chiede aiuto proprio quando avevi finalmente programmato qualcosa di importante per te.",
+    "optionA": "Aiuto lui: la famiglia viene prima dei miei piani",
+    "optionB": "Tengo i miei piani: non posso rimandarmi sempre",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "La famiglia si vede nei momenti di bisogno",
+      "I miei piani li sposto, lui forse no",
+      "Esserci quando serve è ciò che conta"
+    ],
+    "spuntiB": [
+      "Rimandarmi sempre crea rancore nascosto",
+      "Anche i miei impegni hanno valore",
+      "Dire no a volte è sano, non egoista"
+    ]
+  },
+  {
+    "id": "c14",
+    "text": "Scopri che un amico ha mentito su di te per fare bella figura. Affrontarlo rischia lo scontro; lasciar correre ti rode dentro.",
+    "optionA": "Lo affronto: certe cose vanno chiarite",
+    "optionB": "Lascio correre: non vale uno scontro",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "I non detti avvelenano i rapporti",
+      "Farsi rispettare è giusto",
+      "Chiarire è meglio che rimuginare"
+    ],
+    "spuntiB": [
+      "Non ogni sgarbo merita una guerra",
+      "Forse per lui non ne valeva la pena",
+      "A volte lasciar perdere è più maturo"
+    ]
+  },
+  {
+    "id": "c15",
+    "text": "Puoi prenderti il merito di un lavoro di gruppo riuscito soprattutto grazie a te, o condividerlo con chi ha fatto meno.",
+    "optionA": "Condivido: il gruppo vince insieme",
+    "optionB": "Mi prendo il mio: il merito va dove è dovuto",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Riconoscere tutti tiene unito il gruppo",
+      "La generosità torna indietro",
+      "Prendersi tutto isola e crea rancore"
+    ],
+    "spuntiB": [
+      "Chi lavora di più merita di vederselo riconosciuto",
+      "L’equità finta penalizza l’impegno",
+      "Cedere il merito insegna che non conta sforzarsi"
+    ]
+  },
+  {
+    "id": "c16",
+    "text": "Hai promesso una cosa a qualcuno, ma mantenerla ora ti costa molto più del previsto.",
+    "optionA": "Mantengo: la parola data è sacra",
+    "optionB": "Mi tiro indietro: le condizioni sono cambiate",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Una promessa vale proprio quando costa",
+      "Chi non mantiene la parola perde la fiducia",
+      "La coerenza è ciò che mi definisce"
+    ],
+    "spuntiB": [
+      "Promettere alla cieca non obbliga all’assurdo",
+      "Le circostanze cambiano le valutazioni",
+      "L’eccessiva rigidità a volte fa più danni"
+    ]
+  },
+  {
+    "id": "c17",
+    "text": "Un conoscente in difficoltà ti chiede un favore che ti scoccia ma che per lui conta moltissimo.",
+    "optionA": "Lo faccio: per me poco, per lui tanto",
+    "optionB": "Dico di no: non posso dire sempre sì",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Un piccolo gesto può cambiargli la giornata",
+      "Si misura una persona da come tratta chi non le serve",
+      "Dare quando costa poco è giusto"
+    ],
+    "spuntiB": [
+      "Dire sempre sì mi rende uno zerbino",
+      "Anche i piccoli favori, sommati, pesano",
+      "Il mio tempo conta quanto il suo bisogno"
+    ]
+  },
+  {
+    "id": "c18",
+    "text": "Potresti migliorare in fretta accettando critiche dure che però ti feriscono nell’orgoglio.",
+    "optionA": "Le cerco: crescere vale più dell’orgoglio",
+    "optionB": "Le evito: la durezza demolisce, non costruisce",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Solo chi accetta le critiche migliora davvero",
+      "L’orgoglio ferito guarisce, l’ignoranza no",
+      "Chi ti critica con onestà ti fa un regalo"
+    ],
+    "spuntiB": [
+      "La crescita non passa per forza dall’umiliazione",
+      "Troppa autocritica paralizza",
+      "Si può migliorare anche con incoraggiamento"
+    ]
+  },
+  {
+    "id": "c19",
+    "text": "Puoi ottenere un vantaggio sfruttando la distrazione o l’errore di qualcun altro.",
+    "optionA": "Non approfitto: sull’errore altrui non si costruisce",
+    "optionB": "Ne approfitto: ognuno bada a sé",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Approfittare dell’errore altrui è sleale",
+      "Vorrei che con me fossero corretti",
+      "Un vantaggio rubato non è una vittoria"
+    ],
+    "spuntiB": [
+      "Nel mondo reale le occasioni si colgono",
+      "Non sono il custode degli sbagli degli altri",
+      "Chi è distratto impara la lezione"
+    ]
+  },
+  {
+    "id": "c20",
+    "text": "Hai un’abitudine comoda (di consumo, di vita) che però va contro i valori che dici di avere.",
+    "optionA": "La cambio: vivere contro i miei valori mi tradisce",
+    "optionB": "La tengo: la coerenza totale è impossibile",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Le piccole incoerenze, sommate, diventano chi sei",
+      "Cambiare un’abitudine comoda è il vero coraggio",
+      "Vivere coerenti dà pace"
+    ],
+    "spuntiB": [
+      "Nessuno è coerente al 100%",
+      "Certe comodità non fanno male a nessuno",
+      "Il fanatismo dei valori è una prigione"
+    ]
+  },
+  {
+    "id": "c21",
+    "text": "Un amico continua a chiederti soldi in prestito che restituisce a fatica.",
+    "optionA": "Lo aiuto ancora: è un amico in difficoltà",
+    "optionB": "Metto un freno: così non lo aiuto, lo abituo",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Un amico nel bisogno non si abbandona",
+      "I soldi contano meno di una persona",
+      "Forse stavolta ce la fa"
+    ],
+    "spuntiB": [
+      "Prestare all’infinito non risolve il suo problema",
+      "I soldi tra amici rovinano i rapporti",
+      "Dire no può essere il vero aiuto"
+    ]
+  },
+  {
+    "id": "c22",
+    "text": "Puoi presentarti più sicuro e capace di quanto ti senti per afferrare un’occasione, o essere onesto sui tuoi limiti.",
+    "optionA": "Sono onesto: non prometto ciò che non sono",
+    "optionB": "Mi vendo meglio: la sicurezza si costruisce facendo",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Gonfiarsi prepara a una caduta",
+      "L’onestà costruisce fiducia duratura",
+      "Voglio occasioni adatte a me, non recitate"
+    ],
+    "spuntiB": [
+      "Quasi tutti si presentano meglio di come sono",
+      "Le competenze si imparano sul campo",
+      "La troppa modestia chiude le porte"
+    ]
+  },
+  {
+    "id": "c23",
+    "text": "Puoi chiarire un vecchio malinteso con qualcuno, ma riaprire il discorso potrebbe risvegliare il rancore.",
+    "optionA": "Chiarisco: meglio affrontare che lasciare in sospeso",
+    "optionB": "Lascio stare: certe cose è meglio non riaprirle",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Un malinteso irrisolto pesa per anni",
+      "Chiarire libera entrambi",
+      "Il coraggio di affrontare ripaga"
+    ],
+    "spuntiB": [
+      "Riaprire può peggiorare ciò che il tempo ha calmato",
+      "Non tutto va per forza chiarito",
+      "A volte il silenzio ha già fatto pace"
+    ]
+  },
+  {
+    "id": "c24",
+    "text": "Per stare al passo col tuo gruppo spendi più di quanto puoi. Ammetterlo ti imbarazza; continuare ti mette nei guai.",
+    "optionA": "Sono sincero sui miei limiti: gli amici veri capiranno",
+    "optionB": "Continuo: non voglio sentirmi escluso",
+    "register": "vita",
+    "tappa": 1,
+    "complessita": "alto",
+    "spuntiA": [
+      "Gli amici veri non si misurano a spese",
+      "Vivere oltre le proprie possibilità è una trappola",
+      "La sincerità sui soldi è una forza, non una vergogna"
+    ],
+    "spuntiB": [
+      "Restare fuori dalle uscite isola",
+      "Qualche sacrificio per esserci vale la pena",
+      "Nessuno vuole essere quello che si tira sempre indietro"
+    ]
+  },
+  {
+    "id": "c25",
+    "text": "Puoi accettare un lavoro che ti fa crescere tantissimo, ma in un’azienda di cui non condividi i valori.",
+    "optionA": "Accetto: imparo e poi me ne vado",
+    "optionB": "Rifiuto: non lavoro per ciò che disapprovo",
+    "register": "business",
+    "tappa": 2,
+    "complessita": "alto",
+    "spuntiA": [
+      "La crescita professionale è rara e preziosa",
+      "Si impara anche da ciò che non si condivide",
+      "I miei valori restano miei, ovunque lavori"
+    ],
+    "spuntiB": [
+      "Lavorare contro i propri valori logora",
+      "Si finisce per assomigliare a dove si sta",
+      "Il “poi me ne vado” spesso non arriva mai"
+    ]
+  },
+  {
+    "id": "c26",
+    "text": "Un collega più debole rischia il posto. Puoi aiutarlo rubando tempo al tuo lavoro, o pensare solo a te.",
+    "optionA": "Lo aiuto: una squadra non lascia indietro nessuno",
+    "optionB": "Penso a me: ognuno deve reggere il proprio peso",
+    "register": "business",
+    "tappa": 2,
+    "complessita": "alto",
+    "spuntiA": [
+      "Una squadra unita rende più di individui isolati",
+      "Aiutare oggi è avere alleati domani",
+      "Il successo da soli è fragile"
+    ],
+    "spuntiB": [
+      "Non posso sacrificare il mio lavoro per tutti",
+      "Ognuno è responsabile di sé",
+      "Aiutare chi non regge può trascinarti giù"
+    ]
+  },
+  {
+    "id": "c27",
+    "text": "Più soldi per un lavoro che ti annoia, o meno soldi per uno che ti appassiona ma è precario.",
+    "optionA": "Scelgo la passione: la noia spegne",
+    "optionB": "Scelgo i soldi: la stabilità viene prima",
+    "register": "vita",
+    "tappa": 2,
+    "complessita": "alto",
+    "spuntiA": [
+      "Passare la vita annoiati è uno spreco",
+      "La passione dà un’energia che si riversa ovunque",
+      "Il precario di oggi può diventare il sicuro di domani"
+    ],
+    "spuntiB": [
+      "La stabilità è la base di ogni libertà",
+      "La passione non paga l’affitto",
+      "Il fascino del precario svanisce in fretta"
+    ]
+  },
+  {
+    "id": "c28",
+    "text": "Puoi licenziare in tronco chi rende poco, o investire mesi per provare a recuperarlo prima di arrenderti.",
+    "optionA": "Investo su di lui: le persone non sono usa e getta",
+    "optionB": "Lo lascio andare: non posso permettermi zavorre",
+    "register": "business",
+    "tappa": 2,
+    "complessita": "alto",
+    "spuntiA": [
+      "Chi recupera una persona crea lealtà profonda",
+      "Liberarsi al primo problema svuota la fiducia",
+      "A volte serve solo una seconda occasione"
+    ],
+    "spuntiB": [
+      "Trascinare chi non rende penalizza tutti",
+      "Le risorse per recuperare hanno un limite",
+      "La pietà mal riposta affossa l’azienda"
+    ]
+  },
+  {
+    "id": "c29",
+    "text": "Una carriera brillante trasferendoti spesso, o una più modesta restando radicato dove hai costruito legami.",
+    "optionA": "La carriera: le radici si ripiantano",
+    "optionB": "I legami: una carriera senza casa è vuota",
+    "register": "vita",
+    "tappa": 2,
+    "complessita": "alto",
+    "spuntiA": [
+      "Le occasioni vanno colte dove sono",
+      "Cambiare posti arricchisce",
+      "Si costruiscono nuovi legami ovunque"
+    ],
+    "spuntiB": [
+      "Sradicarsi di continuo impedisce radici vere",
+      "Una carriera senza affetti stabili è arida",
+      "La modestia con le persone giuste vale più del prestigio"
+    ]
+  },
+  {
+    "id": "c30",
+    "text": "Puoi tagliare i costi peggiorando un po’ la qualità, e quasi nessun cliente se ne accorgerebbe.",
+    "optionA": "Non lo faccio: la qualità è un patto col cliente",
+    "optionB": "Lo faccio: in affari i margini contano",
+    "register": "business",
+    "tappa": 2,
+    "complessita": "alto",
+    "spuntiA": [
+      "La reputazione si costruisce in anni e si perde in un attimo",
+      "Ingannare il cliente, anche poco, è un tradimento",
+      "La qualità è ciò che mi distingue"
+    ],
+    "spuntiB": [
+      "Senza margini l’azienda non sopravvive",
+      "Tutti ottimizzano i costi",
+      "Se il cliente non percepisce la differenza, dov’è il danno?"
+    ]
+  },
+  {
+    "id": "c31",
+    "text": "Guadagnare bene facendo qualcosa di utile ma anonimo, o poco facendo qualcosa che lascia un segno.",
+    "optionA": "Voglio lasciare un segno: il senso conta più del conto",
+    "optionB": "Scelgo il guadagno utile: il segno è un lusso",
+    "register": "vita",
+    "tappa": 2,
+    "complessita": "alto",
+    "spuntiA": [
+      "Una vita senza un senso che senti è grigia",
+      "Il segno lasciato dà orgoglio per sempre",
+      "I soldi non riempiono il vuoto di significato"
+    ],
+    "spuntiB": [
+      "Mantenersi è la prima responsabilità",
+      "Il “segno” spesso è vanità travestita",
+      "L’utilità concreta vale più di un sogno romantico"
+    ]
+  },
+  {
+    "id": "c32",
+    "text": "Un fornitore storico in difficoltà ti chiede di pagarlo in anticipo per sopravvivere, mettendo in tensione la tua liquidità.",
+    "optionA": "Lo aiuto: la lealtà nei rapporti conta",
+    "optionB": "Penso ai miei conti: gli affari non sono beneficenza",
+    "register": "business",
+    "tappa": 2,
+    "complessita": "alto",
+    "spuntiA": [
+      "Chi ti è stato fedele merita lealtà nei guai",
+      "I rapporti di fiducia valgono più di un trimestre",
+      "Aiutarlo oggi è avere un alleato domani"
+    ],
+    "spuntiB": [
+      "Rischiare la mia azienda non salva la sua",
+      "In affari il sentimento si paga caro",
+      "La responsabilità è prima verso i miei"
+    ]
+  },
+  {
+    "id": "c33",
+    "text": "Una promozione che ti realizza ma che ti ruberà quasi tutte le serate e i weekend per anni.",
+    "optionA": "Accetto: è il momento di spingere",
+    "optionB": "Rinuncio: il tempo libero è parte della vita",
+    "register": "vita",
+    "tappa": 2,
+    "complessita": "alto",
+    "spuntiA": [
+      "Ci sono stagioni in cui vale la pena spingere",
+      "Realizzarsi dà un’energia che ripaga",
+      "Le occasioni grosse non aspettano"
+    ],
+    "spuntiB": [
+      "Una vita di soli weekend rubati non si recupera",
+      "Il successo che divora tutto non è successo",
+      "Il tempo per sé e per gli altri è la vera ricchezza"
+    ]
+  },
+  {
+    "id": "c34",
+    "text": "Assumeresti chi ti somiglia (e con cui lavoreresti bene) o chi è diverso da te e ti metterebbe in discussione?",
+    "optionA": "Chi mi mette in discussione: la diversità fa crescere",
+    "optionB": "Chi mi somiglia: l’intesa fa rendere",
+    "register": "business",
+    "tappa": 2,
+    "complessita": "alto",
+    "spuntiA": [
+      "Un team di cloni non innova",
+      "Chi ti sfida ti rende migliore",
+      "La diversità di vedute previene gli errori"
+    ],
+    "spuntiB": [
+      "L’intesa rende il lavoro fluido ed efficace",
+      "Troppi attriti rallentano tutto",
+      "Si lavora meglio con chi ci si capisce"
+    ]
+  },
+  {
+    "id": "c35",
+    "text": "A un colloquio puoi raccontare con onestà un tuo fallimento passato, o ometterlo per avere più chance.",
+    "optionA": "Sono sincero: un fallimento spiegato mostra maturità",
+    "optionB": "Lo ometto: nessuno si penalizza da solo",
+    "register": "vita",
+    "tappa": 2,
+    "complessita": "alto",
+    "spuntiA": [
+      "Un fallimento raccontato bene è un punto di forza",
+      "La sincerità costruisce fiducia da subito",
+      "Voglio essere preso per chi sono davvero"
+    ],
+    "spuntiB": [
+      "Nessuno è obbligato a sabotarsi",
+      "Un colloquio premia chi si presenta meglio",
+      "Certe cose non sono affari di chi assume"
+    ]
+  },
+  {
+    "id": "c36",
+    "text": "Un cliente chiede uno sconto enorme minacciando di andarsene. Cedere svaluta il tuo lavoro; tenere il punto può farti perdere il contratto.",
+    "optionA": "Tengo il punto: svendersi è una spirale",
+    "optionB": "Cedo: meglio un margine basso che nessun cliente",
+    "register": "business",
+    "tappa": 2,
+    "complessita": "alto",
+    "spuntiA": [
+      "Chi si svende insegna che il suo lavoro vale poco",
+      "Uno sconto strappato col ricatto ne chiama altri",
+      "Il valore va difeso, non scontato"
+    ],
+    "spuntiB": [
+      "Un cliente perso è fatturato perso",
+      "In tempi magri ogni contratto conta",
+      "Si recupera sul volume ciò che si perde sul prezzo"
     ]
   }
 ]
