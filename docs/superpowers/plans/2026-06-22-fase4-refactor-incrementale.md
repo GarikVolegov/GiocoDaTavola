@@ -48,9 +48,20 @@ sola, invece di un big-bang. Stop per review dopo ogni fetta.
 - `PlayerApp.tsx`: blocco inline (~170 righe) → `<PredictView .../>`. Da 1445 a 1291 righe.
 - Copertura: render-test PREDICT pronostico+scommessa e variante know-pair. 354 test, gate verdi.
 
-Stato PlayerApp: **1789 → 1291 righe** (-498, -28%) in 5 fette.
+## Fette 6-9 — Completata la decomposizione di PlayerApp ✅
+- Fetta 6: `DuelArgueView` (DUEL_ARGUE) → 1291→1257.
+- Fetta 7: `StatusView` (display in-game: TAPPA/PHASE_INTRO/REVEAL/RESULTS/FINAL_AWARDS/FINAL_DUEL) → 1257→1091.
+- Fetta 8: `SubmitDilemmaCard` (card "aggiungi dilemma" della lobby) → 1091→1047.
+- Fetta 9: `LeaderSetup` (pannello setup-leader della lobby) → 1047→871.
+- Ognuna con render-test; import orfani rimossi a ogni passo.
+
+**Stato finale PlayerApp: 1789 → 871 righe (-918, -51%) in 9 fette. 359 test verdi.**
+Cartella `client/src/player/views/`: VoteView, SpeakerVoteView, AccuseView, DefenseView,
+PredictView, DuelArgueView, StatusView, SubmitDilemmaCard, LeaderSetup, ReactionBar, layout.
+Residuo in PlayerApp = container (stato + wiring socket + handlers + roster/how-to + join screen).
 
 ## Prossime fette (proposte, non ancora fatte)
+- Lato server: decomporre `RoomStore` (rooms.ts ~2273 righe) — track separato.
 - Estrarre le altre viste di fase di PlayerApp (DEFENSE/INTERVENTI, SPEAKER_VOTE,
   PREDICT, ACCUSE, lo switch finale TAPPA/SPLIT/RESULTS/AWARDS), aggiungendo un
   render-test per ognuna PRIMA dell'estrazione.
