@@ -1,0 +1,29 @@
+/* white panel (so the QR scans) with an A→B gradient border that brands it as
+   the app's join code; dark ink text since the panel is light */
+.frame {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 0.85rem 0.7rem;
+  border-radius: var(--radius-lg);
+  border: 3px solid transparent;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(135deg, var(--faction-a), var(--faction-b)) border-box;
+  box-shadow: var(--shadow-card);
+  color: #0b0e1a;
+}
+.label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #0b0e1a;
+}
+.caption {
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.75;
+}

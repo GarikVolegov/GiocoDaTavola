@@ -51,7 +51,7 @@ import {
   type PlayerInfiltratoRolePayload,
   type PlayerAccusedPayload,
 } from '../shared/events';
-import { Card, Pill, Button, Alert, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel } from '../shared/ui';
+import { Card, Pill, Button, Alert, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, JoinQr } from '../shared/ui';
 import { useAuth, Show, SignInButton } from '@clerk/react';
 
 // A row of tap-to-send reaction emojis, shown to the audience during a defense /
@@ -1192,6 +1192,12 @@ export default function PlayerApp() {
           }}
         >
           {joinedCode}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+          <JoinQr code={joinedCode} />
+          <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.7 }}>
+            Fai inquadrare il QR per entrare — oppure detta il codice
+          </p>
         </div>
         <h2 style={{ fontSize: '1.1rem', margin: '0.5rem 0 0' }}>
           Giocatori ({players.length}/8)
