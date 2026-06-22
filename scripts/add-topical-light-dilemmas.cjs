@@ -193,14 +193,6 @@ const NEW = [
     spuntiB: ['Un po’ di mistero è simpatico', 'Ti trattano come ti vedono', 'Il dubbio è un gioco innocuo'],
   },
   {
-    id: 'l08', tappa: 1, register: 'vita',
-    text: 'Non avresti mai più bisogno di dormire, o non avresti mai più bisogno di mangiare?',
-    optionA: 'Niente sonno: ore di vita in più',
-    optionB: 'Niente cibo: libertà e risparmio',
-    spuntiA: ['Avrei una vita lunga il doppio', 'Quante cose farei con quelle ore', 'Il sonno è tempo rubato'],
-    spuntiB: ['Niente spese né orari dei pasti', 'Mangiare incatena la giornata', 'E poi dormire resta un piacere'],
-  },
-  {
     id: 'l09', tappa: 1, register: 'vita',
     text: 'Conosceresti la risposta a qualsiasi domanda, ma senza poterla mai condividere con nessuno?',
     optionA: 'Sì: sapere mi basta',
@@ -239,14 +231,6 @@ const NEW = [
     optionB: 'Meglio non sapere e vivere sereno',
     spuntiA: ['Solo così posso migliorare', 'Le verità scomode sono utili', 'Preferisco il vero al comodo'],
     spuntiB: ['Certi giudizi rovinano i rapporti', 'Non tutto ciò che pensano è giusto', 'A volte ignorare è serenità'],
-  },
-  {
-    id: 'l14', tappa: 1, register: 'vita',
-    text: 'Potresti mangiare qualsiasi cosa senza ingrassare, o non ammalarti mai più?',
-    optionA: 'Mangiare tutto senza pensieri',
-    optionB: 'Salute di ferro per sempre',
-    spuntiA: ['Il piacere del cibo è quotidiano', 'Vivrei senza sensi di colpa', 'La gola è una gioia semplice'],
-    spuntiB: ['La salute è la base di tutto', 'Niente malattie è vita serena', 'Il gusto passa, la salute resta'],
   },
   {
     id: 'l15', tappa: 1, register: 'vita',

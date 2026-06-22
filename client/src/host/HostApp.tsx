@@ -321,6 +321,11 @@ export default function HostApp() {
                 {defense.speaker.devil ? '🎭 ' : ''}Difende {defense.speaker.side} ·{' '}
                 {defense.speaker.side === 'A' ? dilemma?.optionA : dilemma?.optionB}
               </div>
+              {defense.raisedCount > 0 && (
+                <p style={{ margin: 0, fontSize: '1.2rem', opacity: 0.85 }}>
+                  ✋ {defense.raisedCount} {defense.raisedCount === 1 ? 'vuole' : 'vogliono'} intervenire
+                </p>
+              )}
               {defense.argument && (
                 <p style={{ fontSize: '1.4rem', fontStyle: 'italic', margin: 0, maxWidth: 'min(90vw, 44rem)', opacity: 0.95 }}>
                   “{defense.argument}”
@@ -339,6 +344,33 @@ export default function HostApp() {
               Nessuno ha votato: niente difese per questo dilemma.
             </p>
           )
+        )}
+
+        {phase === 'INTERVENTI' && defense && (
+          <section
+            aria-label="Interventi"
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}
+          >
+            <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
+              Interviene <span style={{ color: '#ffd36b' }}>{defense.intervenor?.nickname ?? '…'}</span> 🙋
+            </p>
+            {defense.queue && defense.queue.length > 0 && (
+              <ol style={{ margin: 0, paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: '0.3rem' }}>
+                {defense.queue.map((q) => (
+                  <li
+                    key={q.id}
+                    style={{
+                      fontSize: '1.15rem',
+                      fontWeight: q.id === defense.speakerId ? 800 : 400,
+                      opacity: q.id === defense.speakerId ? 1 : 0.6,
+                    }}
+                  >
+                    {q.nickname}{q.id === defense.speakerId ? ' 🎤' : ''}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
         )}
 
         {phase === 'PHASE_RESULTS' && swing && <ResultsPanel swing={swing} />}

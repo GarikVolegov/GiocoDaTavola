@@ -1878,6 +1878,906 @@
     ]
   },
   {
+    "id": "s01",
+    "text": "Ti accorgi che la strada che stai costruendo (studio, lavoro) è quella voluta dalla tua famiglia, non da te. Cambiare ora costa anni e delusioni.",
+    "optionA": "Cambio: meglio tardi che vivere una vita non mia",
+    "optionB": "Vado avanti: ho già investito troppo per ripartire",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "Più aspetti, più diventa difficile cambiare davvero",
+      "Vivere il sogno di altri è un debito che non finisce mai",
+      "Gli anni spesi a cambiare valgono meno di una vita intera sbagliata"
+    ],
+    "spuntiB": [
+      "Buttare anni di lavoro è uno spreco concreto, non teorico",
+      "Spesso non è la strada il problema, ma l’illusione che altrove sia meglio",
+      "La maturità è anche trovare senso in ciò che hai costruito"
+    ]
+  },
+  {
+    "id": "s02",
+    "text": "Un’amicizia importante sta cambiando: tu cresci in una direzione, l’altro no. Restare richiede di fingere di essere ancora chi eri.",
+    "optionA": "Lascio andare: fingere è peggio di perdersi",
+    "optionB": "Resto: certi legami valgono un compromesso",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "Un’amicizia che ti chiede di rimpicciolirti non ti fa bene",
+      "Crescere significa anche lasciare ciò che non cresce con te",
+      "Fingere a lungo logora più della mancanza"
+    ],
+    "spuntiB": [
+      "Le amicizie vere attraversano fasi diverse senza spezzarsi",
+      "Si butta troppo in fretta ciò che ha radici profonde",
+      "Forse serve pazienza, non la fuga"
+    ]
+  },
+  {
+    "id": "s03",
+    "text": "Puoi dire a un amico che il percorso che ha scelto con entusiasmo lo porterà quasi certamente a sbattere, oppure lasciarlo imparare sulla sua pelle.",
+    "optionA": "Glielo dico: gli risparmio un muro",
+    "optionB": "Sto zitto: certe cose si capiscono solo sbagliando",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "Un amico che tace mentre vai a sbattere non è un amico",
+      "A volte un avvertimento in tempo cambia tutto",
+      "Il rispetto è anche dire ciò che non si vuole sentire"
+    ],
+    "spuntiB": [
+      "Le lezioni imparate da soli sono le uniche che restano",
+      "Il mio giudizio potrebbe essere sbagliato: non sono lui",
+      "Togliergli l’errore è togliergli la crescita"
+    ]
+  },
+  {
+    "id": "s04",
+    "text": "Hai un talento che potrebbe diventare lavoro, ma trasformarlo in professione rischia di farti odiare l’unica cosa che ami davvero.",
+    "optionA": "Ci provo: vivere della propria passione è il sogno",
+    "optionB": "Lo tengo per me: certe cose vanno protette dal lavoro",
+    "register": "vita",
+    "tappa": 1,
+    "spuntiA": [
+      "Pochi hanno la fortuna di amare ciò che fanno",
+      "Non provarci è già una forma di rimpianto",
+      "Si può difendere la passione anche dentro il lavoro"
+    ],
+    "spuntiB": [
+      "Trasformare in dovere ciò che ami può ucciderlo",
+      "Un rifugio che resta gratuito vale più di un reddito",
+      "Non tutto ciò che amiamo deve diventare produttivo"
+    ]
+  },
+  {
+    "id": "s05",
+    "text": "Il capo ti chiede di firmare un report che “arrotonda” i numeri: tutti lo fanno, e rifiutare ti marchierebbe come quello difficile. Non è illegale, è solo comodo.",
+    "optionA": "Firmo: una battaglia così mi costa la carriera e non cambia il sistema",
+    "optionB": "Non firmo: si comincia sempre da un piccolo “arrotondamento”",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Da solo non cambi una cultura aziendale, ti escludi e basta",
+      "Esistono battaglie più importanti su cui spendere credibilità",
+      "Rifiutare il piccolo non ti rende eroe, ti rende disoccupato"
+    ],
+    "spuntiB": [
+      "Le grandi frodi iniziano tutte da compromessi “comodi”",
+      "Se firmo oggi, domani la richiesta sarà più grande",
+      "La reputazione di integrità è l’unica cosa che resta quando crolla tutto"
+    ]
+  },
+  {
+    "id": "s06",
+    "text": "Un tuo collaboratore bravissimo cresce al punto da poterti presto soffiare il posto. Puoi spingerlo ancora più su o tenerlo un po’ indietro “per il bene del team”.",
+    "optionA": "Lo aiuto a superarmi: un capo si misura da chi lascia crescere",
+    "optionB": "Lo rallento: nessuno si fa scavare la fossa da solo",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Chi forma chi lo supera lascia un’eredità, non un’ombra",
+      "Trattenere il talento lo fa andare altrove, contro di te",
+      "La paura di essere superati è la fine di ogni leader"
+    ],
+    "spuntiB": [
+      "L’ingenuità in azienda si paga con la poltrona",
+      "Proteggere la propria posizione è legittima sopravvivenza",
+      "Aiutarlo troppo presto è regalare il proprio lavoro"
+    ]
+  },
+  {
+    "id": "s07",
+    "text": "Ti offrono il lavoro che insegui da anni proprio mentre la tua famiglia attraversa il momento più fragile. Accettare significa non esserci.",
+    "optionA": "Accetto: occasioni così non aspettano i momenti giusti",
+    "optionB": "Rinuncio: non c’è carriera che ricompri questo momento",
+    "register": "vita",
+    "tappa": 2,
+    "spuntiA": [
+      "I momenti perfetti non arrivano mai, le occasioni sì",
+      "Realizzarmi mi rende anche un partner e un genitore migliore",
+      "Rinunciare ora potrebbe diventare un rancore verso chi amo"
+    ],
+    "spuntiB": [
+      "Chi non c’è quando conta, non c’è davvero",
+      "Un’occasione persa fa male un anno, un’assenza per sempre",
+      "Il successo goduto da soli sa di sconfitta"
+    ]
+  },
+  {
+    "id": "s08",
+    "text": "Scopri che il successo del tuo intero settore poggia su un inganno verso i clienti che nessuno denuncia. Parlare rovinerebbe te insieme a tutti gli altri.",
+    "optionA": "Lo espongo: la verità vale più del mio posto",
+    "optionB": "Sto al gioco: non sono io il poliziotto del mondo",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Il silenzio di tutti è ciò che tiene in piedi l’inganno",
+      "Non potrei lavorare sapendo di vivere su una bugia",
+      "Qualcuno deve pur essere il primo a parlare"
+    ],
+    "spuntiB": [
+      "Da solo non cambio un sistema, mi distruggo soltanto",
+      "Travolgerei colleghi innocenti che ci campano",
+      "Cambiare le regole non è compito di chi le subisce"
+    ]
+  },
+  {
+    "id": "s09",
+    "text": "Puoi guadagnare molto di più cambiando città, ma sradicando i figli da scuola, amici e nonni proprio quando ne hanno più bisogno.",
+    "optionA": "Mi trasferisco: garantire loro di più viene prima",
+    "optionB": "Resto: le radici valgono più di un reddito migliore",
+    "register": "vita",
+    "tappa": 2,
+    "spuntiA": [
+      "Più mezzi significano più possibilità per loro",
+      "I bambini si adattano più di quanto pensiamo",
+      "Rinunciare a un’occasione per comodità è un rischio anche per loro"
+    ],
+    "spuntiB": [
+      "Strappare un figlio dai suoi legami lascia ferite invisibili",
+      "Il denaro in più non ricompra una nonna vicina",
+      "La stabilità affettiva conta più del conto in banca"
+    ]
+  },
+  {
+    "id": "s10",
+    "text": "Un cliente importante ti chiede una cosa che sai non gli conviene davvero. Dargliela è un grosso contratto, dissuaderlo significa perderlo.",
+    "optionA": "Gli do ciò che chiede: è adulto, decide lui",
+    "optionB": "Lo dissuado anche a costo del contratto",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Non sta a me fare il tutore dei miei clienti",
+      "Se non glielo do io, lo trova altrove peggio",
+      "Rispettare la sua scelta è anche rispettarlo"
+    ],
+    "spuntiB": [
+      "Un cliente che si sente tradito non torna mai più",
+      "La fiducia vale più di un singolo contratto",
+      "Vendere ciò che danneggia è un guadagno che si paga dopo"
+    ]
+  },
+  {
+    "id": "s11",
+    "text": "Sei stato fedele a un’azienda (o a una persona) per anni; ora capisci che quella lealtà ti è costata occasioni e che non sarebbe ricambiata.",
+    "optionA": "Resto fedele: i miei valori non dipendono dagli altri",
+    "optionB": "Vado: la lealtà a senso unico è solo ingenuità",
+    "register": "vita",
+    "tappa": 2,
+    "spuntiA": [
+      "Chi sono lo decido io, non chi mi sta di fronte",
+      "La coerenza è una ricchezza che non ha prezzo",
+      "Tradire i propri principi per ripicca ti svuota"
+    ],
+    "spuntiB": [
+      "La lealtà non ricambiata è sfruttamento mascherato",
+      "Restare per principio mentre perdi tutto è autolesionismo",
+      "Anche la fedeltà ha bisogno di reciprocità per avere senso"
+    ]
+  },
+  {
+    "id": "s12",
+    "text": "Puoi assumere chi ha più bisogno del lavoro o chi è oggettivamente più bravo. Il primo cambierebbe vita, il secondo farebbe crescere tutti.",
+    "optionA": "Il più bravo: l’azienda non è beneficenza",
+    "optionB": "Chi ne ha più bisogno: a parità conta anche la vita delle persone",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Scegliere il merito è giusto verso tutti",
+      "Un’azienda forte poi può aiutare davvero",
+      "Assumere per pietà fa un torto anche a chi assumi"
+    ],
+    "spuntiB": [
+      "A parità, dare un’occasione a chi non ne ha è giustizia",
+      "Il talento trova un’altra porta, il bisogno spesso no",
+      "Un lavoro può salvare una vita, non solo un bilancio"
+    ]
+  },
+  {
+    "id": "s13",
+    "text": "Hai costruito tutto su un obiettivo e finalmente lo raggiungi, ma non ti rende felice come pensavi. Ammetterlo significa rimettere in discussione anni.",
+    "optionA": "Lo ammetto e cambio rotta: meglio ora che mai",
+    "optionB": "Insisto: forse la felicità arriva, o mi aspettavo troppo",
+    "register": "vita",
+    "tappa": 2,
+    "spuntiA": [
+      "Riconoscere un errore presto evita di moltiplicarlo",
+      "La vita è troppo corta per inseguire una meta vuota",
+      "Il coraggio di ripartire vale più dell’orgoglio"
+    ],
+    "spuntiB": [
+      "Mollare al traguardo è buttare tutto il cammino",
+      "Forse il problema sono le aspettative, non la meta",
+      "Anche le mete vere deludono un po’: la felicità costante non esiste"
+    ]
+  },
+  {
+    "id": "s14",
+    "text": "Per salvare i posti devi scegliere: tagliare lo stipendio a tutti, te compreso, oppure licenziarne pochi e tenere alti gli altri.",
+    "optionA": "Taglio a tutti: si affonda o si nuota insieme",
+    "optionB": "Licenzio pochi: meglio salvare davvero la maggioranza",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "La solidarietà tiene viva un’azienda più dei numeri",
+      "Sacrificare pochi per comodità incrina la fiducia di tutti",
+      "Condividere il peso è ciò che distingue un vero capo"
+    ],
+    "spuntiB": [
+      "Impoverire tutti fa scappare i migliori e affonda comunque",
+      "A volte un taglio netto salva l’insieme",
+      "Diluire il dolore su tutti non lo riduce, lo prolunga"
+    ]
+  },
+  {
+    "id": "s15",
+    "text": "Sei diventato bravissimo in un lavoro che non ti rappresenta più. Ricominciare da capo significa tornare l’ultimo della fila.",
+    "optionA": "Ricomincio: meglio ultimo nel posto giusto che primo in quello sbagliato",
+    "optionB": "Resto: buttare una competenza costruita in anni è folle",
+    "register": "vita",
+    "tappa": 2,
+    "spuntiA": [
+      "Una competenza non ti obbliga a usarla per sempre",
+      "Il disagio del principiante passa, l’insoddisfazione no",
+      "Ripartire da forti è un lusso che molti non hanno"
+    ],
+    "spuntiB": [
+      "Una maestria si costruisce in anni, non si butta per noia",
+      "Spesso l’insoddisfazione ti segue ovunque vai",
+      "Ricominciare da zero ha un costo reale su chi dipende da te"
+    ]
+  },
+  {
+    "id": "s16",
+    "text": "Un concorrente in difficoltà ti chiede aiuto. Aiutarlo lo rimette in piedi contro di te; lasciarlo cadere ti consegna il mercato.",
+    "optionA": "Lo aiuto: il rispetto vale più del vantaggio",
+    "optionB": "Lo lascio cadere: gli affari non premiano i buoni",
+    "register": "business",
+    "tappa": 2,
+    "spuntiA": [
+      "Un mercato senza rivali si addormenta",
+      "La reputazione di chi aiuta apre più porte di una conquista",
+      "Vincere schiacciando lascia un vuoto, non una vittoria"
+    ],
+    "spuntiB": [
+      "La pietà negli affari si paga a caro prezzo",
+      "Lui non esiterebbe a farti fuori",
+      "Le occasioni si colgono, non si regalano"
+    ]
+  },
+  {
+    "id": "s17",
+    "text": "Un genitore ti chiede di curarlo negli ultimi anni; farlo significa rinunciare alla tua famiglia e ai tuoi progetti proprio mentre li costruisci.",
+    "optionA": "Mi prendo cura di lui: certi debiti si onorano",
+    "optionB": "Trovo un’altra soluzione: non sacrifico la mia vita che nasce",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Chi ti ha cresciuto merita di non essere lasciato solo",
+      "I figli imparano la cura guardando come tratti i tuoi",
+      "Certi ultimi momenti col genitore non tornano"
+    ],
+    "spuntiB": [
+      "Annullare la propria vita non è amore, è colpa travestita",
+      "Esistono modi di curare senza distruggersi",
+      "Sacrificare la mia famiglia per la sua non è un pareggio"
+    ]
+  },
+  {
+    "id": "s18",
+    "text": "Scopri per caso che il tuo partner, anni fa, ti ha mentito su qualcosa di grosso, ma da allora è stato impeccabile. Riaprire tutto rischia di distruggere il presente.",
+    "optionA": "Affronto la verità: non posso fingere di non sapere",
+    "optionB": "Lascio il passato dov’è: conta chi è oggi",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Un non detto scoperto avvelena ogni momento futuro",
+      "Ho diritto a una relazione senza zone d’ombra",
+      "La verità detta, anche tardi, è più solida di un equilibrio finto"
+    ],
+    "spuntiB": [
+      "Giudicare oggi un errore di ieri è ingiusto verso chi è cambiato",
+      "Riaprire ferite guarite non guarisce nulla",
+      "A volte custodire la pace è più saggio che avere ragione"
+    ]
+  },
+  {
+    "id": "s19",
+    "text": "Tuo figlio adolescente ti confida un segreto serio chiedendoti di non dirlo all’altro genitore. Mantenere la parola tradisce il partner; romperla tradisce tuo figlio.",
+    "optionA": "Mantengo il segreto: la sua fiducia è tutto",
+    "optionB": "Lo dico al partner: tra genitori non ci sono fazioni",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Se tradisco la sua fiducia non si confiderà mai più",
+      "Un figlio deve sapere di avere almeno un porto sicuro",
+      "La fiducia di un adolescente è fragile e preziosa"
+    ],
+    "spuntiB": [
+      "Una coppia divisa da segreti non protegge davvero",
+      "Nascondere al partner crea un’alleanza malsana",
+      "Su cose serie un genitore non può decidere da solo"
+    ]
+  },
+  {
+    "id": "s20",
+    "text": "Il tuo migliore amico ti chiede di mentire a sua moglie per coprirlo. Non sai cosa abbia fatto, ma rifiutare significa scegliere lei contro di lui.",
+    "optionA": "Lo copro: non sta a me processarlo",
+    "optionB": "Mi tiro fuori: non mento per nessuno",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Un amico chiede fiducia, non un interrogatorio",
+      "Non conosco i fatti: giudicare sarebbe arroganza",
+      "La lealtà che si tira indietro al primo dubbio è debole"
+    ],
+    "spuntiB": [
+      "Mentire mi rende complice di qualcosa che ignoro",
+      "Coprirlo è schierarmi contro un’altra persona",
+      "Un amico che ti chiede di mentire ti sta già usando"
+    ]
+  },
+  {
+    "id": "s21",
+    "text": "Dopo anni capisci che resti nella relazione più per paura della solitudine e per la storia condivisa che per amore. Andartene farebbe male a entrambi.",
+    "optionA": "Resto: una vita costruita insieme vale più dell’idea romantica",
+    "optionB": "Me ne vado: restare per paura è ingiusto per entrambi",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "L’amore-passione lascia il posto a qualcosa di più profondo",
+      "Buttare anni e legami per un’idea è ingenuo",
+      "La storia comune e la stabilità sono amore, in un’altra forma"
+    ],
+    "spuntiB": [
+      "Restare per paura ruba a entrambi la possibilità di felicità",
+      "Una vita insieme senza amore è una gabbia condivisa",
+      "Fa più male una presenza assente di un addio onesto"
+    ]
+  },
+  {
+    "id": "s22",
+    "text": "Un amico sta facendo una scelta che consideri un grave errore di vita. Puoi opporti rischiando il rapporto, o sostenerlo per non perderlo.",
+    "optionA": "Mi oppongo: tacere è abbandonarlo",
+    "optionB": "Lo sostengo: è la sua vita, non la mia",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Un amico vero dice anche ciò che fa arrabbiare",
+      "Sostenere un errore per quieto vivere è codardia",
+      "Se anche sbaglio, almeno mi sono opposto per lui"
+    ],
+    "spuntiB": [
+      "La mia idea di errore non è una verità assoluta",
+      "Le persone hanno diritto di sbagliare a modo loro",
+      "Restare accanto vale più di avere ragione"
+    ]
+  },
+  {
+    "id": "s23",
+    "text": "I tuoi genitori anziani vogliono restare nella loro casa nonostante non sia più sicura. Rispettare la loro libertà significa accettare un rischio reale.",
+    "optionA": "Rispetto la loro scelta: la dignità vale il rischio",
+    "optionB": "Intervengo: la loro sicurezza viene prima dell’orgoglio",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Togliere l’autonomia a un anziano lo spegne prima del corpo",
+      "Una vita sicura ma in gabbia non è una vita",
+      "Hanno il diritto di decidere fino alla fine"
+    ],
+    "spuntiB": [
+      "L’amore a volte è proteggere anche contro la loro volontà",
+      "Un incidente evitabile sarebbe un rimpianto eterno",
+      "La loro libertà non vale più della loro incolumità"
+    ]
+  },
+  {
+    "id": "s24",
+    "text": "Scopri che un parente stretto nasconde un problema serio (dipendenza, debiti). Esporlo alla famiglia lo tradisce; tacere lo lascia affondare.",
+    "optionA": "Lo dico alla famiglia: da solo non ne esce",
+    "optionB": "Resto al suo fianco in silenzio: la fiducia prima",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Certi problemi si superano solo col sostegno di tutti",
+      "Coprirlo da solo significa affondare con lui",
+      "Tradire la sua riservatezza può essere ciò che lo salva"
+    ],
+    "spuntiB": [
+      "Esporlo può umiliarlo e farlo chiudere del tutto",
+      "La fiducia tradita distrugge l’unico ponte che ho con lui",
+      "Aiutare in silenzio rispetta la sua dignità"
+    ]
+  },
+  {
+    "id": "s25",
+    "text": "Il tuo partner riceve un’occasione di vita all’estero. Seguirlo azzera la tua carriera e i tuoi legami; non seguirlo mette a rischio la coppia.",
+    "optionA": "Lo seguo: l’amore vale il sacrificio",
+    "optionB": "Non lo seguo: annullarmi non aiuterebbe nessuno dei due",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Una carriera si ricostruisce, un grande amore no",
+      "Sostenere il sogno dell’altro è amore concreto",
+      "Restare per orgoglio mio condannerebbe la coppia"
+    ],
+    "spuntiB": [
+      "Chi si annulla per amore prima o poi presenta il conto",
+      "Una relazione non dovrebbe chiedere di sparire",
+      "Anche i miei sogni hanno lo stesso diritto dei suoi"
+    ]
+  },
+  {
+    "id": "s26",
+    "text": "Un amico di una vita ha cambiato valori al punto da rappresentare tutto ciò in cui non credi. Restare amici significa convivere con ciò che disapprovi.",
+    "optionA": "Resto: la persona è più delle sue idee",
+    "optionB": "Mi allontano: certi valori non sono dettagli",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Un’amicizia che resiste alle differenze è la più forte",
+      "Tagliare chi la pensa diversamente ci isola tutti",
+      "Dietro le idee c’è ancora la persona che ho amato"
+    ],
+    "spuntiB": [
+      "Frequentare ciò che disapprovo mi corrode",
+      "Certi valori non sono opinioni, sono confini",
+      "Tacere per amicizia è già tradire me stesso"
+    ]
+  },
+  {
+    "id": "s27",
+    "text": "Tuo figlio adulto fa scelte che lo fanno soffrire. Puoi continuare a salvarlo economicamente o smettere, sapendo che cadrà ma forse imparerà.",
+    "optionA": "Smetto di salvarlo: l’amore a volte è lasciar cadere",
+    "optionB": "Continuo: non si gira la faccia a un figlio che soffre",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Salvarlo sempre gli impedisce di crescere",
+      "Un amore che evita ogni caduta cresce figli eterni bambini",
+      "A volte il bene fa più male di un no"
+    ],
+    "spuntiB": [
+      "Un genitore non smette mai di esserci",
+      "Lasciar cadere chi ami è un rischio che può non perdonarsi",
+      "La durezza educativa a volte è solo abbandono mascherato"
+    ]
+  },
+  {
+    "id": "s28",
+    "text": "Sai una verità che libererebbe un amico da un’illusione su una persona cara ormai morta. La verità non cambia nulla, se non distruggere un bel ricordo.",
+    "optionA": "Taccio: certi ricordi vanno protetti",
+    "optionB": "Dico la verità: vivere su un’illusione non è giusto",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Un ricordo che dà pace vale più di una verità inutile",
+      "La verità senza scopo è solo crudeltà",
+      "Non tutto ciò che è vero va detto"
+    ],
+    "spuntiB": [
+      "Un legame fondato su un’illusione resta falso",
+      "Ha il diritto di conoscere la realtà, non una favola",
+      "Le verità nascoste pesano comunque, anche taciute"
+    ]
+  },
+  {
+    "id": "s29",
+    "text": "Il tuo partner vuole un figlio, tu no (o viceversa). È un desiderio che non ammette mezze misure: qualunque scelta sacrifica uno dei due.",
+    "optionA": "Seguo il suo desiderio: negarglielo lo distruggerebbe",
+    "optionB": "Resto fedele a me stesso: un figlio non si fa per non deludere",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Negare un figlio a chi lo desidera può uccidere l’amore",
+      "A volte si scopre di volere ciò che si temeva",
+      "Amare è anche fare spazio al sogno dell’altro"
+    ],
+    "spuntiB": [
+      "Un figlio fatto per dovere è un’ingiustizia verso il bambino",
+      "Tradire un no così profondo crea rancore eterno",
+      "Su una scelta irreversibile non ci si può forzare"
+    ]
+  },
+  {
+    "id": "s30",
+    "text": "Ti accorgi di amare la persona sbagliata: stare con lei ferirebbe qualcuno a cui tieni. Seguire il cuore o proteggere chi resterebbe ferito?",
+    "optionA": "Seguo il cuore: una vita repressa fa male a tutti",
+    "optionB": "Rinuncio: la mia felicità non vale la ferita di chi amo",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Reprimere un amore vero avvelena ogni rapporto",
+      "Vivere per non ferire gli altri è non vivere",
+      "La sincerità, per quanto dura, è più rispettosa della finzione"
+    ],
+    "spuntiB": [
+      "Costruire la felicità sul dolore altrui è fragile",
+      "Alcuni legami contano più di un desiderio",
+      "Saper rinunciare è una forma matura di amore"
+    ]
+  },
+  {
+    "id": "s31",
+    "text": "Un amico ti chiede sincerità su un suo difetto che gli rovina i rapporti, ma dirlo davvero potrebbe ferirlo a fondo.",
+    "optionA": "Sono pienamente sincero: me l’ha chiesto e gli serve",
+    "optionB": "Addolcisco la verità: la durezza non aiuta",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Una sincerità annacquata non cambia nulla",
+      "Chi chiede la verità merita di riceverla intera",
+      "Le ferite della verità guariscono, l’autoinganno no"
+    ],
+    "spuntiB": [
+      "La verità senza tatto distrugge invece di aiutare",
+      "Come dici una cosa conta quanto la cosa stessa",
+      "Si può essere onesti senza essere spietati"
+    ]
+  },
+  {
+    "id": "s32",
+    "text": "Tua sorella ti chiede di non invitare un parente alle sue nozze per vecchie ferite, ma escluderlo spaccherebbe la famiglia allargata.",
+    "optionA": "Rispetto lei: è il suo giorno, decide lei",
+    "optionB": "Provo a ricucire: un’esclusione lascia strascichi per anni",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Nel suo giorno la sua serenità viene prima",
+      "Imporle una presenza dolorosa è egoismo nostro",
+      "Le ferite vere meritano rispetto, non diplomazia"
+    ],
+    "spuntiB": [
+      "Un’esclusione alle nozze diventa una frattura permanente",
+      "Forse è l’occasione per chiudere una vecchia ferita",
+      "Le scelte di un giorno pesano sui rapporti di una vita"
+    ]
+  },
+  {
+    "id": "s33",
+    "text": "Dopo una lite enorme, capisci che per salvare il rapporto dovresti chiedere scusa per primo, anche se senti di avere ragione.",
+    "optionA": "Chiedo scusa per primo: il rapporto vale più dell’orgoglio",
+    "optionB": "Aspetto: scusarmi avendo ragione è una resa che peserà",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Chi fa il primo passo è il più forte, non il più debole",
+      "Avere ragione da soli non scalda il letto",
+      "Salvare un legame vale più di un punto vinto"
+    ],
+    "spuntiB": [
+      "Scusarsi quando non si è in torto crea uno squilibrio",
+      "Un perdono estorto dall’ansia non risolve davvero",
+      "Anche i rapporti hanno bisogno di verità, non solo di pace"
+    ]
+  },
+  {
+    "id": "s34",
+    "text": "Un amico in crisi si appoggia totalmente a te, ma il suo peso sta logorando la tua serenità e la tua famiglia.",
+    "optionA": "Resto presente: non si molla chi affoga",
+    "optionB": "Metto un limite: non posso affondare con lui",
+    "register": "vita",
+    "tappa": 3,
+    "spuntiA": [
+      "Gli amici si vedono nei momenti bui",
+      "Un limite ora potrebbe sembrargli un abbandono",
+      "Aiutare ha senso proprio quando costa"
+    ],
+    "spuntiB": [
+      "Salvare lui annegando io non aiuta nessuno",
+      "Anche chi aiuta ha bisogno di confini",
+      "Una presenza esausta finisce per fare male a entrambi"
+    ]
+  },
+  {
+    "id": "s35",
+    "text": "Puoi realizzare il sogno più grande, ma solo dedicandogli così tanto da diventare un genitore (o partner) assente. Ne vale la pena?",
+    "optionA": "Inseguo il sogno: ne saranno fieri",
+    "optionB": "Rinuncio: nessun traguardo vale l’assenza dalle loro vite",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Un genitore realizzato insegna a sognare",
+      "I sogni rinviati diventano rancori che pesano su tutti",
+      "Esserci sempre ma spento non è un regalo"
+    ],
+    "spuntiB": [
+      "I figli non ricordano i tuoi successi, ma le tue assenze",
+      "Il tempo con loro è l’unica cosa irrecuperabile",
+      "Un sogno goduto da soli sa di sconfitta"
+    ]
+  },
+  {
+    "id": "s36",
+    "text": "Alla fine potresti scegliere: aver vissuto in modo del tutto onesto ma deludendo chi amavi, o aver detto qualche bugia per renderli felici.",
+    "optionA": "Onesto, anche a costo di deluderli",
+    "optionB": "Qualche bugia buona, ma loro felici",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Una vita autentica è l’unica davvero tua",
+      "Le bugie “buone” tolgono agli altri il diritto di scegliere",
+      "Si ricorda chi è stato vero, non chi è stato comodo"
+    ],
+    "spuntiB": [
+      "A volte amare è proteggere, anche con una bugia",
+      "La felicità di chi amo conta più della mia coerenza",
+      "La verità totale può essere una forma di egoismo"
+    ]
+  },
+  {
+    "id": "s37",
+    "text": "Puoi dedicare la vita a costruire qualcosa che durerà oltre te, ma a costo di non viverla mai pienamente nel presente.",
+    "optionA": "Costruisco per il dopo: lasciare un segno dà senso",
+    "optionB": "Vivo il presente: una vita rimandata non torna",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Ciò che lasci è la tua parte di eternità",
+      "Vivere solo per l’oggi è vivere senza radici nel futuro",
+      "Le cose grandi chiedono di rinunciare a qualcosa"
+    ],
+    "spuntiB": [
+      "Il futuro non è garantito, l’oggi sì",
+      "Costruire per il dopo può rubarti l’unica vita che hai",
+      "Nessuno, alla fine, rimpiange di aver vissuto troppo"
+    ]
+  },
+  {
+    "id": "s38",
+    "text": "Scopri che una persona che ammiravi e che ti ha fatto del bene ha commesso, in passato, qualcosa di grave. Cambia ciò che è stata per te?",
+    "optionA": "No: ciò che è stata per me resta vero",
+    "optionB": "Sì: non posso separare la persona dalle sue azioni",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Il bene che mi ha fatto è reale e non si cancella",
+      "Nessuno è solo il suo atto peggiore",
+      "Giudicare tutto col senno di poi è ingiusto"
+    ],
+    "spuntiB": [
+      "Chiudere gli occhi sul male è una forma di complicità",
+      "Ciò che una persona fa rivela chi è davvero",
+      "Ammirare nonostante tutto svaluta le vittime"
+    ]
+  },
+  {
+    "id": "s39",
+    "text": "Hai l’occasione di chiudere i conti con chi ti ha ferito a fondo, ma solo rinunciando per sempre a vederlo pagare.",
+    "optionA": "Lascio andare: la pace vale più della rivalsa",
+    "optionB": "No: certe ferite chiedono giustizia, non oblio",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Il rancore tiene legati al proprio carnefice",
+      "Perdonare non è dimenticare, è liberarsi",
+      "La vendetta non ridà mai ciò che è stato tolto"
+    ],
+    "spuntiB": [
+      "Perdonare troppo presto è tradire il proprio dolore",
+      "Senza conseguenze, il male resta impunito",
+      "La memoria del torto è una forma di rispetto per sé"
+    ]
+  },
+  {
+    "id": "s40",
+    "text": "Potresti vivere più a lungo e in salute rinunciando a tutti i piaceri che la rendono tua, o vivere pienamente ma di meno.",
+    "optionA": "Vita lunga e disciplinata: il tempo è tutto",
+    "optionB": "Vita piena anche se più breve: conta come vivi",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Più tempo significa più amori, persone, esperienze",
+      "La disciplina di oggi è la libertà di domani",
+      "Si rinuncia a poco per guadagnare molto"
+    ],
+    "spuntiB": [
+      "Una vita di sole rinunce non è vita",
+      "La qualità di un giorno vale più di dieci vuoti",
+      "Vivere col freno tirato è una lenta resa"
+    ]
+  },
+  {
+    "id": "s41",
+    "text": "Un genitore in fin di vita ti chiede una promessa che, per mantenerla, ti costringerà a enormi sacrifici per anni.",
+    "optionA": "Prometto e mantengo: è la sua ultima volontà",
+    "optionB": "Non prometto ciò che non posso davvero sostenere",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Un’ultima promessa è un debito d’amore",
+      "Mantenere la parola data dà senso al dolore",
+      "Certe parole valgono una vita di impegno"
+    ],
+    "spuntiB": [
+      "Promettere per pietà e poi cedere è peggio di un no",
+      "Una volontà non può ipotecare tutta la mia vita",
+      "L’amore vero non chiede catene"
+    ]
+  },
+  {
+    "id": "s42",
+    "text": "Puoi conoscere sempre la verità su tutto ciò che ti circonda, o vivere con qualche bella illusione che ti rende più sereno e più gentile.",
+    "optionA": "La verità sempre, anche scomoda",
+    "optionB": "Qualche illusione, se mi rende migliore e più felice",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Vivere nell’illusione è non vivere davvero",
+      "Solo dalla verità nascono scelte vere",
+      "Le illusioni prima o poi presentano il conto"
+    ],
+    "spuntiB": [
+      "Certe verità non aggiungono nulla se non dolore",
+      "Un po’ di illusione ci rende più umani",
+      "Non tutto va saputo per vivere bene"
+    ]
+  },
+  {
+    "id": "s43",
+    "text": "Scopri che la cosa di cui sei più orgoglioso è nata da un colpo di fortuna, non dal tuo merito. Cambia il valore di ciò che hai fatto?",
+    "optionA": "No: conta ciò che ne ho costruito, non l’inizio",
+    "optionB": "Sì: la verità ridimensiona il mio orgoglio",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "La fortuna apre la porta, ma poi tocca a te",
+      "Conta cosa hai fatto dell’occasione",
+      "Negare il proprio merito per umiltà è falsa modestia"
+    ],
+    "spuntiB": [
+      "Riconoscere la fortuna è onestà verso chi non l’ha avuta",
+      "L’orgoglio cieco al caso è arroganza",
+      "Il merito vero sa distinguersi dalla fortuna"
+    ]
+  },
+  {
+    "id": "s44",
+    "text": "Potresti dare a chi ami una felicità immediata ma effimera, oppure una verità dolorosa che lo farà crescere.",
+    "optionA": "La felicità ora: il dolore arriverà comunque da sé",
+    "optionB": "La verità: crescere vale più di stare bene un momento",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Regalare un momento di gioia non è mai sbagliato",
+      "Il dolore non va anticipato se non serve",
+      "A volte proteggere è il dono più grande"
+    ],
+    "spuntiB": [
+      "Una felicità su basi false crolla peggio",
+      "Chi amiamo merita strumenti per crescere, non una bolla",
+      "La verità data con amore è il regalo più duraturo"
+    ]
+  },
+  {
+    "id": "s45",
+    "text": "Alla fine ti accorgi di aver passato la vita a rincorrere l’approvazione altrui. Cambiare ora significa deludere proprio chi hai sempre voluto compiacere.",
+    "optionA": "Cambio: voglio vivere finalmente per me",
+    "optionB": "Resto: a questo punto ferire chi amo non ne vale la pena",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Non è mai troppo tardi per riprendersi la propria vita",
+      "Compiacere all’infinito è una prigione che ti scegli",
+      "Chi ti ama davvero accetterà il vero te"
+    ],
+    "spuntiB": [
+      "Stravolgere tutto ora ferirebbe persone reali",
+      "La libertà che fa solo macerie non è libertà",
+      "A volte la pace degli altri è parte della propria"
+    ]
+  },
+  {
+    "id": "s46",
+    "text": "Puoi rivelare un segreto di famiglia che libererebbe te dal peso di portarlo, ma toglierebbe la pace a chi non ha mai saputo.",
+    "optionA": "Lo rivelo: non è giusto che il peso sia solo mio",
+    "optionB": "Lo custodisco: la loro pace vale il mio silenzio",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Un segreto portato da soli logora una vita intera",
+      "La verità appartiene anche a chi riguarda",
+      "I segreti di famiglia esplodono sempre, prima o poi"
+    ],
+    "spuntiB": [
+      "Liberare me caricando loro è solo egoismo",
+      "Non tutte le verità migliorano le cose",
+      "Proteggere la loro serenità è un atto d’amore"
+    ]
+  },
+  {
+    "id": "s47",
+    "text": "Capisci che per essere davvero felice dovresti smettere di aiutare gli altri come hai sempre fatto, ma qualcuno dipende da te.",
+    "optionA": "Penso a me: anche io ho diritto alla mia vita",
+    "optionB": "Continuo: non posso abbandonare chi conta su di me",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Annullarsi per gli altri prima o poi crolla",
+      "Non si può versare da una brocca vuota",
+      "Anche chi aiuta merita di essere felice"
+    ],
+    "spuntiB": [
+      "Abbandonare chi dipende da te è una ferita che resta",
+      "La felicità costruita lasciando soli gli altri è fragile",
+      "A volte il senso della vita è proprio prendersi cura"
+    ]
+  },
+  {
+    "id": "s48",
+    "text": "Potresti sapere come ti ricorderanno dopo la morte, ma la verità potrebbe non piacerti affatto.",
+    "optionA": "Voglio saperlo: preferisco la verità all’illusione",
+    "optionB": "Preferisco non sapere: voglio vivere senza quel peso",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Sapere come mi vedono potrebbe cambiarmi in meglio",
+      "Vivere su un’idea falsa di sé è un inganno",
+      "La verità, anche dura, è preferibile"
+    ],
+    "spuntiB": [
+      "Vivere per il giudizio postumo è già una prigione",
+      "Certe verità tolgono la pace senza dare nulla",
+      "Conta come vivo, non come mi etichetteranno"
+    ]
+  },
+  {
+    "id": "s49",
+    "text": "Hai un’unica occasione di dire a una persona ormai lontana ciò che non hai mai avuto il coraggio di dire. Farlo potrebbe riaprire ferite in entrambi.",
+    "optionA": "Glielo dico: meglio il rischio del rimpianto",
+    "optionB": "Lascio stare: certe cose è giusto lasciarle dove sono",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Le parole non dette diventano i rimpianti più pesanti",
+      "Anche una ferita riaperta può finalmente guarire",
+      "Il coraggio di dire libera, qualunque sia la risposta"
+    ],
+    "spuntiB": [
+      "Riaprire il passato a volte fa più male che bene",
+      "Non tutto va detto solo per liberare sé stessi",
+      "Certe pagine chiuse vanno rispettate"
+    ]
+  },
+  {
+    "id": "s50",
+    "text": "Capisci che la vita “giusta” che hai costruito (sicura, ordinata, approvata) non è quella che volevi. Buttare tutto ora avrebbe un prezzo enorme per chi ti circonda.",
+    "optionA": "Resto fedele agli impegni presi: la libertà non giustifica le macerie",
+    "optionB": "Cambio: vivere una vita non mia è il prezzo più alto di tutti",
+    "register": "vita",
+    "tappa": 4,
+    "spuntiA": [
+      "Le scelte fatte hanno creato persone e legami reali",
+      "La felicità che distrugge gli altri non è felicità",
+      "La maturità è trovare senso anche in ciò che non hai scelto"
+    ],
+    "spuntiB": [
+      "Una vita intera vissuta per dovere è uno spreco",
+      "Restare infelice “per gli altri” nessuno te lo chiede davvero",
+      "Il rimpianto di non aver vissuto è il più crudele"
+    ]
+  },
+  {
     "id": "a01",
     "text": "Disattiveresti per sempre tutti i social, anche a costo di tagliarti fuori da qualche amicizia e occasione?",
     "optionA": "Sì: mi riprendo la testa",
@@ -2274,24 +3174,6 @@
     ]
   },
   {
-    "id": "l08",
-    "text": "Non avresti mai più bisogno di dormire, o non avresti mai più bisogno di mangiare?",
-    "optionA": "Niente sonno: ore di vita in più",
-    "optionB": "Niente cibo: libertà e risparmio",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Avrei una vita lunga il doppio",
-      "Quante cose farei con quelle ore",
-      "Il sonno è tempo rubato"
-    ],
-    "spuntiB": [
-      "Niente spese né orari dei pasti",
-      "Mangiare incatena la giornata",
-      "E poi dormire resta un piacere"
-    ]
-  },
-  {
     "id": "l09",
     "text": "Conosceresti la risposta a qualsiasi domanda, ma senza poterla mai condividere con nessuno?",
     "optionA": "Sì: sapere mi basta",
@@ -2379,24 +3261,6 @@
       "Certi giudizi rovinano i rapporti",
       "Non tutto ciò che pensano è giusto",
       "A volte ignorare è serenità"
-    ]
-  },
-  {
-    "id": "l14",
-    "text": "Potresti mangiare qualsiasi cosa senza ingrassare, o non ammalarti mai più?",
-    "optionA": "Mangiare tutto senza pensieri",
-    "optionB": "Salute di ferro per sempre",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Il piacere del cibo è quotidiano",
-      "Vivrei senza sensi di colpa",
-      "La gola è una gioia semplice"
-    ],
-    "spuntiB": [
-      "La salute è la base di tutto",
-      "Niente malattie è vita serena",
-      "Il gusto passa, la salute resta"
     ]
   },
   {
@@ -2530,54 +3394,6 @@
     ]
   },
   {
-    "id": "r08",
-    "text": "Conserveresti per sempre il piacere del cibo o quello della musica, dovendo rinunciare all’altro?",
-    "optionA": "Il cibo",
-    "optionB": "La musica",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Il gusto è un piacere quotidiano",
-      "Mangiare unisce le persone"
-    ],
-    "spuntiB": [
-      "La musica accompagna ogni emozione",
-      "Una canzone riporta interi anni"
-    ]
-  },
-  {
-    "id": "r09",
-    "text": "Un solo micro-superpotere: sapere sempre l’ora esatta senza guardare, o trovare sempre parcheggio?",
-    "optionA": "L’ora sempre in testa",
-    "optionB": "Parcheggio sempre libero",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Non sarei mai in ritardo",
-      "Una magia utile ogni giorno"
-    ],
-    "spuntiB": [
-      "Mi risparmierebbe stress e tempo",
-      "In città vale oro"
-    ]
-  },
-  {
-    "id": "r10",
-    "text": "Per un anno: niente caffè e alcol, o niente serie TV e social?",
-    "optionA": "Via caffè e alcol",
-    "optionB": "Via serie e social",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "La mente lucida vale il sacrificio",
-      "Il corpo ringrazia"
-    ],
-    "spuntiB": [
-      "Tempo libero ritrovato",
-      "Meno schermi, più vita"
-    ]
-  },
-  {
     "id": "r11",
     "text": "Vorresti essere ricordato per una grande impresa fatta una volta, o per mille piccole gentilezze quotidiane?",
     "optionA": "Una grande impresa",
@@ -2591,22 +3407,6 @@
     "spuntiB": [
       "Le piccole cose scaldano davvero",
       "La bontà quotidiana cambia vite vicine"
-    ]
-  },
-  {
-    "id": "r12",
-    "text": "Al ristorante ordineresti sempre il piatto che ami, o ogni volta qualcosa di nuovo rischiando di pentirtene?",
-    "optionA": "Il sicuro che amo",
-    "optionB": "Sempre qualcosa di nuovo",
-    "register": "vita",
-    "tappa": 1,
-    "spuntiA": [
-      "Perché rischiare un piacere certo?",
-      "Conosco ciò che mi rende felice"
-    ],
-    "spuntiB": [
-      "La scoperta vale il rischio",
-      "Sempre uguale è già noia"
     ]
   },
   {
