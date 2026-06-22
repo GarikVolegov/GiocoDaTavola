@@ -62,6 +62,8 @@ import {
 } from '../shared/events';
 import { Card, Pill, Button, Alert, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, JoinQr } from '../shared/ui';
 import { useAuth, Show, SignInButton } from '@clerk/react';
+import VoteView from './views/VoteView';
+import { wrap } from './views/layout';
 
 // A row of tap-to-send reaction emojis, shown to the audience during a defense /
 // duel turn so non-speakers stay engaged. Throttled by the caller.
@@ -555,121 +557,23 @@ export default function PlayerApp() {
       </button>
     ) : null;
 
-  const wrap = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    textAlign: 'center',
-    padding: '1.5rem',
-    gap: '1rem',
-  } as const;
-
   if (
     joinedCode &&
     (phase === 'VOTE_1' || phase === 'VOTE_2' || phase === 'DUEL_PICK' || phase === 'DUEL_REPICK')
   ) {
-    const dilemma = game?.dilemma;
-    // VOTE_2 / DUEL_REPICK keep the player's first choice as the default they can
-    // keep or change; the sub-line nudges them per phase.
-    const subtitle =
-      phase === 'VOTE_2'
-        ? 'Hai sentito le difese: confermi o cambi idea?'
-        : phase === 'DUEL_PICK'
-          ? 'Scegli la tua posizione.'
-          : phase === 'DUEL_REPICK'
-            ? 'Ti ha convinto? Conferma o cambia.'
-            : null;
     return (
-      <main style={wrap}>
-        <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
-        {subtitle && (
-          <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0 }}>
-            {subtitle}
-          </p>
-        )}
-        {remaining != null && (
-          <div
-            aria-label="Tempo rimanente"
-            style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-          >
-            {remaining}s
-          </div>
-        )}
-        {dilemma && (
-          <p style={{ fontSize: '1.1rem', opacity: 0.85, margin: 0 }}>{dilemma.text}</p>
-        )}
-        <div
-          role="group"
-          aria-label="Il tuo voto"
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(90vw, 22rem)' }}
-        >
-          {(['A', 'B'] as const).map((letter) => {
-            const selected = vote === letter;
-            const accent = letter === 'A' ? '84,134,196' : '199,122,69';
-            return (
-              <button
-                key={letter}
-                type="button"
-                onClick={() => castVote(letter)}
-                aria-pressed={selected}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  textAlign: 'left',
-                  padding: '1rem 1.1rem',
-                  borderRadius: '0.8rem',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  color: 'inherit',
-                  background: selected ? `rgba(${accent},0.32)` : `rgba(${accent},0.12)`,
-                  border: `2px solid rgba(${accent},${selected ? 0.9 : 0.4})`,
-                }}
-              >
-                <span style={{ fontSize: '1.6rem', fontWeight: 800, opacity: 0.85 }}>{letter}</span>
-                <span style={{ fontSize: '1.1rem' }}>
-                  {dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        {voteError ? (
-          <p role="alert" style={{ color: '#ff6b6b', margin: 0, fontWeight: 600 }}>
-            {voteError}
-          </p>
-        ) : vote ? (
-          <p style={{ opacity: 0.8, margin: 0 }}>
-            Hai votato <strong>{vote}</strong>. Puoi cambiare finché c’è tempo.
-          </p>
-        ) : (
-          <p style={{ opacity: 0.7, margin: 0 }}>Tocca A o B per votare.</p>
-        )}
-        {phase === 'VOTE_2' && (
-          <>
-            <button
-              type="button"
-              onClick={() => getSocket().emit(SocketEvents.PlayerConfirmVote)}
-              style={{
-                marginTop: '0.25rem',
-                fontSize: '1.05rem',
-                fontWeight: 700,
-                padding: '0.7rem 1.6rem',
-                borderRadius: '0.7rem',
-                cursor: 'pointer',
-              }}
-            >
-              Confermo ✓
-            </button>
-            <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
-              Confermati {game?.confirmedCount ?? 0}/{players.length} · si va avanti quando tutti confermano
-            </p>
-          </>
-        )}
-        {skipButton}
-      </main>
+      <VoteView
+        phase={phase}
+        dilemma={game?.dilemma}
+        remaining={remaining}
+        vote={vote}
+        voteError={voteError}
+        onVote={castVote}
+        onConfirm={() => getSocket().emit(SocketEvents.PlayerConfirmVote)}
+        confirmedCount={game?.confirmedCount ?? 0}
+        playerCount={players.length}
+        skipButton={skipButton}
+      />
     );
   }
 

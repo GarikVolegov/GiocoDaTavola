@@ -77,4 +77,27 @@ describe('PlayerApp', () => {
     expect(screen.getByText('Mare')).toBeInTheDocument();
     expect(screen.getByText('Montagna')).toBeInTheDocument();
   });
+
+  it('shows the confirm affordance at VOTE_2', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_2',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        confirmedCount: 0,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/hai sentito le difese/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /confermo/i })).toBeInTheDocument();
+  });
 });

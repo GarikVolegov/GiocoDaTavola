@@ -1,0 +1,28 @@
+# Fase 4 — Refactor god-file (incrementale) — Implementation Plan
+
+**Approccio:** una fetta coesa per volta, ognuna coperta da test e mergeabile da
+sola, invece di un big-bang. Stop per review dopo ogni fetta.
+
+## Fetta 1 — Estrazione `VoteView` da PlayerApp ✅
+- Nuovo `client/src/player/views/layout.ts`: stile condiviso `wrap` (spostato da
+  PlayerApp, ora importato dalle ~15 viste che lo usavano).
+- Nuovo `client/src/player/views/VoteView.tsx`: la schermata di voto
+  (VOTE_1/VOTE_2/DUEL_PICK/DUEL_REPICK), purely presentational — il padre possiede
+  lo stato voto e gli emit socket (callback `onVote`/`onConfirm`).
+- `PlayerApp.tsx`: blocco voto inline (~105 righe) → `<VoteView .../>`. Da 1789 a 1693 righe.
+- Copertura: render-test VOTE_1 + VOTE_2 in `PlayerApp.test.tsx` (verificano il
+  wiring PlayerApp→VoteView, non il componente isolato → provano che il refactor
+  preserva il comportamento). 345 test, gate verdi.
+
+## Prossime fette (proposte, non ancora fatte)
+- Estrarre le altre viste di fase di PlayerApp (DEFENSE/INTERVENTI, SPEAKER_VOTE,
+  PREDICT, ACCUSE, lo switch finale TAPPA/SPLIT/RESULTS/AWARDS), aggiungendo un
+  render-test per ognuna PRIMA dell'estrazione.
+- Estrarre il blocco "lobby + setup leader" (grande) in una `LobbyView`.
+- Lato server: scomporre `RoomStore` (rooms.ts) estraendo helper coesi per dominio
+  (tally voti, rotazione difensori, predizioni/scommesse) dietro la stessa API
+  pubblica usata da `index.ts`, con i 327 unit-test + l'integrazione come rete.
+
+## Principio
+Ogni fetta: (1) render/unit-test della parte da estrarre, (2) estrazione, (3) gate
+verdi, (4) commit+push, (5) review. Niente diff monstre.
