@@ -251,18 +251,18 @@ describe('RoomStore.startGame', () => {
 });
 
 describe('PHASE_DURATIONS_MS', () => {
-  it('has no timer for LOBBY and FINAL_AWARDS, positive timers for the rest', () => {
+  it('has no timer for LOBBY/FINAL_AWARDS and the self-paced vote phases', () => {
     expect(PHASE_DURATIONS_MS.LOBBY).toBeNull();
     expect(PHASE_DURATIONS_MS.FINAL_AWARDS).toBeNull();
+    // Self-paced: advance on "everyone acted", not on a timer.
+    expect(PHASE_DURATIONS_MS.VOTE_1).toBeNull();
+    expect(PHASE_DURATIONS_MS.PREDICT).toBeNull();
+    expect(PHASE_DURATIONS_MS.SPEAKER_VOTE).toBeNull();
     const timed: GamePhase[] = [
       'PHASE_INTRO',
       'DILEMMA_REVEAL',
-      'VOTE_1',
       'SPLIT_REVEAL',
-      'PREDICT',
       'DEFENSE',
-      'VOTE_2',
-      'SPEAKER_VOTE',
       'PHASE_RESULTS',
     ];
     for (const phase of timed) {
