@@ -463,6 +463,14 @@ export type ReactResult =
   | { ok: true; emoji: Reaction }
   | { ok: false; error: ReactError };
 
+export type RaiseHandError = 'ROOM_NOT_FOUND' | 'NOT_RAISE_PHASE' | 'NOT_IN_ROOM' | 'IS_SPEAKER';
+export type RaiseHandResult =
+  | { ok: true; room: Room; raised: boolean }
+  | { ok: false; error: RaiseHandError };
+
+export type FinishTurnError = 'ROOM_NOT_FOUND' | 'NOT_FINISHING_PHASE' | 'NOT_SPEAKER' | 'TOO_EARLY';
+export type FinishTurnResult = { ok: true; room: Room } | { ok: false; error: FinishTurnError };
+
 export type PredictError =
   | 'ROOM_NOT_FOUND'
   | 'NOT_PREDICT_PHASE'
@@ -1272,6 +1280,27 @@ export class RoomStore {
       s.reactionsReceived = (s.reactionsReceived ?? 0) + 1;
     }
     return { ok: true, emoji };
+  }
+
+  /**
+   * Toggle a player's raised hand during a defender's turn (DEFENSE only). Anyone
+   * present except the current speaker may queue; raising again lowers it. The FIFO
+   * order is the speaking order for the INTERVENTI mini-turns that follow. The
+   * identities never leave the server during DEFENSE — only the aggregate count.
+   */
+  raiseHand(code: string, playerId: string): RaiseHandResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.phase !== 'DEFENSE') return { ok: false, error: 'NOT_RAISE_PHASE' };
+    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
+    if (this.currentSpeakerId(room) === playerId) return { ok: false, error: 'IS_SPEAKER' };
+    const i = room.raisedHands.indexOf(playerId);
+    if (i >= 0) {
+      room.raisedHands.splice(i, 1);
+      return { ok: true, room, raised: false };
+    }
+    room.raisedHands.push(playerId);
+    return { ok: true, room, raised: true };
   }
 
   /**

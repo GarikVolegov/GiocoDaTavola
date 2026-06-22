@@ -2235,3 +2235,28 @@ describe('armTurn on DEFENSE entry', () => {
     expect(room.phaseExpiresAt).toBe(now + 180_000);
   });
 });
+
+describe('raiseHand', () => {
+  function room4(store: RoomStore) {
+    return defenseRoom(store, ['A', 'B', 'B', 'B']);
+  }
+  it('queues non-speakers in FIFO order and toggles off', () => {
+    const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
+    const code = room4(store);
+    const speaker = store.get(code)!.defenders[0].id;
+    const others = [...store.get(code)!.players.keys()].filter((id) => id !== speaker);
+    expect(store.raiseHand(code, others[0])).toMatchObject({ ok: true, raised: true });
+    expect(store.raiseHand(code, others[1])).toMatchObject({ ok: true, raised: true });
+    expect(store.get(code)!.raisedHands).toEqual([others[0], others[1]]);
+    expect(store.raiseHand(code, others[0])).toMatchObject({ ok: true, raised: false });
+    expect(store.get(code)!.raisedHands).toEqual([others[1]]);
+  });
+  it('rejects the current speaker and the wrong phase', () => {
+    const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
+    const code = room4(store);
+    const speaker = store.get(code)!.defenders[0].id;
+    expect(store.raiseHand(code, speaker)).toEqual({ ok: false, error: 'IS_SPEAKER' });
+    while (store.get(code)!.phase === 'DEFENSE' || store.get(code)!.phase === 'INTERVENTI') store.advancePhase(code);
+    expect(store.raiseHand(code, speaker)).toEqual({ ok: false, error: 'NOT_RAISE_PHASE' });
+  });
+});
