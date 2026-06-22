@@ -41,6 +41,15 @@ sola, invece di un big-bang. Stop per review dopo ogni fetta.
 - Copertura: render-test DEFENSE spettatore (sta parlando + alza la mano) e turno
   proprio (tocca a te + Ho finito). 352 test, gate verdi.
 
+## Fetta 5 — Estrazione `PredictView` da PlayerApp ✅
+- Nuovo `client/src/player/views/PredictView.tsx`: schermata PREDICT a due varianti
+  (pronostico post-difese + scommessa ribaltone · oppure "quanto mi conosci" se il
+  giocatore ha un'assegnazione). Branch interno su `knowPair`.
+- `PlayerApp.tsx`: blocco inline (~170 righe) → `<PredictView .../>`. Da 1445 a 1291 righe.
+- Copertura: render-test PREDICT pronostico+scommessa e variante know-pair. 354 test, gate verdi.
+
+Stato PlayerApp: **1789 → 1291 righe** (-498, -28%) in 5 fette.
+
 ## Prossime fette (proposte, non ancora fatte)
 - Estrarre le altre viste di fase di PlayerApp (DEFENSE/INTERVENTI, SPEAKER_VOTE,
   PREDICT, ACCUSE, lo switch finale TAPPA/SPLIT/RESULTS/AWARDS), aggiungendo un

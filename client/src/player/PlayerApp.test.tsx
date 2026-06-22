@@ -201,4 +201,50 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/tocca a te/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ho finito/i })).toBeInTheDocument();
   });
+
+  it('shows prediction + swing bet at PREDICT (no know-pair)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PREDICT',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        knowPairs: null,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/chi vincerà/i)).toBeInTheDocument();
+    expect(screen.getByText(/ci sarà un ribaltone/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /REGGE/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /RIBALTA/ })).toBeInTheDocument();
+  });
+
+  it('shows the "quanto mi conosci" guess at PREDICT when assigned', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PREDICT',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        knowPairs: [{ guesserId: 'p1', guesserNickname: 'Alice', targetId: 'p2', targetNickname: 'Bea' }],
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/quanto mi conosci/i)).toBeInTheDocument();
+    expect(screen.getByText('Bea')).toBeInTheDocument(); // the target to guess
+  });
 });
