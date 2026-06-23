@@ -108,8 +108,16 @@ describe('dilemmasForRegister', () => {
     expect(dilemmasForRegister(all, 'business').length).toBeGreaterThanOrEqual(8);
   });
 
-  it('ogni dilemma è taggato vita o business', () => {
-    expect(all.every((d) => d.register === 'vita' || d.register === 'business')).toBe(true);
+  it('ogni dilemma è taggato vita, business o carriera', () => {
+    expect(
+      all.every((d) => d.register === 'vita' || d.register === 'business' || d.register === 'carriera'),
+    ).toBe(true);
+  });
+
+  it('carriera restituisce solo i dilemmi taggati carriera, e ce ne sono abbastanza', () => {
+    const car = dilemmasForRegister(all, 'carriera');
+    expect(car.length).toBeGreaterThanOrEqual(10);
+    expect(car.every((d) => d.register === 'carriera')).toBe(true);
   });
 });
 

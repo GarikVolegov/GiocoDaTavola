@@ -116,7 +116,7 @@ export const FORMAT_DILEMMA_COUNT: Record<SessionFormat, number> = {
 };
 
 /** Content registers (mirror server deck.ts / rooms.ts). */
-export const CONTENT_REGISTERS = ['vita', 'business', 'misto'] as const;
+export const CONTENT_REGISTERS = ['vita', 'business', 'carriera', 'misto'] as const;
 export type ContentRegister = (typeof CONTENT_REGISTERS)[number];
 
 /** Behaviour-based bot personalities (mirror of the server's `BotPersona`). */
@@ -142,6 +142,7 @@ export const FORMAT_LABELS: Record<SessionFormat, { nome: string; durata: string
 export const REGISTER_LABELS: Record<ContentRegister, string> = {
   vita: 'Vita',
   business: 'Business pro',
+  carriera: 'Carriera',
   misto: 'Misto',
 };
 

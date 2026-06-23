@@ -6,7 +6,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** Content register: 'misto' is a filter meaning "any". */
-export type ContentRegister = 'vita' | 'business' | 'misto';
+export type ContentRegister = 'vita' | 'business' | 'carriera' | 'misto';
 
 /**
  * A 1-based "tappa" (life chapter / depth level) for the "Percorso" mode. Higher
@@ -32,7 +32,7 @@ export interface Dilemma {
   optionA: string;
   optionB: string;
   /** Which content register this dilemma belongs to. */
-  register: 'vita' | 'business';
+  register: 'vita' | 'business' | 'carriera';
   /** Percorso chapter/level (1..4); absent ⇒ classic-only dilemma. */
   tappa?: Tappa;
   /** Debate-complexity tier (alto < max < power). Present on every curated dilemma. */

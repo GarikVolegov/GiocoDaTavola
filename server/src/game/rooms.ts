@@ -83,7 +83,7 @@ export const DILEMMA_COUNT_OPTIONS = [3, 5, 7] as const;
 export type DilemmaCount = (typeof DILEMMA_COUNT_OPTIONS)[number];
 
 /** Content registers the host can pick (mirror of deck.ts ContentRegister). */
-export const CONTENT_REGISTERS = ['vita', 'business', 'misto'] as const;
+export const CONTENT_REGISTERS = ['vita', 'business', 'carriera', 'misto'] as const;
 
 /**
  * Behaviour-based bot personalities (Fase B). The persona doesn't pick a *side*

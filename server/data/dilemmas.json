@@ -5648,5 +5648,221 @@
       "In tempi magri ogni contratto conta",
       "Si recupera sul volume ciò che si perde sul prezzo"
     ]
+  },
+  {
+    "id": "dc01",
+    "text": "Ti offrono il posto fisso noioso o la startup che rischia di chiudere tra un anno.",
+    "optionA": "Posto fisso: stabilità e sonni tranquilli",
+    "optionB": "Startup: imparo 10x e mi gioco la scommessa",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "La stabilità è una base, non una prigione",
+      "Con la testa serena rendi di più",
+      "Puoi imparare anche in un posto solido"
+    ],
+    "spuntiB": [
+      "A 25 anni il rischio costa poco",
+      "In startup cresci a velocità doppia",
+      "Un fallimento è un CV, non una condanna"
+    ]
+  },
+  {
+    "id": "dc02",
+    "text": "Ti paghi un corso costoso o impari tutto gratis da solo su internet?",
+    "optionA": "Pago il corso: struttura, scadenze, persone",
+    "optionB": "Da solo: stesso sapere, zero euro",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "La struttura ti fa finire davvero",
+      "Il network del corso vale più del corso",
+      "Pagare ti rende serio"
+    ],
+    "spuntiB": [
+      "Tutto è online gratis se sai cercare",
+      "Impari ciò che ti serve, non un programma",
+      "I soldi risparmiati li investi sul campo"
+    ]
+  },
+  {
+    "id": "dc03",
+    "text": "Resti in un ruolo comodo o chiedi la promozione che ti spaventa?",
+    "optionA": "Resto comodo: non tutto deve crescere",
+    "optionB": "Chiedo: la paura è il segnale giusto",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "La comodità non è una colpa",
+      "Crescere ora ti costa equilibrio",
+      "Un sì forzato brucia in 6 mesi"
+    ],
+    "spuntiB": [
+      "Cresci solo dove hai un po' paura",
+      "Se non chiedi, decide qualcun altro per te",
+      "Il ruolo comodo oggi è la noia di domani"
+    ]
+  },
+  {
+    "id": "dc04",
+    "text": "Accetti più stipendio in un'azienda che non stimi, o meno soldi dove credi?",
+    "optionA": "Più soldi: la stima non paga l'affitto",
+    "optionB": "Meno soldi: lavoro dove ha senso",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Coi soldi ti compri opzioni e tempo",
+      "La stima è un lusso da chi è sistemato",
+      "Puoi credere altrove, fuori dall'orario"
+    ],
+    "spuntiB": [
+      "8 ore al giorno dove non credi ti spengono",
+      "Il senso tiene acceso più del bonus",
+      "Si rende di più dove ci si crede"
+    ]
+  },
+  {
+    "id": "dc05",
+    "text": "Dici al capo che il progetto è una pessima idea, o esegui e basta?",
+    "optionA": "Eseguo: non è il mio rischio",
+    "optionB": "Parlo: tacere è complicità",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Non sei pagato per avere ragione",
+      "A volte vedi solo un pezzo del quadro",
+      "Scegli le battaglie giuste"
+    ],
+    "spuntiB": [
+      "Il silenzio dei competenti costa caro",
+      "Un buon capo vuole il tuo dissenso",
+      "Se va male, eseguivo ordini non ti salva"
+    ]
+  },
+  {
+    "id": "dc06",
+    "text": "Cambi totalmente settore a 30 anni o capitalizzi i 10 anni che hai già fatto?",
+    "optionA": "Capitalizzo: 10 anni non si buttano",
+    "optionB": "Cambio: meglio ora che a 50",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "L'esperienza è un vantaggio composto",
+      "Ricominciare costa tempo e soldi",
+      "La competenza è libertà"
+    ],
+    "spuntiB": [
+      "10 anni in un campo sbagliato sono un costo affondato",
+      "Le skill si trasferiscono più di quanto credi",
+      "Meglio 30 anni di nuovo che 50 di rimpianto"
+    ]
+  },
+  {
+    "id": "dc07",
+    "text": "Lavori gratis 3 mesi per un'occasione enorme, o ti fai pagare da subito?",
+    "optionA": "Gratis: l'occasione vale più dei soldi",
+    "optionB": "Mi pago: il lavoro gratis svaluta",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Una porta giusta cambia la traiettoria",
+      "A volte paghi tu per imparare",
+      "Investi su una scommessa, non regali"
+    ],
+    "spuntiB": [
+      "Chi lavora gratis viene trattato da gratis",
+      "Occasione è spesso una scusa",
+      "Il valore si rispetta solo se ha un prezzo"
+    ]
+  },
+  {
+    "id": "dc08",
+    "text": "Lavoro da remoto in pigiama o ufficio con i colleghi veri?",
+    "optionA": "Remoto: tempo, focus, niente traffico",
+    "optionB": "Ufficio: relazioni, crescita, carriera",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Recuperi 2 ore di vita al giorno",
+      "Lavori meglio senza interruzioni",
+      "La libertà è produttività"
+    ],
+    "spuntiB": [
+      "La carriera passa dalle relazioni",
+      "Da soli si impara la metà",
+      "I legami si costruiscono di persona"
+    ]
+  },
+  {
+    "id": "dc09",
+    "text": "Pubblichi i tuoi lavori online (e ti esponi) o aspetti di essere pronto?",
+    "optionA": "Aspetto: meglio uscire bene",
+    "optionB": "Pubblico: pronti non si è mai",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "La prima impressione conta",
+      "La qualità costruisce reputazione",
+      "Esporsi acerbi può danneggiare"
+    ],
+    "spuntiB": [
+      "Pronto è una scusa per la paura",
+      "Il feedback vero arriva solo dopo aver pubblicato",
+      "Fatto è meglio di perfetto"
+    ]
+  },
+  {
+    "id": "dc10",
+    "text": "Segui la tua passione o segui i soldi, dove c'è lavoro davvero?",
+    "optionA": "Passione: la vita è una",
+    "optionB": "Soldi: prima mangio, poi sogno",
+    "register": "carriera",
+    "complessita": "max",
+    "spuntiA": [
+      "Sulla passione resisti alle difficoltà",
+      "La bravura nasce da ciò che ami",
+      "I soldi senza senso bruciano"
+    ],
+    "spuntiB": [
+      "La passione paga le bollette?",
+      "I soldi comprano tempo per la passione",
+      "Segui la passione lo dice chi è già ricco"
+    ]
+  },
+  {
+    "id": "dc11",
+    "text": "Denunci il collega che bara o ti fai gli affari tuoi?",
+    "optionA": "Mi faccio gli affari miei",
+    "optionB": "Lo dico: il silenzio è complicità",
+    "register": "carriera",
+    "complessita": "max",
+    "spuntiA": [
+      "Non sei il poliziotto dell'ufficio",
+      "Rischi di passare per spia",
+      "Forse non sai tutta la storia"
+    ],
+    "spuntiB": [
+      "Se taci, domani tocca a te",
+      "Un team marcio affonda tutti",
+      "L'integrità vale più di un collega"
+    ]
+  },
+  {
+    "id": "dc12",
+    "text": "Mandi via il dipendente bravo ma tossico o tieni i risultati e ti tieni il veleno?",
+    "optionA": "Lo tengo: i numeri parlano",
+    "optionB": "Lo mando via: il veleno costa di più",
+    "register": "carriera",
+    "complessita": "power",
+    "spuntiA": [
+      "I risultati pagano gli stipendi",
+      "Un fuoriclasse non si sostituisce facile",
+      "Puoi gestirne il carattere"
+    ],
+    "spuntiB": [
+      "Un tossico distrugge 5 brave persone",
+      "La cultura vale più di un campione",
+      "Quello che permetti, lo insegni"
+    ]
   }
 ]
