@@ -59,11 +59,17 @@ export default function DefenseView({
   const finishButton = (
     <>
       <Button variant="primary" size="lg" onClick={onFinish} disabled={!canFinishNow}>
-        {canFinishNow ? 'Ho finito ▶' : `Ho finito tra ${minRemaining ?? ''}s`}
+        Ho finito ▶
       </Button>
-      {remaining != null && (
-        <p style={{ fontSize: '0.85rem', opacity: 0.6, margin: 0 }}>max {remaining}s</p>
-      )}
+      {canFinishNow
+        ? remaining != null && (
+            <p style={{ fontSize: '0.85rem', opacity: 0.6, margin: 0 }}>max {remaining}s</p>
+          )
+        : (
+            <p style={{ fontSize: '0.85rem', opacity: 0.6, margin: 0 }}>
+              Parla ancora {minRemaining ?? ''}s prima di poter passare
+            </p>
+          )}
     </>
   );
 
@@ -164,6 +170,13 @@ export default function DefenseView({
             >
               {handRaised ? '✋ Abbassa la mano' : '✋ Alza la mano'}
             </button>
+          )}
+          {phase === 'DEFENSE' && d?.speakerId != null && (
+            <p style={{ fontSize: '0.9rem', opacity: 0.7, margin: 0 }}>
+              {handRaised
+                ? '✋ Mano alzata — potrai intervenire dopo le difese'
+                : 'Alza la mano per intervenire dopo'}
+            </p>
           )}
           {phase === 'INTERVENTI' && myQueuePos >= 0 && (
             <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0 }}>

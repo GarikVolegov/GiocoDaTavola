@@ -19,6 +19,8 @@ interface VoteViewProps {
   voteError: string | null;
   onVote: (choice: VoteChoice) => void;
   onConfirm: () => void;
+  confirmed: boolean;
+  votedCount: number;
   confirmedCount: number;
   playerCount: number;
   skipButton: ReactNode;
@@ -34,6 +36,8 @@ export default function VoteView({
   voteError,
   onVote,
   onConfirm,
+  confirmed,
+  votedCount,
   confirmedCount,
   playerCount,
   skipButton,
@@ -90,16 +94,32 @@ export default function VoteView({
       ) : (
         <p style={{ opacity: 0.7, margin: 0 }}>Tocca A o B per votare.</p>
       )}
-      {phase === 'VOTE_2' && (
-        <>
-          <Button variant="primary" onClick={onConfirm} style={{ marginTop: '0.25rem' }}>
-            Confermo ✓
-          </Button>
-          <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
-            Confermati {confirmedCount}/{playerCount} · si va avanti quando tutti confermano
-          </p>
-        </>
+      {(phase === 'VOTE_1' || phase === 'DUEL_PICK') && (
+        <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
+          Hanno votato {votedCount}/{playerCount}
+        </p>
       )}
+      {phase === 'VOTE_2' &&
+        (confirmed ? (
+          <>
+            <p style={{ fontWeight: 800, margin: '0.25rem 0 0', fontSize: '1.05rem' }}>
+              ✓ Hai confermato
+            </p>
+            <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
+              Aspettiamo gli altri… {confirmedCount}/{playerCount}
+            </p>
+          </>
+        ) : (
+          <>
+            <Button variant="primary" onClick={onConfirm} style={{ marginTop: '0.25rem' }}>
+              Confermo ✓
+            </Button>
+            <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
+              Conferma per proseguire — si va avanti quando confermano tutti ({confirmedCount}/
+              {playerCount})
+            </p>
+          </>
+        ))}
       {skipButton}
     </main>
   );

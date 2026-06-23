@@ -354,6 +354,177 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/aggiungi un dilemma/i)).toBeInTheDocument();
   });
 
+  it('shows group voting progress on the phone at VOTE_1', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+          { id: 'p3', nickname: 'Carlo' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 2,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/hanno votato 2\/3/i)).toBeInTheDocument();
+  });
+
+  it('gives personal feedback after confirming the second vote', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_2',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 2,
+        confirmedCount: 0,
+        leaderId: null,
+      });
+    });
+    // Before confirming there is no personal "you confirmed" state.
+    expect(screen.queryByText(/aspettiamo gli altri/i)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /confermo/i }));
+    expect(screen.getByText(/aspettiamo gli altri/i)).toBeInTheDocument();
+  });
+
+  it('explains the minimum speaking time while the finish button is locked (DEFENSE)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: {
+          speakerId: 'p1',
+          speaker: { id: 'p1', nickname: 'Alice', side: 'A' },
+          startedAt: Date.now(),
+          minEndsAt: Date.now() + 30000,
+        },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByRole('button', { name: /ho finito/i })).toBeDisabled();
+    expect(screen.getByText(/parla ancora/i)).toBeInTheDocument();
+  });
+
+  it('hints spectators they can raise their hand to intervene later (DEFENSE)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: { speakerId: 'p2', speaker: { id: 'p2', nickname: 'Bea', side: 'A' } },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/per intervenire dopo/i)).toBeInTheDocument();
+  });
+
+  it('confirms to a spectator that their hand is raised (DEFENSE)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: { speakerId: 'p2', speaker: { id: 'p2', nickname: 'Bea', side: 'A' } },
+        leaderId: null,
+      });
+    });
+    act(() => {
+      serverEmit('player:handRaised', { raised: true });
+    });
+    expect(screen.getByText(/mano alzata/i)).toBeInTheDocument();
+  });
+
+  it('cues the next step at DILEMMA_REVEAL (status view)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DILEMMA_REVEAL',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/tra poco si vota/i)).toBeInTheDocument();
+  });
+
+  it('cues the next step at SPLIT_REVEAL (status view)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'SPLIT_REVEAL',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/ora si difende/i)).toBeInTheDocument();
+  });
+
   it('shows the leader setup panel when you are the leader', () => {
     render(<PlayerApp />);
     act(() => {

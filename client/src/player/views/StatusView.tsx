@@ -208,11 +208,19 @@ export default function StatusView({
           </p>
         </>
       ) : phase === 'DILEMMA_REVEAL' ? (
-        game?.dilemma && <DilemmaCard dilemma={game.dilemma} />
+        <>
+          {game?.dilemma && <DilemmaCard dilemma={game.dilemma} />}
+          <p style={{ fontSize: '0.95rem', opacity: 0.7, margin: 0 }}>
+            Leggete insieme — tra poco si vota
+          </p>
+        </>
       ) : phase === 'SPLIT_REVEAL' ? (
         <>
           {game?.split && <SplitBar split={game.split} />}
           {game?.dilemma && <DilemmaCard dilemma={game.dilemma} />}
+          <p style={{ fontSize: '0.95rem', opacity: 0.7, margin: 0 }}>
+            Ecco come si è diviso il gruppo — ora si difende
+          </p>
         </>
       ) : phase === 'PHASE_RESULTS' ? (
         <>

@@ -134,6 +134,10 @@ export default function PlayerApp() {
   const [players, setPlayers] = useState<PublicPlayer[]>([]);
   const [game, setGame] = useState<GameStatePayload | null>(null);
   const [vote, setVote] = useState<VoteChoice | null>(null);
+  // Whether the player has explicitly confirmed their second vote (VOTE_2). Local
+  // only: the server reports just the aggregate count, so this drives the personal
+  // "you confirmed — waiting for the others" feedback on this phone.
+  const [confirmed, setConfirmed] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
   const [blindSpot, setBlindSpot] = useState<BlindSpot | null>(null);
   const [predicted, setPredicted] = useState<VoteChoice | null>(null);
@@ -394,9 +398,16 @@ export default function PlayerApp() {
     setHandRaised(false);
   }, [turnSpeakerId, phase]);
 
+  // A confirmation belongs to one VOTE_2 round only: drop it whenever the phase
+  // changes so the next second-vote starts from the "Confermo" affordance again.
+  useEffect(() => {
+    setConfirmed(false);
+  }, [phase]);
+
   const castVote = (choice: VoteChoice) => {
     setVote(choice); // optimistic; reverts via player:voted/voteError
     setVoteError(null);
+    setConfirmed(false); // changing the (second) vote un-confirms it
     buzz(25); // tactile confirm the tap registered
     getSocket().emit(SocketEvents.PlayerVote, { choice });
   };
@@ -592,7 +603,12 @@ export default function PlayerApp() {
         vote={vote}
         voteError={voteError}
         onVote={castVote}
-        onConfirm={() => getSocket().emit(SocketEvents.PlayerConfirmVote)}
+        onConfirm={() => {
+          setConfirmed(true);
+          getSocket().emit(SocketEvents.PlayerConfirmVote);
+        }}
+        confirmed={confirmed}
+        votedCount={game?.votedCount ?? 0}
         confirmedCount={game?.confirmedCount ?? 0}
         playerCount={players.length}
         skipButton={skipButton}
