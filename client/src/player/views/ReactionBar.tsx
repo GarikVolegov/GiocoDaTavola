@@ -21,8 +21,9 @@ export default function ReactionBar({ onReact }: { onReact: (emoji: Reaction) =>
             padding: '0.55rem 0.7rem',
             borderRadius: '999px',
             cursor: 'pointer',
-            background: 'rgba(242,243,255,0.08)',
-            border: '1px solid rgba(242,243,255,0.18)',
+            color: 'inherit',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border-strong)',
           }}
         >
           {emoji}

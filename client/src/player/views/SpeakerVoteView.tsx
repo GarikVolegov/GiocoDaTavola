@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { PHASE_LABELS, type Defender } from '../../shared/events';
+import { VoteOption } from '../../shared/ui';
 import { wrap } from './layout';
 
 interface SpeakerVoteViewProps {
@@ -41,34 +42,16 @@ export default function SpeakerVoteView({
           aria-label="Il tuo voto al miglior oratore"
           style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(90vw, 22rem)' }}
         >
-          {candidates.map((d) => {
-            const selected = speakerVote === d.id;
-            const accent = d.side === 'A' ? '84,134,196' : '199,122,69';
-            return (
-              <button
-                key={d.id}
-                type="button"
-                onClick={() => onVote(d.id)}
-                aria-pressed={selected}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  textAlign: 'left',
-                  padding: '1rem 1.1rem',
-                  borderRadius: '0.8rem',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  color: 'inherit',
-                  background: selected ? `rgba(${accent},0.32)` : `rgba(${accent},0.12)`,
-                  border: `2px solid rgba(${accent},${selected ? 0.9 : 0.4})`,
-                }}
-              >
-                <span style={{ fontSize: '1.4rem', fontWeight: 800, opacity: 0.85 }}>{d.side}</span>
-                <span style={{ fontSize: '1.1rem' }}>{d.nickname}</span>
-              </button>
-            );
-          })}
+          {candidates.map((d) => (
+            <VoteOption
+              key={d.id}
+              faction={d.side === 'A' ? 'a' : 'b'}
+              letter={d.side}
+              label={d.nickname}
+              selected={speakerVote === d.id}
+              onClick={() => onVote(d.id)}
+            />
+          ))}
         </div>
       )}
       {speakerVote && (

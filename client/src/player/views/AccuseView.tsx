@@ -1,4 +1,5 @@
 import { PHASE_LABELS, type PublicPlayer } from '../../shared/events';
+import { VoteOption } from '../../shared/ui';
 import { wrap } from './layout';
 
 interface AccuseViewProps {
@@ -30,31 +31,15 @@ export default function AccuseView({ candidates, remaining, myAccusation, onAccu
         aria-label="La tua accusa"
         style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'min(90vw, 22rem)' }}
       >
-        {candidates.map((p) => {
-          const selected = myAccusation === p.id;
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => onAccuse(p.id)}
-              aria-pressed={selected}
-              style={{
-                padding: '0.9rem 1.1rem',
-                borderRadius: '0.8rem',
-                cursor: 'pointer',
-                fontWeight: 700,
-                fontSize: '1.05rem',
-                color: 'inherit',
-                textAlign: 'left',
-                background: selected ? 'rgba(168,130,255,0.32)' : 'rgba(168,130,255,0.12)',
-                border: `2px solid rgba(168,130,255,${selected ? 0.9 : 0.4})`,
-              }}
-            >
-              {p.nickname}
-              {p.isBot ? ' 🤖' : ''}
-            </button>
-          );
-        })}
+        {candidates.map((p) => (
+          <VoteOption
+            key={p.id}
+            faction="accent"
+            label={`${p.nickname}${p.isBot ? ' 🤖' : ''}`}
+            selected={myAccusation === p.id}
+            onClick={() => onAccuse(p.id)}
+          />
+        ))}
       </div>
       {myAccusation ? (
         <p style={{ opacity: 0.8, margin: 0 }}>Accusa registrata. Vediamo chi era… 👀</p>

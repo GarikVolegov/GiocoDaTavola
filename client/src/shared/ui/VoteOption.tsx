@@ -14,6 +14,8 @@ type VoteOptionProps = {
   selected?: boolean;
   /** Centre the content (used by the side-by-side swing-bet pair). */
   centered?: boolean;
+  /** Grow to fill an equal share of a flex row (side-by-side picks). */
+  fill?: boolean;
   'aria-label'?: string;
 };
 
@@ -28,9 +30,16 @@ export function VoteOption({
   hint,
   selected = false,
   centered = false,
+  fill = false,
   'aria-label': ariaLabel,
 }: VoteOptionProps) {
-  const cls = [styles.option, styles[faction], selected && styles.selected, centered && styles.center]
+  const cls = [
+    styles.option,
+    styles[faction],
+    selected && styles.selected,
+    centered && styles.center,
+    fill && styles.fill,
+  ]
     .filter(Boolean)
     .join(' ');
   return (

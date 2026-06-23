@@ -21,6 +21,9 @@
 .center {
   justify-content: center;
 }
+.fill {
+  flex: 1;
+}
 
 /* Faction identity: visible even when unselected (so A=blue / B=terracotta reads
    at a glance); selected intensifies the border + adds the colored bloom. */
