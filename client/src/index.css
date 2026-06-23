@@ -2,8 +2,14 @@
   color-scheme: dark;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -13,6 +19,10 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* long unbroken words (URLs, codes) never push the layout sideways on phones */
+  overflow-wrap: break-word;
 }
 
 #root {
@@ -25,4 +35,12 @@ h2 {
   font-family: var(--font-display);
   margin: 0;
   line-height: 1.15;
+}
+
+/* Consistent keyboard / switch-access focus ring across the whole app — many
+   controls are inline-styled and otherwise show no visible focus. :where() keeps
+   specificity at 0 so a component's own focus style still wins. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
 }
