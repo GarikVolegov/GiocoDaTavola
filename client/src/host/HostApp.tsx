@@ -17,7 +17,7 @@ import {
   type PublicPlayer,
   type PercorsoView,
 } from '../shared/events';
-import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip } from '../shared/ui';
+import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip, leanFromSplit } from '../shared/ui';
 import ReactionSwarm from '../shared/ReactionSwarm';
 
 const screen = {
@@ -148,6 +148,19 @@ export default function HostApp() {
     else stopAmbient();
   }, [audioReady, phase]);
   useEffect(() => () => stopAmbient(), []);
+
+  // Sfondo "bivio": al SPLIT_REVEAL la scena pende verso il lato in testa
+  // (voto AGGREGATO — i voti restano segreti, nessun aggancio durante VOTE_*).
+  // In ogni altra fase resta neutra (50). La var vive su :root così la legge il
+  // BivioBackdrop montato in App.tsx.
+  useEffect(() => {
+    const root = document.documentElement;
+    const lean = phase === 'SPLIT_REVEAL' && game?.split ? leanFromSplit(game.split) : 50;
+    root.style.setProperty('--bivio-lean', String(lean));
+    return () => {
+      root.style.setProperty('--bivio-lean', '50');
+    };
+  }, [phase, game?.split]);
 
   // No code yet: ask for one (the leader's phone shows it after creating a room).
   if (!code) {
