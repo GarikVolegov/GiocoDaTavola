@@ -2,6 +2,12 @@
 // reads the pure loop from sequence.ts and plays it quietly under the host screen. A
 // setInterval ticks every LOOKAHEAD_MS and queues any notes due in the next window with
 // sample-accurate timing. Drops to a softer mix while someone is speaking.
+//
+// CRITICAL: /host is often NOT the focused tab during play (the leader is on their phone /
+// the player view), and browsers throttle setInterval to ~1/s in background tabs — a tiny
+// look-ahead leaves the music dead silent. So we queue several SECONDS ahead (audio plays
+// even while the JS timer is throttled), resync if we ever fall behind, and re-prime the
+// moment the tab returns to the foreground.
 
 import { getCtx, getMaster } from './engine';
 import { noteAt, LOOP_STEPS, SECONDS_PER_BEAT, type NoteEvent } from './sequence';
@@ -15,8 +21,10 @@ let intensity: MusicIntensity = 'full';
 
 export type MusicIntensity = 'full' | 'soft';
 
-const LOOKAHEAD_MS = 100; // how often the scheduler wakes
-const SCHEDULE_AHEAD = 0.25; // seconds of audio to queue in advance
+const LOOKAHEAD_MS = 100; // how often the scheduler wakes (when not throttled)
+// Seconds of audio to queue in advance. Generous on purpose: it must exceed the ~1s
+// background-tab timer throttle so the music never runs dry while /host is unfocused.
+const SCHEDULE_AHEAD = 5;
 // Overall loudness of the bed; "soft" ducks under a speaker without going silent.
 // Tuned so the musichetta is clearly audible as background music (not a faint hum) —
 // see /tmp audio probe: full ≈ -15 dBFS peak.
@@ -43,11 +51,32 @@ function scheduleNote(note: NoteEvent, when: number): void {
 function scheduler(): void {
   const ctx = getCtx();
   if (!ctx) return;
+  // If the tab was throttled/hidden, the clock jumped ahead of us. Don't dump a backlog
+  // of past-due notes (they'd pile up at once) — skip forward to "now" and carry on.
+  if (nextNoteTime < ctx.currentTime) {
+    nextNoteTime = ctx.currentTime + 0.05;
+  }
   while (nextNoteTime < ctx.currentTime + SCHEDULE_AHEAD) {
     for (const note of noteAt(step)) scheduleNote(note, nextNoteTime);
     nextNoteTime += SECONDS_PER_BEAT;
     step = (step + 1) % LOOP_STEPS;
   }
+}
+
+// On returning to the foreground, resume the (possibly auto-suspended) context and top up
+// the queue immediately, so any gap from a long hide closes at once instead of next tick.
+function onVisibility(): void {
+  if (!running || typeof document === 'undefined' || document.visibilityState !== 'visible') return;
+  const ctx = getCtx();
+  if (!ctx) return;
+  void ctx.resume();
+  scheduler();
+}
+let visibilityBound = false;
+function ensureVisibilityListener(): void {
+  if (visibilityBound || typeof document === 'undefined') return;
+  document.addEventListener('visibilitychange', onVisibility);
+  visibilityBound = true;
 }
 
 export function startMusic(): void {
@@ -61,6 +90,7 @@ export function startMusic(): void {
   step = 0;
   nextNoteTime = ctx.currentTime + 0.1;
   running = true;
+  ensureVisibilityListener();
   scheduler();
   timer = setInterval(scheduler, LOOKAHEAD_MS);
 }
