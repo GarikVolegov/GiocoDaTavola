@@ -658,46 +658,6 @@ export class RoomStore {
    * only TURN_BOT_MS and no floor. Overrides whatever expiryFor set generically.
    */
 
-  /**
-   * Pick the surprise "Avvocato del Diavolo" round: a random 1-based dilemma
-   * index in [2..dilemmaCount] (never the first round, so the group learns the
-   * normal flow first). null when there are fewer than 2 dilemmas.
-   */
-  private pickDevilRound(dilemmaCount: number): number | null {
-    if (dilemmaCount < 2) return null;
-    return 2 + Math.floor(this.rng() * (dilemmaCount - 1));
-  }
-
-  /** True when the round in play is the "Avvocato del Diavolo" round. */
-
-  /**
-   * Pick the surprise "Quanto mi conosci" round: a random round in [2..count]
-   * distinct from the devil round. Only for longer games (>=5 dilemmas) so short
-   * sessions aren't over-twisted; null otherwise.
-   */
-  private pickKnowRound(dilemmaCount: number, devilRound: number | null): number | null {
-    if (dilemmaCount < 5) return null;
-    const options: number[] = [];
-    for (let i = 2; i <= dilemmaCount; i++) if (i !== devilRound) options.push(i);
-    if (options.length === 0) return null;
-    return options[Math.floor(this.rng() * options.length)];
-  }
-
-  /**
-   * Assign each connected human a target to guess (a ring: everyone guesses the
-   * next player), clearing any stale guesses. Called on entry to PREDICT in the
-   * "Quanto mi conosci" round. With fewer than 2 humans nobody gets a target.
-   */
-  private assignKnowTargets(room: Room): void {
-    room.knowTargets.clear();
-    room.knowGuesses.clear();
-    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
-    if (humans.length < 2) return;
-    for (let i = 0; i < humans.length; i++) {
-      room.knowTargets.set(humans[i].id, humans[(i + 1) % humans.length].id);
-    }
-  }
-
 
 
 
@@ -915,9 +875,9 @@ export class RoomStore {
     }
     // Pick the surprise "Avvocato del Diavolo" round up front (group mode only).
     const totalRounds = room.dilemmaCount ?? 0;
-    room.devilRoundIndex = mode === 'gruppo' ? this.pickDevilRound(totalRounds) : null;
+    room.devilRoundIndex = mode === 'gruppo' ? devilAdvocate.pickDevilRound(totalRounds, this.rng) : null;
     // …and (longer games only) a "Quanto mi conosci" round, distinct from the devil one.
-    room.knowRoundIndex = mode === 'gruppo' ? this.pickKnowRound(totalRounds, room.devilRoundIndex) : null;
+    room.knowRoundIndex = mode === 'gruppo' ? knowRound.pickKnowRound(totalRounds, room.devilRoundIndex, this.rng) : null;
     room.stats = new Map();
     room.defenseCounts = new Map();
     room.duelScore = new Map();
@@ -1053,7 +1013,7 @@ export class RoomStore {
     }
     // Entering PREDICT in the "Quanto mi conosci" round assigns the guessing ring.
     if (transition.phase === 'PREDICT' && knowRound.isKnowRound(room)) {
-      this.assignKnowTargets(room);
+      knowRound.assignKnowTargets(room);
     }
     // Entering DEFENSE picks the defenders from this round's votes and starts at
     // the first turn (the per-turn timer was set by expiryFor above).

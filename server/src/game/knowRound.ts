@@ -59,3 +59,35 @@ export function knowGuessResults(room: Room): KnowGuessOutcome[] {
     return { guesserId, targetId, guess, actual, correct: actual != null && guess === actual };
   });
 }
+
+/**
+ * Assign each connected human a target to guess (a ring: everyone guesses the next
+ * player), clearing any stale guesses. Called on entry to PREDICT in the know round.
+ * With fewer than 2 humans nobody gets a target.
+ */
+export function assignKnowTargets(room: Room): void {
+  room.knowTargets.clear();
+  room.knowGuesses.clear();
+  const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+  if (humans.length < 2) return;
+  for (let i = 0; i < humans.length; i++) {
+    room.knowTargets.set(humans[i].id, humans[(i + 1) % humans.length].id);
+  }
+}
+
+/**
+ * Pick the surprise "Quanto mi conosci" round: a random round in [2..dilemmaCount]
+ * distinct from the devil round. Only for longer games (>=5 dilemmas) so short
+ * sessions aren't over-twisted; null otherwise.
+ */
+export function pickKnowRound(
+  dilemmaCount: number,
+  devilRound: number | null,
+  rng: () => number,
+): number | null {
+  if (dilemmaCount < 5) return null;
+  const options: number[] = [];
+  for (let i = 2; i <= dilemmaCount; i++) if (i !== devilRound) options.push(i);
+  if (options.length === 0) return null;
+  return options[Math.floor(rng() * options.length)];
+}

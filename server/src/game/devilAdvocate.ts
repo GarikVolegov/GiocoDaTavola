@@ -21,3 +21,13 @@ export function publicDevilRound(room: Room): boolean {
     room.phase === 'PHASE_RESULTS'
   );
 }
+
+/**
+ * Pick the surprise "Avvocato del Diavolo" round: a random 1-based dilemma index in
+ * [2..dilemmaCount] (never the first round, so the group learns the normal flow
+ * first). null when there are fewer than 2 dilemmas.
+ */
+export function pickDevilRound(dilemmaCount: number, rng: () => number): number | null {
+  if (dilemmaCount < 2) return null;
+  return 2 + Math.floor(rng() * (dilemmaCount - 1));
+}
