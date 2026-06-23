@@ -130,22 +130,6 @@ export default function LeaderSetup({
           </div>
 
           <div style={{ width: '100%' }}>
-            <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Argomenti</p>
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Registro">
-              {CONTENT_REGISTERS.map((r) => (
-                <Pill
-                  key={r}
-                  selected={register === r}
-                  onClick={() => setRegister(r)}
-                  aria-label={REGISTER_LABELS[r]}
-                >
-                  {REGISTER_LABELS[r]}
-                </Pill>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ width: '100%' }}>
             <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Durata</p>
             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Formato">
               {SESSION_FORMATS.map((f) => (
@@ -216,38 +200,68 @@ export default function LeaderSetup({
         </>
       )}
 
-      {(percorsoOn || gameMode === 'gruppo') && (
-        <div style={{ width: '100%' }}>
-          <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità speciale</p>
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Pill
-              selected={infiltratoOn}
-              onClick={() => {
-                setInfiltratoOn((v) => !v);
-                setSquadreOn(false);
-              }}
-              aria-label="L'Infiltrato (un giocatore segreto)"
-            >
-              🕵️ L'Infiltrato {infiltratoOn ? 'ON' : 'OFF'}
-            </Pill>
-            <Pill
-              selected={squadreOn}
-              onClick={() => {
-                setSquadreOn((v) => !v);
-                setInfiltratoOn(false);
-              }}
-              aria-label="Squadre (Blu contro Arancio)"
-            >
-              🔵🟠 Squadre {squadreOn ? 'ON' : 'OFF'}
-            </Pill>
-          </div>
-          <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
-            {squadreOn
-              ? `Blu contro Arancio: vince chi convince di più · servono ≥${MIN_SQUADRE_PLAYERS} giocatori`
-              : `Un giocatore segreto deve ribaltare il gruppo · servono ≥${MIN_INFILTRATO_HUMANS} persone`}
-          </p>
+      {/* Secondary tuning tucked behind a disclosure so the default view isn't a wall:
+          most leaders just pick the type/duration and hit Avvia. */}
+      <details style={{ width: '100%' }}>
+        <summary style={{ cursor: 'pointer', opacity: 0.8, fontSize: '0.9rem', textAlign: 'center' }}>
+          Altre opzioni ·{' '}
+          {[!percorsoOn && 'argomenti', (percorsoOn || gameMode === 'gruppo') && 'modalità speciale']
+            .filter(Boolean)
+            .join(' e ')}
+        </summary>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '0.7rem' }}>
+          {!percorsoOn && (
+            <div style={{ width: '100%' }}>
+              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Argomenti</p>
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Registro">
+                {CONTENT_REGISTERS.map((r) => (
+                  <Pill
+                    key={r}
+                    selected={register === r}
+                    onClick={() => setRegister(r)}
+                    aria-label={REGISTER_LABELS[r]}
+                  >
+                    {REGISTER_LABELS[r]}
+                  </Pill>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(percorsoOn || gameMode === 'gruppo') && (
+            <div style={{ width: '100%' }}>
+              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità speciale</p>
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Pill
+                  selected={infiltratoOn}
+                  onClick={() => {
+                    setInfiltratoOn((v) => !v);
+                    setSquadreOn(false);
+                  }}
+                  aria-label="L'Infiltrato (un giocatore segreto)"
+                >
+                  🕵️ L'Infiltrato {infiltratoOn ? 'ON' : 'OFF'}
+                </Pill>
+                <Pill
+                  selected={squadreOn}
+                  onClick={() => {
+                    setSquadreOn((v) => !v);
+                    setInfiltratoOn(false);
+                  }}
+                  aria-label="Squadre (Blu contro Arancio)"
+                >
+                  🔵🟠 Squadre {squadreOn ? 'ON' : 'OFF'}
+                </Pill>
+              </div>
+              <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
+                {squadreOn
+                  ? `Blu contro Arancio: vince chi convince di più · servono ≥${MIN_SQUADRE_PLAYERS} giocatori`
+                  : `Un giocatore segreto deve ribaltare il gruppo · servono ≥${MIN_INFILTRATO_HUMANS} persone`}
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </details>
 
       <Button variant="ghost" onClick={onAddBot} disabled={!canAddBot}>
         + Aggiungi bot 🤖

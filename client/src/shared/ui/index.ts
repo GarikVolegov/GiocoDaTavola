@@ -14,3 +14,4 @@ export { DilemmaCard, SplitBar, ResultsPanel, AwardsPanel } from './PublicViews'
 export { Logo } from './Logo';
 export { Swing } from './Swing';
 export { JoinQr } from './JoinQr';
+export { RoomCodeChip } from './RoomCodeChip';
