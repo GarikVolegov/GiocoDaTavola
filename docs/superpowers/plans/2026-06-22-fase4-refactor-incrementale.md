@@ -63,22 +63,25 @@ Residuo in PlayerApp = container (stato + wiring socket + handlers + roster/how-
 ## Track server — `RoomStore` decomposto per dominio ✅ (in corso)
 Pattern: funzioni pure su `Room` in moduli dedicati; `RoomStore` fa lookup + delega.
 Import type-only da rooms.ts → nessun ciclo runtime. Rete: 327 unit + integrazione.
-**rooms.ts: 2273 → 2067 righe** (-206), ~40 metodi di logica spostati in moduli testabili:
+**rooms.ts: 2273 → 1973 righe** (-300), logica spostata in **9 moduli** testabili:
+- `voteCount.ts` — fondazionale: `tally` + `isVoteChoice`/`isSwingBet`.
+- `voting.ts` — core: vote/confirm/tally/split/swing.
+- `predictions.ts` — pronostico + swing bet (+ leadFlipped), usa voteCount.
 - `knowRound.ts` — "Quanto mi conosci".
 - `infiltrato.ts` — accuse + resolve/reveal.
-- `voteCount.ts` — fondazionale: `tally` + `isVoteChoice`/`isSwingBet`.
-- `predictions.ts` — pronostico + swing bet (+ leadFlipped), usa voteCount.
 - `speakerVote.ts` — voto miglior oratore.
 - `submittedDilemmas.ts` — dilemmi dei giocatori (+ costanti submission).
-- `voting.ts` — core: vote/confirm/tally/split/swing.
+- `defenseTurns.ts` — currentSpeakerId/raiseHand/finishTurn/publicDefense.
+- `reactions.ts` — react (1 ciclo call-time benigno per le costanti reaction).
 Ognuno: gate verdi → commit → push. 359 test verdi.
 
 ### Rimane (engine centrale, NON estratto — più rischioso)
-La macchina a stati (`advancePhase` ~170 righe, `startGame` ~120), la rotazione
-difensori/interventi, la logica voti-bot, percorso e la gestione lobby. Sono il
+La macchina a stati (`advancePhase` ~170 righe, `startGame` ~120), `selectDefenders`/
+`armTurn`, la logica voti-bot (`applyBotSecondVotes`), il percorso planning. Sono il
 cuore che coordina l'intero flusso e muta il room su più concern: vanno estratti
 con attenzione dedicata (non in loop rapido), eventualmente con un modulo
-state-machine apposito.
+state-machine apposito. La gestione lobby (join/leave/create/bot) resta
+legittimamente in RoomStore (gestisce la collezione di room, non un singolo Room).
 - Estrarre le altre viste di fase di PlayerApp (DEFENSE/INTERVENTI, SPEAKER_VOTE,
   PREDICT, ACCUSE, lo switch finale TAPPA/SPLIT/RESULTS/AWARDS), aggiungendo un
   render-test per ognuna PRIMA dell'estrazione.
