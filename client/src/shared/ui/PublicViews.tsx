@@ -27,8 +27,8 @@ export function DilemmaCard({ dilemma }: { dilemma: PublicDilemma }) {
           {COMPLESSITA_LABELS[dilemma.complessita]}
         </span>
       )}
-      <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: '0 0 0.6rem' }}>{dilemma.text}</p>
-      <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }}>
+      <p style={{ fontSize: 'clamp(1.15rem, 2.4vw, 1.9rem)', fontWeight: 700, margin: '0 0 var(--space-3)' }}>{dilemma.text}</p>
+      <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap', fontSize: 'clamp(0.95rem, 1.6vw, 1.25rem)' }}>
         <span><strong>A</strong> · {dilemma.optionA}</span>
         <span><strong>B</strong> · {dilemma.optionB}</span>
       </div>
@@ -98,9 +98,9 @@ export function AwardsPanel({ awards }: { awards: Award[] }) {
             glow="accent"
             style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', alignItems: 'center', textAlign: 'center' }}
           >
-            <span style={{ fontSize: '2.5rem' }}>{a.emoji}</span>
-            <span style={{ fontSize: '1.3rem', fontWeight: 800 }}>{a.title}</span>
-            <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--gold)' }}>{a.winner.nickname}</span>
+            <span style={{ fontSize: 'clamp(2.2rem, 4vw, 3.4rem)' }}>{a.emoji}</span>
+            <span style={{ fontSize: 'clamp(1.15rem, 2vw, 1.6rem)', fontWeight: 800 }}>{a.title}</span>
+            <span style={{ fontSize: 'clamp(1.3rem, 2.4vw, 2rem)', fontWeight: 700, color: 'var(--gold)' }}>{a.winner.nickname}</span>
             <span style={{ fontSize: '0.95rem', opacity: 0.8 }}>{a.description}</span>
           </Card>
         ))}
