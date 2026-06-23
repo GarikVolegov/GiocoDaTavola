@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@clerk/react';
 import ErrorBoundary from './shared/ErrorBoundary';
+import { BivioBackdrop } from './shared/ui';
 
 // Per-route code-splitting: a phone opening `/join` shouldn't download the
 // host/landing/profile code, and vice versa. Each view becomes its own chunk.
@@ -30,8 +31,8 @@ export default function App() {
           <Routes>
             <Route path="/" element={<RootRoute />} />
             <Route path="/casa" element={<Home />} />
-            <Route path="/host" element={<><ConnectionBanner /><HostApp /></>} />
-            <Route path="/join" element={<><ConnectionBanner /><PlayerApp /></>} />
+            <Route path="/host" element={<><ConnectionBanner /><BivioBackdrop variant="host" /><HostApp /></>} />
+            <Route path="/join" element={<><ConnectionBanner /><BivioBackdrop variant="player" /><PlayerApp /></>} />
             <Route path="/profilo" element={<Profile />} />
             <Route path="/impostazioni" element={<Settings />} />
           </Routes>

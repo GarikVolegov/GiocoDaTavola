@@ -17,3 +17,4 @@ export { Avatar } from './Avatar';
 export { Swing } from './Swing';
 export { JoinQr } from './JoinQr';
 export { RoomCodeChip } from './RoomCodeChip';
+export { BivioBackdrop, leanFromSplit } from './BivioBackdrop';
