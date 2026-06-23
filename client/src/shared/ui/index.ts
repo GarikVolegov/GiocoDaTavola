@@ -3,6 +3,7 @@ export { Button } from './Button';
 export { Card } from './Card';
 export { OptionCard } from './OptionCard';
 export { VoteOption } from './VoteOption';
+export { default as Celebration } from './Celebration';
 export { Pill } from './Pill';
 export { Countdown } from './Countdown';
 export { CodeDisplay } from './CodeDisplay';

@@ -17,7 +17,7 @@ import {
   type PublicPlayer,
   type PercorsoView,
 } from '../shared/events';
-import { Card, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing, Button, TextInput, Alert } from '../shared/ui';
+import { Card, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing, Button, TextInput, Alert, Celebration } from '../shared/ui';
 import ReactionSwarm from '../shared/ReactionSwarm';
 
 const screen = {
@@ -523,6 +523,7 @@ export default function HostApp() {
 
         {phase === 'DUEL_RESULT' && duelResult && (
           <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+            {duelResult.convinced.length > 0 && <Celebration />}
             {duelResult.agreed ? (
               <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
                 🤝 Eravate d’accordo
@@ -544,6 +545,7 @@ export default function HostApp() {
             aria-label="Risultato del duello"
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}
           >
+            <Celebration pieces={40} />
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
               {duelSummary.scores.map((s) => (
                 <Card

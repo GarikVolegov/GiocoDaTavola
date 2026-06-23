@@ -3,6 +3,7 @@
 // events.ts; they carry only aggregate, non-secret data (never who voted what).
 import { COMPLESSITA_LABELS, type PublicDilemma, type VoteSplit, type PublicSwing, type Award } from '../events';
 import { Card } from './index';
+import Celebration from './Celebration';
 
 /** The dilemma prompt + its two options. Used in DILEMMA_REVEAL / VOTE_*. */
 export function DilemmaCard({ dilemma }: { dilemma: PublicDilemma }) {
@@ -61,6 +62,8 @@ export function ResultsPanel({ swing }: { swing: PublicSwing }) {
       aria-label="Risultati della persuasione"
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', maxWidth: 'min(92vw, 50rem)' }}
     >
+      {/* A swing (someone actually changed their mind) is the round's emotional peak. */}
+      {swing.switched > 0 && <Celebration />}
       <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
         {swing.switched === 0
           ? 'Nessuno ha cambiato idea 🪨'
@@ -90,6 +93,7 @@ export function AwardsPanel({ awards }: { awards: Award[] }) {
       aria-label="Premi finali"
       style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'center', maxWidth: 'min(92vw, 60rem)' }}
     >
+      <Celebration pieces={40} />
       {awards.map((a) => (
         <Card
           key={a.id}
