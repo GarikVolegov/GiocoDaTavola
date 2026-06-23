@@ -6,6 +6,7 @@ import { botDefenseArgument } from './botDefense';
 import * as knowRound from './knowRound';
 import * as infiltrato from './infiltrato';
 import * as predictions from './predictions';
+import * as speakerVote from './speakerVote';
 import { tally, isVoteChoice } from './voteCount';
 import {
   type GamePhase,
@@ -1610,37 +1611,25 @@ export class RoomStore {
   voteSpeaker(code: string, voterId: string, defenderId: string): SpeakerVoteResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'SPEAKER_VOTE') return { ok: false, error: 'NOT_SPEAKER_VOTE_PHASE' };
-    if (!room.players.has(voterId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    const isDefender = room.defenders.some((d) => d.id === defenderId);
-    if (!isDefender || defenderId === voterId) return { ok: false, error: 'INVALID_TARGET' };
-    room.speakerVotes.set(voterId, defenderId);
-    return { ok: true, room };
+    return speakerVote.voteSpeaker(room, voterId, defenderId);
   }
 
   /** The defenders to choose between during SPEAKER_VOTE; null otherwise. */
   speakerCandidates(code: string): Defender[] | null {
     const room = this.rooms.get(code);
-    if (!room || room.phase !== 'SPEAKER_VOTE') return null;
-    return room.defenders;
+    return room ? speakerVote.speakerCandidates(room) : null;
   }
 
   /** How many players have cast a best-speaker vote this round (aggregate only). */
   speakerVotedCount(code: string): number {
-    return this.rooms.get(code)?.speakerVotes.size ?? 0;
+    const room = this.rooms.get(code);
+    return room ? speakerVote.speakerVotedCount(room) : 0;
   }
 
-  /**
-   * True once every CONNECTED HUMAN has cast a best-speaker vote (and at least one
-   * is present). Bots never peer-vote, so they're ignored; used only to
-   * short-circuit the SPEAKER_VOTE timer.
-   */
+  /** True once every connected human has cast a best-speaker vote (ends the phase early). */
   allSpeakerVoted(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room) return false;
-    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
-    if (humans.length === 0) return false;
-    return humans.every((p) => room.speakerVotes.has(p.id));
+    return room ? speakerVote.allSpeakerVoted(room) : false;
   }
 
   /** How many connected players have cast a vote this round (aggregate only). */
