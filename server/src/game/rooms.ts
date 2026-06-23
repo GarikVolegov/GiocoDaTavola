@@ -11,6 +11,7 @@ import * as submittedDilemmas from './submittedDilemmas';
 import * as voting from './voting';
 import * as defenseTurns from './defenseTurns';
 import * as reactions from './reactions';
+import * as devilAdvocate from './devilAdvocate';
 import { tally } from './voteCount';
 import {
   type GamePhase,
@@ -680,7 +681,7 @@ export class RoomStore {
    * is chosen via the injectable rng, so tests can pin the pick.
    */
   private selectDefenders(room: Room): Defender[] {
-    const devil = this.isDevilRound(room);
+    const devil = devilAdvocate.isDevilRound(room);
     const defenders: Defender[] = [];
     for (const side of ['A', 'B'] as const) {
       const voters = [...room.votes.entries()]
@@ -722,9 +723,6 @@ export class RoomStore {
   }
 
   /** True when the round in play is the "Avvocato del Diavolo" round. */
-  private isDevilRound(room: Room): boolean {
-    return room.devilRoundIndex !== null && room.dilemmaIndex === room.devilRoundIndex;
-  }
 
   /**
    * Pick the surprise "Quanto mi conosci" round: a random round in [2..count]
@@ -1628,13 +1626,7 @@ export class RoomStore {
    */
   publicDevilRound(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room || !this.isDevilRound(room)) return false;
-    return (
-      room.phase === 'DEFENSE' ||
-      room.phase === 'VOTE_2' ||
-      room.phase === 'SPEAKER_VOTE' ||
-      room.phase === 'PHASE_RESULTS'
-    );
+    return room ? devilAdvocate.publicDevilRound(room) : false;
   }
 
   /**
