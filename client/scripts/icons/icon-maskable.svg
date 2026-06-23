@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SCHIERATI">
+  <!-- Maskable: full navy bleed + emblem scaled to ~0.72 around the canvas centre so
+       all content stays inside the adaptive-icon safe zone (central 80%). -->
+  <rect width="512" height="512" fill="#131829"></rect>
+  <g transform="translate(256 256) scale(0.72) translate(-256 -284)">
+    <path d="M256,452 L256,300" fill="none" stroke="#E8EAF2" stroke-width="46" stroke-linecap="round"></path>
+    <path d="M256,300 L150,116" fill="none" stroke="#5486C4" stroke-width="46" stroke-linecap="round"></path>
+    <path d="M256,300 L362,116" fill="none" stroke="#C77A45" stroke-width="46" stroke-linecap="round"></path>
+    <circle cx="256" cy="300" r="26" fill="#E8EAF2"></circle>
+  </g>
+</svg>
