@@ -5,7 +5,8 @@ import { Deck, dilemmasForRegister, loadDilemmas, COMPLESSITA_RANK, type Dilemma
 import { botDefenseArgument } from './botDefense';
 import * as knowRound from './knowRound';
 import * as infiltrato from './infiltrato';
-import { tally, isVoteChoice, isSwingBet } from './voteCount';
+import * as predictions from './predictions';
+import { tally, isVoteChoice } from './voteCount';
 import {
   type GamePhase,
   PHASE_DURATIONS_MS,
@@ -851,7 +852,7 @@ export class RoomStore {
     }
     // Credit each swing bettor who correctly called whether the lead would change
     // ('ribalta' when it flipped, 'regge' when it held).
-    const flipped = this.leadFlipped(room);
+    const flipped = predictions.leadFlipped(room);
     // "L'Infiltrato" mission: a round where the leading side flipped (the underdog
     // overturned the favourite) scores for the infiltrator.
     if (room.infiltratorId && flipped) room.infiltratorFlips++;
@@ -1276,7 +1277,7 @@ export class RoomStore {
       // flips). Aggregate only — no per-player data leaks into the recap.
       if (room.format === 'percorso') {
         room.tappaDilemmas++;
-        if (this.leadFlipped(room)) room.tappaSwings++;
+        if (predictions.leadFlipped(room)) room.tappaSwings++;
       }
     }
     return { ok: true, room };
@@ -1386,77 +1387,47 @@ export class RoomStore {
   predict(code: string, playerId: string, choice: string): PredictResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'PREDICT') return { ok: false, error: 'NOT_PREDICT_PHASE' };
-    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    if (!isVoteChoice(choice)) return { ok: false, error: 'INVALID_CHOICE' };
-    room.predictions.set(playerId, choice);
-    return { ok: true, room };
+    return predictions.predict(room, playerId, choice);
   }
 
   /** How many players have made a prediction this round (aggregate only). */
   predictedCount(code: string): number {
-    return this.rooms.get(code)?.predictions.size ?? 0;
+    const room = this.rooms.get(code);
+    return room ? predictions.predictedCount(room) : 0;
   }
 
-  /**
-   * True once every CONNECTED HUMAN has predicted (and at least one is present).
-   * Bots never predict, so they're ignored; used only to short-circuit the
-   * PREDICT timer (the phase timer still bounds it regardless).
-   */
+  /** True once every connected human has predicted (ends PREDICT early). */
   allPredicted(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room) return false;
-    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
-    if (humans.length === 0) return false;
-    return humans.every((p) => room.predictions.has(p.id));
+    return room ? predictions.allPredicted(room) : false;
   }
 
   /**
    * Each predictor's own outcome for the just-finished round, for the private
-   * `player:predictionResult` emit at PHASE_RESULTS. `actual` is the second-vote
-   * majority (null on a tie); a prediction is correct only when it matches it.
+   * `player:predictionResult` emit at PHASE_RESULTS.
    */
   predictionResults(code: string): PredictionResult[] {
     const room = this.rooms.get(code);
-    if (!room) return [];
-    const t = tally(room.votes);
-    const actual: VoteChoice | null = t.A > t.B ? 'A' : t.B > t.A ? 'B' : null;
-    return [...room.predictions].map(([playerId, predicted]) => ({
-      playerId,
-      predicted,
-      actual,
-      correct: actual != null && predicted === actual,
-    }));
+    return room ? predictions.predictionResults(room) : [];
   }
 
-  /**
-   * Record (or change) a player's secret swing bet during PREDICT: whether the
-   * leading side will change after the defenses. Overwritable until the phase
-   * ends; never leaves the server as an identity (only the aggregate count, plus
-   * each bettor's own result at PHASE_RESULTS).
-   */
+  /** Record (or change) a player's secret swing bet during PREDICT. */
   swingBet(code: string, playerId: string, bet: string): SwingBetResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'PREDICT') return { ok: false, error: 'NOT_PREDICT_PHASE' };
-    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    if (!isSwingBet(bet)) return { ok: false, error: 'INVALID_BET' };
-    room.swingBets.set(playerId, bet);
-    return { ok: true, room };
+    return predictions.swingBet(room, playerId, bet);
   }
 
   /** How many players have placed a swing bet this round (aggregate only). */
   swingBetCount(code: string): number {
-    return this.rooms.get(code)?.swingBets.size ?? 0;
+    const room = this.rooms.get(code);
+    return room ? predictions.swingBetCount(room) : 0;
   }
 
-  /** True once every CONNECTED HUMAN has placed a swing bet (mirror of allPredicted). */
+  /** True once every connected human has placed a swing bet (mirror of allPredicted). */
   allSwingBet(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room) return false;
-    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
-    if (humans.length === 0) return false;
-    return humans.every((p) => room.swingBets.has(p.id));
+    return room ? predictions.allSwingBet(room) : false;
   }
 
   /**
@@ -1465,24 +1436,7 @@ export class RoomStore {
    */
   swingBetResults(code: string): SwingBetOutcome[] {
     const room = this.rooms.get(code);
-    if (!room) return [];
-    const flipped = this.leadFlipped(room);
-    return [...room.swingBets].map(([playerId, bet]) => ({
-      playerId,
-      bet,
-      flipped,
-      correct: (bet === 'ribalta') === flipped,
-    }));
-  }
-
-  /**
-   * Whether the leading side changed between the first vote (votes1) and the
-   * second (votes) — a tie counts as its own "side", so A→tie or tie→A both flip.
-   */
-  private leadFlipped(room: Room): boolean {
-    const lead = (t: VoteTally): VoteChoice | null =>
-      t.A > t.B ? 'A' : t.B > t.A ? 'B' : null;
-    return lead(tally(room.votes1)) !== lead(tally(room.votes));
+    return room ? predictions.swingBetResults(room) : [];
   }
 
   /** A fresh shuffled copy of `arr` using the injectable rng (Fisher–Yates). */
