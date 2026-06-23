@@ -79,13 +79,13 @@ export default function LeaderSetup({
   return (
     <Card
       glow="accent"
-      style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.8rem', alignItems: 'center' }}
+      style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', alignItems: 'center' }}
     >
       <h3 style={{ fontSize: '1.05rem', margin: 0 }}>Sei il leader — componi la serata</h3>
 
       <div style={{ width: '100%' }}>
         <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Tipo di partita</p>
-        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Tipo di partita">
+        <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Tipo di partita">
           <Pill selected={!percorsoOn} onClick={() => setPercorsoOn(false)} aria-label="Classica: 3, 5 o 7 dilemmi">
             <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
               <span style={{ fontWeight: 700 }}>Classica</span>
@@ -112,7 +112,7 @@ export default function LeaderSetup({
         <>
           <div style={{ width: '100%' }}>
             <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità</p>
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Modalità">
+            <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Modalità">
               {GAME_MODES.map((m) => (
                 <Pill
                   key={m}
@@ -131,7 +131,7 @@ export default function LeaderSetup({
 
           <div style={{ width: '100%' }}>
             <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Durata</p>
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Formato">
+            <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Formato">
               {SESSION_FORMATS.map((f) => (
                 <Pill
                   key={f}
@@ -156,7 +156,7 @@ export default function LeaderSetup({
         <>
           <div style={{ width: '100%' }}>
             <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Tappa di partenza</p>
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Tappa di partenza">
+            <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Tappa di partenza">
               {TAPPE.map((t) => (
                 <Pill
                   key={t.id}
@@ -178,7 +178,7 @@ export default function LeaderSetup({
 
           <div style={{ width: '100%' }}>
             <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Durata</p>
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Durata percorso">
+            <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Durata percorso">
               {DURATE.map((d) => (
                 <Pill
                   key={d}
@@ -209,11 +209,11 @@ export default function LeaderSetup({
             .filter(Boolean)
             .join(' e ')}
         </summary>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '0.7rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginTop: '0.7rem' }}>
           {!percorsoOn && (
             <div style={{ width: '100%' }}>
               <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Argomenti</p>
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Registro">
+              <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Registro">
                 {CONTENT_REGISTERS.map((r) => (
                   <Pill
                     key={r}
@@ -231,7 +231,7 @@ export default function LeaderSetup({
           {(percorsoOn || gameMode === 'gruppo') && (
             <div style={{ width: '100%' }}>
               <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità speciale</p>
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Pill
                   selected={infiltratoOn}
                   onClick={() => {

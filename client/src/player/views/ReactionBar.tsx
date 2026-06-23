@@ -7,7 +7,7 @@ export default function ReactionBar({ onReact }: { onReact: (emoji: Reaction) =>
     <div
       role="group"
       aria-label="Reagisci"
-      style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}
+      style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', justifyContent: 'center' }}
     >
       {REACTIONS.map((emoji) => (
         <button
@@ -19,7 +19,7 @@ export default function ReactionBar({ onReact }: { onReact: (emoji: Reaction) =>
             fontSize: '1.8rem',
             lineHeight: 1,
             padding: '0.55rem 0.7rem',
-            borderRadius: '999px',
+            borderRadius: 'var(--radius-pill)',
             cursor: 'pointer',
             color: 'inherit',
             background: 'var(--surface-2)',

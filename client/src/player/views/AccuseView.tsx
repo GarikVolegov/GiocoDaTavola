@@ -29,7 +29,7 @@ export default function AccuseView({ candidates, remaining, myAccusation, onAccu
       <div
         role="group"
         aria-label="La tua accusa"
-        style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'min(90vw, 22rem)' }}
+        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', width: 'min(90vw, 22rem)' }}
       >
         {candidates.map((p) => (
           <VoteOption

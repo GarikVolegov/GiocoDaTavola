@@ -23,7 +23,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <div role="alert" style={{ padding: 24, textAlign: 'center', fontFamily: 'system-ui' }}>
+        <div role="alert" style={{ padding: 24, textAlign: 'center', fontFamily: 'var(--font-body)' }}>
           <p>Qualcosa è andato storto.</p>
           <button type="button" onClick={() => window.location.reload()}>
             Ricarica

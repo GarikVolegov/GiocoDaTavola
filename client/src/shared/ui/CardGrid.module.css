@@ -1,0 +1,12 @@
+/* Equal-column responsive grid for clusters of cards/score tiles. auto-fit + a
+   shared min keeps every column the same width, so adjacent borders line up — 1
+   column on phones, N on wider screens, no media queries. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--cg-min, 14rem), 1fr));
+  gap: var(--space-4);
+  align-items: stretch;
+  justify-content: center;
+  width: 100%;
+  max-width: var(--cg-max, min(92vw, 60rem));
+}

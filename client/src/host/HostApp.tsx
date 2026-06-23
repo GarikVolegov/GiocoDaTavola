@@ -17,7 +17,7 @@ import {
   type PublicPlayer,
   type PercorsoView,
 } from '../shared/events';
-import { Card, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip } from '../shared/ui';
+import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip } from '../shared/ui';
 import ReactionSwarm from '../shared/ReactionSwarm';
 
 const screen = {
@@ -27,8 +27,8 @@ const screen = {
   justifyContent: 'center',
   minHeight: '100dvh',
   textAlign: 'center',
-  padding: '2rem',
-  gap: '1.5rem',
+  padding: 'var(--space-6)',
+  gap: 'var(--space-5)',
 } as const;
 
 // Read a room code from the spectator URL (`/host?code=XXXX`).
@@ -52,7 +52,7 @@ function PercorsoMap({ percorso }: { percorso: PercorsoView }) {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '0.2rem',
+              gap: 'var(--space-1)',
               padding: 'var(--space-2) var(--space-4)',
               borderRadius: 'var(--radius-md)',
               border: current ? '2px solid var(--gold)' : '1px solid var(--border)',
@@ -159,7 +159,7 @@ export default function HostApp() {
         </p>
         <form
           onSubmit={submitCode}
-          style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}
+          style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}
         >
           <TextInput
             mono
@@ -213,7 +213,7 @@ export default function HostApp() {
         {phase === 'TAPPA_INTRO' && game.percorso && (() => {
           const meta = tappaMeta(game.percorso.currentTappa);
           return (
-            <Card glow="accent" style={{ maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', textAlign: 'center', alignItems: 'center' }}>
+            <Card glow="accent" style={{ maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center', alignItems: 'center' }}>
               <span style={{ fontSize: '4rem' }}>{meta.emoji}</span>
               <h2 style={{ fontSize: '2rem', margin: 0, fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>{meta.nome}</h2>
               <p style={{ fontSize: '1.3rem', opacity: 0.85, margin: 0 }}>{meta.sottotitolo}</p>
@@ -227,7 +227,7 @@ export default function HostApp() {
           const meta = tappaMeta(p.currentTappa);
           const isLast = p.dilemmaIndex >= p.totalDilemmas;
           return (
-            <Card glow="accent" style={{ maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', textAlign: 'center', alignItems: 'center' }}>
+            <Card glow="accent" style={{ maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center', alignItems: 'center' }}>
               <h2 style={{ fontSize: '1.8rem', margin: 0 }}>{meta.emoji} {meta.nome} — completata!</h2>
               <p style={{ fontSize: '1.4rem', margin: 0 }}>
                 {p.tappaDilemmas} {p.tappaDilemmas === 1 ? 'dilemma' : 'dilemmi'} · {p.tappaSwings} {p.tappaSwings === 1 ? 'ribaltone' : 'ribaltoni'}
@@ -306,7 +306,7 @@ export default function HostApp() {
           defense.speaker ? (
             <section
               aria-label="Chi sta difendendo"
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)' }}
             >
               {game.isDevilRound && (
                 <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: 'var(--gold)' }}>
@@ -325,7 +325,7 @@ export default function HostApp() {
               <div
                 style={{
                   padding: '0.75rem 1.5rem',
-                  borderRadius: '0.9rem',
+                  borderRadius: 'var(--radius-lg)',
                   fontSize: '1.25rem',
                   fontWeight: 700,
                   background:
@@ -349,7 +349,7 @@ export default function HostApp() {
                 </p>
               )}
               {defense.spunti && defense.spunti.length > 0 && (
-                <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
                   {defense.spunti.map((s, i) => (
                     <li key={`${i}-${s}`} style={{ fontSize: '1.1rem', opacity: 0.85 }}>{s}</li>
                   ))}
@@ -366,13 +366,13 @@ export default function HostApp() {
         {phase === 'INTERVENTI' && defense && (
           <section
             aria-label="Interventi"
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)' }}
           >
             <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
               Interviene <span style={{ color: 'var(--gold)' }}>{defense.intervenor?.nickname ?? '…'}</span> 🙋
             </p>
             {defense.queue && defense.queue.length > 0 && (
-              <ol style={{ margin: 0, paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <ol style={{ margin: 0, paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
                 {defense.queue.map((q) => (
                   <li
                     key={q.id}
@@ -402,7 +402,7 @@ export default function HostApp() {
           <div
             style={{
               padding: '1rem 1.6rem',
-              borderRadius: '1rem',
+              borderRadius: 'var(--radius-lg)',
               textAlign: 'center',
               background: 'var(--gold-soft)',
               border: '2px solid var(--gold-line)',
@@ -426,7 +426,7 @@ export default function HostApp() {
           <div
             style={{
               padding: '1rem 1.6rem',
-              borderRadius: '1rem',
+              borderRadius: 'var(--radius-lg)',
               textAlign: 'center',
               background: 'var(--faction-a-soft)',
               border: '2px solid var(--faction-a-line)',
@@ -456,9 +456,9 @@ export default function HostApp() {
         {phase === 'DUEL_REVEAL' && duelReveal && (
           <section
             aria-label="Le vostre scelte"
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.9rem' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}
           >
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <CardGrid min={10} max="min(92vw, 32rem)">
               {duelReveal.picks.map((p) => {
                 const rgb = p.choice === 'A' ? '84,134,196' : '199,122,69';
                 return (
@@ -466,13 +466,13 @@ export default function HostApp() {
                     key={p.id}
                     style={{
                       padding: '1rem 1.4rem',
-                      borderRadius: '0.9rem',
+                      borderRadius: 'var(--radius-lg)',
                       background: `rgba(${rgb},0.18)`,
                       border: `2px solid rgba(${rgb},0.5)`,
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '0.2rem',
+                      gap: 'var(--space-1)',
                     }}
                   >
                     <span style={{ fontWeight: 700 }}>{p.nickname}</span>
@@ -483,7 +483,7 @@ export default function HostApp() {
                   </div>
                 );
               })}
-            </div>
+            </CardGrid>
             <p style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>
               {duelReveal.agreed ? '🤝 Siete d’accordo!' : '⚔️ Si va al duello!'}
             </p>
@@ -493,7 +493,7 @@ export default function HostApp() {
         {phase === 'DUEL_ARGUE' && duelTurn?.speaker && (
           <section
             aria-label="Chi argomenta"
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)' }}
           >
             <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
               Turno {duelTurn.turn}/{duelTurn.totalTurns}
@@ -504,7 +504,7 @@ export default function HostApp() {
             <div
               style={{
                 padding: '0.75rem 1.5rem',
-                borderRadius: '0.9rem',
+                borderRadius: 'var(--radius-lg)',
                 fontSize: '1.25rem',
                 fontWeight: 700,
                 background: duelTurn.speaker.side === 'A' ? 'rgba(84,134,196,0.18)' : 'rgba(199,122,69,0.18)',
@@ -524,7 +524,7 @@ export default function HostApp() {
         )}
 
         {phase === 'DUEL_RESULT' && duelResult && (
-          <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+          <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)' }}>
             {duelResult.convinced.length > 0 && <Celebration />}
             {duelResult.agreed ? (
               <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
@@ -545,15 +545,15 @@ export default function HostApp() {
         {phase === 'FINAL_DUEL' && duelSummary && (
           <section
             aria-label="Risultato del duello"
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}
           >
             <Celebration pieces={40} />
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <CardGrid min={10} max="min(92vw, 30rem)">
               {duelSummary.scores.map((s) => (
                 <Card
                   key={s.id}
                   glow="accent"
-                  style={{ flex: '1 1 12rem', minWidth: '10rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', alignItems: 'center', textAlign: 'center' }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', alignItems: 'center', textAlign: 'center' }}
                 >
                   <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{s.nickname}</span>
                   <span style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--gold)' }}>{s.persuasions}</span>
@@ -562,7 +562,7 @@ export default function HostApp() {
                   </span>
                 </Card>
               ))}
-            </div>
+            </CardGrid>
             <p style={{ fontSize: '1.2rem', opacity: 0.85, margin: 0 }}>
               Eravate d’accordo {duelSummary.agreements} {duelSummary.agreements === 1 ? 'volta' : 'volte'}
             </p>
@@ -610,7 +610,7 @@ export default function HostApp() {
           fontSize: 'clamp(4rem, 18vw, 9rem)',
           fontWeight: 800,
           letterSpacing: '0.4rem',
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          fontFamily: 'var(--font-mono)',
           lineHeight: 1,
         }}
       >
@@ -634,7 +634,7 @@ export default function HostApp() {
               padding: 0,
               display: 'flex',
               flexWrap: 'wrap',
-              gap: '0.5rem',
+              gap: 'var(--space-2)',
               justifyContent: 'center',
             }}
           >
@@ -644,9 +644,9 @@ export default function HostApp() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem',
+                  gap: 'var(--space-2)',
                   padding: '0.4rem 0.9rem',
-                  borderRadius: '999px',
+                  borderRadius: 'var(--radius-pill)',
                   background: p.isBot ? 'var(--gold-soft)' : 'rgba(127,127,127,0.18)',
                   fontWeight: 600,
                   opacity: p.connected === false ? 0.5 : 1,

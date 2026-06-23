@@ -66,7 +66,7 @@ export default function StatusView({
           return (
             <Card
               glow="accent"
-              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.4rem', textAlign: 'center' }}
+              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
             >
               <p style={{ fontSize: '3rem', margin: 0 }}>{meta.emoji}</p>
               <p style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>{meta.nome}</p>
@@ -83,7 +83,7 @@ export default function StatusView({
           return (
             <Card
               glow="accent"
-              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'center' }}
+              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
             >
               <p style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0 }}>{meta.emoji} {meta.nome} — fatto!</p>
               <p style={{ fontSize: '0.95rem', opacity: 0.85, margin: 0 }}>
@@ -107,7 +107,7 @@ export default function StatusView({
           {infiltratoRole && (
             <Card
               glow="accent"
-              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.4rem', textAlign: 'center' }}
+              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
             >
               <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>🕵️ Sei l'Infiltrato!</p>
               <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.9 }}>{infiltratoRole.mission}</p>
@@ -162,7 +162,7 @@ export default function StatusView({
           {game?.teams && (
             <Card
               glow="accent"
-              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.3rem', textAlign: 'center' }}
+              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', textAlign: 'center' }}
             >
               <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>
                 🔵 {game.teams.scores.blu} — {game.teams.scores.arancio} 🟠
@@ -179,7 +179,7 @@ export default function StatusView({
           {game?.infiltratoResult && (
             <Card
               glow={game.infiltratoResult.won ? 'a' : 'accent'}
-              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.4rem', textAlign: 'center' }}
+              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
             >
               <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>
                 🕵️ L'infiltrato era <strong>{game.infiltratoResult.infiltratorNickname}</strong>
@@ -197,7 +197,7 @@ export default function StatusView({
           {blindSpot && (
             <Card
               glow="accent"
-              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'left' }}
+              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'left' }}
             >
               <h3 style={{ margin: 0, fontSize: '1.05rem' }}>🔭 Il tuo punto cieco</h3>
               <p style={{ margin: 0, fontWeight: 700 }}>{blindSpot.title}</p>
@@ -211,7 +211,7 @@ export default function StatusView({
             <SignInButton mode="modal">
               <button
                 type="button"
-                style={{ marginTop: '0.5rem', fontWeight: 700, padding: '0.6rem 1.4rem', borderRadius: '0.7rem', cursor: 'pointer' }}
+                style={{ marginTop: '0.5rem', fontWeight: 700, padding: '0.6rem 1.4rem', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
               >
                 Accedi e salva
               </button>

@@ -68,7 +68,7 @@ export default function VoteView({
       <div
         role="group"
         aria-label="Il tuo voto"
-        style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(90vw, 22rem)' }}
+        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', width: 'min(90vw, 22rem)' }}
       >
         {(['A', 'B'] as const).map((letter) => (
           <VoteOption

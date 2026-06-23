@@ -615,12 +615,12 @@ export default function PlayerApp() {
             fontSize: '2.5rem',
             fontWeight: 800,
             letterSpacing: '0.3rem',
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            fontFamily: 'var(--font-mono)',
           }}
         >
           {joinedCode}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-1)' }}>
           <JoinQr code={joinedCode} />
           <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.7 }}>
             Fai inquadrare il QR per entrare — oppure detta il codice
@@ -636,7 +636,7 @@ export default function PlayerApp() {
             padding: 0,
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.4rem',
+            gap: 'var(--space-2)',
             width: 'min(90vw, 22rem)',
           }}
         >
@@ -648,9 +648,9 @@ export default function PlayerApp() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem',
+                  gap: 'var(--space-2)',
                   padding: '0.5rem 0.9rem',
-                  borderRadius: '0.6rem',
+                  borderRadius: 'var(--radius-md)',
                   background: p.isBot ? 'var(--gold-soft)' : 'rgba(127,127,127,0.18)',
                   fontWeight: 600,
                   opacity: absent ? 0.5 : 1,
@@ -690,12 +690,12 @@ export default function PlayerApp() {
             width: 'min(90vw, 22rem)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.6rem',
+            gap: 'var(--space-2)',
             textAlign: 'left',
           }}
         >
           <h3 style={{ margin: 0, fontSize: '1.05rem' }}>Come funziona</h3>
-          <ol style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+          <ol style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
             {HOW_TO_PLAY.map((step) => (
               <li key={step} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{step}</li>
             ))}
@@ -782,7 +782,7 @@ export default function PlayerApp() {
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.9rem',
+          gap: 'var(--space-4)',
           width: 'min(90vw, 22rem)',
         }}
       >

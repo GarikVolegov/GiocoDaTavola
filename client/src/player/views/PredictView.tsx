@@ -58,7 +58,7 @@ export default function PredictView({
         <div
           role="group"
           aria-label="La tua ipotesi"
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(90vw, 22rem)' }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', width: 'min(90vw, 22rem)' }}
         >
           {(['A', 'B'] as const).map((letter) => (
             <VoteOption
@@ -98,7 +98,7 @@ export default function PredictView({
       <div
         role="group"
         aria-label="Il tuo pronostico"
-        style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(90vw, 22rem)' }}
+        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', width: 'min(90vw, 22rem)' }}
       >
         {(['A', 'B'] as const).map((letter) => (
           <VoteOption
@@ -121,10 +121,10 @@ export default function PredictView({
       <div
         role="group"
         aria-label="La tua scommessa sul ribaltone"
-        style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'min(90vw, 22rem)' }}
+        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', width: 'min(90vw, 22rem)' }}
       >
         <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0.5rem 0 0' }}>🎰 Ci sarà un ribaltone?</p>
-        <div style={{ display: 'flex', gap: '0.6rem' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
           {(
             [
               ['regge', 'REGGE', 'La maggioranza tiene'],

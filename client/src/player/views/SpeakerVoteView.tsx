@@ -40,7 +40,7 @@ export default function SpeakerVoteView({
         <div
           role="group"
           aria-label="Il tuo voto al miglior oratore"
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(90vw, 22rem)' }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', width: 'min(90vw, 22rem)' }}
         >
           {candidates.map((d) => (
             <VoteOption

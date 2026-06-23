@@ -34,8 +34,8 @@ export default function Profile() {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '1rem',
-    padding: '2rem 1.5rem',
+    gap: 'var(--space-4)',
+    padding: 'var(--space-6) var(--space-5)',
     color: 'var(--text)',
     fontFamily: 'var(--font-body)',
   } as const;
@@ -48,7 +48,7 @@ export default function Profile() {
       <Show when="signed-out">
         <p style={{ color: 'var(--text-muted)' }}>Accedi per vedere i premi salvati.</p>
         <SignInButton mode="modal">
-          <button type="button" style={{ fontWeight: 700, padding: '0.7rem 1.4rem', borderRadius: '0.7rem', cursor: 'pointer' }}>
+          <button type="button" style={{ fontWeight: 700, padding: '0.7rem 1.4rem', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
             Accedi
           </button>
         </SignInButton>
@@ -60,7 +60,7 @@ export default function Profile() {
           <p style={{ color: 'var(--text-muted)' }}>Nessun premio salvato (ancora). Gioca una partita! 🎲</p>
         )}
         {awards != null && awards.length > 0 && (
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', gap: '0.8rem', justifyContent: 'center', maxWidth: 'min(92vw, 60rem)' }}>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, width: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(14rem, 1fr))', gap: 'var(--space-4)', maxWidth: 'min(92vw, 60rem)' }}>
             {awards.map((a) => (
               <li
                 key={a.id}
@@ -68,10 +68,8 @@ export default function Profile() {
                   background: 'var(--surface)',
                   border: '1px solid var(--border)',
                   borderRadius: 'var(--radius-md)',
-                  padding: '1rem 1.2rem',
+                  padding: 'var(--space-4)',
                   textAlign: 'center',
-                  flex: '1 1 14rem',
-                  maxWidth: '16rem',
                 }}
               >
                 <div style={{ fontSize: '2rem' }}>{a.emoji}</div>

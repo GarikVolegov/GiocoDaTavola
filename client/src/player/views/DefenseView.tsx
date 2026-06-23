@@ -108,7 +108,7 @@ export default function DefenseView({
                   <p style={{ fontSize: '0.9rem', fontWeight: 700, opacity: 0.8, margin: '0 0 0.3rem' }}>
                     Spunti per te:
                   </p>
-                  <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
                     {d.spunti.map((s, i) => (
                       <li key={`${i}-${s}`} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{s}</li>
                     ))}
@@ -155,7 +155,7 @@ export default function DefenseView({
                 fontSize: '1.05rem',
                 fontWeight: 700,
                 padding: '0.7rem 1.3rem',
-                borderRadius: '0.8rem',
+                borderRadius: 'var(--radius-lg)',
                 border: handRaised ? '2px solid var(--gold)' : '2px solid var(--border-strong)',
                 background: handRaised ? 'var(--gold-soft)' : 'transparent',
                 color: 'inherit',

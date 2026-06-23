@@ -8,6 +8,6 @@ export const wrap: CSSProperties = {
   justifyContent: 'center',
   minHeight: '100dvh',
   textAlign: 'center',
-  padding: '1.5rem',
+  padding: 'var(--space-5)',
   gap: '1rem',
 };

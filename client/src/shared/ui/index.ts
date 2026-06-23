@@ -1,6 +1,7 @@
 export { Stage } from './Stage';
 export { Button } from './Button';
 export { Card } from './Card';
+export { CardGrid } from './CardGrid';
 export { OptionCard } from './OptionCard';
 export { VoteOption } from './VoteOption';
 export { default as Celebration } from './Celebration';

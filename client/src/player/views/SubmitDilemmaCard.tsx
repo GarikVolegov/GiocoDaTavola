@@ -36,7 +36,7 @@ export default function SubmitDilemmaCard({
     optionB.trim() !== '';
   return (
     <Card
-      style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.55rem', textAlign: 'left' }}
+      style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'left' }}
     >
       <h3 style={{ margin: 0, fontSize: '1.05rem' }}>✍️ Aggiungi un dilemma</h3>
       <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.75 }}>
