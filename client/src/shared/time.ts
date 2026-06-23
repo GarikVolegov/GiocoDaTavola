@@ -17,7 +17,7 @@ export function formatMSS(totalSeconds: number): string {
   return `${m}:${rem.toString().padStart(2, '0')}`;
 }
 
-// Phases where the host shows a "waiting" screen and the ambient loop should play:
+// Phases where the host shows a "waiting" screen and the background musichetta plays:
 // idle waits for input plus listening to a speaker. Excludes the short, auto-advancing
 // reveal/result cards and the finale.
 const WAITING_PHASES: ReadonlySet<GamePhase> = new Set<GamePhase>([

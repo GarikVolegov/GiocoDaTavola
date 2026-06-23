@@ -1,9 +1,12 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, useRef, type FormEvent } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import { useElapsed } from '../shared/useElapsed';
 import { formatMSS, isWaitingPhase } from '../shared/time';
-import { startAmbient, stopAmbient, unlockAmbient } from './ambient';
+import { unlockAudio } from './audio/engine';
+import { startMusic, stopMusic, setMusicIntensity } from './audio/music';
+import { play as playSfx } from './audio/sfx';
+import { sfxForTransition } from './audio/cues';
 import {
   SocketEvents,
   PHASE_LABELS,
@@ -13,6 +16,7 @@ import {
   tappaMeta,
   type LobbyUpdatePayload,
   type GameStatePayload,
+  type GamePhase,
   type PlayerJoinErrorPayload,
   type PublicPlayer,
   type PercorsoView,
@@ -127,13 +131,13 @@ export default function HostApp() {
   const elapsed = useElapsed(game?.defense?.startedAt ?? null);
   const speaking = phase === 'DEFENSE' || phase === 'INTERVENTI';
 
-  // Ambient waiting-screen loop (host-only). Unlock on the first user gesture (the
-  // "Collega TV" submit is a pointerdown, so it counts) per the browser autoplay
-  // policy, then play during waiting phases and stop otherwise / on unmount.
+  // Host audio (host-only): a quiet background "musichetta" during waiting/speaking
+  // phases plus event sound effects. Unlock on the first user gesture (the "Collega TV"
+  // submit is a pointerdown, so it counts) per the browser autoplay policy.
   const [audioReady, setAudioReady] = useState(false);
   useEffect(() => {
     const onGesture = () => {
-      unlockAmbient();
+      unlockAudio();
       setAudioReady(true);
     };
     window.addEventListener('pointerdown', onGesture, { once: true });
@@ -143,11 +147,28 @@ export default function HostApp() {
       window.removeEventListener('keydown', onGesture);
     };
   }, []);
+  // The musichetta plays in waiting/speaking phases and stops elsewhere / on unmount.
   useEffect(() => {
-    if (audioReady && isWaitingPhase(phase)) startAmbient();
-    else stopAmbient();
+    if (audioReady && isWaitingPhase(phase)) startMusic();
+    else stopMusic();
   }, [audioReady, phase]);
-  useEffect(() => () => stopAmbient(), []);
+  // Duck the bed under a speaker so it never competes with someone talking.
+  useEffect(() => {
+    setMusicIntensity(speaking ? 'soft' : 'full');
+  }, [speaking]);
+  useEffect(() => () => stopMusic(), []);
+
+  // Event sound effects: fire a sting when the phase changes to a noteworthy moment.
+  // `phase` is derived from `game`, so they update together; comparing against the
+  // previous phase means non-phase game updates produce no sound (cue returns null).
+  const prevPhaseRef = useRef<GamePhase | null>(null);
+  useEffect(() => {
+    const prev = prevPhaseRef.current;
+    prevPhaseRef.current = phase;
+    if (!audioReady || !game) return;
+    const cue = sfxForTransition(prev, phase, game);
+    if (cue) playSfx(cue);
+  }, [phase, audioReady, game]);
 
   // Sfondo "bivio": al SPLIT_REVEAL la scena pende verso il lato in testa
   // (voto AGGREGATO — i voti restano segreti, nessun aggancio durante VOTE_*).
