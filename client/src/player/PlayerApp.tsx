@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, lazy, Suspense, type FormEvent } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import { useElapsed } from '../shared/useElapsed';
@@ -44,6 +44,11 @@ import {
   type MyProfile,
 } from '../shared/events';
 import { Card, JoinQr, Button, Field, TextInput, Alert } from '../shared/ui';
+import { useHostAudio } from '../host/audio/useHostAudio';
+import { MuteButton } from '../host/MuteButton';
+import { AudioGate } from '../host/AudioGate';
+// Lazy so jsQR (the camera decoder) only loads when a player actually opens the scanner.
+const QrScanner = lazy(() => import('./QrScanner').then((m) => ({ default: m.QrScanner })));
 import { useAuth } from '@clerk/react';
 import VoteView from './views/VoteView';
 import SpeakerVoteView from './views/SpeakerVoteView';
@@ -120,6 +125,8 @@ export default function PlayerApp() {
   const [nickname, setNickname] = useState(() => loadSession()?.nickname ?? '');
   // Create vs. join: default to "create" when arriving via /join?create=1.
   const [mode, setMode] = useState<'join' | 'create'>(() => (urlWantsCreate() ? 'create' : 'join'));
+  // Whether the camera QR reader overlay is open (join-by-scan).
+  const [showScanner, setShowScanner] = useState(false);
   const [joinedCode, setJoinedCode] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -472,6 +479,19 @@ export default function PlayerApp() {
   // This phone holds the leadership when the room's leaderId matches our seat.
   const isLeader = game?.leaderId != null && game.leaderId === playerId;
 
+  // All game audio — musichetta, event SFX and the Storie narrator voice — plays on the
+  // LEADER's phone ONLY, so a single device makes sound (no cacophony from 8 phones). The
+  // others stay silent and just read the narration text. Unlocks on the leader's first tap
+  // (browser autoplay policy); the AudioGate is an explicit fallback. Called unconditionally
+  // here (before the render branches) so the audio survives across phase changes.
+  const { audioReady, activateAudio } = useHostAudio({ enabled: isLeader, game });
+  const leaderAudio = isLeader ? (
+    <>
+      {!audioReady && <AudioGate onActivate={activateAudio} />}
+      {audioReady && <MuteButton />}
+    </>
+  ) : null;
+
   // Leader controls (gated server-side; non-leader emits are ignored).
   const startGame = () => {
     setStartError(null);
@@ -658,26 +678,30 @@ export default function PlayerApp() {
 
   if (joinedCode && phase !== 'LOBBY') {
     return (
-      <StatusView
-        phase={phase}
-        game={game}
-        remaining={remaining}
-        playerId={playerId}
-        isLeader={isLeader}
-        onAdvance={advance}
-        infiltratoRole={infiltratoRole}
-        predictionResult={predictionResult}
-        swingBetResult={swingBetResult}
-        knowResult={knowResult}
-        blindSpot={blindSpot}
-        skipButton={skipButton}
-      />
+      <>
+        {leaderAudio}
+        <StatusView
+          phase={phase}
+          game={game}
+          remaining={remaining}
+          playerId={playerId}
+          isLeader={isLeader}
+          onAdvance={advance}
+          infiltratoRole={infiltratoRole}
+          predictionResult={predictionResult}
+          swingBetResult={swingBetResult}
+          knowResult={knowResult}
+          blindSpot={blindSpot}
+          skipButton={skipButton}
+        />
+      </>
     );
   }
 
   if (joinedCode) {
     return (
       <main style={wrap}>
+        {leaderAudio}
         <h1 style={{ fontSize: '1.5rem', margin: 0 }}>Sei nella stanza</h1>
         <div
           style={{
@@ -841,6 +865,17 @@ export default function PlayerApp() {
   const creating = mode === 'create';
   return (
     <main style={wrap}>
+      {showScanner && (
+        <Suspense fallback={null}>
+          <QrScanner
+            onScan={(scanned) => {
+              setCode(scanned);
+              setShowScanner(false);
+            }}
+            onClose={() => setShowScanner(false)}
+          />
+        </Suspense>
+      )}
       <h1 style={{ fontSize: '1.75rem', margin: 0 }}>
         {creating ? 'Crea una partita' : 'Entra nella partita'}
       </h1>
@@ -871,6 +906,14 @@ export default function PlayerApp() {
               maxLength={4}
               style={{ fontSize: '1.5rem' }}
             />
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setShowScanner(true)}
+              style={{ marginTop: 'var(--space-2)', width: '100%' }}
+            >
+              📷 Scansiona QR
+            </Button>
           </Field>
         )}
         <Field label="Nickname">

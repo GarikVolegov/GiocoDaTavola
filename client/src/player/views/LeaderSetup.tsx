@@ -264,7 +264,7 @@ export default function LeaderSetup({
             </div>
           )}
           <p style={{ opacity: 0.6, margin: '0.45rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
-            🔊 La storia è letta ad alta voce dallo schermo principale.
+            🔊 La storia è letta ad alta voce dal tuo telefono (sei tu il narratore). Tutti la leggono anche come testo.
           </p>
         </div>
       )}

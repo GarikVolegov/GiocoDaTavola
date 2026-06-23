@@ -121,7 +121,9 @@ export default function StatusView({
             <p style={{ fontSize: '2.6rem', margin: 0 }}>{game.storia.emoji}</p>
             <p style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0 }}>{game.storia.title}</p>
             <p style={{ fontSize: '0.9rem', opacity: 0.85, margin: 0 }}>con {game.storia.protagonist}</p>
-            <p style={{ fontSize: '0.9rem', opacity: 0.8, margin: 0 }}>🔊 Ascolta la voce sullo schermo.</p>
+            <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'left' }}>
+              {game.storia.premessa}
+            </p>
             {narratorAdvance('Comincia ▶')}
           </Card>
         ) : null
@@ -139,7 +141,11 @@ export default function StatusView({
             <p style={{ fontSize: '0.8rem', opacity: 0.6, margin: 0 }}>
               Scena {game.storia.sceneIndex + 1} di {game.storia.totalScenes}
             </p>
-            <p style={{ fontSize: '0.95rem', opacity: 0.9, margin: 0 }}>🔊 Ascolta la voce sullo schermo.</p>
+            {game.storia.sceneNarration && (
+              <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'left' }}>
+                {game.storia.sceneNarration}
+              </p>
+            )}
             {narratorAdvance('Al bivio ▶')}
           </Card>
         ) : null
@@ -154,7 +160,11 @@ export default function StatusView({
                 Il gruppo ha scelto {game.storia.decision === 'A' ? '🔵 A' : '🟠 B'}
               </p>
             )}
-            <p style={{ fontSize: '0.95rem', opacity: 0.9, margin: 0 }}>🔊 Cosa succede ora… sullo schermo.</p>
+            {game.storia.consequence && (
+              <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'left' }}>
+                {game.storia.consequence}
+              </p>
+            )}
             {narratorAdvance('Continua ▶')}
           </Card>
         ) : null
@@ -166,7 +176,11 @@ export default function StatusView({
           >
             <p style={{ fontSize: '2.2rem', margin: 0 }}>🌅</p>
             <p style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>Epilogo</p>
-            <p style={{ fontSize: '0.95rem', opacity: 0.9, margin: 0 }}>🔊 Il finale della vostra storia, sullo schermo.</p>
+            {game.storia.epilogo && (
+              <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'left' }}>
+                {game.storia.epilogo}
+              </p>
+            )}
             {narratorAdvance('Vai ai premi ▶')}
           </Card>
         ) : null

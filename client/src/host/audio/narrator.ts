@@ -32,24 +32,89 @@ export function narrationAvailable(): boolean {
   return synth() != null;
 }
 
-let preferredVoice: SpeechSynthesisVoice | null = null;
-
-/** Pick (and cache) an Italian voice; falls back to lang-only when none is named. */
-function pickItalianVoice(s: SpeechSynthesis): SpeechSynthesisVoice | null {
-  if (preferredVoice) return preferredVoice;
-  preferredVoice = s.getVoices().find((v) => v.lang?.toLowerCase().startsWith('it')) ?? null;
-  return preferredVoice;
+/**
+ * Split prose into sentence-sized chunks. The speech engine is fed one chunk at a time
+ * so it never chokes on a long passage (Chrome silently stops an utterance after ~15s).
+ * Keeps terminators (incl. "…"), trims, drops empties. Pure / unit-tested.
+ */
+export function splitIntoSentences(text: string): string[] {
+  const matches = text.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g);
+  if (!matches) return [];
+  return matches.map((s) => s.trim()).filter((s) => s.length > 0);
 }
 
-/** Stop any narration in progress. */
+/**
+ * Choose the most natural Italian voice available: Siri / "enhanced" / "premium" voices
+ * sound far less robotic than the compact default. Falls back to any it-* voice, else null
+ * (the browser then uses its default it-IT voice). Pure / unit-tested.
+ */
+export function pickBestItalianVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  const italian = voices.filter((v) => v.lang?.toLowerCase().startsWith('it'));
+  if (italian.length === 0) return null;
+  const score = (v: SpeechSynthesisVoice): number => {
+    const name = (v.name ?? '').toLowerCase();
+    let s = 0;
+    if (name.includes('siri')) s += 8;
+    if (/enhanced|premium|neural|natural/.test(name)) s += 6;
+    if (name.includes('google')) s += 3; // "Google italiano" is a decent remote voice
+    if (/alice|federica|luca|paola|emma/.test(name)) s += 2; // known-good Apple it voices
+    if (v.lang?.toLowerCase() === 'it-it') s += 1;
+    if (v.localService) s += 1;
+    return s;
+  };
+  return italian.slice().sort((a, b) => score(b) - score(a))[0] ?? null;
+}
+
+// A new narration line supersedes any queue still in flight; `speakGen` invalidates the old
+// one. `keepAliveTimer` nudges the engine so long speech isn't cut off mid-passage.
+let speakGen = 0;
+let keepAliveTimer: ReturnType<typeof setInterval> | null = null;
+
+function stopKeepAlive(): void {
+  if (keepAliveTimer != null) {
+    clearInterval(keepAliveTimer);
+    keepAliveTimer = null;
+  }
+}
+
+/** Stop any narration in progress (and invalidate its chunk queue). */
 export function cancelNarration(): void {
-  synth()?.cancel();
+  speakGen += 1;
+  stopKeepAlive();
+  const s = synth();
+  if (s && (s.speaking || s.pending)) s.cancel();
+}
+
+let primed = false;
+
+/**
+ * Prime the speech engine from WITHIN a user gesture (the audio-enable tap). Many
+ * browsers (Chrome, Safari) only let speechSynthesis speak after it's been kicked
+ * off once inside a real gesture; a near-silent priming utterance unlocks it so
+ * the later, programmatic narration actually plays. Safe / idempotent.
+ */
+export function unlockSpeech(): void {
+  const s = synth();
+  if (!s || primed) return;
+  primed = true;
+  try {
+    if (s.paused) s.resume();
+    const u = new SpeechSynthesisUtterance(' '); // a non-breaking space
+    u.volume = 0;
+    u.lang = 'it-IT';
+    s.speak(u);
+  } catch {
+    /* ignore — best-effort unlock */
+  }
 }
 
 /**
  * Speak a line of prose (host only). No-op when muted, unavailable, or empty.
- * Cancels any prior utterance first so lines never overlap. `onDone` fires when
- * the utterance ends, errors, or is skipped — used to restore the music bed.
+ * `onDone` fires when the utterance ends, errors, or is skipped — used to restore
+ * the music bed. Hardened against two real speechSynthesis quirks:
+ *  - cancel() ONLY when something is actually playing (an idle cancel() makes the
+ *    NEXT utterance silently drop in Chrome — which killed the very first line);
+ *  - if the voice list hasn't loaded yet, wait for it instead of speaking voiceless.
  */
 export function speak(text: string | null | undefined, onDone?: () => void): void {
   const s = synth();
@@ -58,31 +123,66 @@ export function speak(text: string | null | undefined, onDone?: () => void): voi
     onDone?.();
     return;
   }
-  s.cancel(); // never overlap; also clears a stuck queue
-  const u = new SpeechSynthesisUtterance(line);
-  u.lang = 'it-IT';
-  u.rate = 0.96;
-  const voice = pickItalianVoice(s);
-  if (voice) u.voice = voice;
-  let done = false;
-  const finish = () => {
-    if (done) return;
-    done = true;
+  const gen = (speakGen += 1); // this line supersedes any queue still in flight
+  stopKeepAlive();
+  if (s.speaking || s.pending) s.cancel(); // never overlap — but don't cancel when idle
+  if (s.paused) s.resume(); // recover from a stuck/paused engine
+
+  const chunks = splitIntoSentences(line);
+  if (chunks.length === 0) {
     onDone?.();
-  };
-  u.onend = finish;
-  u.onerror = finish;
-  // Voice list may load asynchronously; if it's empty now, set the voice once it
-  // arrives (best-effort; the utterance still speaks with the default it-IT voice).
-  if (!voice && s.getVoices().length === 0) {
-    s.addEventListener(
-      'voiceschanged',
-      () => {
-        const v = pickItalianVoice(s);
-        if (v) u.voice = v;
-      },
-      { once: true },
-    );
+    return;
   }
-  s.speak(u);
+
+  const run = () => {
+    if (gen !== speakGen) return; // superseded while waiting for voices
+    const voice = pickBestItalianVoice(s.getVoices());
+    let i = 0;
+    const finish = () => {
+      if (gen !== speakGen) return; // a newer line owns the engine now
+      stopKeepAlive();
+      onDone?.();
+    };
+    // Chrome stops long speech after ~15s; a periodic pause()/resume() keeps it going.
+    keepAliveTimer = setInterval(() => {
+      if (s.speaking && !s.paused) {
+        s.pause();
+        s.resume();
+      }
+    }, 9000);
+    const speakNext = () => {
+      if (gen !== speakGen) return;
+      if (i >= chunks.length) {
+        finish();
+        return;
+      }
+      const u = new SpeechSynthesisUtterance(chunks[i]);
+      u.lang = 'it-IT';
+      u.rate = 0.98;
+      u.pitch = 1;
+      if (voice) u.voice = voice;
+      u.onend = () => {
+        i += 1;
+        speakNext();
+      };
+      u.onerror = finish;
+      s.speak(u);
+    };
+    speakNext();
+  };
+
+  // Voice list loads asynchronously; speaking before it's ready can produce no
+  // sound. If empty, wait for `voiceschanged` (once), with a timeout fallback.
+  if (s.getVoices().length === 0) {
+    let fired = false;
+    const go = () => {
+      if (fired) return;
+      fired = true;
+      run();
+    };
+    s.addEventListener('voiceschanged', go, { once: true });
+    setTimeout(go, 300);
+  } else {
+    run();
+  }
 }

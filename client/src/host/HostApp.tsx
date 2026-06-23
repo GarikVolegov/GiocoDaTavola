@@ -1,15 +1,8 @@
-import { useEffect, useState, useRef, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import { useElapsed } from '../shared/useElapsed';
-import { formatMSS, isWaitingPhase } from '../shared/time';
-import { unlockAudio } from './audio/engine';
-import { startMusic, stopMusic, setMusicIntensity } from './audio/music';
-import { play as playSfx } from './audio/sfx';
-import { sfxForTransition, shouldWarnAt, handRaised } from './audio/cues';
-import { speak, cancelNarration, narrationFor } from './audio/narrator';
-import { MuteButton } from './MuteButton';
-import { AudioGate } from './AudioGate';
+import { formatMSS } from '../shared/time';
 import {
   SocketEvents,
   PHASE_LABELS,
@@ -19,7 +12,6 @@ import {
   tappaMeta,
   type LobbyUpdatePayload,
   type GameStatePayload,
-  type GamePhase,
   type PlayerJoinErrorPayload,
   type PublicPlayer,
   type PercorsoView,
@@ -134,85 +126,9 @@ export default function HostApp() {
   const elapsed = useElapsed(game?.defense?.startedAt ?? null);
   const speaking = phase === 'DEFENSE' || phase === 'INTERVENTI';
 
-  // Host audio (host-only): a quiet background "musichetta" during waiting/speaking
-  // phases plus event sound effects. Unlock on the first user gesture (the "Collega TV"
-  // submit is a pointerdown, so it counts) per the browser autoplay policy.
-  const [audioReady, setAudioReady] = useState(false);
-  // Explicit activation (from the tap-to-enable gate): unlock + an immediate confirmation
-  // chime so the host instantly knows sound is on, then let the effects start the music.
-  const activateAudio = () => {
-    unlockAudio();
-    setAudioReady(true);
-    playSfx('reveal');
-  };
-  useEffect(() => {
-    const onGesture = () => {
-      unlockAudio();
-      setAudioReady(true);
-    };
-    window.addEventListener('pointerdown', onGesture, { once: true });
-    window.addEventListener('keydown', onGesture, { once: true });
-    return () => {
-      window.removeEventListener('pointerdown', onGesture);
-      window.removeEventListener('keydown', onGesture);
-    };
-  }, []);
-  // The musichetta plays in waiting/speaking phases and stops elsewhere / on unmount.
-  useEffect(() => {
-    if (audioReady && isWaitingPhase(phase)) startMusic();
-    else stopMusic();
-  }, [audioReady, phase]);
-  // Duck the bed under a speaker so it never competes with someone talking.
-  useEffect(() => {
-    setMusicIntensity(speaking ? 'soft' : 'full');
-  }, [speaking]);
-  useEffect(() => () => stopMusic(), []);
-
-  // Storie: the host voice reads each narrative beat aloud (host-only). Ducks the
-  // music under the voice and restores it when the line ends; a phase change
-  // cancels any line in progress so they never overlap. Keyed on the prose itself
-  // so it fires exactly once per beat.
-  const narrationLine = narrationFor(phase, game?.storia ?? null);
-  useEffect(() => {
-    if (!audioReady || !narrationLine) {
-      cancelNarration();
-      return;
-    }
-    setMusicIntensity('soft');
-    speak(narrationLine, () => setMusicIntensity('full'));
-    return () => cancelNarration();
-  }, [audioReady, narrationLine]);
-  useEffect(() => () => cancelNarration(), []);
-
-  // Event sound effects: fire a sting when the phase changes to a noteworthy moment.
-  // `phase` is derived from `game`, so they update together; comparing against the
-  // previous phase means non-phase game updates produce no sound (cue returns null).
-  const prevPhaseRef = useRef<GamePhase | null>(null);
-  useEffect(() => {
-    const prev = prevPhaseRef.current;
-    prevPhaseRef.current = phase;
-    if (!audioReady || !game) return;
-    const cue = sfxForTransition(prev, phase, game);
-    if (cue) playSfx(cue);
-  }, [phase, audioReady, game]);
-
-  // Soft ticks in the final seconds of a countdown — but not while someone is speaking,
-  // where the timer is a safety cap, not a deadline to race.
-  const prevRemainingRef = useRef<number | null>(null);
-  useEffect(() => {
-    const prev = prevRemainingRef.current;
-    prevRemainingRef.current = remaining;
-    if (audioReady && !speaking && shouldWarnAt(prev, remaining)) playSfx('timerWarn');
-  }, [remaining, audioReady, speaking]);
-
-  // A gentle ding whenever a new hand joins the intervention queue.
-  const prevQueueLenRef = useRef<number | null>(null);
-  useEffect(() => {
-    const len = phase === 'INTERVENTI' ? game?.defense?.queue?.length ?? null : null;
-    const prev = prevQueueLenRef.current;
-    prevQueueLenRef.current = len;
-    if (audioReady && handRaised(prev, len)) playSfx('handRaise');
-  }, [phase, audioReady, game]);
+  // NB: this screen (the old "TV" mirror) is intentionally SILENT. All audio — the
+  // musichetta, the event SFX and the Storie narrator voice — now plays on the LEADER's
+  // phone (see useHostAudio in PlayerApp), so only one device makes sound.
 
   // Sfondo "bivio": al SPLIT_REVEAL la scena pende verso il lato in testa
   // (voto AGGREGATO — i voti restano segreti, nessun aggancio durante VOTE_*).
@@ -231,7 +147,6 @@ export default function HostApp() {
   if (!code) {
     return (
       <main style={screen}>
-        {!audioReady && <AudioGate onActivate={activateAudio} />}
         <Logo size={64} payoff />
         <p style={{ opacity: 0.8, margin: 0, maxWidth: '32rem' }}>
           Collega questo schermo a una partita: inserisci il codice mostrato sul telefono del leader.
@@ -275,9 +190,7 @@ export default function HostApp() {
     const duelSummary = game.duelSummary;
     return (
       <main style={screen}>
-        {!audioReady && <AudioGate onActivate={activateAudio} />}
         <ReactionSwarm />
-        <MuteButton />
         {/* Latecomers can still join mid-game: keep the code + QR in the corner. */}
         {code && <RoomCodeChip code={code} />}
         {/* Percorso: the climb map (current tappa highlighted) sits above the phase. */}
@@ -721,8 +634,6 @@ export default function HostApp() {
   // LOBBY: show the code + roster + a passive "waiting for the leader" line.
   return (
     <main style={screen}>
-      {!audioReady && <AudioGate onActivate={activateAudio} />}
-      <MuteButton />
       <Logo size={64} payoff />
       <p style={{ opacity: 0.7, margin: 0 }}>
         Entra da <strong>{window.location.host}</strong> con il codice
