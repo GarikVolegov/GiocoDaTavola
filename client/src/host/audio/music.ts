@@ -1,38 +1,55 @@
-// The background "musichetta": a look-ahead scheduler (standard Web Audio pattern) that
-// reads the pure loop from sequence.ts and plays it quietly under the host screen. A
-// setInterval ticks every LOOKAHEAD_MS and queues any notes due in the next window with
-// sample-accurate timing. Drops to a softer mix while someone is speaking.
+// The background "musichetta". It loops on the AUDIO THREAD: we render one pass of the
+// Am–F–C–G loop (from sequence.ts) into an AudioBuffer once, then play it with loop=true.
 //
-// CRITICAL: /host is often NOT the focused tab during play (the leader is on their phone /
-// the player view), and browsers throttle setInterval to ~1/s in background tabs — a tiny
-// look-ahead leaves the music dead silent. So we queue several SECONDS ahead (audio plays
-// even while the JS timer is throttled), resync if we ever fall behind, and re-prime the
-// moment the tab returns to the foreground.
+// Why not a setInterval look-ahead scheduler? /host is usually NOT the focused tab while
+// people play (they're on their phones / the player view) and is often an embedded preview
+// (e.g. VS Code's browser). Browsers throttle — or outright freeze — JS timers in
+// background/hidden views, which would stall a timer-driven scheduler and kill the music
+// (one-shot SFX still fire on events, so you'd hear "random" sounds but no music — exactly
+// the reported bug). A looping AudioBufferSourceNode keeps playing regardless of JS-timer
+// state, as long as the AudioContext is running. Ducking stays real-time via the bus gain.
 
 import { getCtx, getMaster } from './engine';
 import { noteAt, LOOP_STEPS, SECONDS_PER_BEAT, type NoteEvent } from './sequence';
 
-let musicGain: GainNode | null = null;
-let timer: ReturnType<typeof setInterval> | null = null;
-let step = 0;
-let nextNoteTime = 0;
-let running = false;
-let intensity: MusicIntensity = 'full';
-
 export type MusicIntensity = 'full' | 'soft';
 
-const LOOKAHEAD_MS = 100; // how often the scheduler wakes (when not throttled)
-// Seconds of audio to queue in advance. Generous on purpose: it must exceed the ~1s
-// background-tab timer throttle so the music never runs dry while /host is unfocused.
-const SCHEDULE_AHEAD = 5;
+let musicGain: GainNode | null = null;
+let source: AudioBufferSourceNode | null = null;
+let buffer: AudioBuffer | null = null;
+let rendering = false;
+let running = false; // "should be playing" — survives the async render
+let intensity: MusicIntensity = 'full';
+
+const LOOP_SECONDS = LOOP_STEPS * SECONDS_PER_BEAT;
 // Overall loudness of the bed; "soft" ducks under a speaker without going silent.
-// Tuned so the musichetta is clearly audible as background music (not a faint hum) —
-// see /tmp audio probe: full ≈ -15 dBFS peak.
+// Tuned so the musichetta is clearly audible as background music (≈ -15 dBFS peak).
 const BED_GAIN: Record<MusicIntensity, number> = { full: 0.34, soft: 0.16 };
 
-function scheduleNote(note: NoteEvent, when: number): void {
-  const ctx = getCtx();
-  if (!ctx || !musicGain) return;
+function offlineCtor(): typeof OfflineAudioContext | null {
+  if (typeof window === 'undefined') return null;
+  return (
+    window.OfflineAudioContext ??
+    (window as unknown as { webkitOfflineAudioContext?: typeof OfflineAudioContext })
+      .webkitOfflineAudioContext ??
+    null
+  );
+}
+
+// Render one loop of the sequence into an AudioBuffer (offline, once — then cached).
+async function renderLoop(sampleRate: number): Promise<AudioBuffer | null> {
+  const Ctor = offlineCtor();
+  if (!Ctor) return null;
+  const length = Math.ceil(LOOP_SECONDS * sampleRate);
+  const off = new Ctor(1, length, sampleRate);
+  for (let step = 0; step < LOOP_STEPS; step++) {
+    const when = step * SECONDS_PER_BEAT;
+    for (const note of noteAt(step)) scheduleNote(off, off.destination, note, when);
+  }
+  return off.startRendering();
+}
+
+function scheduleNote(ctx: BaseAudioContext, dest: AudioNode, note: NoteEvent, when: number): void {
   const osc = ctx.createOscillator();
   osc.type = 'triangle'; // soft, flute-like — gentle on the ears
   osc.frequency.value = note.freq;
@@ -43,40 +60,20 @@ function scheduleNote(note: NoteEvent, when: number): void {
   g.gain.exponentialRampToValueAtTime(note.gain, when + 0.04);
   g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
   osc.connect(g);
-  g.connect(musicGain);
+  g.connect(dest);
   osc.start(when);
   osc.stop(when + dur + 0.05);
 }
 
-function scheduler(): void {
+// Start the looping source — only once the buffer is ready and we still want to play.
+function beginPlayback(): void {
   const ctx = getCtx();
-  if (!ctx) return;
-  // If the tab was throttled/hidden, the clock jumped ahead of us. Don't dump a backlog
-  // of past-due notes (they'd pile up at once) — skip forward to "now" and carry on.
-  if (nextNoteTime < ctx.currentTime) {
-    nextNoteTime = ctx.currentTime + 0.05;
-  }
-  while (nextNoteTime < ctx.currentTime + SCHEDULE_AHEAD) {
-    for (const note of noteAt(step)) scheduleNote(note, nextNoteTime);
-    nextNoteTime += SECONDS_PER_BEAT;
-    step = (step + 1) % LOOP_STEPS;
-  }
-}
-
-// On returning to the foreground, resume the (possibly auto-suspended) context and top up
-// the queue immediately, so any gap from a long hide closes at once instead of next tick.
-function onVisibility(): void {
-  if (!running || typeof document === 'undefined' || document.visibilityState !== 'visible') return;
-  const ctx = getCtx();
-  if (!ctx) return;
-  void ctx.resume();
-  scheduler();
-}
-let visibilityBound = false;
-function ensureVisibilityListener(): void {
-  if (visibilityBound || typeof document === 'undefined') return;
-  document.addEventListener('visibilitychange', onVisibility);
-  visibilityBound = true;
+  if (!running || !buffer || !ctx || !musicGain || source) return;
+  source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+  source.connect(musicGain);
+  source.start();
 }
 
 export function startMusic(): void {
@@ -84,21 +81,41 @@ export function startMusic(): void {
   const master = getMaster();
   if (!ctx || !master || running) return;
   void ctx.resume();
+  running = true;
   musicGain = ctx.createGain();
   musicGain.gain.value = BED_GAIN[intensity];
   musicGain.connect(master);
-  step = 0;
-  nextNoteTime = ctx.currentTime + 0.1;
-  running = true;
-  ensureVisibilityListener();
-  scheduler();
-  timer = setInterval(scheduler, LOOKAHEAD_MS);
+
+  if (buffer) {
+    beginPlayback();
+    return;
+  }
+  if (!rendering) {
+    rendering = true;
+    renderLoop(ctx.sampleRate)
+      .then((buf) => {
+        buffer = buf;
+        rendering = false;
+        beginPlayback(); // reads current state — plays only if still running
+      })
+      .catch(() => {
+        rendering = false;
+      });
+  }
+  // If a render is already in flight (from a previous start), its .then will call
+  // beginPlayback against the current state, so this start is covered too.
 }
 
 export function stopMusic(): void {
-  if (timer) {
-    clearInterval(timer);
-    timer = null;
+  running = false;
+  if (source) {
+    try {
+      source.stop();
+    } catch {
+      /* already stopped */
+    }
+    source.disconnect();
+    source = null;
   }
   const ctx = getCtx();
   if (ctx && musicGain) {
@@ -108,10 +125,9 @@ export function stopMusic(): void {
     setTimeout(() => node.disconnect(), 300);
   }
   musicGain = null;
-  running = false;
 }
 
-/** Duck the bed under a speaker ('soft') or bring it back ('full'). */
+/** Duck the bed under a speaker ('soft') or bring it back ('full') — real-time, on the bus. */
 export function setMusicIntensity(next: MusicIntensity): void {
   intensity = next;
   const ctx = getCtx();

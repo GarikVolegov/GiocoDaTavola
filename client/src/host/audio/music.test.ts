@@ -1,97 +1,92 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { startMusic, stopMusic } from './music';
+import { LOOP_STEPS, SECONDS_PER_BEAT } from './sequence';
 
-// A throwaway fake Web Audio graph: we only care how many oscillators the scheduler
-// creates (= notes actually queued). engine.ts caches one context, so we hand back a
-// single shared fake.
-let oscCreated = 0;
-let maxStart = 0; // furthest-ahead note start time queued (= buffer depth)
-let now = 0;
+// The musichetta now loops on the audio thread (an AudioBufferSourceNode with loop=true),
+// so it survives background-tab JS-timer throttling/freezing. These fakes let us assert
+// that a looping source is created and torn down — no real Web Audio needed.
+let sources: Array<{ buffer: unknown; loop: boolean; start: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn> }> = [];
+let offlineOscillators = 0;
 
 const param = () => ({
   value: 0,
   setValueAtTime: vi.fn(),
   exponentialRampToValueAtTime: vi.fn(),
-  linearRampToValueAtTime: vi.fn(),
   cancelScheduledValues: vi.fn(),
   setTargetAtTime: vi.fn(),
 });
 
-const fakeCtx = {
+const FAKE_BUFFER = { duration: LOOP_STEPS * SECONDS_PER_BEAT };
+
+const realCtx = {
   state: 'running' as const,
-  get currentTime() {
-    return now;
-  },
+  currentTime: 0,
+  sampleRate: 44100,
   destination: { connect: vi.fn(), disconnect: vi.fn() },
   resume: vi.fn(() => Promise.resolve()),
   createGain: () => ({ gain: param(), connect: vi.fn(), disconnect: vi.fn() }),
-  createOscillator: () => {
-    oscCreated += 1;
-    return {
-      type: 'sine',
-      frequency: param(),
-      connect: vi.fn(),
-      start: (when: number) => {
-        if (when > maxStart) maxStart = when;
-      },
-      stop: vi.fn(),
-    };
+  createOscillator: () => ({ type: 'sine', frequency: param(), connect: vi.fn(), start: vi.fn(), stop: vi.fn() }),
+  createBufferSource: () => {
+    const s = { buffer: null as unknown, loop: false, connect: vi.fn(), start: vi.fn(), stop: vi.fn(), disconnect: vi.fn() };
+    sources.push(s);
+    return s;
   },
-  createAnalyser: () => ({ fftSize: 0, connect: vi.fn(), getFloatTimeDomainData: vi.fn() }),
 };
 
+function FakeOffline() {
+  return {
+    destination: { connect: vi.fn() },
+    createOscillator: () => {
+      offlineOscillators += 1;
+      return { type: 'sine', frequency: param(), connect: vi.fn(), start: vi.fn(), stop: vi.fn() };
+    },
+    createGain: () => ({ gain: param(), connect: vi.fn() }),
+    startRendering: () => Promise.resolve(FAKE_BUFFER),
+  };
+}
+
 beforeEach(() => {
-  oscCreated = 0;
-  maxStart = 0;
-  now = 0;
-  vi.useFakeTimers();
-  // Must be constructable (engine does `new Ctor()`), so a plain function, not an arrow.
+  sources = [];
+  offlineOscillators = 0;
   (window as unknown as { AudioContext: unknown }).AudioContext = function FakeAudioContext() {
-    return fakeCtx;
+    return realCtx;
+  };
+  (window as unknown as { OfflineAudioContext: unknown }).OfflineAudioContext = function FakeOfflineCtx() {
+    return FakeOffline();
   };
 });
 
-afterEach(() => {
-  stopMusic();
-  vi.runAllTimers();
-  vi.useRealTimers();
-});
+afterEach(() => stopMusic());
 
-describe('music start/stop lifecycle', () => {
-  it('schedules notes when started (LOBBY)', () => {
+const flush = () => new Promise((r) => setTimeout(r, 0));
+
+describe('musichetta (looping buffer — throttle-proof)', () => {
+  it('renders the loop and plays it as a looping buffer source', async () => {
     startMusic();
-    expect(oscCreated).toBeGreaterThan(0);
+    await flush();
+    expect(offlineOscillators).toBeGreaterThan(0); // the loop got rendered
+    expect(sources.length).toBe(1);
+    expect(sources[0].loop).toBe(true); // loops on the audio thread, no JS timer
+    expect(sources[0].start).toHaveBeenCalled();
   });
 
-  it('restarts after being stopped — the core gameplay phase cycling', () => {
-    startMusic(); // LOBBY / a waiting phase
-    expect(oscCreated).toBeGreaterThan(0);
-
-    stopMusic(); // a non-waiting reveal phase
-    vi.advanceTimersByTime(400); // let the disconnect timeout fire
-
-    oscCreated = 0;
-    now = 12; // time has moved on
-    startMusic(); // the next waiting phase (VOTE_1, PREDICT, …)
-    expect(oscCreated).toBeGreaterThan(0); // music MUST come back
+  it('stops the source on stopMusic', async () => {
+    startMusic();
+    await flush();
+    const s = sources[0];
+    stopMusic();
+    expect(s.stop).toHaveBeenCalled();
   });
 
-  it('queues several seconds of audio ahead so a throttled timer cannot starve it', () => {
-    now = 100;
+  it('restarts after being stopped (game phase cycling)', async () => {
     startMusic();
-    // Must buffer well past the ~1s background-tab timer throttle.
-    expect(maxStart - now).toBeGreaterThan(3);
-  });
-
-  it('resyncs instead of dumping a backlog after the tab was throttled/hidden', () => {
+    await flush();
+    stopMusic();
     startMusic();
-    oscCreated = 0;
-    // Simulate a long hidden stretch: the audio clock advanced 30s but the throttled
-    // interval did not fire. The next tick must NOT schedule ~30s of past notes at once.
-    now = 30;
-    vi.advanceTimersByTime(150); // fire the scheduler once
-    expect(oscCreated).toBeGreaterThan(0); // music resumes
-    expect(oscCreated).toBeLessThan(40); // but only a small look-ahead, not a backlog
+    await flush();
+    expect(sources.length).toBe(2);
+    expect(sources[1].loop).toBe(true);
+    expect(sources[1].start).toHaveBeenCalled();
   });
 });
