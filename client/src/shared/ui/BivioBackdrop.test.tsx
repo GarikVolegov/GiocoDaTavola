@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from 'vitest';
-import { cleanup } from '@testing-library/react';
-import { leanFromSplit } from './BivioBackdrop';
+import { cleanup, render, screen } from '@testing-library/react';
+import { BivioBackdrop, leanFromSplit } from './BivioBackdrop';
 
 afterEach(() => cleanup());
 
@@ -18,5 +18,24 @@ describe('leanFromSplit', () => {
   it('returns the rounded A-percentage otherwise', () => {
     expect(leanFromSplit({ A: 1, B: 3 })).toBe(25);
     expect(leanFromSplit({ A: 1, B: 2 })).toBe(33);
+  });
+});
+
+describe('BivioBackdrop', () => {
+  it('renders a decorative, aria-hidden layer', () => {
+    render(<BivioBackdrop variant="host" />);
+    const el = screen.getByTestId('bivio-backdrop');
+    expect(el).toBeInTheDocument();
+    expect(el).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('uses full intensity on host', () => {
+    render(<BivioBackdrop variant="host" />);
+    expect(screen.getByTestId('bivio-backdrop').style.getPropertyValue('--bivio-k')).toBe('1');
+  });
+
+  it('uses reduced intensity on player', () => {
+    render(<BivioBackdrop variant="player" />);
+    expect(screen.getByTestId('bivio-backdrop').style.getPropertyValue('--bivio-k')).toBe('0.4');
   });
 });
