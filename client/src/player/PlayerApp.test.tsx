@@ -554,6 +554,36 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/hanno pronosticato 1\/3/i)).toBeInTheDocument();
   });
 
+  it('confirms the swing bet after you place it at PREDICT', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'PREDICT',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        knowPairs: null,
+        predictedCount: 0,
+        leaderId: null,
+      });
+    });
+    expect(screen.queryByText(/hai scommesso/i)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /REGGE/ }));
+    expect(screen.getByText(/hai scommesso/i)).toBeInTheDocument();
+  });
+
   it('shows group speaker-vote progress at SPEAKER_VOTE', () => {
     render(<PlayerApp />);
     act(() => {

@@ -150,6 +150,11 @@ export default function PredictView({
             />
           ))}
         </div>
+        {swingBet && (
+          <p style={{ opacity: 0.8, margin: 0, fontSize: '0.95rem' }}>
+            Hai scommesso: la maggioranza <strong>{swingBet === 'regge' ? 'regge' : 'ribalta'}</strong>.
+          </p>
+        )}
       </div>
       {skipButton}
     </main>
