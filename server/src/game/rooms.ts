@@ -3,6 +3,7 @@
 
 import { Deck, dilemmasForRegister, loadDilemmas, COMPLESSITA_RANK, type Dilemma, type ContentRegister, type Tappa } from './deck';
 import { botDefenseArgument } from './botDefense';
+import * as knowRound from './knowRound';
 import {
   type GamePhase,
   PHASE_DURATIONS_MS,
@@ -749,11 +750,6 @@ export class RoomStore {
     return options[Math.floor(this.rng() * options.length)];
   }
 
-  /** True when the round in play is the "Quanto mi conosci" round. */
-  private isKnowRound(room: Room): boolean {
-    return room.knowRoundIndex !== null && room.dilemmaIndex === room.knowRoundIndex;
-  }
-
   /**
    * Assign each connected human a target to guess (a ring: everyone guesses the
    * next player), clearing any stale guesses. Called on entry to PREDICT in the
@@ -1247,7 +1243,7 @@ export class RoomStore {
       room.turnMinEndsAt = null;
     }
     // Entering PREDICT in the "Quanto mi conosci" round assigns the guessing ring.
-    if (transition.phase === 'PREDICT' && this.isKnowRound(room)) {
+    if (transition.phase === 'PREDICT' && knowRound.isKnowRound(room)) {
       this.assignKnowTargets(room);
     }
     // Entering DEFENSE picks the defenders from this round's votes and starts at
@@ -1579,25 +1575,19 @@ export class RoomStore {
   knowGuess(code: string, guesserId: string, choice: string): KnowGuessResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'PREDICT' || !this.isKnowRound(room)) return { ok: false, error: 'NOT_KNOW_PHASE' };
-    if (!room.knowTargets.has(guesserId)) return { ok: false, error: 'NO_TARGET' };
-    if (!isVoteChoice(choice)) return { ok: false, error: 'INVALID_CHOICE' };
-    room.knowGuesses.set(guesserId, choice);
-    return { ok: true, room };
+    return knowRound.knowGuess(room, guesserId, choice);
   }
 
   /** How many guessers have guessed this round (aggregate only). */
   knowGuessedCount(code: string): number {
-    return this.rooms.get(code)?.knowGuesses.size ?? 0;
+    const room = this.rooms.get(code);
+    return room ? knowRound.knowGuessedCount(room) : 0;
   }
 
   /** True once every guesser in the ring has guessed (used to end PREDICT early). */
   allKnowGuessed(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room) return false;
-    const guessers = [...room.knowTargets.keys()];
-    if (guessers.length === 0) return false;
-    return guessers.every((id) => room.knowGuesses.has(id));
+    return room ? knowRound.allKnowGuessed(room) : false;
   }
 
   /**
@@ -1607,17 +1597,7 @@ export class RoomStore {
    */
   publicKnowPairs(code: string): KnowPair[] | null {
     const room = this.rooms.get(code);
-    if (!room || !this.isKnowRound(room)) return null;
-    const phaseOk =
-      room.phase === 'PREDICT' || room.phase === 'DEFENSE' ||
-      room.phase === 'VOTE_2' || room.phase === 'SPEAKER_VOTE' || room.phase === 'PHASE_RESULTS';
-    if (!phaseOk) return null;
-    return [...room.knowTargets].map(([guesserId, targetId]) => ({
-      guesserId,
-      guesserNickname: room.players.get(guesserId)?.nickname ?? '',
-      targetId,
-      targetNickname: room.players.get(targetId)?.nickname ?? '',
-    }));
+    return room ? knowRound.publicKnowPairs(room) : null;
   }
 
   /**
@@ -1626,12 +1606,7 @@ export class RoomStore {
    */
   knowGuessResults(code: string): KnowGuessOutcome[] {
     const room = this.rooms.get(code);
-    if (!room) return [];
-    return [...room.knowGuesses].map(([guesserId, guess]) => {
-      const targetId = room.knowTargets.get(guesserId) ?? '';
-      const actual = room.votes1.get(targetId) ?? null;
-      return { guesserId, targetId, guess, actual, correct: actual != null && guess === actual };
-    });
+    return room ? knowRound.knowGuessResults(room) : [];
   }
 
   /**
