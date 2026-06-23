@@ -5,6 +5,7 @@ import { Deck, dilemmasForRegister, loadDilemmas, COMPLESSITA_RANK, type Dilemma
 import { botDefenseArgument } from './botDefense';
 import * as knowRound from './knowRound';
 import * as infiltrato from './infiltrato';
+import { tally, isVoteChoice, isSwingBet } from './voteCount';
 import {
   type GamePhase,
   PHASE_DURATIONS_MS,
@@ -116,13 +117,7 @@ function isGameMode(v: string): v is GameMode {
   return v === 'gruppo' || v === 'duello';
 }
 
-function isVoteChoice(c: string): c is VoteChoice {
-  return c === 'A' || c === 'B';
-}
 
-function isSwingBet(b: string): b is SwingBet {
-  return b === 'ribalta' || b === 'regge';
-}
 
 export interface Player {
   /** Stable, public per-player id (NOT the socket id and NOT the reconnect
@@ -780,8 +775,8 @@ export class RoomStore {
    * tied split, gregge/bastian hold (no clear majority to chase).
    */
   private applyBotSecondVotes(room: Room): void {
-    const tally = RoomStore.tally(room.votes1);
-    const majority: VoteChoice | null = tally.A > tally.B ? 'A' : tally.B > tally.A ? 'B' : null;
+    const t = tally(room.votes1);
+    const majority: VoteChoice | null = t.A > t.B ? 'A' : t.B > t.A ? 'B' : null;
     const minority: VoteChoice | null = majority ? (majority === 'A' ? 'B' : 'A') : null;
     for (const p of room.players.values()) {
       if (!p.isBot || !p.persona) continue;
@@ -817,8 +812,8 @@ export class RoomStore {
    * still intact for this round.
    */
   private recordRoundStats(room: Room): void {
-    const first = RoomStore.tally(room.votes1);
-    const second = RoomStore.tally(room.votes);
+    const first = tally(room.votes1);
+    const second = tally(room.votes);
     const majoritySide: VoteChoice | null =
       second.A > second.B ? 'A' : second.B > second.A ? 'B' : null;
     let roundSwitched = 0;
@@ -1424,8 +1419,8 @@ export class RoomStore {
   predictionResults(code: string): PredictionResult[] {
     const room = this.rooms.get(code);
     if (!room) return [];
-    const tally = RoomStore.tally(room.votes);
-    const actual: VoteChoice | null = tally.A > tally.B ? 'A' : tally.B > tally.A ? 'B' : null;
+    const t = tally(room.votes);
+    const actual: VoteChoice | null = t.A > t.B ? 'A' : t.B > t.A ? 'B' : null;
     return [...room.predictions].map(([playerId, predicted]) => ({
       playerId,
       predicted,
@@ -1487,7 +1482,7 @@ export class RoomStore {
   private leadFlipped(room: Room): boolean {
     const lead = (t: VoteTally): VoteChoice | null =>
       t.A > t.B ? 'A' : t.B > t.A ? 'B' : null;
-    return lead(RoomStore.tally(room.votes1)) !== lead(RoomStore.tally(room.votes));
+    return lead(tally(room.votes1)) !== lead(tally(room.votes));
   }
 
   /** A fresh shuffled copy of `arr` using the injectable rng (Fisher–Yates). */
@@ -1700,16 +1695,10 @@ export class RoomStore {
   }
 
   /** Aggregate A vs B counts of a votes map (no identities). */
-  private static tally(votes: Map<string, VoteChoice>): VoteTally {
-    const tally: VoteTally = { A: 0, B: 0 };
-    for (const choice of votes.values()) tally[choice]++;
-    return tally;
-  }
-
   /** Aggregate A vs B tally for the current round (no identities). */
   voteTally(code: string): VoteTally {
     const room = this.rooms.get(code);
-    return room ? RoomStore.tally(room.votes) : { A: 0, B: 0 };
+    return room ? tally(room.votes) : { A: 0, B: 0 };
   }
 
   /**
@@ -1720,8 +1709,8 @@ export class RoomStore {
    */
   computeSwing(code: string): SwingResult {
     const room = this.rooms.get(code);
-    const first = room ? RoomStore.tally(room.votes1) : { A: 0, B: 0 };
-    const second = room ? RoomStore.tally(room.votes) : { A: 0, B: 0 };
+    const first = room ? tally(room.votes1) : { A: 0, B: 0 };
+    const second = room ? tally(room.votes) : { A: 0, B: 0 };
     let switched = 0;
     if (room) {
       for (const [id, firstChoice] of room.votes1) {
