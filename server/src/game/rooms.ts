@@ -10,6 +10,7 @@ import * as speakerVote from './speakerVote';
 import * as submittedDilemmas from './submittedDilemmas';
 import * as voting from './voting';
 import * as defenseTurns from './defenseTurns';
+import * as reactions from './reactions';
 import { tally } from './voteCount';
 import {
   type GamePhase,
@@ -97,9 +98,6 @@ function isContentRegister(v: string): v is ContentRegister {
  */
 export const REACTIONS = ['👏', '🔥', '🤯', '😂', '🤔'] as const;
 export type Reaction = (typeof REACTIONS)[number];
-function isReaction(e: string): e is Reaction {
-  return (REACTIONS as readonly string[]).includes(e);
-}
 
 /** Minimum gap between two reactions from the SAME player (anti-spam), in ms. */
 export const REACTION_MIN_INTERVAL_MS = 400;
@@ -1302,23 +1300,7 @@ export class RoomStore {
   react(code: string, playerId: string, emoji: string): ReactResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'DEFENSE' && room.phase !== 'INTERVENTI' && room.phase !== 'DUEL_ARGUE') {
-      return { ok: false, error: 'NOT_REACTING_PHASE' };
-    }
-    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    if (!isReaction(emoji)) return { ok: false, error: 'INVALID_EMOJI' };
-    const now = this.now();
-    const last = room.lastReactionAt.get(playerId);
-    if (last != null && now - last < REACTION_MIN_INTERVAL_MS) {
-      return { ok: false, error: 'RATE_LIMITED' };
-    }
-    room.lastReactionAt.set(playerId, now);
-    const speakerId = defenseTurns.currentSpeakerId(room);
-    if (speakerId) {
-      const s = ensureStats(room, speakerId);
-      s.reactionsReceived = (s.reactionsReceived ?? 0) + 1;
-    }
-    return { ok: true, emoji };
+    return reactions.react(room, playerId, emoji, this.now());
   }
 
   /**
