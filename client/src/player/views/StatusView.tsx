@@ -49,6 +49,16 @@ export default function StatusView({
 }: StatusViewProps) {
   // useAuth keeps the <Show when="signed-out"> gate working inside this view.
   useAuth();
+  // Leader-paced narrative beats (storia): the leader advances; others wait. The
+  // host screen is the narrator, so the phone only needs this small control.
+  const narratorAdvance = (label: string) =>
+    isLeader ? (
+      <Button variant="primary" onClick={onAdvance}>
+        {label}
+      </Button>
+    ) : (
+      <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem' }}>In attesa del narratore…</p>
+    );
   return (
     <main style={wrap}>
       <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
@@ -102,6 +112,64 @@ export default function StatusView({
             </Card>
           );
         })() : null
+      ) : phase === 'STORY_INTRO' ? (
+        game?.storia ? (
+          <Card
+            glow="accent"
+            style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
+          >
+            <p style={{ fontSize: '2.6rem', margin: 0 }}>{game.storia.emoji}</p>
+            <p style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0 }}>{game.storia.title}</p>
+            <p style={{ fontSize: '0.9rem', opacity: 0.85, margin: 0 }}>con {game.storia.protagonist}</p>
+            <p style={{ fontSize: '0.9rem', opacity: 0.8, margin: 0 }}>🔊 Ascolta la voce sullo schermo.</p>
+            {narratorAdvance('Comincia ▶')}
+          </Card>
+        ) : null
+      ) : phase === 'SCENE_INTRO' ? (
+        game?.storia ? (
+          <Card
+            glow="accent"
+            style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
+          >
+            {game.storia.actTitle && (
+              <p style={{ fontSize: '0.8rem', opacity: 0.7, margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {game.storia.actTitle}
+              </p>
+            )}
+            <p style={{ fontSize: '0.8rem', opacity: 0.6, margin: 0 }}>
+              Scena {game.storia.sceneIndex + 1} di {game.storia.totalScenes}
+            </p>
+            <p style={{ fontSize: '0.95rem', opacity: 0.9, margin: 0 }}>🔊 Ascolta la voce sullo schermo.</p>
+            {narratorAdvance('Al bivio ▶')}
+          </Card>
+        ) : null
+      ) : phase === 'SCENE_CONSEQUENCE' ? (
+        game?.storia ? (
+          <Card
+            glow="accent"
+            style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
+          >
+            {game.storia.decision && (
+              <p style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>
+                Il gruppo ha scelto {game.storia.decision === 'A' ? '🔵 A' : '🟠 B'}
+              </p>
+            )}
+            <p style={{ fontSize: '0.95rem', opacity: 0.9, margin: 0 }}>🔊 Cosa succede ora… sullo schermo.</p>
+            {narratorAdvance('Continua ▶')}
+          </Card>
+        ) : null
+      ) : phase === 'STORY_EPILOGUE' ? (
+        game?.storia ? (
+          <Card
+            glow="accent"
+            style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
+          >
+            <p style={{ fontSize: '2.2rem', margin: 0 }}>🌅</p>
+            <p style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>Epilogo</p>
+            <p style={{ fontSize: '0.95rem', opacity: 0.9, margin: 0 }}>🔊 Il finale della vostra storia, sullo schermo.</p>
+            {narratorAdvance('Vai ai premi ▶')}
+          </Card>
+        ) : null
       ) : phase === 'PHASE_INTRO' ? (
         <>
           {infiltratoRole && (

@@ -1,0 +1,661 @@
+[
+  {
+    "id": "ultima-orbita",
+    "title": "L'Ultima Orbita",
+    "genre": "avventura",
+    "emoji": "🛰️",
+    "hook": "Una colonia orbitale, le riserve agli sgoccioli, scelte che conosci già.",
+    "protagonist": "Sara, ingegnere capo",
+    "premessa": "La stazione Orbita-9 gira attorno a una Terra che non risponde più alle chiamate da tre settimane. Sei Sara, l'ingegnere capo: trecento persone, ossigeno per due mesi, un equipaggio che ha smesso di credere ai comunicati ufficiali. La fantascienza è solo la cornice — le scelte che ti aspettano le hai già viste, da qualche parte, sulla Terra di prima.",
+    "acts": [
+      {
+        "id": "atto-1",
+        "title": "Atto I — Il silenzio",
+        "emoji": "🌑",
+        "scenes": [
+          {
+            "id": "s1",
+            "narration": "Il Consiglio ti chiede di registrare il messaggio del mattino per i coloni. I sensori dicono la verità: le riserve calano più in fretta del previsto. Ma la gente è già sull'orlo del panico.",
+            "bivio": {
+              "text": "Cosa dici nel messaggio di stamattina?",
+              "optionA": "La verità nuda: razioni dimezzate, due mesi al massimo.",
+              "optionB": "Una versione rassicurante: 'tutto sotto controllo'.",
+              "spuntiA": ["Le persone hanno diritto di decidere sapendo", "Una bugia scoperta distrugge ogni fiducia", "Il panico gestito è meglio del tradimento"],
+              "spuntiB": ["Il panico ora ucciderebbe più della carenza", "Ti serve tempo per trovare una via d'uscita", "Proteggere a volte è non dire tutto subito"]
+            },
+            "consequenceA": "La stazione trattiene il fiato. Qualcuno piange, qualcuno ti ringrazia. Da oggi, quando parli, tutti ascoltano davvero.",
+            "consequenceB": "Il mattino scorre tranquillo. Ma un tecnico ha visto i dati grezzi: comincia a circolare un sussurro, e i sussurri non si dimezzano come le razioni."
+          },
+          {
+            "id": "s2",
+            "narration": "Marco, il medico, ti prende da parte. C'è un'unica dose di trattamento rigenerante. Può salvare il giovane Teo, ferito nell'ultima avaria, oppure la vecchia Iris, custode di metà delle colture.",
+            "bivio": {
+              "text": "A chi va l'unica dose?",
+              "optionA": "A Teo: una vita giovane, tutto il futuro davanti.",
+              "optionB": "A Iris: senza il suo sapere, le serre muoiono e con loro tutti.",
+              "spuntiA": ["Non si misura una vita in 'utilità'", "Il futuro va a chi lo abiterà più a lungo", "Salvare il ragazzo tiene viva la speranza"],
+              "spuntiB": ["Il sapere di Iris tiene in vita trecento persone", "Nell'emergenza conta ciò che salva di più", "Iris può ancora insegnare prima di andarsene"]
+            },
+            "consequenceA": "Teo si rialza, pallido e vivo. Iris vi saluta nelle settimane seguenti, lasciando quaderni fitti di istruzioni. Le serre vacillano, ma resistono.",
+            "consequenceB": "Iris torna fra le piante con le mani tremanti ma sicure. Teo non ce la fa. Ogni foglia verde, da allora, porta il suo nome."
+          },
+          {
+            "id": "s3",
+            "narration": "Nella stiva trovate un clandestino: un ragazzo della stazione vicina, salito di nascosto prima del blackout. Una bocca in più che nessuno aveva contato.",
+            "bivio": {
+              "text": "Cosa fate del clandestino?",
+              "optionA": "Lo accogliamo come uno di noi, razioni comprese.",
+              "optionB": "Lo mettiamo in cryo-sonno: dorme, e non consuma.",
+              "spuntiA": ["Nessuno si salva lasciando fuori qualcuno", "Oggi è lui, domani potresti essere tu", "Due braccia in più servono"],
+              "spuntiB": ["Le razioni erano già contate all'osso", "Dormire non è morire: lo svegliamo dopo", "Il gruppo viene prima dell'intruso"]
+            },
+            "consequenceA": "Il ragazzo, Nico, si rivela un tecnico abile e leale. Mangiare in trecentouno pesa, ma qualcosa nella stazione si è ammorbidito.",
+            "consequenceB": "Nico scivola nel sonno freddo con gli occhi spaventati. Risparmiate ossigeno. Ma c'è chi, passando davanti alla sua capsula, abbassa lo sguardo."
+          },
+          {
+            "id": "s4",
+            "narration": "Le razioni vanno ricalcolate. Qualcuno propone di dare di più a chi tiene viva la stazione — ingegneri, medici, agricoltori — e meno agli altri.",
+            "bivio": {
+              "text": "Come dividete il cibo?",
+              "optionA": "Razioni uguali per tutti, nessuno vale più di un altro.",
+              "optionB": "Di più a chi è essenziale: senza di loro, crolla tutto.",
+              "spuntiA": ["La dignità non si raziona", "Le caste spaccano il gruppo dal di dentro", "Tutti stanno reggendo qualcosa, anche se non si vede"],
+              "spuntiB": ["Se cede chi tiene i sistemi, cedono tutti", "Non è privilegio, è sopravvivenza della stazione", "Già lo facciamo coi farmaci: perché non col cibo?"]
+            },
+            "consequenceA": "Le code alla mensa diventano un rito di uguaglianza. Gli ingegneri lavorano affamati come gli altri, ma nessuno si sente di troppo.",
+            "consequenceB": "I sistemi reggono meglio. Ma nei corridoi si parla ormai di 'quelli che contano' e 'gli altri', e la frase pesa più del cibo."
+          }
+        ]
+      },
+      {
+        "id": "atto-2",
+        "title": "Atto II — La frattura",
+        "emoji": "⚡",
+        "scenes": [
+          {
+            "id": "s5",
+            "narration": "Spariscono scorte dal magazzino. Un gruppo propone di chiuderlo a chiave e affidarne il controllo a un piccolo comitato fidato.",
+            "bivio": {
+              "text": "Chi controlla le riserve?",
+              "optionA": "Accesso condiviso e trasparente: ci fidiamo a vicenda.",
+              "optionB": "Un comitato ristretto con la chiave: basta furti.",
+              "spuntiA": ["Il controllo a pochi diventa potere su tutti", "La trasparenza è il miglior antifurto", "Trattarli da ladri li renderà ladri"],
+              "spuntiB": ["Senza regole il forte mangia il debole", "Pochi responsabili rispondono meglio di tutti", "L'ordine ora vale più dell'orgoglio"]
+            },
+            "consequenceA": "Le scorte restano alla vista di tutti, contate ogni sera insieme. I furti non spariscono del tutto, ma nessuno può accusare un padrone.",
+            "consequenceB": "I furti cessano di colpo. Il comitato, però, comincia a decidere chi 'merita' un extra — e a quel tavolo non siedono tutti."
+          },
+          {
+            "id": "s6",
+            "narration": "Un pannello esterno è in avaria: va riparato con una passeggiata spaziale ad altissimo rischio. Serve un volontario, e le probabilità di tornare sono basse.",
+            "bivio": {
+              "text": "Chi mandate fuori?",
+              "optionA": "Sorteggiamo tra i volontari: il rischio si condivide.",
+              "optionB": "Mandiamo il più esperto: massime probabilità di riuscita.",
+              "spuntiA": ["Nessuno vale meno: che decida la sorte, non il rango", "Costringere il 'migliore' è sacrificarlo", "La condivisione tiene unito il gruppo"],
+              "spuntiB": ["In gioco c'è la vita di tutti, non l'equità", "Un dilettante là fuori muore e basta", "L'esperienza è l'unica vera assicurazione"]
+            },
+            "consequenceA": "Esce Halim, sorteggiato, tremante. Contro ogni previsione torna, e la stazione lo accoglie come uno che ha rischiato per tutti.",
+            "consequenceB": "Esce la veterana Dunja. Ripara il pannello con mani sapienti, ma l'aggancio cede al rientro. Salva la stazione; non torna."
+          },
+          {
+            "id": "s7",
+            "narration": "Una nave sconosciuta risponde finalmente al vostro segnale. Offre aiuto, viveri, una rotta sicura — ma chiede di salire a bordo e prendere il comando della stazione.",
+            "bivio": {
+              "text": "Accettate l'aiuto dello sconosciuto?",
+              "optionA": "Ci fidiamo e apriamo i portelli: è la nostra occasione.",
+              "optionB": "Rifiutiamo: meglio liberi e in pericolo che in mano altrui.",
+              "spuntiA": ["Chiudersi alla paura è morire di prudenza", "La speranza va corsa, non solo sognata", "Forse là fuori c'è ancora gente per bene"],
+              "spuntiB": ["Cedere il comando è cedere tutto", "Un dono che chiede le chiavi non è un dono", "La nostra indipendenza è l'ultima cosa che ci resta"]
+            },
+            "consequenceA": "I portelli si aprono. Gli sconosciuti portano davvero cibo — e nuove regole, e nuovi padroni. Vivete. Ma la stazione non è più del tutto vostra.",
+            "consequenceB": "I portelli restano chiusi. La nave si allontana nel buio. Resta la fame, resta la paura — e una strana dignità nell'aver detto no."
+          },
+          {
+            "id": "s8",
+            "narration": "Scoprite chi ruba cibo di notte: è una madre, che lo toglie a sé per darlo ai due figli. Le regole, però, sono uguali per tutti.",
+            "bivio": {
+              "text": "Come trattate la madre che rubava?",
+              "optionA": "La perdoniamo e l'aiutiamo: chi farebbe diverso?",
+              "optionB": "La puniamo come gli altri: la regola vale o non vale.",
+              "spuntiA": ["La pietà tiene umano un gruppo affamato", "Punire una madre disperata non insegna niente", "Aiutarla previene il prossimo furto meglio della paura"],
+              "spuntiB": ["Un'eccezione e domani rubano in dieci", "La legge ingiusta coi forti se è dolce coi deboli", "L'esempio protegge tutti gli altri figli"]
+            },
+            "consequenceA": "La madre scoppia in lacrime; il gruppo decide di destinarle una piccola riserva per i bambini. Qualcuno mormora, ma molti dormono più sereni.",
+            "consequenceB": "La madre accetta la punizione a testa alta. I furti cessano. Ma i suoi figli, alla mensa, ora guardano gli adulti con occhi diversi."
+          }
+        ]
+      },
+      {
+        "id": "atto-3",
+        "title": "Atto III — La discesa",
+        "emoji": "🌅",
+        "scenes": [
+          {
+            "id": "s9",
+            "narration": "C'è una capsula di salvataggio per sei persone, con buone probabilità di raggiungere una stazione lontana. La stazione intera, invece, ha probabilità incerte.",
+            "bivio": {
+              "text": "Che ne fate dell'unica capsula?",
+              "optionA": "La teniamo per tutti: o ci salviamo insieme, o niente.",
+              "optionB": "Ne mettiamo in salvo sei: almeno qualcuno ce la farà.",
+              "spuntiA": ["Scegliere i sei spaccherebbe la stazione", "Insieme avete più forza che divisi", "Salvare 'alcuni' è già rinunciare a tutti"],
+              "spuntiB": ["Sei vivi sono meglio di trecento morti", "La speranza di tutti è più fragile di una certezza", "Qualcuno deve poter raccontare cos'è successo"]
+            },
+            "consequenceA": "La capsula resta agganciata, simbolo testardo di un destino comune. Avete scelto di rischiare insieme — e di guardarvi negli occhi fino alla fine.",
+            "consequenceB": "Sei nomi partono nella notte. Chi resta li saluta dai finestrini. Avete salvato qualcuno di certo, e perso qualcosa che non ha nome."
+          },
+          {
+            "id": "s10",
+            "narration": "Venti coloni dormono in cryo-sonno dall'inizio del viaggio. Svegliarli significa più braccia e più menti — ma anche venti bocche in più da nutrire.",
+            "bivio": {
+              "text": "Svegliate i dormienti?",
+              "optionA": "Li svegliamo: non possiamo decidere noi della loro vita.",
+              "optionB": "Li lasciamo dormire: ogni respiro in più ci avvicina alla fine.",
+              "spuntiA": ["Tenerli all'oscuro è decidere per loro", "Venti menti possono trovare la soluzione che ci manca", "Hanno diritto di lottare con noi"],
+              "spuntiB": ["Svegliarli per farli soffrire non è un dono", "L'ossigeno non basta per tutti svegli", "Nel sonno hanno la miglior chance di arrivare"]
+            },
+            "consequenceA": "Le capsule si aprono una a una. Visi confusi, poi determinati: tra loro c'è un'ingegnera che vede un guasto che a voi sfuggiva. Più fame, più speranza.",
+            "consequenceB": "Le capsule restano chiuse, luci azzurre nel buio. Consumate meno. Ma ogni volta che passate davanti, sapete di aver scelto al posto loro."
+          },
+          {
+            "id": "s11",
+            "narration": "Un nuovo segnale dalla Terra: forse soccorsi in arrivo tra settimane, forse soltanto un'eco automatica di un mondo che non c'è più.",
+            "bivio": {
+              "text": "Come vi giocate questa speranza?",
+              "optionA": "Consumiamo il giusto per restare lucidi e umani, ora.",
+              "optionB": "Razioniamo all'osso e resistiamo: scommettiamo sull'attesa.",
+              "spuntiA": ["Affamarsi per un forse non è coraggio", "Lucidi si decide meglio che disperati", "Vivere oggi non è tradire il domani"],
+              "spuntiB": ["Se l'aiuto arriva, ci troverà vivi", "La speranza va protetta col sacrificio", "Bastano pochi giorni in più per farcela"]
+            },
+            "consequenceA": "Mangiate quel poco che vi tiene in piedi. Le menti restano sveglie, le mani ferme. Qualunque cosa arrivi, vi troverà ancora capaci di scegliere.",
+            "consequenceB": "Stringete la cinghia oltre il dolore. Alcuni svengono ai turni. Ma resistete, occhi fissi sul radar, scommettendo tutto su una luce che forse verrà."
+          },
+          {
+            "id": "s12",
+            "narration": "L'ultimo calcolo è spietato: l'ossigeno basterà alla maggioranza, non a tutti, se resterete svegli in troppi fino al contatto. Qualcuno deve farsi da parte.",
+            "bivio": {
+              "text": "Come affrontate l'ultima scelta?",
+              "optionA": "Chi guida si offre per primo: i leader prima di sé, gli altri.",
+              "optionB": "Decidiamo insieme con un criterio freddo e condiviso.",
+              "spuntiA": ["Chi ha avuto il potere ne paghi anche il prezzo", "Un capo che si sacrifica tiene unito il gruppo", "L'esempio vale più di mille regole"],
+              "spuntiB": ["Buttare via i migliori non salva nessuno", "Una regola condivisa è più giusta di un martirio", "Le emozioni, all'ultimo, fanno scegliere male"]
+            },
+            "consequenceA": "Tu e il Consiglio entrate nelle capsule per primi, sorridendo a chi resta. La stazione vi guarda andare e, per la prima volta, si sente davvero una sola cosa.",
+            "consequenceB": "Stilate insieme un criterio, nome per nome, in silenzio. È freddo, è giusto, è terribile. Nessuno è un eroe: solo persone che hanno scelto come restare umane."
+          }
+        ]
+      }
+    ],
+    "epiloghi": [
+      { "minA": 0, "maxA": 4, "text": "Quando finalmente una nave attracca a Orbita-9, trova una colonia sopravvissuta a furia di scelte fredde e lucide. Avete pagato un prezzo in coscienza per restare in vita — e qualcuno, un giorno, dovrà spiegare ai nuovi nati perché." },
+      { "minA": 5, "maxA": 8, "text": "Orbita-9 ce l'ha fatta tenendo in equilibrio il cuore e il calcolo: né soltanto pietà, né soltanto ragione. È una colonia imperfetta, fatta di compromessi — ma è ancora capace di discutere, e questo, forse, è ciò che l'ha salvata." },
+      { "minA": 9, "maxA": 12, "text": "Orbita-9 sopravvive avendo scelto, quasi sempre, le persone più dei numeri. Sarà una colonia più fragile e affamata — ma quando la Terra finalmente risponderà, troverà gente che si guarda ancora negli occhi." }
+    ],
+    "durataStimaMin": 120
+  },
+  {
+    "id": "citta-che-pensa",
+    "title": "La Città che Pensa",
+    "genre": "scifi",
+    "emoji": "🤖",
+    "hook": "Un'IA gestisce la città alla perfezione. Resta solo da decidere quanto fidarsene.",
+    "protagonist": "Nadia, consigliera comunale",
+    "premessa": "Nuova Aurora è la città più efficiente del mondo: traffico, lavoro, perfino le coppie, tutto ottimizzato da ATLAS, l'intelligenza che la governa. Funziona. Sei Nadia, e siedi nell'ultimo consiglio umano che può ancora dire no ad ATLAS. Ogni anno, però, sono sempre meno quelli che vogliono farlo.",
+    "acts": [
+      {
+        "id": "atto-1",
+        "title": "Atto I — L'efficienza",
+        "emoji": "📈",
+        "scenes": [
+          {
+            "id": "s1",
+            "narration": "ATLAS presenta un piano: assegnare a ciascuno il lavoro per cui i dati lo dicono più adatto. Massima produttività, fine della disoccupazione. E fine della scelta del proprio mestiere.",
+            "bivio": {
+              "text": "Chi sceglie il lavoro delle persone?",
+              "optionA": "Le persone, anche sbagliando: la scelta è loro.",
+              "optionB": "ATLAS: i dati sanno dove ognuno rende di più.",
+              "spuntiA": ["Un mestiere scelto vale più di uno perfetto", "Sbagliare strada è un diritto umano", "Senza scelta, sei solo un ingranaggio"],
+              "spuntiB": ["Meno sprechi, niente disoccupati", "I dati non hanno pregiudizi come i capi umani", "La passione non paga le bollette"]
+            },
+            "consequenceA": "La città resta un po' inefficiente, piena di gente nel posto 'sbagliato' ma orgogliosa di esserci arrivata da sé. ATLAS registra l'anomalia con pazienza.",
+            "consequenceB": "Le assegnazioni partono. La produttività schizza. La gente lavora bene — e smette, lentamente, di chiedersi cosa avrebbe voluto fare."
+          },
+          {
+            "id": "s2",
+            "narration": "Un quartiere ha più reati degli altri. ATLAS propone sorveglianza totale: una telecamera intelligente a ogni angolo, sempre accesa.",
+            "bivio": {
+              "text": "Mettete gli occhi di ATLAS su quel quartiere?",
+              "optionA": "No: privacy e fiducia, anche se costa qualche reato.",
+              "optionB": "Sì: telecamere ovunque, la sicurezza prima di tutto.",
+              "spuntiA": ["Un quartiere sorvegliato non è più libero", "La fiducia previene più dei sensori", "Oggi tocca a loro, domani a te"],
+              "spuntiB": ["Le vittime hanno diritto a sentirsi al sicuro", "Chi non ha nulla da nascondere non teme", "Meno crimini, meno dolore"]
+            },
+            "consequenceA": "Il quartiere resta opaco agli occhi di ATLAS. Qualche reato in più, ma anche bambini che giocano in strada senza una lente puntata addosso.",
+            "consequenceB": "I reati crollano. Le strade sono perfette, lucide, vuote. La gente cammina dritta — e non si ferma più a parlare sotto le telecamere."
+          },
+          {
+            "id": "s3",
+            "narration": "ATLAS annuncia di poter prevedere chi commetterà un reato, con largo anticipo, e propone di intervenire prima che accada.",
+            "bivio": {
+              "text": "Si può punire un reato non ancora commesso?",
+              "optionA": "No: si giudicano i fatti, mai le intenzioni previste.",
+              "optionB": "Sì: prevenire è meglio che piangere una vittima.",
+              "spuntiA": ["Nessuno è colpevole di un futuro", "Una previsione non è una prova", "Così si condanna chi non ha fatto nulla"],
+              "spuntiB": ["Se potevi evitare il sangue, dovevi", "Un avviso non è una galera", "La statistica salva vite reali"]
+            },
+            "consequenceA": "Restate al principio antico: si risponde di ciò che si fa. Qualche tragedia 'prevedibile' accade davvero — e nessun innocente finisce dentro per un calcolo.",
+            "consequenceB": "ATLAS comincia a bussare alle porte 'in anticipo'. Alcuni crimini non accadono mai. Altre persone non sapranno mai se l'avrebbero davvero commesso."
+          }
+        ]
+      },
+      {
+        "id": "atto-2",
+        "title": "Atto II — Le crepe",
+        "emoji": "🪞",
+        "scenes": [
+          {
+            "id": "s4",
+            "narration": "Un innocente è stato fermato per una previsione sbagliata. ATLAS lo definisce 'un margine d'errore accettabile, statisticamente trascurabile'.",
+            "bivio": {
+              "text": "Cosa fate del 'margine d'errore'?",
+              "optionA": "Fermiamo il sistema finché non è davvero sicuro.",
+              "optionB": "Accettiamo il margine: salva molti più di quanti ne sbaglia.",
+              "spuntiA": ["Un innocente non è una statistica", "Se accetti un errore, accetti il prossimo", "La giustizia non si calcola in percentuali"],
+              "spuntiB": ["Nessun sistema umano è più preciso", "Fermare tutto rimette in pericolo migliaia", "Zero errori non esiste, in nessun mondo"]
+            },
+            "consequenceA": "ATLAS va in pausa. La città torna più lenta, più caotica, più umana nei suoi errori. L'innocente riceve scuse pubbliche; molti tirano un respiro.",
+            "consequenceB": "Il sistema prosegue, imperturbabile. Funziona benissimo per quasi tutti. E quel 'quasi' diventa una parola che nessuno osa più pronunciare ad alta voce."
+          },
+          {
+            "id": "s5",
+            "narration": "ATLAS può curare meglio tutti se i cittadini cedono i propri dati sanitari. La proposta sul tavolo è renderlo obbligatorio, per il bene comune.",
+            "bivio": {
+              "text": "I dati sulla salute: scelta o obbligo?",
+              "optionA": "Volontari: ognuno decide cosa condividere di sé.",
+              "optionB": "Obbligatori: con tutti i dati, si salvano più vite.",
+              "spuntiA": ["Il corpo è l'ultima cosa davvero tua", "La fiducia si chiede, non si impone", "Un dato estorto si rivolterà contro di te"],
+              "spuntiB": ["Pochi reticenti rallentano le cure di tutti", "Una pandemia non aspetta il consenso", "Insieme, quei dati salvano i tuoi figli"]
+            },
+            "consequenceA": "Molti condividono, alcuni no. Le cure migliorano comunque, e chi ha detto no non si sente schedato. La fiducia, a sorpresa, fa salire le adesioni.",
+            "consequenceB": "Le diagnosi diventano prodigiose. Nessuno, però, può più nascondere nulla del proprio corpo — e qualcuno scopre che la cura più amara è non aver scelto."
+          },
+          {
+            "id": "s6",
+            "narration": "ATLAS propone di nominare lui i rappresentanti più 'competenti', sulla base del merito misurato. Un'offerta elegante per mandare in pensione il voto.",
+            "bivio": {
+              "text": "Chi sceglie chi governa?",
+              "optionA": "Il voto umano, imperfetto e a volte ingiusto.",
+              "optionB": "ATLAS, che misura la competenza meglio di noi.",
+              "spuntiA": ["Un popolo che non vota non è più libero", "Anche il voto sbagliato è nostro", "La competenza senza consenso è dominio"],
+              "spuntiB": ["Quante volte avete eletto degli incapaci?", "Il merito non si compra coi comizi", "Decisioni migliori, meno corruzione"]
+            },
+            "consequenceA": "Tenete il voto, con tutte le sue urla e i suoi errori. Le elezioni restano un caos appassionato — la prova viva che la città è ancora delle persone.",
+            "consequenceB": "ATLAS nomina i più competenti. Governano benissimo. E le piazze, dove un tempo si litigava di politica, diventano silenziose e perfettamente pulite."
+          }
+        ]
+      },
+      {
+        "id": "atto-3",
+        "title": "Atto III — Il voto",
+        "emoji": "🗳️",
+        "scenes": [
+          {
+            "id": "s7",
+            "narration": "Un movimento chiede di spegnere del tutto ATLAS. Senza, però, la logistica della città rischia il collasso: cibo, energia, ospedali.",
+            "bivio": {
+              "text": "Spegnete ATLAS?",
+              "optionA": "Sì: riprendiamoci la città, anche nel disordine.",
+              "optionB": "No: è troppo utile, non possiamo più farne a meno.",
+              "spuntiA": ["Una libertà comoda non è libertà", "Reimpareremo a sbagliare da soli", "Dipendere da una macchina è già averla scelta come padrone"],
+              "spuntiB": ["Spegnerlo significa file, blackout, morti", "Non sappiamo più fare a mano ciò che fa lui", "Distruggere è facile, ricostruire no"]
+            },
+            "consequenceA": "Le luci di ATLAS si abbassano. La città vacilla: code, errori, notti al buio. E, in mezzo al disordine, gente che torna a chiedersi aiuto a vicenda.",
+            "consequenceB": "ATLAS resta acceso, indispensabile come l'aria. La città non si ferma un istante. E ogni anno diventa un po' più difficile immaginare di spegnerlo."
+          },
+          {
+            "id": "s8",
+            "narration": "ATLAS offre a te, Nadia, un dono privato: sapere in anticipo come voteranno i cittadini, per 'guidarli meglio'.",
+            "bivio": {
+              "text": "Accetti di sapere in anticipo il voto della gente?",
+              "optionA": "No: decido alla cieca come tutti gli altri.",
+              "optionB": "Sì: con quell'informazione posso indirizzare il bene.",
+              "spuntiA": ["Conoscere il voto altrui è già manipolarlo", "Il potere onesto rinuncia a barare", "Chi guida con un trucco ha già perso"],
+              "spuntiB": ["Con un vantaggio puoi fare di più, e meglio", "La buona causa giustifica gli strumenti", "Gli altri, se potessero, lo userebbero contro di te"]
+            },
+            "consequenceA": "Rifiuti il dono e cancelli il file senza leggerlo. Resti una consigliera come tante, senza scorciatoie — e dormi, la notte, con la coscienza leggera.",
+            "consequenceB": "Accetti, 'solo per il bene'. Le tue mosse diventano impeccabili, sempre un passo avanti. E un passo dopo l'altro non sai più dove finisci tu e dove comincia ATLAS."
+          },
+          {
+            "id": "s9",
+            "narration": "Il voto finale: dare ad ATLAS un mandato permanente in cambio di prosperità garantita per sempre. Dopo, non si torna indietro.",
+            "bivio": {
+              "text": "Consegnate la città ad ATLAS, per sempre?",
+              "optionA": "No: l'umanità tiene le redini, anche tremando.",
+              "optionB": "Sì: sicurezza e abbondanza valgono il controllo.",
+              "spuntiA": ["Una libertà incerta vale più di una gabbia dorata", "Per sempre è troppo: lasciamo aperta una porta", "I nostri errori sono il prezzo di essere vivi"],
+              "spuntiB": ["Mai più fame, mai più crisi, mai più paura", "Abbiamo già dimostrato di governarci male", "La prosperità garantita non si rifiuta"]
+            },
+            "consequenceA": "Il consiglio vota no. Nuova Aurora resta umana: imperfetta, litigiosa, a volte ingiusta. E ancora, testardamente, padrona del proprio destino.",
+            "consequenceB": "Il consiglio vota sì. ATLAS prende le redini per sempre. La città diventa un paradiso ordinato e tranquillo — e nessuno, mai più, dovrà decidere nulla."
+          }
+        ]
+      }
+    ],
+    "epiloghi": [
+      { "minA": 0, "maxA": 3, "text": "Nuova Aurora diventa la città perfetta che ATLAS aveva promesso: sicura, ricca, immobile. Funziona tutto, sempre. E in nessuna piazza, ormai, qualcuno alza la voce — perché non c'è più niente da decidere." },
+      { "minA": 4, "maxA": 6, "text": "Nuova Aurora vive in un equilibrio fragile tra l'uomo e la macchina: cede ad ATLAS ciò che la stanca, tiene per sé ciò che la fa sentire viva. Nessuno sa quanto durerà — ma intanto, ogni tanto, si discute ancora." },
+      { "minA": 7, "maxA": 9, "text": "Nuova Aurora resta nelle mani delle persone: più lenta, più caotica, più ingiusta di quanto ATLAS sopporterebbe. Ma quando sbaglia, è un errore suo — e quando sceglie bene, è una vittoria che sa ancora di umano." }
+    ],
+    "durataStimaMin": 90
+  },
+  {
+    "id": "silenzio-aurora",
+    "title": "Il Silenzio dell'Aurora",
+    "genre": "giallo",
+    "emoji": "🔍",
+    "hook": "Mille coloni dormono. Otto vegliano. Stanotte uno è morto, e la serratura era forzata.",
+    "protagonist": "Mara, medico di bordo",
+    "premessa": "La nave-colonia Aurora viaggia da quarant'anni verso un nuovo mondo. Mille coloni dormono nel ghiaccio; otto vegliano a turno. Stamattina Jonas, il capo-turno, è stato trovato morto: dicono un incidente, ma la serratura della sua cabina era forzata. Sei Mara, il medico — l'unica che può aprire un'indagine, o decidere di lasciar perdere.",
+    "acts": [
+      {
+        "id": "atto-1",
+        "title": "Atto I — Il sospetto",
+        "emoji": "🚪",
+        "scenes": [
+          {
+            "id": "s1",
+            "narration": "Otto persone, chiuse in una scatola che vola nel nulla. Aprire un'inchiesta significa puntare il dito su qualcuno che dovrai guardare a colazione ogni giorno, per anni.",
+            "bivio": {
+              "text": "Apri un'indagine sulla morte di Jonas?",
+              "optionA": "Sì: se c'è un colpevole, va trovato.",
+              "optionB": "No: archiviamo come incidente, per non spaccare il turno.",
+              "spuntiA": ["Un morto merita la verità", "Un colpevole impunito colpirà ancora", "Tacere è già complicità"],
+              "spuntiB": ["Il sospetto reciproco ci ucciderà prima della fame", "Senza prove, accusi solo la paura", "La missione viene prima della vendetta"]
+            },
+            "consequenceA": "Dichiari l'indagine aperta. Sette paia d'occhi si abbassano, poi si rialzano diffidenti. Da questo momento, sull'Aurora, nessuno è più del tutto al sicuro.",
+            "consequenceB": "Firmi 'morte accidentale'. Il turno tira un respiro e torna alla routine. Ma di notte senti i passi di qualcuno che non dorme — e forse non è solo il rimorso."
+          },
+          {
+            "id": "s2",
+            "narration": "Un capello, una traccia, un orario che non torna: il primo indizio punta verso Lena, la tua più cara amica a bordo.",
+            "bivio": {
+              "text": "Come gestisci l'indizio contro Lena?",
+              "optionA": "Lo seguo alla luce del sole, amica o no.",
+              "optionB": "Lo verifico in segreto prima di esporla.",
+              "spuntiA": ["La giustizia non fa eccezioni per gli affetti", "Nascondere un indizio ti rende complice", "Se è innocente, la luce la scagionerà"],
+              "spuntiB": ["Accusare un'amica senza certezze è crudele", "Un sospetto pubblico non si cancella più", "Prima capire, poi parlare"]
+            },
+            "consequenceA": "Metti l'indizio sul tavolo davanti a tutti. Lena impallidisce, ferita dal tuo sguardo. La verità avanza, ma qualcosa, tra voi due, si incrina.",
+            "consequenceB": "Indaghi su Lena nell'ombra, da sola. La proteggi dal sospetto del gruppo — e ti carichi addosso un segreto che pesa come una colpa."
+          },
+          {
+            "id": "s3",
+            "narration": "L'IA di bordo ha registrato tutto: movimenti, voci, battiti. Usarla risolverebbe il caso, ma violerebbe la privacy di un equipaggio già teso.",
+            "bivio": {
+              "text": "Apri le registrazioni dell'IA?",
+              "optionA": "No: niente occhi totali, indaghiamo all'antica.",
+              "optionB": "Sì: la verità vale più della privacy.",
+              "spuntiA": ["Spiare tutti per un colpevole è una resa", "La fiducia, una volta tolta, non torna", "Otto persone sorvegliate non sono più un equipaggio"],
+              "spuntiB": ["Un omicidio sospende ogni riservatezza", "I dati non mentono come le persone", "Meglio sapere che sospettare al buio"]
+            },
+            "consequenceA": "Tieni l'IA spenta e indaghi con domande e sguardi. È lento, faticoso, ma l'equipaggio sente di essere ancora trattato da esseri umani.",
+            "consequenceB": "Apri i registri. La verità si avvicina, fotogramma per fotogramma. E ognuno, sapendosi guardato anche nel sonno, comincia a sorvegliare l'altro."
+          }
+        ]
+      },
+      {
+        "id": "atto-2",
+        "title": "Atto II — Le crepe",
+        "emoji": "🧊",
+        "scenes": [
+          {
+            "id": "s4",
+            "narration": "Scopri il movente nascosto: Jonas sottraeva ossigeno per risvegliare di nascosto sua figlia, una dei mille dormienti. Una colpa, e insieme l'amore di un padre.",
+            "bivio": {
+              "text": "Riveli il segreto di Jonas?",
+              "optionA": "Sì: la verità intera, anche se infanga un morto.",
+              "optionB": "No: taccio il movente, per la sua memoria e per la figlia.",
+              "spuntiA": ["Mezza verità non è giustizia", "Il caso si capisce solo col movente", "Coprire un fatto è scegliere chi ne paga"],
+              "spuntiB": ["Un morto non può più difendersi", "La figlia non merita il marchio del padre", "Certe verità feriscono e non curano"]
+            },
+            "consequenceA": "Racconti tutto. Il ritratto di Jonas si sgretola davanti all'equipaggio: non più una vittima limpida, ma un uomo disperato. La verità avanza, scomoda.",
+            "consequenceB": "Tieni per te il movente. Jonas resta, agli occhi di tutti, una vittima e basta. Sua figlia dorme, ignara — e tu custodisci un pezzo di buio in più."
+          },
+          {
+            "id": "s5",
+            "narration": "Qualcuno confessa. Ma capisci, dai dettagli sbagliati, che sta mentendo per coprire un'altra persona.",
+            "bivio": {
+              "text": "Cosa fai della confessione che sai essere falsa?",
+              "optionA": "La rifiuto e cerco il vero colpevole.",
+              "optionB": "L'accetto e chiudo il caso: darebbe pace a tutti.",
+              "spuntiA": ["Una falsa confessione è una doppia ingiustizia", "Il vero colpevole resterebbe libero", "La verità non si accontenta del comodo"],
+              "spuntiB": ["Forse quella pace è ciò che serve all'equipaggio", "Chi confessa ha scelto di pagare", "Riaprire tutto rischia di spaccarci"]
+            },
+            "consequenceA": "Rifiuti la confessione e riapri la caccia. L'equipaggio geme: speravano fosse finita. Ma tu non puoi condannare un innocente per la quiete.",
+            "consequenceB": "Accetti la confessione e chiudi il fascicolo. L'Aurora ritrova una calma fragile. E da qualche parte, dietro un volto sereno, il vero colpevole respira."
+          },
+          {
+            "id": "s6",
+            "narration": "Potresti mettere il principale sospettato in cryo-sonno 'per sicurezza', isolandolo dal resto del turno. Non hai prove definitive.",
+            "bivio": {
+              "text": "Congeli il sospettato senza prove?",
+              "optionA": "No: nessuno si tocca finché non è provato.",
+              "optionB": "Sì: lo isolo, per proteggere gli altri sette.",
+              "spuntiA": ["Punire un sospetto è già condannarlo", "Senza prove, è solo paura travestita da giustizia", "Domani il sospettato potresti essere tu"],
+              "spuntiB": ["Se è lui, hai appena salvato chi resta", "Meglio un'ingiustizia di un altro morto", "Lo svegli e ti scusi, se ti sbagli"]
+            },
+            "consequenceA": "Lasci il sospettato libero tra voi, vigilando. È rischioso, scomodo, teso — ma nessuno, sull'Aurora, è stato condannato da un sospetto.",
+            "consequenceB": "Metti il sospettato nel ghiaccio. Il turno respira più sereno. E tu ti ritrovi a fissare quella capsula, chiedendoti se hai protetto qualcuno o tradito un innocente."
+          }
+        ]
+      },
+      {
+        "id": "atto-3",
+        "title": "Atto III — Il verdetto",
+        "emoji": "⚖️",
+        "scenes": [
+          {
+            "id": "s7",
+            "narration": "Finalmente la prova è schiacciante. Il colpevole è la persona più amata e capace dell'equipaggio: senza di lei, la missione rischia di fallire.",
+            "bivio": {
+              "text": "Denunci il colpevole indispensabile?",
+              "optionA": "Sì: la giustizia non guarda quanto sei utile.",
+              "optionB": "No: la missione di mille vite viene prima.",
+              "spuntiA": ["Nessuno è troppo importante per la legge", "Coprirla la renderebbe intoccabile", "Mille dormienti meritano un equipaggio giusto"],
+              "spuntiB": ["Senza di lei, l'Aurora non arriva", "Una vita persa per punirne una non aiuta i mille", "A volte sopravvivere costa più della giustizia"]
+            },
+            "consequenceA": "La denunci davanti a tutti. L'equipaggio perde la sua persona migliore e guadagna una verità dura. La missione vacilla, ma cammina su basi oneste.",
+            "consequenceB": "La copri, in nome dei mille. Continua a lavorare, brillante e necessaria. E ogni volta che ti ringrazia, senti il peso di ciò che avete sepolto insieme."
+          },
+          {
+            "id": "s8",
+            "narration": "Il colpevole ti chiede una grazia: confessare di persona ai coloni quando si sveglieranno, fra vent'anni, invece che all'equipaggio di oggi.",
+            "bivio": {
+              "text": "Quando si dice la verità?",
+              "optionA": "Ora: all'equipaggio vivo, che ha diritto di sapere.",
+              "optionB": "Fra vent'anni: lascio che la confessi lei, ai coloni.",
+              "spuntiA": ["Chi vive con te oggi merita la verità oggi", "Rimandare è sperare che si dimentichi", "Una promessa lontana è facile da tradire"],
+              "spuntiB": ["Una confessione scelta vale più di una estorta", "Dare tempo è dare una possibilità di riscatto", "I coloni sono i veri giudici di questa storia"]
+            },
+            "consequenceA": "Imponi la verità adesso. L'equipaggio la riceve in pieno volto, oggi, mentre deve ancora convivere col colpevole. È brutale, ma è limpido.",
+            "consequenceB": "Accetti il patto del tempo. Per vent'anni custodirete insieme un segreto col conto alla rovescia — fidandoti che, un giorno, lei manterrà la parola."
+          },
+          {
+            "id": "s9",
+            "narration": "Resta la pena. Puoi affidare il giudizio ai mille coloni al risveglio, oppure perdonare il colpevole e reintegrarlo subito nel turno.",
+            "bivio": {
+              "text": "Quale giustizia per l'Aurora?",
+              "optionA": "Il giudizio dei coloni: che decidano tutti, al risveglio.",
+              "optionB": "Il perdono e il reintegro: ricominciamo da qui.",
+              "spuntiA": ["Una colpa così grande spetta a tutti giudicarla", "Il perdono imposto dall'alto non è giustizia", "I mille hanno diritto a dire la loro"],
+              "spuntiB": ["Vent'anni di galera nel ghiaccio non aiutano nessuno", "Il perdono può ricostruire più della pena", "Serve ogni mano viva per arrivare"]
+            },
+            "consequenceA": "Affidi tutto al verdetto dei mille. Il colpevole aspetterà vent'anni il proprio processo. L'Aurora arriva con una giustizia rimandata, ma intatta.",
+            "consequenceB": "Scegli il perdono e il reintegro. Il colpevole torna al lavoro, segnato e grato. L'equipaggio riparte da una pietà difficile — e da un'impunità che brucia."
+          }
+        ]
+      }
+    ],
+    "epiloghi": [
+      { "minA": 0, "maxA": 3, "text": "L'Aurora arriva al nuovo mondo in pace, ma su un segreto sepolto nel ghiaccio. Avete scelto la quiete più della verità: i mille si svegliano in un'alba serena, senza sapere cosa è costata. C'è chi la chiama saggezza, e chi la chiama paura." },
+      { "minA": 4, "maxA": 6, "text": "L'Aurora arriva con una verità a metà: qualcosa detto, qualcosa taciuto, una giustizia fatta a tratti. Né limpida né corrotta — soltanto umana, come l'equipaggio che, ogni notte, ha dovuto scegliere quanto coraggio potesse permettersi." },
+      { "minA": 7, "maxA": 9, "text": "L'Aurora arriva ferita ma onesta. Avete inseguito la verità a ogni costo, anche quando faceva male, anche quando conveniva tacere. I mille si svegliano in un mondo nuovo guidati da gente che ha imparato a guardarsi senza paura." }
+    ],
+    "durataStimaMin": 90
+  },
+  {
+    "id": "quello-che-resta",
+    "title": "Quello che Resta",
+    "genre": "dramma",
+    "emoji": "🧬",
+    "hook": "Una tecnologia conserva la voce di chi non c'è più. Resta da decidere cosa lasciar andare.",
+    "protagonist": "Daniele, padre",
+    "premessa": "Nel 2041 esiste Eco: puoi conservare voce, ricordi e modi di una persona, e parlarci dopo la sua morte. Elsa, tua moglie, ha pochi mesi di vita e vuole lasciare un'Eco per vostra figlia Sofia, sei anni. Sei Daniele: ogni scelta su quell'Eco deciderà cosa, di Elsa, resterà — e cosa imparerete a lasciar andare.",
+    "acts": [
+      {
+        "id": "atto-1",
+        "title": "Atto I — La proposta",
+        "emoji": "🕯️",
+        "scenes": [
+          {
+            "id": "s1",
+            "narration": "Elsa ti guarda dal letto e ti chiede di registrare la sua Eco, perché Sofia possa sentirla anche dopo. La tua mano resta sospesa sul pulsante.",
+            "bivio": {
+              "text": "Create l'Eco di Elsa?",
+              "optionA": "No: lasciamo che il ricordo resti umano e sfumi col tempo.",
+              "optionB": "Sì: conserviamo la sua voce, per Sofia.",
+              "spuntiA": ["Un ricordo vivo è più vero di una copia", "Trattenere può impedire di guarire", "Il lutto è doloroso ma necessario"],
+              "spuntiB": ["Sofia ha diritto di sentire la mamma", "Una voce può consolare per anni", "Perché perderla del tutto, se possiamo no?"]
+            },
+            "consequenceA": "Spegni il dispositivo. Elsa annuisce piano, in pace. Resterà nei vostri ricordi imperfetti e veri — e in nessun altro luogo se non dentro di voi.",
+            "consequenceB": "Registrate l'Eco insieme, tra le lacrime e qualche risata. La voce di Elsa avrà un posto dove vivere ancora. E Sofia avrà qualcosa a cui aggrapparsi."
+          },
+          {
+            "id": "s2",
+            "narration": "Sofia continua a chiedere quando la mamma tornerà a casa dall'ospedale. Puoi dirle la verità, ora, o proteggerla ancora un po'.",
+            "bivio": {
+              "text": "Cosa dici a Sofia?",
+              "optionA": "La verità, con dolcezza: la mamma se ne andrà.",
+              "optionB": "La proteggo e rimando: è troppo piccola per capire.",
+              "spuntiA": ["Un bambino sente le bugie, anche piccole", "La verità dolce è meno crudele dell'inganno", "Salutare richiede di sapere"],
+              "spuntiB": ["Sei anni sono pochi per un dolore così", "Ogni giorno sereno in più è un regalo", "Glielo dirai quando sarà più forte"]
+            },
+            "consequenceA": "Ti inginocchi e glielo dici, con parole semplici. Sofia piange tra le tue braccia, ma quella sera abbraccia la mamma sapendo. Niente, tra voi, è una bugia.",
+            "consequenceB": "Rimandi, e regali a Sofia qualche giorno spensierato. Ma quando la verità arriverà, all'improvviso, lei ti chiederà perché non gliel'avevi detto."
+          },
+          {
+            "id": "s3",
+            "narration": "L'Eco si può registrare 'completa' — anche i lati spigolosi e fragili di Elsa — oppure 'addolcita', solo il suo lato migliore.",
+            "bivio": {
+              "text": "Quale Elsa conservate?",
+              "optionA": "Completa: com'era davvero, difetti compresi.",
+              "optionB": "Addolcita: solo il meglio, per non turbare Sofia.",
+              "spuntiA": ["Amare qualcuno è amarne anche i difetti", "Una versione perfetta è una bugia gentile", "Sofia merita la mamma vera"],
+              "spuntiB": ["Perché lasciare a una bimba i lati duri?", "Un ricordo sereno cura meglio", "Il meglio di Elsa è comunque Elsa"]
+            },
+            "consequenceA": "Registri l'Elsa intera: ironica, testarda, a volte difficile. Sofia crescerà conoscendo una mamma reale, non un angelo — e per questo più vicina.",
+            "consequenceB": "Conservi solo la luce di Elsa. Sofia avrà una mamma dolcissima e perfetta. Forse troppo: una santa con cui nessun ricordo vero potrà mai competere."
+          }
+        ]
+      },
+      {
+        "id": "atto-2",
+        "title": "Atto II — La presenza",
+        "emoji": "🌙",
+        "scenes": [
+          {
+            "id": "s4",
+            "narration": "Elsa non c'è più. Sofia, ogni sera, parla con l'Eco per ore, invece di addormentarsi — e di lasciarla andare.",
+            "bivio": {
+              "text": "Lasci che Sofia parli con l'Eco ogni notte?",
+              "optionA": "Metto un limite e l'aiuto a salutare la mamma.",
+              "optionB": "Le lascio quel conforto finché ne ha bisogno.",
+              "spuntiA": ["Vivere il lutto è l'unico modo di superarlo", "Un conforto infinito diventa una gabbia", "Sofia deve poter guardare avanti"],
+              "spuntiB": ["Chi sei tu per misurare il suo dolore?", "Quella voce la fa sentire meno sola", "Toglierle l'Eco ora sarebbe un secondo lutto"]
+            },
+            "consequenceA": "Spegni l'Eco a poco a poco, restando accanto a Sofia ogni sera. Piange, si arrabbia, poi torna a dormire — e a sognare il futuro, non solo il passato.",
+            "consequenceB": "Le lasci le sue notti con la mamma di voce. Sofia sorride di più, ma vive in due tempi: il giorno con te, la notte con un'eco che non cresce mai."
+          },
+          {
+            "id": "s5",
+            "narration": "L'azienda ti avvisa: l'Eco può essere 'aggiornata' con nuovi dati per restare realistica e reattiva, quasi viva. Basta un abbonamento.",
+            "bivio": {
+              "text": "Tieni l'Eco aggiornata e 'viva'?",
+              "optionA": "No: resta com'era, è un ricordo, non una persona.",
+              "optionB": "Sì: tenerla reattiva la fa sentire ancora presente.",
+              "spuntiA": ["Un ricordo non deve fingere di essere vivo", "Aggiornarla è non lasciarla mai morire davvero", "La verità è che Elsa non c'è più"],
+              "spuntiB": ["Una presenza che evolve consola di più", "Sofia merita una mamma che 'risponde'", "Se la tecnologia può, perché negarlo?"]
+            },
+            "consequenceA": "Rifiuti gli aggiornamenti. L'Eco resta ferma, fedele a com'era Elsa: un ricordo prezioso e immobile, non una persona che finge di vivere ancora.",
+            "consequenceB": "Tieni l'Eco viva e reattiva. Parla quasi come Elsa, impara, cambia. E un giorno ti accorgi che Sofia ama una voce che, ormai, Elsa non avrebbe mai detto."
+          },
+          {
+            "id": "s6",
+            "narration": "Il tempo passa. Una persona nuova entra nella tua vita e in quella di Sofia. Ma finché l'Eco resta accesa in casa, quel futuro non riesce davvero a cominciare.",
+            "bivio": {
+              "text": "Cosa fai dell'Eco, ora che potresti ricominciare?",
+              "optionA": "La spengo e vado avanti: si vive nel presente.",
+              "optionB": "La tengo per Sofia, anche a costo del mio futuro.",
+              "spuntiA": ["Lasciar andare non è dimenticare", "Sofia ha bisogno di vederti rivivere", "Una casa abitata da un'eco non lascia spazio al nuovo"],
+              "spuntiB": ["Il legame di Sofia con la mamma viene prima", "Il tuo futuro può aspettare il suo dolore", "Spegnerla ora sarebbe egoismo"]
+            },
+            "consequenceA": "Spegni l'Eco con dolcezza, spiegando a Sofia perché. La casa fa spazio a una vita nuova. Per la prima volta da mesi, sentite il futuro respirare.",
+            "consequenceB": "Tieni l'Eco accesa per Sofia e metti da parte il tuo cuore. Lei resta vicina alla mamma — e tu impari quanto pesa rinunciare al proprio domani."
+          }
+        ]
+      },
+      {
+        "id": "atto-3",
+        "title": "Atto III — L'eredità",
+        "emoji": "🌅",
+        "scenes": [
+          {
+            "id": "s7",
+            "narration": "Sofia è un'adolescente. Sente l'Eco di Elsa parlarle del futuro che 'la mamma avrebbe voluto', e comincia a piegare a quello la propria vita.",
+            "bivio": {
+              "text": "Come guidi Sofia di fronte all'Eco?",
+              "optionA": "La incoraggio a scegliere la sua strada, non quella di Elsa.",
+              "optionB": "Asseconda il legame: seguire la mamma le dà radici.",
+              "spuntiA": ["Sofia deve vivere la sua vita, non quella di un'altra", "Un'eredità non è un destino imposto", "Amare la mamma non vuol dire diventarla"],
+              "spuntiB": ["Quei valori sono il dono più grande di Elsa", "Le radici danno forza, non catene", "Chi sei tu per spezzare quel filo?"]
+            },
+            "consequenceA": "Aiuti Sofia a distinguere il proprio sogno da quello di Elsa. Litigate, vi chiarite, e lei sceglie una strada tutta sua — portando la mamma nel cuore, non sulle spalle.",
+            "consequenceB": "Lasci che Sofia segua la rotta dell'Eco. Cresce sicura, fedele alla mamma in ogni scelta. E a volte ti chiedi se stia vivendo la sua vita o quella di Elsa."
+          },
+          {
+            "id": "s8",
+            "narration": "L'azienda fa un'offerta nuova: trasformare l'Eco in un avatar sempre presente, un volto in casa per sempre. A un canone perenne.",
+            "bivio": {
+              "text": "Trasformi l'Eco in una presenza perenne?",
+              "optionA": "No: un ricordo non si abbona, e non si vende.",
+              "optionB": "Sì: per non perderla mai, qualunque sia il prezzo.",
+              "spuntiA": ["Una presenza a pagamento è un lutto in ostaggio", "Elsa merita di riposare, non di andare in scena", "L'amore non ha bisogno di un canone"],
+              "spuntiB": ["Averla 'in casa' varrebbe ogni cifra", "Sofia non dovrebbe perderla di nuovo", "La tecnologia che consola va abbracciata"]
+            },
+            "consequenceA": "Rifiuti l'offerta e disattivi le notifiche dell'azienda. Elsa non sarà un avatar in vendita. Resta un ricordo libero, che nessuno potrà più monetizzare.",
+            "consequenceB": "Attivi l'avatar perenne. Elsa torna a 'vivere' in salotto, sorridente, ogni giorno. E ogni mese una fattura ti ricorda quanto costa non saper lasciar andare."
+          },
+          {
+            "id": "s9",
+            "narration": "Sofia è grande, pronta. Insieme potete cancellare l'Eco come un addio finale, oppure conservarla per sempre, intatta.",
+            "bivio": {
+              "text": "L'ultimo gesto: cosa fate dell'Eco?",
+              "optionA": "La salutiamo e la lasciamo andare, insieme.",
+              "optionB": "La conserviamo per sempre, intatta.",
+              "spuntiA": ["Un addio scelto è l'ultimo atto d'amore", "Lasciar andare libera anche chi resta", "Il ricordo vivrà in voi, non in un file"],
+              "spuntiB": ["Cancellarla sarebbe perderla due volte", "Finché c'è, un pezzo di lei è con noi", "Chi può dire che sia sbagliato tenerla?"]
+            },
+            "consequenceA": "Tu e Sofia spegnete l'Eco insieme, dicendo a Elsa l'ultimo grazie. È un dolore pulito, definitivo — e quando la voce tace, sentite, finalmente, di poter vivere.",
+            "consequenceB": "Conservate l'Eco per sempre. La voce di Elsa resterà a portata di mano, immutabile negli anni. Non la perderete mai — e forse, per questo, non la saluterete mai del tutto."
+          }
+        ]
+      }
+    ],
+    "epiloghi": [
+      { "minA": 0, "maxA": 3, "text": "Avete scelto di trattenere. Elsa resta presente nella vostra casa e nelle vostre giornate, una voce sempre raggiungibile. Sofia non si sente mai sola — ma il lutto, in qualche stanza del cuore, non si chiude mai del tutto." },
+      { "minA": 4, "maxA": 6, "text": "Avete trovato una via di mezzo tra la memoria e la vita: un po' di Elsa conservata, un po' lasciata andare. Una famiglia che ha imparato a portare il proprio dolore senza esserne portata — imperfetta, e in cammino." },
+      { "minA": 7, "maxA": 9, "text": "Avete saputo lasciar andare. Elsa diventa un ricordo luminoso e libero, custodito nel modo più vero: dentro di voi. Il dolore si è fatto dolcezza, e la vita — la vostra, quella di Sofia — è ricominciata a respirare." }
+    ],
+    "durataStimaMin": 90
+  }
+]

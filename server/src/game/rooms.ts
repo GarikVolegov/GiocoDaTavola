@@ -21,6 +21,7 @@ import {
   nextPhase,
   nextDuelPhase,
   nextPercorsoPhase,
+  nextStoriaPhase,
 } from './phases';
 import {
   buildPercorsoPlan,
@@ -29,6 +30,17 @@ import {
   N_TAPPE,
   type Durata,
 } from './percorso';
+import {
+  buildStoriaPlan,
+  decisionForRound,
+  pickEpilogo,
+  countDecisionsA,
+  validateStory,
+  loadStories,
+  type Story,
+  type StoryScene,
+} from './storie';
+import { tally } from './voteCount';
 import { computeAwards as computeAwardsFor, type Award, type PlayerStats } from './awards';
 import { computeBlindSpot, type BlindSpot } from './blindspots';
 import {
@@ -47,6 +59,9 @@ export * from './phases';
 // Re-export the percorso planning helpers (TAPPE, buildPercorsoPlan, …) so
 // index.ts can surface tappe metadata + counts without a separate import path.
 export * from './percorso';
+// Re-export the storie helpers + types (loadStories, storieCatalog, Story, …) so
+// index.ts can surface the story catalog without a separate import path.
+export * from './storie';
 // Re-export the scoring types so consumers keep importing them from './rooms'.
 export type { Award, AwardId, PlayerStats } from './awards';
 export type { BlindSpot, BlindSpotId } from './blindspots';
@@ -197,8 +212,8 @@ export interface Room {
   dilemmaCount: number | null;
   /** Content register chosen at start; null until the game starts (and always null in percorso). */
   register: ContentRegister | null;
-  /** Session format: 'classic' (3/5/7) or 'percorso' (themed ascent). Default 'classic'. */
-  format: 'classic' | 'percorso';
+  /** Session format: 'classic' (3/5/7), 'percorso' (themed ascent) or 'storia' (narrative). Default 'classic'. */
+  format: 'classic' | 'percorso' | 'storia';
   /** Percorso: the tappa the host chose to start from (1..4); null in classic. */
   startTappa: Tappa | null;
   /** Percorso: the duration preset chosen at start; null in classic. */
@@ -213,6 +228,26 @@ export interface Room {
   tappaDilemmas: number;
   /** Percorso: rounds in the current tappa whose leading side flipped (recap accumulator). Aggregate only. */
   tappaSwings: number;
+  /** Storia: the chosen story (metadata + epiloghi); null unless format==='storia'. */
+  story: Story | null;
+  /** Storia: the chosen story's id; null in classic/percorso. */
+  storyId: string | null;
+  /** Storia: parallel to plannedDilemmas — the scene (narration + consequences) of each bivio. */
+  plannedScenes: StoryScene[];
+  /** Storia: parallel to plannedDilemmas — the 0-based act index of each bivio. */
+  plannedActs: number[];
+  /** Storia: the group's resolved decision per closed crossroads (drives the epilogue + recap). */
+  storyDecisions: VoteChoice[];
+  /** Storia: the narration prose of the current scene (SCENE_INTRO); null otherwise. */
+  currentSceneNarration: string | null;
+  /** Storia: the consequence prose of the current scene (SCENE_CONSEQUENCE); null otherwise. */
+  currentSceneConsequence: string | null;
+  /** Storia: the group's decision for the current scene (A/B); null until SCENE_CONSEQUENCE. */
+  currentDecision: VoteChoice | null;
+  /** Storia: the resolved variant ending (STORY_EPILOGUE); null otherwise. */
+  currentEpilogo: string | null;
+  /** Storia: the 0-based act index currently in play; null in classic/percorso. */
+  currentAct: number | null;
   /** Which dilemma (1-based) is being played; 0 before the first reveal. */
   dilemmaIndex: number;
   /** Epoch ms when the current phase auto-advances; null if it has no timer. */
@@ -379,6 +414,7 @@ export type StartGameError =
   | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
   | 'INVALID_PERCORSO'
+  | 'INVALID_STORIA'
   | 'INFILTRATO_NEEDS_PLAYERS'
   | 'SQUADRE_NEEDS_PLAYERS'
   | 'ALREADY_STARTED';
@@ -427,6 +463,35 @@ export interface PercorsoView {
   /** Current tappa recap: dilemmas played so far + leading-side flips (aggregate). */
   tappaDilemmas: number;
   tappaSwings: number;
+}
+
+/**
+ * Secret-safe storia view broadcast to host/phones. All prose is public and the
+ * `decision` is the already-public aggregate majority — no individual vote leaks.
+ * The host reads the narration aloud (TTS) from this; phones mirror it as text.
+ */
+export interface StoriaView {
+  storyId: string;
+  title: string;
+  protagonist: string;
+  emoji: string;
+  /** Opening prose (the setting) — shown/spoken at STORY_INTRO. */
+  premessa: string;
+  /** Title of the act the current scene belongs to (badge on SCENE_INTRO); null otherwise. */
+  actTitle: string | null;
+  /** Narrative prose before the current crossroads — shown/spoken at SCENE_INTRO. */
+  sceneNarration: string | null;
+  /** 1-based index of the crossroads in play (0 before the first). */
+  sceneIndex: number;
+  totalScenes: number;
+  /** The side the group chose this scene (A/B) — shown/spoken at SCENE_CONSEQUENCE. */
+  decision: VoteChoice | null;
+  /** Consequence prose for the group's choice — shown/spoken at SCENE_CONSEQUENCE. */
+  consequence: string | null;
+  /** The variant ending — shown/spoken at STORY_EPILOGUE; null otherwise. */
+  epilogo: string | null;
+  /** Running count of A-decisions (aggregate; drives the epilogue + a mini-indicator). */
+  decisionsA: number;
 }
 
 /** Public reveal of the infiltrator outcome at FINAL_AWARDS (null in normal games). */
@@ -643,6 +708,9 @@ export class RoomStore {
     private readonly makeDeck: (register: ContentRegister) => Deck =
       (register) => new Deck(dilemmasForRegister(loadDilemmas(), register)),
     private readonly rng: () => number = Math.random,
+    // Injectable so tests can supply a small deterministic story catalog instead
+    // of reading server/data/stories.json.
+    private readonly loadStoriesFn: () => Story[] = loadStories,
   ) {}
 
   /** Compute the auto-advance expiry for a phase, or null if it has no timer. */
@@ -719,6 +787,16 @@ export class RoomStore {
       currentTappa: null,
       tappaDilemmas: 0,
       tappaSwings: 0,
+      story: null,
+      storyId: null,
+      plannedScenes: [],
+      plannedActs: [],
+      storyDecisions: [],
+      currentSceneNarration: null,
+      currentSceneConsequence: null,
+      currentDecision: null,
+      currentEpilogo: null,
+      currentAct: null,
       dilemmaIndex: 0,
       phaseExpiresAt: null,
       deck: null,
@@ -776,16 +854,31 @@ export class RoomStore {
     infiltrato: boolean = false,
     squadre: boolean = false,
     percorso?: { startTappa: number; durata: string },
+    storia?: { storyId: string },
   ): StartGameResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
     if (room.phase !== 'LOBBY') return { ok: false, error: 'ALREADY_STARTED' };
+    // "Storia": a curated narrative tale. Like percorso it's a group experience
+    // whose content + length come from a plan validated up front; the surprise
+    // meta-games are disabled so the authored story stays coherent.
+    const useStoria = storia != null;
+    let chosenStory: Story | null = null;
+    let storiaPlan: { dilemmas: Dilemma[]; scenes: StoryScene[]; acts: number[] } | null = null;
     // "Percorso": the long themed ascent. Its dilemma count + content come from a
     // plan we build (and validate) up front, before mutating any room state. It is
     // a group experience, so it always runs in gruppo mode.
-    const usePercorso = percorso != null;
+    const usePercorso = percorso != null && !useStoria;
     let plan: { dilemmas: Dilemma[]; tappe: number[] } | null = null;
-    if (usePercorso) {
+    if (useStoria) {
+      mode = 'gruppo';
+      chosenStory = this.loadStoriesFn().find((s) => s.id === storia.storyId) ?? null;
+      if (!chosenStory || validateStory(chosenStory).length > 0) {
+        return { ok: false, error: 'INVALID_STORIA' };
+      }
+      storiaPlan = buildStoriaPlan(chosenStory);
+      if (storiaPlan.dilemmas.length === 0) return { ok: false, error: 'INVALID_STORIA' };
+    } else if (usePercorso && percorso) {
       mode = 'gruppo';
       if (
         !Number.isInteger(percorso.startTappa) ||
@@ -815,12 +908,13 @@ export class RoomStore {
       if (humanCount < 1) return { ok: false, error: 'NO_HUMAN_PLAYERS' };
     }
     // "L'Infiltrato" needs gruppo + enough humans to hide among and to accuse.
-    const useInfiltrato = infiltrato && mode === 'gruppo';
+    // Disabled in storia: the surprise twists would derail the authored narrative.
+    const useInfiltrato = infiltrato && mode === 'gruppo' && !useStoria;
     if (useInfiltrato && humanCount < MIN_INFILTRATO_HUMANS) {
       return { ok: false, error: 'INFILTRATO_NEEDS_PLAYERS' };
     }
-    // "Squadre" needs gruppo + enough players for two teams.
-    const useSquadre = squadre && mode === 'gruppo';
+    // "Squadre" needs gruppo + enough players for two teams. Also off in storia.
+    const useSquadre = squadre && mode === 'gruppo' && !useStoria;
     if (useSquadre && room.players.size < MIN_SQUADRE_PLAYERS) {
       return { ok: false, error: 'SQUADRE_NEEDS_PLAYERS' };
     }
@@ -846,7 +940,34 @@ export class RoomStore {
     room.currentTappa = null;
     room.tappaDilemmas = 0;
     room.tappaSwings = 0;
-    if (usePercorso && plan) {
+    // Reset storia runtime state up front (only the storia branch repopulates it).
+    room.story = null;
+    room.storyId = null;
+    room.plannedScenes = [];
+    room.plannedActs = [];
+    room.storyDecisions = [];
+    room.currentSceneNarration = null;
+    room.currentSceneConsequence = null;
+    room.currentDecision = null;
+    room.currentEpilogo = null;
+    room.currentAct = null;
+    if (useStoria && storiaPlan && chosenStory) {
+      // Storia: the authored narrative drives everything; the bivi are the plan,
+      // the parallel scenes carry the prose, no register/deck/submitted dilemmas.
+      room.format = 'storia';
+      room.story = chosenStory;
+      room.storyId = chosenStory.id;
+      room.plannedDilemmas = storiaPlan.dilemmas;
+      room.plannedScenes = storiaPlan.scenes;
+      room.plannedActs = storiaPlan.acts;
+      room.dilemmaCount = storiaPlan.dilemmas.length;
+      room.register = null;
+      room.deck = null;
+      room.submittedQueue = [];
+      room.startTappa = null;
+      room.durata = null;
+      room.plannedTappe = [];
+    } else if (usePercorso && plan && percorso) {
       // Percorso: the precomputed ascent drives everything; no register/deck and
       // (for now) no player-submitted dilemmas — the climb is the curated content.
       room.format = 'percorso';
@@ -873,11 +994,13 @@ export class RoomStore {
       room.dilemmaCount = room.plannedDilemmas.length || dilemmaCount;
       room.submittedQueue = []; // baked into plannedDilemmas
     }
-    // Pick the surprise "Avvocato del Diavolo" round up front (group mode only).
+    // Pick the surprise "Avvocato del Diavolo" round up front (group mode only;
+    // never in storia, where the curated narrative must stay intact).
     const totalRounds = room.dilemmaCount ?? 0;
-    room.devilRoundIndex = mode === 'gruppo' ? devilAdvocate.pickDevilRound(totalRounds, this.rng) : null;
+    const allowTwists = mode === 'gruppo' && !useStoria;
+    room.devilRoundIndex = allowTwists ? devilAdvocate.pickDevilRound(totalRounds, this.rng) : null;
     // …and (longer games only) a "Quanto mi conosci" round, distinct from the devil one.
-    room.knowRoundIndex = mode === 'gruppo' ? knowRound.pickKnowRound(totalRounds, room.devilRoundIndex, this.rng) : null;
+    room.knowRoundIndex = allowTwists ? knowRound.pickKnowRound(totalRounds, room.devilRoundIndex, this.rng) : null;
     room.stats = new Map();
     room.defenseCounts = new Map();
     room.duelScore = new Map();
@@ -953,11 +1076,14 @@ export class RoomStore {
     }
 
     // Percorso threads the same per-dilemma sequence through chapter cards/recaps;
-    // classic uses the flat loop. Both share the detours below.
+    // storia wraps each bivio in narrative cards; classic uses the flat loop. All
+    // three share the detours below.
     const step = (phase: GamePhase, idx: number) =>
       room.format === 'percorso'
         ? nextPercorsoPhase(phase, idx, room.plannedTappe)
-        : nextPhase(phase, idx, room.dilemmaCount ?? 0);
+        : room.format === 'storia'
+          ? nextStoriaPhase(phase, idx, room.dilemmaCount ?? 0)
+          : nextPhase(phase, idx, room.dilemmaCount ?? 0);
     let transition = step(room.phase, room.dilemmaIndex);
     // The peer "best speaker" vote needs at least two defenders to choose between;
     // with 0 or 1 it's degenerate, so skip straight to the results.
@@ -982,6 +1108,33 @@ export class RoomStore {
     if (transition.phase === 'TAPPA_RECAP') {
       room.currentTappa = (room.plannedTappe[transition.dilemmaIndex - 1] ?? room.currentTappa) as Tappa | null;
     }
+    // Storia: entering a scene card sets the narration + current act (the scene
+    // is the one whose bivio is about to be revealed: dilemmaIndex is 0-based here).
+    if (transition.phase === 'SCENE_INTRO') {
+      room.currentSceneNarration = room.plannedScenes[transition.dilemmaIndex]?.narration ?? null;
+      room.currentAct = room.plannedActs[transition.dilemmaIndex] ?? null;
+      room.currentSceneConsequence = null;
+      room.currentDecision = null;
+    }
+    // Storia: the consequence card resolves the group's decision for the just-
+    // closed bivio from the second-vote majority (tie → first-vote lead → A) and
+    // shows the matching branch text. Aggregate only — no individual vote leaks.
+    if (transition.phase === 'SCENE_CONSEQUENCE') {
+      const scene = room.plannedScenes[transition.dilemmaIndex - 1];
+      const decision = decisionForRound(tally(room.votes), tally(room.votes1));
+      room.currentDecision = decision;
+      room.currentSceneConsequence = scene
+        ? decision === 'A'
+          ? scene.consequenceA
+          : scene.consequenceB
+        : null;
+      room.storyDecisions.push(decision);
+    }
+    // Storia: the epilogue is the variant ending keyed on how many bivi the group
+    // resolved toward A across the whole tale.
+    if (transition.phase === 'STORY_EPILOGUE' && room.story) {
+      room.currentEpilogo = pickEpilogo(room.story.epiloghi, countDecisionsA(room.storyDecisions));
+    }
     // Entering a new dilemma reveal draws the next (non-repeating) dilemma and
     // resets the round's secret votes so each dilemma starts from a clean tally.
     if (transition.phase === 'DILEMMA_REVEAL') {
@@ -989,6 +1142,9 @@ export class RoomStore {
         // The ascent is precomputed: walk it by index, and track the live tappa.
         room.currentDilemma = room.plannedDilemmas[transition.dilemmaIndex - 1] ?? null;
         room.currentTappa = (room.plannedTappe[transition.dilemmaIndex - 1] ?? null) as Tappa | null;
+      } else if (room.format === 'storia') {
+        // The tale is precomputed: walk the bivi by index (no deck / tappa).
+        room.currentDilemma = room.plannedDilemmas[transition.dilemmaIndex - 1] ?? null;
       } else {
         // Classic: walk the precomputed complexity-escalating plan; fall back to
         // the deck only if (for any reason) the plan is empty.
@@ -1369,6 +1525,34 @@ export class RoomStore {
       tappe,
       tappaDilemmas: room.tappaDilemmas,
       tappaSwings: room.tappaSwings,
+    };
+  }
+
+  /**
+   * The secret-safe storia view for the host/phones: the protagonist + setting,
+   * the current scene's narration/act, the resolved consequence + decision, and
+   * the epilogue — all public prose plus the already-public aggregate decision.
+   * Never any individual vote. null when the room isn't a storia.
+   */
+  publicStoria(code: string): StoriaView | null {
+    const room = this.rooms.get(code);
+    if (!room || room.format !== 'storia' || !room.story) return null;
+    const actIdx = room.currentAct;
+    const actTitle = actIdx != null ? (room.story.acts[actIdx]?.title ?? null) : null;
+    return {
+      storyId: room.story.id,
+      title: room.story.title,
+      protagonist: room.story.protagonist,
+      emoji: room.story.emoji,
+      premessa: room.story.premessa,
+      actTitle,
+      sceneNarration: room.currentSceneNarration,
+      sceneIndex: room.dilemmaIndex,
+      totalScenes: room.dilemmaCount ?? room.plannedDilemmas.length,
+      decision: room.currentDecision,
+      consequence: room.currentSceneConsequence,
+      epilogo: room.currentEpilogo,
+      decisionsA: countDecisionsA(room.storyDecisions),
     };
   }
 

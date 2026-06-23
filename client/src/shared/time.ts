@@ -31,6 +31,11 @@ const WAITING_PHASES: ReadonlySet<GamePhase> = new Set<GamePhase>([
   'SPEAKER_VOTE',
   'ACCUSE',
   'TAPPA_RECAP',
+  // Storie: leader-paced narrative beats — the host reads/voices the prose.
+  'STORY_INTRO',
+  'SCENE_INTRO',
+  'SCENE_CONSEQUENCE',
+  'STORY_EPILOGUE',
   'DUEL_PICK',
   'DUEL_REPICK',
   'DUEL_ARGUE',

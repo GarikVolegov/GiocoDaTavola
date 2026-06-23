@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import path from 'path';
 import fs from 'fs';
 import { randomUUID } from 'crypto';
-import { RoomStore, isVotingPhase, tappaCounts, type Room } from './game/rooms';
+import { RoomStore, isVotingPhase, tappaCounts, storieCatalog, loadStories, type Room } from './game/rooms';
 import { loadDilemmas } from './game/deck';
 import { generateBotDefense, aiDefenseEnabled } from './game/aiDefense';
 import { migrate, dbEnabled, pool } from './db';
@@ -44,6 +44,9 @@ const joinLimiter = createRateLimiter(10, 10_000);
 // Available dilemmas per tappa, computed once at boot — surfaced to the host so
 // the percorso setup can show an accurate (capped) length estimate. Static data.
 const TAPPA_COUNTS = tappaCounts(loadDilemmas());
+// The story catalog (ids + teasers, no prose), computed once at boot — surfaced
+// to the host so the storia setup can list the available tales. Static data.
+const STORIE_CATALOG = storieCatalog(loadStories());
 // Pending auto-advance timer per room, so we can reschedule / cancel it.
 const phaseTimers = new Map<string, NodeJS.Timeout>();
 
@@ -141,6 +144,10 @@ function gameStatePayload(room: Room) {
     format: room.format,
     percorso: rooms.publicPercorso(room.code),
     tappaCounts: TAPPA_COUNTS,
+    // Storie: the narrative view (prose + progress; null in classic/percorso) and
+    // the static story catalog for the host's setup picker. Secret-safe.
+    storia: rooms.publicStoria(room.code),
+    storieCatalog: STORIE_CATALOG,
     // The dilemma in play this round (text + the two options); null outside a
     // dilemma. Public prompt text only — no votes/identities here.
     dilemma: room.currentDilemma,
@@ -522,7 +529,7 @@ io.on('connection', (socket) => {
 
   // The leader starts the game for their room, choosing the dilemma count.
   // Gated: only the socket whose player is the room leader may start.
-  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string }) => {
+  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string; storyId?: string }) => {
     const code = leaderCodeFor(socket.id);
     if (!code) {
       socket.emit('leader:startError', { error: 'ROOM_NOT_FOUND' });
@@ -534,6 +541,10 @@ io.on('connection', (socket) => {
       payload?.format === 'percorso'
         ? { startTappa: Number(payload?.startTappa), durata: String(payload?.durata) }
         : undefined;
+    // "Storia" format carries the chosen story id; like percorso it overrides the
+    // classic count/register and always runs in gruppo mode.
+    const storia =
+      payload?.format === 'storia' ? { storyId: String(payload?.storyId ?? '') } : undefined;
     const result = rooms.startGame(
       code,
       Number(payload?.dilemmaCount),
@@ -542,6 +553,7 @@ io.on('connection', (socket) => {
       Boolean(payload?.infiltrato),
       Boolean(payload?.squadre),
       percorso,
+      storia,
     );
     if (!result.ok) {
       socket.emit('leader:startError', { error: result.error });

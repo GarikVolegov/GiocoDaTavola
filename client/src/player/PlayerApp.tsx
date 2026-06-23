@@ -53,7 +53,7 @@ import PredictView from './views/PredictView';
 import DuelArgueView from './views/DuelArgueView';
 import StatusView from './views/StatusView';
 import SubmitDilemmaCard from './views/SubmitDilemmaCard';
-import LeaderSetup from './views/LeaderSetup';
+import LeaderSetup, { type TipoPartita } from './views/LeaderSetup';
 import { wrap } from './views/layout';
 
 
@@ -151,11 +151,14 @@ export default function PlayerApp() {
   const [gameMode, setGameMode] = useState<GameMode>('gruppo');
   const [infiltratoOn, setInfiltratoOn] = useState(false);
   const [squadreOn, setSquadreOn] = useState(false);
-  // "Percorso": the long themed ascent (gruppo-only). When on, the classic
-  // register/durata pickers are replaced by a start-tappa + duration choice.
-  const [percorsoOn, setPercorsoOn] = useState(false);
+  // Which kind of evening: classica (3/5/7), percorso (themed ascent), or storia
+  // (narrative tale). Percorso/storia are gruppo-only and replace the classic
+  // register/durata pickers with their own config.
+  const [tipoPartita, setTipoPartita] = useState<TipoPartita>('classica');
   const [startTappa, setStartTappa] = useState(1);
   const [durata, setDurata] = useState<Durata>('medio');
+  // "Storia": the chosen story id (from the server's static catalog).
+  const [storyId, setStoryId] = useState<string>('');
   const [startError, setStartError] = useState<string | null>(null);
   // Current credentials, kept in a ref so the socket 'connect' handler can
   // re-claim the seat after a network blip without re-subscribing.
@@ -472,9 +475,23 @@ export default function PlayerApp() {
   // Leader controls (gated server-side; non-leader emits are ignored).
   const startGame = () => {
     setStartError(null);
+    // Storia is a gruppo-only narrative; it carries only the chosen story id and
+    // the server derives everything else from the authored tale.
+    if (tipoPartita === 'storia') {
+      if (!storyId) {
+        setStartError('Scegli una storia');
+        return;
+      }
+      getSocket().emit(SocketEvents.LeaderStartGame, {
+        format: 'storia',
+        storyId,
+        mode: 'gruppo',
+      });
+      return;
+    }
     // Percorso is a gruppo-only experience; it carries its own config (start tappa
     // + duration) and the server derives the dilemma count from the planned ascent.
-    if (percorsoOn) {
+    if (tipoPartita === 'percorso') {
       getSocket().emit(SocketEvents.LeaderStartGame, {
         format: 'percorso',
         startTappa,
@@ -521,9 +538,18 @@ export default function PlayerApp() {
   const canAddBot = gameMode !== 'duello' && players.length < 8;
 
   // Phases that run a server-side countdown the leader may skip (everything past
-  // the lobby except the terminal award/duel screens).
+  // the lobby except the terminal award/duel screens and the leader-paced cards:
+  // the percorso recap + the four storia narrative beats get a "Continua ▶" inside
+  // their own card instead of a bottom "Salta ▶").
   const phaseHasTimer = (p: GameStatePayload['phase']) =>
-    p !== 'LOBBY' && p !== 'FINAL_AWARDS' && p !== 'FINAL_DUEL' && p !== 'TAPPA_RECAP';
+    p !== 'LOBBY' &&
+    p !== 'FINAL_AWARDS' &&
+    p !== 'FINAL_DUEL' &&
+    p !== 'TAPPA_RECAP' &&
+    p !== 'STORY_INTRO' &&
+    p !== 'SCENE_INTRO' &&
+    p !== 'SCENE_CONSEQUENCE' &&
+    p !== 'STORY_EPILOGUE';
 
   // The leader's "skip the rest of this phase" button — only shown to the leader
   // during a phase that has a countdown. Rendered in each in-game branch.
@@ -763,8 +789,8 @@ export default function PlayerApp() {
 
         {isLeader ? (
           <LeaderSetup
-            percorsoOn={percorsoOn}
-            setPercorsoOn={setPercorsoOn}
+            tipoPartita={tipoPartita}
+            setTipoPartita={setTipoPartita}
             gameMode={gameMode}
             setGameMode={setGameMode}
             register={register}
@@ -775,6 +801,9 @@ export default function PlayerApp() {
             setStartTappa={setStartTappa}
             durata={durata}
             setDurata={setDurata}
+            storyId={storyId}
+            setStoryId={setStoryId}
+            storieCatalog={game?.storieCatalog ?? []}
             infiltratoOn={infiltratoOn}
             setInfiltratoOn={setInfiltratoOn}
             squadreOn={squadreOn}

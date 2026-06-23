@@ -26,6 +26,14 @@ export type GamePhase =
   // end-of-tappa recap/pause (handled by nextPercorsoPhase, not nextPhase).
   | 'TAPPA_INTRO'
   | 'TAPPA_RECAP'
+  // "Storie" mode: narrative cards framing each crossroads (handled by
+  // nextStoriaPhase). The protagonist/setting intro, the prose before a bivio,
+  // the consequence of the group's choice, and the variant ending. All
+  // leader-paced (no timer): the host narrates and taps "Continua ▶".
+  | 'STORY_INTRO'
+  | 'SCENE_INTRO'
+  | 'SCENE_CONSEQUENCE'
+  | 'STORY_EPILOGUE'
   // "L'Infiltrato" end-game accusation, inserted before FINAL_AWARDS only when a
   // room has an infiltrator (handled in advancePhase, not the pure sequence).
   | 'ACCUSE'
@@ -73,6 +81,12 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   // so it doubles as a break — the host resumes with "Continua ▶" when ready.
   TAPPA_INTRO: 8_000,
   TAPPA_RECAP: null,
+  // Storie: the narrator (leader) controls the pace of every prose card, so they
+  // never auto-advance — the host reads aloud and resumes with "Continua ▶".
+  STORY_INTRO: null,
+  SCENE_INTRO: null,
+  SCENE_CONSEQUENCE: null,
+  STORY_EPILOGUE: null,
   ACCUSE: 30_000,
   FINAL_AWARDS: null,
   DUEL_PICK: 20_000,
@@ -210,6 +224,52 @@ export function nextPercorsoPhase(
     return { phase: 'TAPPA_RECAP', dilemmaIndex };
   }
   // In-dilemma phases run exactly like the classic sequence.
+  const i = DILEMMA_SEQUENCE.indexOf(current);
+  if (i >= 0 && i < DILEMMA_SEQUENCE.length - 1) {
+    return { phase: DILEMMA_SEQUENCE[i + 1], dilemmaIndex };
+  }
+  return { phase: current, dilemmaIndex };
+}
+
+/**
+ * Pure state-machine transition for "Storie" mode (narrative tales with debated
+ * crossroads). The per-bivio sequence (DILEMMA_REVEAL…PHASE_RESULTS) is identical
+ * to the classic game; only the narrative framing differs:
+ *  - PHASE_INTRO opens the STORY_INTRO (protagonist + setting);
+ *  - STORY_INTRO opens the first SCENE_INTRO (the prose before bivio 1);
+ *  - SCENE_INTRO opens the next bivio (incrementing the 1-based index);
+ *  - PHASE_RESULTS leads into SCENE_CONSEQUENCE (the outcome of the group's choice);
+ *  - SCENE_CONSEQUENCE opens the next scene, or — after the last bivio — the
+ *    STORY_EPILOGUE (the variant ending);
+ *  - STORY_EPILOGUE ends at FINAL_AWARDS.
+ * `total` is the number of crossroads in the story.
+ */
+export function nextStoriaPhase(
+  current: GamePhase,
+  dilemmaIndex: number,
+  total: number,
+): PhaseTransition {
+  if (current === 'PHASE_INTRO') {
+    return { phase: 'STORY_INTRO', dilemmaIndex: 0 };
+  }
+  if (current === 'STORY_INTRO') {
+    return { phase: 'SCENE_INTRO', dilemmaIndex: 0 };
+  }
+  if (current === 'SCENE_INTRO') {
+    return { phase: 'DILEMMA_REVEAL', dilemmaIndex: dilemmaIndex + 1 };
+  }
+  if (current === 'PHASE_RESULTS') {
+    return { phase: 'SCENE_CONSEQUENCE', dilemmaIndex };
+  }
+  if (current === 'SCENE_CONSEQUENCE') {
+    return dilemmaIndex < total
+      ? { phase: 'SCENE_INTRO', dilemmaIndex }
+      : { phase: 'STORY_EPILOGUE', dilemmaIndex };
+  }
+  if (current === 'STORY_EPILOGUE') {
+    return { phase: 'FINAL_AWARDS', dilemmaIndex };
+  }
+  // In-bivio phases run exactly like the classic sequence.
   const i = DILEMMA_SEQUENCE.indexOf(current);
   if (i >= 0 && i < DILEMMA_SEQUENCE.length - 1) {
     return { phase: DILEMMA_SEQUENCE[i + 1], dilemmaIndex };

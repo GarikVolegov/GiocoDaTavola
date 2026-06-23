@@ -7,6 +7,7 @@ import { unlockAudio } from './audio/engine';
 import { startMusic, stopMusic, setMusicIntensity } from './audio/music';
 import { play as playSfx } from './audio/sfx';
 import { sfxForTransition, shouldWarnAt, handRaised } from './audio/cues';
+import { speak, cancelNarration, narrationFor } from './audio/narrator';
 import { MuteButton } from './MuteButton';
 import { AudioGate } from './AudioGate';
 import {
@@ -167,6 +168,22 @@ export default function HostApp() {
   }, [speaking]);
   useEffect(() => () => stopMusic(), []);
 
+  // Storie: the host voice reads each narrative beat aloud (host-only). Ducks the
+  // music under the voice and restores it when the line ends; a phase change
+  // cancels any line in progress so they never overlap. Keyed on the prose itself
+  // so it fires exactly once per beat.
+  const narrationLine = narrationFor(phase, game?.storia ?? null);
+  useEffect(() => {
+    if (!audioReady || !narrationLine) {
+      cancelNarration();
+      return;
+    }
+    setMusicIntensity('soft');
+    speak(narrationLine, () => setMusicIntensity('full'));
+    return () => cancelNarration();
+  }, [audioReady, narrationLine]);
+  useEffect(() => () => cancelNarration(), []);
+
   // Event sound effects: fire a sting when the phase changes to a noteworthy moment.
   // `phase` is derived from `game`, so they update together; comparing against the
   // previous phase means non-phase game updates produce no sound (cue returns null).
@@ -267,9 +284,11 @@ export default function HostApp() {
         {game.percorso && <PercorsoMap percorso={game.percorso} />}
         {inDilemma && (
           <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
-            {game.percorso
-              ? `${tappaMeta(game.percorso.currentTappa).emoji} ${tappaMeta(game.percorso.currentTappa).nome} · Dilemma ${game.dilemmaIndex}/${game.dilemmaCount}`
-              : `Dilemma ${game.dilemmaIndex}/${game.dilemmaCount}`}
+            {game.storia
+              ? `${game.storia.emoji} ${game.storia.actTitle ? game.storia.actTitle + ' · ' : ''}Bivio ${game.dilemmaIndex}/${game.dilemmaCount}`
+              : game.percorso
+                ? `${tappaMeta(game.percorso.currentTappa).emoji} ${tappaMeta(game.percorso.currentTappa).nome} · Dilemma ${game.dilemmaIndex}/${game.dilemmaCount}`
+                : `Dilemma ${game.dilemmaIndex}/${game.dilemmaCount}`}
           </p>
         )}
         <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', margin: 0, fontFamily: phase === 'PHASE_INTRO' ? 'var(--font-serif)' : 'var(--font-display)', fontWeight: phase === 'PHASE_INTRO' ? 500 : 700, ...(phase === 'PHASE_INTRO' && { letterSpacing: 'var(--tracking-serif)' }) }}>{PHASE_LABELS[phase]}</h1>
@@ -302,6 +321,43 @@ export default function HostApp() {
             </Card>
           );
         })()}
+
+        {/* Storie: the narrator's prose, read aloud by the host voice. Large serif. */}
+        {phase === 'STORY_INTRO' && game.storia && (
+          <Card glow="accent" style={{ maxWidth: '46rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', textAlign: 'center', alignItems: 'center' }}>
+            <span style={{ fontSize: '4rem' }}>{game.storia.emoji}</span>
+            <h2 style={{ fontSize: '2.2rem', margin: 0, fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>{game.storia.title}</h2>
+            <p style={{ fontSize: '1.2rem', opacity: 0.75, margin: 0 }}>con {game.storia.protagonist}</p>
+            <p style={{ fontSize: '1.45rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.premessa}</p>
+          </Card>
+        )}
+
+        {phase === 'SCENE_INTRO' && game.storia && (
+          <Card glow="accent" style={{ maxWidth: '46rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center', alignItems: 'center' }}>
+            {game.storia.actTitle && (
+              <p style={{ fontSize: '1rem', opacity: 0.6, margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{game.storia.actTitle}</p>
+            )}
+            <p style={{ fontSize: '1.5rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.sceneNarration}</p>
+          </Card>
+        )}
+
+        {phase === 'SCENE_CONSEQUENCE' && game.storia && (
+          <Card glow="accent" style={{ maxWidth: '46rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center', alignItems: 'center' }}>
+            {game.storia.decision && (
+              <h2 style={{ fontSize: '1.6rem', margin: 0 }}>
+                Il gruppo ha scelto: {game.storia.decision === 'A' ? dilemma?.optionA : dilemma?.optionB}
+              </h2>
+            )}
+            <p style={{ fontSize: '1.45rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.consequence}</p>
+          </Card>
+        )}
+
+        {phase === 'STORY_EPILOGUE' && game.storia && (
+          <Card glow="accent" style={{ maxWidth: '46rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', textAlign: 'center', alignItems: 'center' }}>
+            <span style={{ fontSize: '3.5rem' }}>🌅</span>
+            <p style={{ fontSize: '1.5rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.epilogo}</p>
+          </Card>
+        )}
 
         {phase === 'PHASE_INTRO' && (
           <>

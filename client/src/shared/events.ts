@@ -263,6 +263,11 @@ export type GamePhase =
   // "Percorso" mode chapter framing (mirror server phases.ts).
   | 'TAPPA_INTRO'
   | 'TAPPA_RECAP'
+  // "Storie" mode narrative framing (mirror server phases.ts).
+  | 'STORY_INTRO'
+  | 'SCENE_INTRO'
+  | 'SCENE_CONSEQUENCE'
+  | 'STORY_EPILOGUE'
   | 'ACCUSE'
   | 'FINAL_AWARDS'
   // 1v1 "Duello" mode phases (mirror server rooms.ts).
@@ -321,16 +326,18 @@ export const JOIN_ERROR_MESSAGES: Record<JoinError, string> = {
 };
 
 export interface StartGamePayload {
-  /** Session format: 'classic' (3/5/7, default) or 'percorso' (themed ascent). */
-  format?: 'classic' | 'percorso';
-  /** Classic: number of dilemmas. Ignored (and may be omitted) in percorso. */
+  /** Session format: 'classic' (3/5/7, default), 'percorso' (ascent) or 'storia' (narrative). */
+  format?: 'classic' | 'percorso' | 'storia';
+  /** Classic: number of dilemmas. Ignored (and may be omitted) in percorso/storia. */
   dilemmaCount?: number;
-  /** Classic: content register. Ignored (and may be omitted) in percorso. */
+  /** Classic: content register. Ignored (and may be omitted) in percorso/storia. */
   register?: ContentRegister;
   /** Percorso: tappa to start the ascent from (1..4). */
   startTappa?: number;
   /** Percorso: duration preset. */
   durata?: Durata;
+  /** Storia: the chosen story id. */
+  storyId?: string;
   /** Game mode; defaults to 'gruppo' server-side when omitted (always gruppo in percorso). */
   mode?: GameMode;
   /** Enable "L'Infiltrato" (gruppo + ≥4 humans); defaults off. */
@@ -536,17 +543,67 @@ export interface PercorsoView {
   tappaSwings: number;
 }
 
+// ---------------------------------------------------------------------------
+// "Storie" mode — narrative tales with debated crossroads (mirror server
+// storie.ts). The host reads the prose aloud (TTS); phones mirror it as text.
+// ---------------------------------------------------------------------------
+
+/** Narrative sub-flavors (all stories are sci-fi-framed). Mirror server STORY_GENRES. */
+export const STORY_GENRES = ['avventura', 'scifi', 'giallo', 'dramma'] as const;
+export type StoryGenre = (typeof STORY_GENRES)[number];
+
+/** Host-facing label for each sci-fi sub-flavor. */
+export const STORY_GENRE_LABELS: Record<StoryGenre, string> = {
+  avventura: 'Sopravvivenza',
+  scifi: 'Distopia / IA',
+  giallo: 'Mistero',
+  dramma: 'Dramma umano',
+};
+
+/** A lightweight story-catalog entry for the leader's picker (mirror server StoriaCatalogItem). */
+export interface StoriaCatalogItem {
+  id: string;
+  title: string;
+  genre: StoryGenre;
+  emoji: string;
+  hook: string;
+  durataStimaMin: number;
+  /** Number of crossroads (debate rounds) in the story. */
+  scene: number;
+}
+
+/** Secret-safe storia view (mirror server StoriaView); null in classic/percorso. */
+export interface StoriaView {
+  storyId: string;
+  title: string;
+  protagonist: string;
+  emoji: string;
+  premessa: string;
+  actTitle: string | null;
+  sceneNarration: string | null;
+  sceneIndex: number;
+  totalScenes: number;
+  decision: VoteChoice | null;
+  consequence: string | null;
+  epilogo: string | null;
+  decisionsA: number;
+}
+
 export interface GameStatePayload {
   phase: GamePhase;
   dilemmaCount: number | null;
   /** Content register chosen at start; null in the lobby (and always null in percorso). */
   register: ContentRegister | null;
   /** Session format of the room. */
-  format: 'classic' | 'percorso';
+  format: 'classic' | 'percorso' | 'storia';
   /** Percorso view (progress + tappe), or null in classic / before start. */
   percorso: PercorsoView | null;
   /** Available dilemmas per tappa — static setup data for the percorso estimate. */
   tappaCounts: TappaCounts;
+  /** Storia narrative view (prose + progress), or null in classic/percorso. */
+  storia: StoriaView | null;
+  /** The story catalog — static setup data for the storia picker. */
+  storieCatalog: StoriaCatalogItem[];
   /** Which dilemma (1-based) is in play; 0 before the first reveal. */
   dilemmaIndex: number;
   /** Epoch ms when the phase auto-advances; null if it has no timer. */
@@ -875,6 +932,10 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   PHASE_RESULTS: 'Risultati',
   TAPPA_INTRO: 'Nuova tappa',
   TAPPA_RECAP: 'Fine tappa',
+  STORY_INTRO: 'La storia',
+  SCENE_INTRO: 'La scena',
+  SCENE_CONSEQUENCE: 'Cosa succede',
+  STORY_EPILOGUE: 'Epilogo',
   ACCUSE: "Chi era l'infiltrato?",
   FINAL_AWARDS: 'Premi finali',
   DUEL_PICK: 'Scegliete',
@@ -892,6 +953,8 @@ export type StartGameError =
   | 'WRONG_PLAYER_COUNT'
   | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
+  | 'INVALID_PERCORSO'
+  | 'INVALID_STORIA'
   | 'INFILTRATO_NEEDS_PLAYERS'
   | 'SQUADRE_NEEDS_PLAYERS'
   | 'ALREADY_STARTED';
@@ -908,6 +971,8 @@ export const START_ERROR_MESSAGES: Record<StartGameError, string> = {
   WRONG_PLAYER_COUNT: 'Il 1v1 richiede esattamente 2 giocatori',
   INVALID_DILEMMA_COUNT: 'Numero di dilemmi non valido',
   INVALID_REGISTER: 'Registro non valido',
+  INVALID_PERCORSO: 'Configurazione del percorso non valida',
+  INVALID_STORIA: 'Storia non valida',
   INFILTRATO_NEEDS_PLAYERS: "L'Infiltrato richiede almeno 4 persone",
   SQUADRE_NEEDS_PLAYERS: 'Le Squadre richiedono almeno 4 giocatori',
   ALREADY_STARTED: 'La partita è già iniziata',
