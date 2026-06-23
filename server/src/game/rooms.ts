@@ -8,7 +8,8 @@ import * as infiltrato from './infiltrato';
 import * as predictions from './predictions';
 import * as speakerVote from './speakerVote';
 import * as submittedDilemmas from './submittedDilemmas';
-import { tally, isVoteChoice } from './voteCount';
+import * as voting from './voting';
+import { tally } from './voteCount';
 import {
   type GamePhase,
   PHASE_DURATIONS_MS,
@@ -17,8 +18,6 @@ import {
   DEFENSE_MAX_MS,
   INTERVENTI_MAX_MS,
   TURN_BOT_MS,
-  isVotingPhase,
-  isSplitRevealed,
   isDefensePhase,
   isInterventiPhase,
   nextPhase,
@@ -1287,14 +1286,7 @@ export class RoomStore {
   vote(code: string, playerId: string, choice: string): VoteResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (!isVotingPhase(room.phase)) return { ok: false, error: 'NOT_VOTING_PHASE' };
-    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    if (!isVoteChoice(choice)) return { ok: false, error: 'INVALID_CHOICE' };
-
-    room.votes.set(playerId, choice);
-    // Casting/changing during VOTE_2 is itself a confirmation.
-    if (room.phase === 'VOTE_2') room.confirmedVote2.add(playerId);
-    return { ok: true, room };
+    return voting.vote(room, playerId, choice);
   }
 
   /** The id of the player currently speaking (defender in DEFENSE, arguer in DUEL_ARGUE), or null. */
@@ -1606,67 +1598,37 @@ export class RoomStore {
 
   /** How many connected players have cast a vote this round (aggregate only). */
   voteCount(code: string): number {
-    return this.rooms.get(code)?.votes.size ?? 0;
+    const room = this.rooms.get(code);
+    return room ? voting.voteCount(room) : 0;
   }
 
-  /** Aggregate A vs B counts of a votes map (no identities). */
   /** Aggregate A vs B tally for the current round (no identities). */
   voteTally(code: string): VoteTally {
     const room = this.rooms.get(code);
-    return room ? tally(room.votes) : { A: 0, B: 0 };
+    return room ? voting.voteTally(room) : { A: 0, B: 0 };
   }
 
   /**
-   * Compare the second vote (VOTE_2, the live `votes`) against the first
-   * (the `votes1` snapshot taken when VOTE_2 began): the two aggregate tallies,
-   * how many voters changed side, and the net swing toward each side. Counts
-   * only — individual votes never leave the server. An unknown room yields zeros.
+   * Compare the second vote against the first: the two aggregate tallies, how many
+   * voters changed side, and the net swing toward each side. Zeros for unknown rooms.
    */
   computeSwing(code: string): SwingResult {
     const room = this.rooms.get(code);
-    const first = room ? tally(room.votes1) : { A: 0, B: 0 };
-    const second = room ? tally(room.votes) : { A: 0, B: 0 };
-    let switched = 0;
-    if (room) {
-      for (const [id, firstChoice] of room.votes1) {
-        const secondChoice = room.votes.get(id);
-        if (secondChoice && secondChoice !== firstChoice) switched++;
-      }
-    }
-    return {
-      first,
-      second,
-      switched,
-      netSwing: { A: second.A - first.A, B: second.B - first.B },
-    };
+    return room
+      ? voting.computeSwing(room)
+      : { first: { A: 0, B: 0 }, second: { A: 0, B: 0 }, switched: 0, netSwing: { A: 0, B: 0 } };
   }
 
-  /**
-   * Public results view, only during PHASE_RESULTS (null otherwise): the swing
-   * plus, for each defender whose side gained votes, how many votes moved their
-   * way. Aggregate only; the only identities are the (already public) defenders.
-   */
+  /** Public PHASE_RESULTS view: the swing + per-defender attribution; null otherwise. */
   publicSwing(code: string): PublicSwing | null {
     const room = this.rooms.get(code);
-    if (!room || room.phase !== 'PHASE_RESULTS') return null;
-    const swing = this.computeSwing(code);
-    const attribution: DefenseImpact[] = [];
-    for (const d of room.defenders) {
-      const gained = swing.netSwing[d.side];
-      if (gained > 0) attribution.push({ defender: d, votes: gained });
-    }
-    return { ...swing, attribution };
+    return room ? voting.publicSwing(room) : null;
   }
 
-  /**
-   * The aggregate A/B split when the current phase reveals it (SPLIT_REVEAL),
-   * otherwise null — the gated, public-facing version of voteTally that the
-   * server broadcasts. Counts only; never identities.
-   */
+  /** The aggregate A/B split when the phase reveals it (SPLIT_REVEAL); otherwise null. */
   publicSplit(code: string): { A: number; B: number } | null {
     const room = this.rooms.get(code);
-    if (!room || !isSplitRevealed(room.phase)) return null;
-    return this.voteTally(code);
+    return room ? voting.publicSplit(room) : null;
   }
 
   /**
@@ -1899,38 +1861,26 @@ export class RoomStore {
    */
   allVoted(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room) return false;
-    const present = [...room.players.values()].filter((p) => p.connected !== false);
-    if (present.length === 0) return false;
-    return present.every((p) => room.votes.has(p.id));
+    return room ? voting.allVoted(room) : false;
   }
 
   /** Mark a player's (pre-filled) second vote as explicitly confirmed. VOTE_2 only. */
   confirmVote(code: string, playerId: string): { ok: true; room: Room } | { ok: false; error: 'ROOM_NOT_FOUND' | 'NOT_VOTE2_PHASE' | 'NOT_IN_ROOM' } {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'VOTE_2') return { ok: false, error: 'NOT_VOTE2_PHASE' };
-    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    room.confirmedVote2.add(playerId);
-    return { ok: true, room };
+    return voting.confirmVote(room, playerId);
   }
 
   /** How many players have confirmed their second vote this round (aggregate only). */
   confirmedCount(code: string): number {
-    return this.rooms.get(code)?.confirmedVote2.size ?? 0;
+    const room = this.rooms.get(code);
+    return room ? voting.confirmedCount(room) : 0;
   }
 
-  /**
-   * True once every CONNECTED player has confirmed their second vote (and at least
-   * one is present). Disconnected players (grace period) are ignored so a locked
-   * phone doesn't block; bots are pre-confirmed on entry to VOTE_2.
-   */
+  /** True once every connected player has confirmed their second vote (ends VOTE_2 early). */
   allConfirmed(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room) return false;
-    const present = [...room.players.values()].filter((p) => p.connected !== false);
-    if (present.length === 0) return false;
-    return present.every((p) => room.confirmedVote2.has(p.id));
+    return room ? voting.allConfirmed(room) : false;
   }
 
   /**
