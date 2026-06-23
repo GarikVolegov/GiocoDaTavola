@@ -150,6 +150,9 @@ export default function PlayerApp() {
   const [myAccusation, setMyAccusation] = useState<string | null>(null);
   const [speakerVote, setSpeakerVote] = useState<string | null>(null);
   const [handRaised, setHandRaised] = useState(false);
+  // Two-step guard on the lobby's "leave room" link: the first tap arms it, the
+  // second actually leaves — so a stray tap never drops the player out of the room.
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
   // Player-written dilemmas (lobby): the draft form + how many we've added.
   const [dilemmaText, setDilemmaText] = useState('');
   const [dilemmaA, setDilemmaA] = useState('');
@@ -317,6 +320,7 @@ export default function PlayerApp() {
     setPlayers([]);
     setVote(null);
     setBlindSpot(null);
+    setConfirmingLeave(false);
   };
 
   const phase = game?.phase ?? 'LOBBY';
@@ -658,6 +662,8 @@ export default function PlayerApp() {
         remaining={remaining}
         speakerVote={speakerVote}
         onVote={castSpeakerVote}
+        speakerVotedCount={game?.speakerVotedCount ?? 0}
+        playerCount={players.length}
         skipButton={skipButton}
       />
     );
@@ -675,6 +681,8 @@ export default function PlayerApp() {
         onPredict={castPrediction}
         onSwingBet={castSwingBet}
         onKnowGuess={castKnowGuess}
+        predictedCount={game?.predictedCount ?? 0}
+        playerCount={players.length}
         skipButton={skipButton}
       />
     );
@@ -859,21 +867,56 @@ export default function PlayerApp() {
         ) : (
           <p style={{ opacity: 0.7, margin: 0 }}>In attesa che il leader avvii la partita…</p>
         )}
-        <button
-          type="button"
-          onClick={leaveRoom}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'inherit',
-            opacity: 0.55,
-            fontSize: '0.85rem',
-            textDecoration: 'underline',
-            cursor: 'pointer',
-          }}
-        >
-          Esci dalla stanza
-        </button>
+        {confirmingLeave ? (
+          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={leaveRoom}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--terracotta, inherit)',
+                opacity: 0.9,
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                textDecoration: 'underline',
+                cursor: 'pointer',
+              }}
+            >
+              Esci davvero
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingLeave(false)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'inherit',
+                opacity: 0.55,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+              }}
+            >
+              Annulla
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmingLeave(true)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'inherit',
+              opacity: 0.55,
+              fontSize: '0.85rem',
+              textDecoration: 'underline',
+              cursor: 'pointer',
+            }}
+          >
+            Esci dalla stanza
+          </button>
+        )}
       </main>
     );
   }

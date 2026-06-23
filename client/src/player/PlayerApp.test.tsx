@@ -525,6 +525,84 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/ora si difende/i)).toBeInTheDocument();
   });
 
+  it('shows group prediction progress at PREDICT', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+          { id: 'p3', nickname: 'Carlo' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'PREDICT',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        knowPairs: null,
+        predictedCount: 1,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/hanno pronosticato 1\/3/i)).toBeInTheDocument();
+  });
+
+  it('shows group speaker-vote progress at SPEAKER_VOTE', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+          { id: 'p3', nickname: 'Carlo' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'SPEAKER_VOTE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        speakerCandidates: [
+          { id: 'p2', side: 'A', nickname: 'Bea' },
+          { id: 'p3', side: 'B', nickname: 'Carlo' },
+        ],
+        speakerVotedCount: 2,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/hanno votato 2\/3/i)).toBeInTheDocument();
+  });
+
+  it('asks for confirmation before leaving the room', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', { players: [{ id: 'p1', nickname: 'Alice' }] });
+    });
+    // One tap only arms the confirmation — it must NOT leave the room.
+    fireEvent.click(screen.getByRole('button', { name: /^esci dalla stanza$/i }));
+    expect(screen.getByText(/sei nella stanza/i)).toBeInTheDocument();
+    // Confirming actually leaves, back to the join form.
+    fireEvent.click(screen.getByRole('button', { name: /esci davvero/i }));
+    expect(screen.getByText(/entra nella partita/i)).toBeInTheDocument();
+  });
+
   it('shows the leader setup panel when you are the leader', () => {
     render(<PlayerApp />);
     act(() => {

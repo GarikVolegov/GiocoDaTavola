@@ -18,7 +18,13 @@ export default function ReactionBar({ onReact }: { onReact: (emoji: Reaction) =>
           style={{
             fontSize: '1.8rem',
             lineHeight: 1,
-            padding: '0.55rem 0.7rem',
+            // Comfortable, thumb-sized tap target (≥44px) so reacting is easy on a phone.
+            minWidth: '3rem',
+            minHeight: '3rem',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0.4rem 0.6rem',
             borderRadius: 'var(--radius-pill)',
             cursor: 'pointer',
             color: 'inherit',

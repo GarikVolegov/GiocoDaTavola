@@ -8,6 +8,8 @@ interface SpeakerVoteViewProps {
   remaining: number | null;
   speakerVote: string | null;
   onVote: (defenderId: string) => void;
+  speakerVotedCount: number;
+  playerCount: number;
   skipButton: ReactNode;
 }
 
@@ -18,6 +20,8 @@ export default function SpeakerVoteView({
   remaining,
   speakerVote,
   onVote,
+  speakerVotedCount,
+  playerCount,
   skipButton,
 }: SpeakerVoteViewProps) {
   return (
@@ -57,6 +61,9 @@ export default function SpeakerVoteView({
       {speakerVote && (
         <p style={{ opacity: 0.8, margin: 0 }}>Voto registrato. Puoi cambiare finché c’è tempo.</p>
       )}
+      <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
+        Hanno votato {speakerVotedCount}/{playerCount}
+      </p>
       {skipButton}
     </main>
   );

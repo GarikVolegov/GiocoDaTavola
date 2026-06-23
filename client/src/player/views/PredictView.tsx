@@ -19,6 +19,8 @@ interface PredictViewProps {
   onPredict: (choice: VoteChoice) => void;
   onSwingBet: (bet: SwingBet) => void;
   onKnowGuess: (choice: VoteChoice) => void;
+  predictedCount: number;
+  playerCount: number;
   skipButton: ReactNode;
 }
 
@@ -35,6 +37,8 @@ export default function PredictView({
   onPredict,
   onSwingBet,
   onKnowGuess,
+  predictedCount,
+  playerCount,
   skipButton,
 }: PredictViewProps) {
   if (knowPair) {
@@ -118,6 +122,9 @@ export default function PredictView({
       ) : (
         <p style={{ opacity: 0.7, margin: 0 }}>Scegli chi pensi convincerà di più.</p>
       )}
+      <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
+        Hanno pronosticato {predictedCount}/{playerCount}
+      </p>
       <div
         role="group"
         aria-label="La tua scommessa sul ribaltone"
