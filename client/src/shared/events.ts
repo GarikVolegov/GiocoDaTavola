@@ -364,11 +364,23 @@ export interface InfiltratoResult {
 }
 
 /** Public dilemma shown on the shared screen: the prompt + its two options. */
+/** Debate-complexity tier (mirror server deck.ts): alto < max < power. */
+export type Complessita = 'alto' | 'max' | 'power';
+
+/** Host/phone badge labels for each complexity tier. */
+export const COMPLESSITA_LABELS: Record<Complessita, string> = {
+  alto: '◆ Alto',
+  max: '◆◆ Max',
+  power: '◆◆◆ Power',
+};
+
 export interface PublicDilemma {
   id: string;
   text: string;
   optionA: string;
   optionB: string;
+  /** Debate-complexity tier; shown as a small badge. May be absent on legacy data. */
+  complessita?: Complessita;
 }
 
 /** Aggregate A vs B vote counts. No identities — counts only. */
@@ -422,6 +434,8 @@ export interface DefenseState {
   minEndsAt: number | null;
   /** Whether the current speaker may end now (minimum elapsed). */
   canFinish: boolean;
+  /** When the current turn started (epoch ms); source for the count-up timer. */
+  startedAt: number | null;
 }
 
 /**
@@ -652,11 +666,19 @@ export interface MyGameRecord {
   playedAt: string;
 }
 
+/** A signed-in user's editable profile (GET/PUT /api/me/profile). `avatar` is a
+ *  `preset:<id>` or a small raster data-URL; null means none chosen. */
+export interface MyProfile {
+  displayName: string | null;
+  avatar: string | null;
+}
+
 /** Payload of GET /api/me/dashboard: stats + recent games + a small awards preview. */
 export interface MyDashboard {
   stats: MyStats;
   recentGames: MyGameRecord[];
   recentAwards: Pick<MyAward, 'id' | 'awardId' | 'title' | 'emoji' | 'description' | 'nickname' | 'wonAt'>[];
+  profile: MyProfile;
 }
 
 export interface PlayerVotePayload {

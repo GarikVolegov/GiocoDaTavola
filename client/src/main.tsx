@@ -5,12 +5,11 @@ import App from './App';
 import './shared/ui/tokens.css';
 import './index.css';
 
-// Vite inlines this at build time; it must be set in .env.local (dev) and as a
-// build-time env var on Railway (prod). The publishable key is NOT secret.
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-if (!PUBLISHABLE_KEY) {
-  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY');
-}
+// Vite inlines this at build time; set it in .env.local (dev) and as a build-time
+// env var on Railway (prod). The publishable key is NOT secret. When it's ABSENT,
+// vite.config aliases @clerk/react to an inert stub (keyless boot) so the app still
+// renders signed-out instead of crashing — no hard failure on a missing key.
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ?? '';
 
 const rootEl = document.getElementById('root');
 if (rootEl) {

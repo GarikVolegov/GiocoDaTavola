@@ -1,6 +1,13 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, useRef, type FormEvent } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
+import { useElapsed } from '../shared/useElapsed';
+import { formatMSS, isWaitingPhase } from '../shared/time';
+import { unlockAudio } from './audio/engine';
+import { startMusic, stopMusic, setMusicIntensity } from './audio/music';
+import { play as playSfx } from './audio/sfx';
+import { sfxForTransition, shouldWarnAt, handRaised } from './audio/cues';
+import { MuteButton } from './MuteButton';
 import {
   SocketEvents,
   PHASE_LABELS,
@@ -10,11 +17,12 @@ import {
   tappaMeta,
   type LobbyUpdatePayload,
   type GameStatePayload,
+  type GamePhase,
   type PlayerJoinErrorPayload,
   type PublicPlayer,
   type PercorsoView,
 } from '../shared/events';
-import { Card, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing } from '../shared/ui';
+import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip, leanFromSplit } from '../shared/ui';
 import ReactionSwarm from '../shared/ReactionSwarm';
 
 const screen = {
@@ -22,10 +30,10 @@ const screen = {
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  minHeight: '100vh',
+  minHeight: '100dvh',
   textAlign: 'center',
-  padding: '2rem',
-  gap: '1.5rem',
+  padding: 'var(--space-6)',
+  gap: 'var(--space-5)',
 } as const;
 
 // Read a room code from the spectator URL (`/host?code=XXXX`).
@@ -49,7 +57,7 @@ function PercorsoMap({ percorso }: { percorso: PercorsoView }) {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '0.2rem',
+              gap: 'var(--space-1)',
               padding: 'var(--space-2) var(--space-4)',
               borderRadius: 'var(--radius-md)',
               border: current ? '2px solid var(--gold)' : '1px solid var(--border)',
@@ -119,6 +127,80 @@ export default function HostApp() {
 
   const phase = game?.phase ?? 'LOBBY';
   const remaining = useCountdown(game?.phaseExpiresAt ?? null);
+  // While someone is speaking, the big timer counts UP from 0 (turn start) instead
+  // of down from the safety cap.
+  const elapsed = useElapsed(game?.defense?.startedAt ?? null);
+  const speaking = phase === 'DEFENSE' || phase === 'INTERVENTI';
+
+  // Host audio (host-only): a quiet background "musichetta" during waiting/speaking
+  // phases plus event sound effects. Unlock on the first user gesture (the "Collega TV"
+  // submit is a pointerdown, so it counts) per the browser autoplay policy.
+  const [audioReady, setAudioReady] = useState(false);
+  useEffect(() => {
+    const onGesture = () => {
+      unlockAudio();
+      setAudioReady(true);
+    };
+    window.addEventListener('pointerdown', onGesture, { once: true });
+    window.addEventListener('keydown', onGesture, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', onGesture);
+      window.removeEventListener('keydown', onGesture);
+    };
+  }, []);
+  // The musichetta plays in waiting/speaking phases and stops elsewhere / on unmount.
+  useEffect(() => {
+    if (audioReady && isWaitingPhase(phase)) startMusic();
+    else stopMusic();
+  }, [audioReady, phase]);
+  // Duck the bed under a speaker so it never competes with someone talking.
+  useEffect(() => {
+    setMusicIntensity(speaking ? 'soft' : 'full');
+  }, [speaking]);
+  useEffect(() => () => stopMusic(), []);
+
+  // Event sound effects: fire a sting when the phase changes to a noteworthy moment.
+  // `phase` is derived from `game`, so they update together; comparing against the
+  // previous phase means non-phase game updates produce no sound (cue returns null).
+  const prevPhaseRef = useRef<GamePhase | null>(null);
+  useEffect(() => {
+    const prev = prevPhaseRef.current;
+    prevPhaseRef.current = phase;
+    if (!audioReady || !game) return;
+    const cue = sfxForTransition(prev, phase, game);
+    if (cue) playSfx(cue);
+  }, [phase, audioReady, game]);
+
+  // Soft ticks in the final seconds of a countdown — but not while someone is speaking,
+  // where the timer is a safety cap, not a deadline to race.
+  const prevRemainingRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prev = prevRemainingRef.current;
+    prevRemainingRef.current = remaining;
+    if (audioReady && !speaking && shouldWarnAt(prev, remaining)) playSfx('timerWarn');
+  }, [remaining, audioReady, speaking]);
+
+  // A gentle ding whenever a new hand joins the intervention queue.
+  const prevQueueLenRef = useRef<number | null>(null);
+  useEffect(() => {
+    const len = phase === 'INTERVENTI' ? game?.defense?.queue?.length ?? null : null;
+    const prev = prevQueueLenRef.current;
+    prevQueueLenRef.current = len;
+    if (audioReady && handRaised(prev, len)) playSfx('handRaise');
+  }, [phase, audioReady, game]);
+
+  // Sfondo "bivio": al SPLIT_REVEAL la scena pende verso il lato in testa
+  // (voto AGGREGATO — i voti restano segreti, nessun aggancio durante VOTE_*).
+  // In ogni altra fase resta neutra (50). La var vive su :root così la legge il
+  // BivioBackdrop montato in App.tsx.
+  useEffect(() => {
+    const root = document.documentElement;
+    const lean = phase === 'SPLIT_REVEAL' && game?.split ? leanFromSplit(game.split) : 50;
+    root.style.setProperty('--bivio-lean', String(lean));
+    return () => {
+      root.style.setProperty('--bivio-lean', '50');
+    };
+  }, [phase, game?.split]);
 
   // No code yet: ask for one (the leader's phone shows it after creating a room).
   if (!code) {
@@ -130,9 +212,10 @@ export default function HostApp() {
         </p>
         <form
           onSubmit={submitCode}
-          style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}
+          style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}
         >
-          <input
+          <TextInput
+            mono
             value={codeInput}
             onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
             placeholder="ABCD"
@@ -141,28 +224,13 @@ export default function HostApp() {
             spellCheck={false}
             maxLength={4}
             aria-label="Codice stanza"
-            style={{
-              fontSize: '2rem',
-              letterSpacing: '0.3rem',
-              textAlign: 'center',
-              padding: '0.6rem 0.8rem',
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-              textTransform: 'uppercase',
-              width: '8rem',
-            }}
+            style={{ fontSize: '2rem', width: '8rem' }}
           />
-          <button
-            type="submit"
-            style={{ fontSize: '1.2rem', fontWeight: 700, padding: '0.7rem 1.4rem', borderRadius: '0.6rem', cursor: 'pointer' }}
-          >
+          <Button type="submit" size="lg">
             Collega TV
-          </button>
+          </Button>
         </form>
-        {attachError && (
-          <p role="alert" style={{ color: '#ff6b6b', margin: 0, fontWeight: 600 }}>
-            {attachError}
-          </p>
-        )}
+        {attachError && <Alert>{attachError}</Alert>}
       </main>
     );
   }
@@ -182,6 +250,9 @@ export default function HostApp() {
     return (
       <main style={screen}>
         <ReactionSwarm />
+        <MuteButton />
+        {/* Latecomers can still join mid-game: keep the code + QR in the corner. */}
+        {code && <RoomCodeChip code={code} />}
         {/* Percorso: the climb map (current tappa highlighted) sits above the phase. */}
         {game.percorso && <PercorsoMap percorso={game.percorso} />}
         {inDilemma && (
@@ -191,12 +262,12 @@ export default function HostApp() {
               : `Dilemma ${game.dilemmaIndex}/${game.dilemmaCount}`}
           </p>
         )}
-        <h1 style={{ fontSize: '2.5rem', margin: 0, fontFamily: phase === 'PHASE_INTRO' ? 'var(--font-serif)' : 'var(--font-display)', fontWeight: phase === 'PHASE_INTRO' ? 500 : 700, ...(phase === 'PHASE_INTRO' && { letterSpacing: 'var(--tracking-serif)' }) }}>{PHASE_LABELS[phase]}</h1>
+        <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', margin: 0, fontFamily: phase === 'PHASE_INTRO' ? 'var(--font-serif)' : 'var(--font-display)', fontWeight: phase === 'PHASE_INTRO' ? 500 : 700, ...(phase === 'PHASE_INTRO' && { letterSpacing: 'var(--tracking-serif)' }) }}>{PHASE_LABELS[phase]}</h1>
 
         {phase === 'TAPPA_INTRO' && game.percorso && (() => {
           const meta = tappaMeta(game.percorso.currentTappa);
           return (
-            <Card glow="accent" style={{ maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', textAlign: 'center', alignItems: 'center' }}>
+            <Card glow="accent" style={{ maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center', alignItems: 'center' }}>
               <span style={{ fontSize: '4rem' }}>{meta.emoji}</span>
               <h2 style={{ fontSize: '2rem', margin: 0, fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>{meta.nome}</h2>
               <p style={{ fontSize: '1.3rem', opacity: 0.85, margin: 0 }}>{meta.sottotitolo}</p>
@@ -210,7 +281,7 @@ export default function HostApp() {
           const meta = tappaMeta(p.currentTappa);
           const isLast = p.dilemmaIndex >= p.totalDilemmas;
           return (
-            <Card glow="accent" style={{ maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: '0.6rem', textAlign: 'center', alignItems: 'center' }}>
+            <Card glow="accent" style={{ maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center', alignItems: 'center' }}>
               <h2 style={{ fontSize: '1.8rem', margin: 0 }}>{meta.emoji} {meta.nome} — completata!</h2>
               <p style={{ fontSize: '1.4rem', margin: 0 }}>
                 {p.tappaDilemmas} {p.tappaDilemmas === 1 ? 'dilemma' : 'dilemmi'} · {p.tappaSwings} {p.tappaSwings === 1 ? 'ribaltone' : 'ribaltoni'}
@@ -289,10 +360,10 @@ export default function HostApp() {
           defense.speaker ? (
             <section
               aria-label="Chi sta difendendo"
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)' }}
             >
               {game.isDevilRound && (
-                <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#ffd36b' }}>
+                <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: 'var(--gold)' }}>
                   🎭 Avvocato del Diavolo — si difende il lato OPPOSTO al proprio voto!
                 </p>
               )}
@@ -303,12 +374,12 @@ export default function HostApp() {
               )}
               <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
                 {defense.argument ? '🤖' : 'Sta parlando'}{' '}
-                <span style={{ color: '#ffd36b' }}>{defense.speaker.nickname}</span> {defense.argument ? '' : '🎤'}
+                <span style={{ color: 'var(--gold)' }}>{defense.speaker.nickname}</span> {defense.argument ? '' : '🎤'}
               </p>
               <div
                 style={{
                   padding: '0.75rem 1.5rem',
-                  borderRadius: '0.9rem',
+                  borderRadius: 'var(--radius-lg)',
                   fontSize: '1.25rem',
                   fontWeight: 700,
                   background:
@@ -332,7 +403,7 @@ export default function HostApp() {
                 </p>
               )}
               {defense.spunti && defense.spunti.length > 0 && (
-                <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
                   {defense.spunti.map((s, i) => (
                     <li key={`${i}-${s}`} style={{ fontSize: '1.1rem', opacity: 0.85 }}>{s}</li>
                   ))}
@@ -349,13 +420,13 @@ export default function HostApp() {
         {phase === 'INTERVENTI' && defense && (
           <section
             aria-label="Interventi"
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)' }}
           >
             <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
-              Interviene <span style={{ color: '#ffd36b' }}>{defense.intervenor?.nickname ?? '…'}</span> 🙋
+              Interviene <span style={{ color: 'var(--gold)' }}>{defense.intervenor?.nickname ?? '…'}</span> 🙋
             </p>
             {defense.queue && defense.queue.length > 0 && (
-              <ol style={{ margin: 0, paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <ol style={{ margin: 0, paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
                 {defense.queue.map((q) => (
                   <li
                     key={q.id}
@@ -385,15 +456,15 @@ export default function HostApp() {
           <div
             style={{
               padding: '1rem 1.6rem',
-              borderRadius: '1rem',
+              borderRadius: 'var(--radius-lg)',
               textAlign: 'center',
-              background: 'rgba(168,130,255,0.16)',
-              border: '2px solid rgba(168,130,255,0.5)',
+              background: 'var(--gold-soft)',
+              border: '2px solid var(--gold-line)',
             }}
           >
             <p style={{ margin: 0, fontSize: '1.8rem', fontWeight: 800 }}>
               🕵️ L'infiltrato era{' '}
-              <span style={{ color: '#ffd36b' }}>{game.infiltratoResult.infiltratorNickname}</span>
+              <span style={{ color: 'var(--gold)' }}>{game.infiltratoResult.infiltratorNickname}</span>
             </p>
             <p style={{ margin: '0.4rem 0 0', fontSize: '1.3rem' }}>
               {game.infiltratoResult.won
@@ -409,10 +480,10 @@ export default function HostApp() {
           <div
             style={{
               padding: '1rem 1.6rem',
-              borderRadius: '1rem',
+              borderRadius: 'var(--radius-lg)',
               textAlign: 'center',
-              background: 'rgba(79,140,255,0.12)',
-              border: '2px solid rgba(79,140,255,0.4)',
+              background: 'var(--faction-a-soft)',
+              border: '2px solid var(--faction-a-line)',
             }}
           >
             <p style={{ margin: 0, fontSize: '2rem', fontWeight: 800 }}>
@@ -439,9 +510,9 @@ export default function HostApp() {
         {phase === 'DUEL_REVEAL' && duelReveal && (
           <section
             aria-label="Le vostre scelte"
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.9rem' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}
           >
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <CardGrid min={10} max="min(92vw, 32rem)">
               {duelReveal.picks.map((p) => {
                 const rgb = p.choice === 'A' ? '84,134,196' : '199,122,69';
                 return (
@@ -449,13 +520,13 @@ export default function HostApp() {
                     key={p.id}
                     style={{
                       padding: '1rem 1.4rem',
-                      borderRadius: '0.9rem',
+                      borderRadius: 'var(--radius-lg)',
                       background: `rgba(${rgb},0.18)`,
                       border: `2px solid rgba(${rgb},0.5)`,
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '0.2rem',
+                      gap: 'var(--space-1)',
                     }}
                   >
                     <span style={{ fontWeight: 700 }}>{p.nickname}</span>
@@ -466,7 +537,7 @@ export default function HostApp() {
                   </div>
                 );
               })}
-            </div>
+            </CardGrid>
             <p style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>
               {duelReveal.agreed ? '🤝 Siete d’accordo!' : '⚔️ Si va al duello!'}
             </p>
@@ -476,18 +547,18 @@ export default function HostApp() {
         {phase === 'DUEL_ARGUE' && duelTurn?.speaker && (
           <section
             aria-label="Chi argomenta"
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)' }}
           >
             <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
               Turno {duelTurn.turn}/{duelTurn.totalTurns}
             </p>
             <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
-              Argomenta <span style={{ color: '#ffd36b' }}>{duelTurn.speaker.nickname}</span> 🎤
+              Argomenta <span style={{ color: 'var(--gold)' }}>{duelTurn.speaker.nickname}</span> 🎤
             </p>
             <div
               style={{
                 padding: '0.75rem 1.5rem',
-                borderRadius: '0.9rem',
+                borderRadius: 'var(--radius-lg)',
                 fontSize: '1.25rem',
                 fontWeight: 700,
                 background: duelTurn.speaker.side === 'A' ? 'rgba(84,134,196,0.18)' : 'rgba(199,122,69,0.18)',
@@ -507,7 +578,8 @@ export default function HostApp() {
         )}
 
         {phase === 'DUEL_RESULT' && duelResult && (
-          <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+          <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)' }}>
+            {duelResult.convinced.length > 0 && <Celebration />}
             {duelResult.agreed ? (
               <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
                 🤝 Eravate d’accordo
@@ -515,7 +587,7 @@ export default function HostApp() {
             ) : duelResult.convinced.length > 0 ? (
               duelResult.convinced.map((c) => (
                 <p key={c.convinced.id} style={{ fontSize: 'clamp(1.5rem, 4.5vw, 2.4rem)', fontWeight: 800, margin: 0 }}>
-                  <span style={{ color: '#ffd36b' }}>{c.persuader.nickname}</span> ha convinto {c.convinced.nickname}! 🎯
+                  <span style={{ color: 'var(--gold)' }}>{c.persuader.nickname}</span> ha convinto {c.convinced.nickname}! 🎯
                 </p>
               ))
             ) : (
@@ -527,30 +599,43 @@ export default function HostApp() {
         {phase === 'FINAL_DUEL' && duelSummary && (
           <section
             aria-label="Risultato del duello"
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}
           >
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <Celebration pieces={40} />
+            <CardGrid min={10} max="min(92vw, 30rem)">
               {duelSummary.scores.map((s) => (
                 <Card
                   key={s.id}
                   glow="accent"
-                  style={{ flex: '1 1 12rem', minWidth: '10rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', alignItems: 'center', textAlign: 'center' }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', alignItems: 'center', textAlign: 'center' }}
                 >
                   <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{s.nickname}</span>
-                  <span style={{ fontSize: '2.2rem', fontWeight: 800, color: '#ffd36b' }}>{s.persuasions}</span>
+                  <span style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--gold)' }}>{s.persuasions}</span>
                   <span style={{ fontSize: '0.95rem', opacity: 0.8 }}>
                     {s.persuasions === 1 ? 'persuasione' : 'persuasioni'}
                   </span>
                 </Card>
               ))}
-            </div>
+            </CardGrid>
             <p style={{ fontSize: '1.2rem', opacity: 0.85, margin: 0 }}>
               Eravate d’accordo {duelSummary.agreements} {duelSummary.agreements === 1 ? 'volta' : 'volte'}
             </p>
           </section>
         )}
 
-        {remaining != null && (
+        {speaking && game?.defense?.startedAt != null ? (
+          <div
+            aria-label="Tempo trascorso"
+            style={{
+              fontSize: 'clamp(3rem, 12vw, 6rem)',
+              fontWeight: 800,
+              fontVariantNumeric: 'tabular-nums',
+              lineHeight: 1,
+            }}
+          >
+            {formatMSS(elapsed ?? 0)}
+          </div>
+        ) : remaining != null ? (
           <div
             aria-label="Tempo rimanente"
             style={{
@@ -562,7 +647,7 @@ export default function HostApp() {
           >
             {remaining}s
           </div>
-        )}
+        ) : null}
       </main>
     );
   }
@@ -570,6 +655,7 @@ export default function HostApp() {
   // LOBBY: show the code + roster + a passive "waiting for the leader" line.
   return (
     <main style={screen}>
+      <MuteButton />
       <Logo size={64} payoff />
       <p style={{ opacity: 0.7, margin: 0 }}>
         Entra da <strong>{window.location.host}</strong> con il codice
@@ -579,7 +665,7 @@ export default function HostApp() {
           fontSize: 'clamp(4rem, 18vw, 9rem)',
           fontWeight: 800,
           letterSpacing: '0.4rem',
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          fontFamily: 'var(--font-mono)',
           lineHeight: 1,
         }}
       >
@@ -603,7 +689,7 @@ export default function HostApp() {
               padding: 0,
               display: 'flex',
               flexWrap: 'wrap',
-              gap: '0.5rem',
+              gap: 'var(--space-2)',
               justifyContent: 'center',
             }}
           >
@@ -613,9 +699,9 @@ export default function HostApp() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem',
+                  gap: 'var(--space-2)',
                   padding: '0.4rem 0.9rem',
-                  borderRadius: '999px',
+                  borderRadius: 'var(--radius-pill)',
                   background: p.isBot ? 'var(--gold-soft)' : 'rgba(127,127,127,0.18)',
                   fontWeight: 600,
                   opacity: p.connected === false ? 0.5 : 1,

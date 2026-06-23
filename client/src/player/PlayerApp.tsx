@@ -1,31 +1,18 @@
-import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
-import ReactionSwarm from '../shared/ReactionSwarm';
+import { useElapsed } from '../shared/useElapsed';
 import {
   SocketEvents,
   JOIN_ERROR_MESSAGES,
   VOTE_ERROR_MESSAGES,
   START_ERROR_MESSAGES,
-  PHASE_LABELS,
   PERSONA_LABELS,
   OBJECTIVE,
   HOW_TO_PLAY,
-  SESSION_FORMATS,
-  FORMAT_LABELS,
   FORMAT_DILEMMA_COUNT,
-  CONTENT_REGISTERS,
-  REGISTER_LABELS,
   MIN_PLAYERS_TO_START,
-  GAME_MODES,
-  MODE_LABELS,
-  TAPPE,
-  DURATE,
-  DURATA_LABELS,
-  tappaMeta,
-  estimatePercorsoDilemmi,
   type Durata,
-  REACTIONS,
   REACTION_MIN_INTERVAL_MS,
   type GameMode,
   type SessionFormat,
@@ -47,9 +34,6 @@ import {
   type PlayerSpeakerVotedPayload,
   type Reaction,
   type BlindSpot,
-  MAX_SUBMISSIONS_PER_PLAYER,
-  MIN_INFILTRATO_HUMANS,
-  MIN_SQUADRE_PLAYERS,
   SUBMIT_DILEMMA_ERROR_MESSAGES,
   type PlayerDilemmaSubmittedPayload,
   type PlayerSubmitDilemmaErrorPayload,
@@ -57,41 +41,21 @@ import {
   type PlayerKnowGuessResultPayload,
   type PlayerInfiltratoRolePayload,
   type PlayerAccusedPayload,
+  type MyProfile,
 } from '../shared/events';
-import { Card, Pill, Button, Alert, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, JoinQr } from '../shared/ui';
-import { useAuth, Show, SignInButton } from '@clerk/react';
+import { Card, JoinQr, Button, Field, TextInput, Alert } from '../shared/ui';
+import { useAuth } from '@clerk/react';
+import VoteView from './views/VoteView';
+import SpeakerVoteView from './views/SpeakerVoteView';
+import AccuseView from './views/AccuseView';
+import DefenseView from './views/DefenseView';
+import PredictView from './views/PredictView';
+import DuelArgueView from './views/DuelArgueView';
+import StatusView from './views/StatusView';
+import SubmitDilemmaCard from './views/SubmitDilemmaCard';
+import LeaderSetup from './views/LeaderSetup';
+import { wrap } from './views/layout';
 
-// A row of tap-to-send reaction emojis, shown to the audience during a defense /
-// duel turn so non-speakers stay engaged. Throttled by the caller.
-function ReactionBar({ onReact }: { onReact: (emoji: Reaction) => void }) {
-  return (
-    <div
-      role="group"
-      aria-label="Reagisci"
-      style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}
-    >
-      {REACTIONS.map((emoji) => (
-        <button
-          key={emoji}
-          type="button"
-          onClick={() => onReact(emoji)}
-          aria-label={`Reagisci ${emoji}`}
-          style={{
-            fontSize: '1.8rem',
-            lineHeight: 1,
-            padding: '0.55rem 0.7rem',
-            borderRadius: '999px',
-            cursor: 'pointer',
-            background: 'rgba(242,243,255,0.08)',
-            border: '1px solid rgba(242,243,255,0.18)',
-          }}
-        >
-          {emoji}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 // Read a prefilled room code from the QR join URL (`/join?room=CODE`).
 function urlRoom(): string {
@@ -331,6 +295,8 @@ export default function PlayerApp() {
   // Self-paced turn (DEFENSE/INTERVENTI): the floor countdown gates "Ho finito".
   const minRemaining = useCountdown(game?.defense?.minEndsAt ?? null);
   const canFinishNow = game?.defense?.minEndsAt == null || (minRemaining ?? 0) <= 0;
+  // The speaker's elapsed time, counting UP from the turn start.
+  const speakerElapsed = useElapsed(game?.defense?.startedAt ?? null);
 
   // Each new dilemma round starts with a clean (unselected) vote + prediction.
   useEffect(() => {
@@ -358,6 +324,31 @@ export default function PlayerApp() {
       cancelled = true;
     };
   }, [isSignedIn, joinedCode]);
+
+  // Pre-fill the join nickname from the signed-in user's saved profile, but never
+  // clobber a value they already have (typed, or restored from a saved session).
+  useEffect(() => {
+    if (!isSignedIn) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const token = await getToken();
+        const res = await fetch('/api/me/profile', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) return;
+        const p = (await res.json()) as MyProfile;
+        if (!cancelled && p.displayName) {
+          setNickname((cur) => (cur.trim() === '' ? p.displayName ?? '' : cur));
+        }
+      } catch {
+        /* best-effort prefill */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn, getToken]);
 
   // Buzz the phone the moment it becomes this player's turn to speak (defense or
   // duel) so they look up from the screen — easy to miss on a shared TV.
@@ -502,21 +493,6 @@ export default function PlayerApp() {
       optionB: dilemmaB,
     });
   };
-  const canSubmitDilemma =
-    mySubmitted < MAX_SUBMISSIONS_PER_PLAYER &&
-    dilemmaText.trim() !== '' &&
-    dilemmaA.trim() !== '' &&
-    dilemmaB.trim() !== '';
-  const dilemmaFieldStyle: CSSProperties = {
-    width: '100%',
-    padding: '0.6rem 0.7rem',
-    borderRadius: '0.6rem',
-    border: '1px solid rgba(242,243,255,0.18)',
-    background: 'rgba(242,243,255,0.06)',
-    color: 'inherit',
-    fontSize: '0.95rem',
-    boxSizing: 'border-box',
-  };
 
   // Gruppo: solo play allowed (1 human + bots), never bots-only. Duello: exactly
   // two humans (no bot opponent). Mirrors the old HostApp start gating.
@@ -536,795 +512,123 @@ export default function PlayerApp() {
   // during a phase that has a countdown. Rendered in each in-game branch.
   const skipButton =
     isLeader && phaseHasTimer(phase) ? (
-      <button
-        type="button"
-        onClick={advance}
-        style={{
-          fontSize: '1rem',
-          fontWeight: 700,
-          padding: '0.5rem 1.3rem',
-          borderRadius: '0.6rem',
-          cursor: 'pointer',
-        }}
-      >
+      <Button variant="ghost" onClick={advance}>
         Salta ▶
-      </button>
+      </Button>
     ) : null;
-
-  const wrap = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    textAlign: 'center',
-    padding: '1.5rem',
-    gap: '1rem',
-  } as const;
 
   if (
     joinedCode &&
     (phase === 'VOTE_1' || phase === 'VOTE_2' || phase === 'DUEL_PICK' || phase === 'DUEL_REPICK')
   ) {
-    const dilemma = game?.dilemma;
-    // VOTE_2 / DUEL_REPICK keep the player's first choice as the default they can
-    // keep or change; the sub-line nudges them per phase.
-    const subtitle =
-      phase === 'VOTE_2'
-        ? 'Hai sentito le difese: confermi o cambi idea?'
-        : phase === 'DUEL_PICK'
-          ? 'Scegli la tua posizione.'
-          : phase === 'DUEL_REPICK'
-            ? 'Ti ha convinto? Conferma o cambia.'
-            : null;
     return (
-      <main style={wrap}>
-        <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
-        {subtitle && (
-          <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0 }}>
-            {subtitle}
-          </p>
-        )}
-        {remaining != null && (
-          <div
-            aria-label="Tempo rimanente"
-            style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-          >
-            {remaining}s
-          </div>
-        )}
-        {dilemma && (
-          <p style={{ fontSize: '1.1rem', opacity: 0.85, margin: 0 }}>{dilemma.text}</p>
-        )}
-        <div
-          role="group"
-          aria-label="Il tuo voto"
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(90vw, 22rem)' }}
-        >
-          {(['A', 'B'] as const).map((letter) => {
-            const selected = vote === letter;
-            const accent = letter === 'A' ? '84,134,196' : '199,122,69';
-            return (
-              <button
-                key={letter}
-                type="button"
-                onClick={() => castVote(letter)}
-                aria-pressed={selected}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  textAlign: 'left',
-                  padding: '1rem 1.1rem',
-                  borderRadius: '0.8rem',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  color: 'inherit',
-                  background: selected ? `rgba(${accent},0.32)` : `rgba(${accent},0.12)`,
-                  border: `2px solid rgba(${accent},${selected ? 0.9 : 0.4})`,
-                }}
-              >
-                <span style={{ fontSize: '1.6rem', fontWeight: 800, opacity: 0.85 }}>{letter}</span>
-                <span style={{ fontSize: '1.1rem' }}>
-                  {dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        {voteError ? (
-          <p role="alert" style={{ color: '#ff6b6b', margin: 0, fontWeight: 600 }}>
-            {voteError}
-          </p>
-        ) : vote ? (
-          <p style={{ opacity: 0.8, margin: 0 }}>
-            Hai votato <strong>{vote}</strong>. Puoi cambiare finché c’è tempo.
-          </p>
-        ) : (
-          <p style={{ opacity: 0.7, margin: 0 }}>Tocca A o B per votare.</p>
-        )}
-        {phase === 'VOTE_2' && (
-          <>
-            <button
-              type="button"
-              onClick={() => getSocket().emit(SocketEvents.PlayerConfirmVote)}
-              style={{
-                marginTop: '0.25rem',
-                fontSize: '1.05rem',
-                fontWeight: 700,
-                padding: '0.7rem 1.6rem',
-                borderRadius: '0.7rem',
-                cursor: 'pointer',
-              }}
-            >
-              Confermo ✓
-            </button>
-            <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
-              Confermati {game?.confirmedCount ?? 0}/{players.length} · si va avanti quando tutti confermano
-            </p>
-          </>
-        )}
-        {skipButton}
-      </main>
+      <VoteView
+        phase={phase}
+        dilemma={game?.dilemma}
+        remaining={remaining}
+        vote={vote}
+        voteError={voteError}
+        onVote={castVote}
+        onConfirm={() => getSocket().emit(SocketEvents.PlayerConfirmVote)}
+        confirmedCount={game?.confirmedCount ?? 0}
+        playerCount={players.length}
+        skipButton={skipButton}
+      />
     );
   }
 
   if (joinedCode && (phase === 'DEFENSE' || phase === 'INTERVENTI')) {
-    const d = game?.defense ?? null;
-    const speaker = d?.speaker ?? null; // the defender (DEFENSE only)
-    const myTurn = d?.speakerId != null && d.speakerId === playerId;
-    const sideOption = speaker
-      ? speaker.side === 'A'
-        ? game?.dilemma?.optionA
-        : game?.dilemma?.optionB
-      : undefined;
-    const myQueuePos = d?.queue ? d.queue.findIndex((q) => q.id === playerId) : -1;
-
-    const finishButton = (
-      <>
-        <button
-          type="button"
-          onClick={sendFinish}
-          disabled={!canFinishNow}
-          style={{
-            fontSize: '1.2rem',
-            fontWeight: 800,
-            padding: '0.9rem 1.6rem',
-            borderRadius: '0.9rem',
-            border: 'none',
-            cursor: canFinishNow ? 'pointer' : 'not-allowed',
-            opacity: canFinishNow ? 1 : 0.5,
-          }}
-        >
-          {canFinishNow ? 'Ho finito ▶' : `Ho finito tra ${minRemaining ?? ''}s`}
-        </button>
-        {remaining != null && (
-          <p style={{ fontSize: '0.85rem', opacity: 0.6, margin: 0 }}>max {remaining}s</p>
-        )}
-      </>
-    );
-
     return (
-      <main style={wrap}>
-        <ReactionSwarm />
-        <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
-
-        {myTurn ? (
-          <>
-            {phase === 'INTERVENTI' ? (
-              <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te: intervieni! 🙋</p>
-            ) : speaker?.devil ? (
-              <p style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#ffd36b' }}>
-                🎭 Avvocato del Diavolo!
-              </p>
-            ) : (
-              <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te! 🎤</p>
-            )}
-
-            {phase === 'DEFENSE' && speaker && (
-              <>
-                {game?.dilemma && (
-                  <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0, maxWidth: '22rem' }}>
-                    {game.dilemma.text}
-                  </p>
-                )}
-                {speaker.devil ? (
-                  <p style={{ fontSize: '1.1rem', opacity: 0.95, margin: 0, maxWidth: '22rem' }}>
-                    Hai votato <strong>{speaker.side === 'A' ? 'B' : 'A'}</strong>, ma ora convinci tutti
-                    che <strong>{speaker.side}</strong>
-                    {sideOption ? ` (${sideOption})` : ''} è la scelta giusta!
-                  </p>
-                ) : (
-                  <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
-                    Difendi <strong>{speaker.side}</strong>
-                    {sideOption ? `: ${sideOption}` : ''}
-                  </p>
-                )}
-                {d?.spunti && d.spunti.length > 0 && (
-                  <div style={{ width: 'min(90vw, 22rem)', textAlign: 'left' }}>
-                    <p style={{ fontSize: '0.9rem', fontWeight: 700, opacity: 0.8, margin: '0 0 0.3rem' }}>
-                      Spunti per te:
-                    </p>
-                    <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                      {d.spunti.map((s, i) => (
-                        <li key={`${i}-${s}`} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </>
-            )}
-            {finishButton}
-          </>
-        ) : speaker == null && phase === 'DEFENSE' ? (
-          <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
-            Nessuna difesa per questo dilemma.
-          </p>
-        ) : (
-          <>
-            {phase === 'DEFENSE' && game?.isDevilRound && (
-              <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#ffd36b' }}>
-                🎭 Round Avvocato del Diavolo — difende il contrario!
-              </p>
-            )}
-            <p style={{ fontSize: '1.3rem', margin: 0 }}>
-              {phase === 'INTERVENTI' ? (
-                <>Interviene <strong>{d?.intervenor?.nickname ?? '…'}</strong> 🙋</>
-              ) : (
-                <>Sta parlando <strong>{speaker?.nickname ?? '…'}</strong> 🎤</>
-              )}
-            </p>
-
-            {phase === 'DEFENSE' && d?.speakerId != null && (
-              <button
-                type="button"
-                onClick={toggleHand}
-                style={{
-                  fontSize: '1.05rem',
-                  fontWeight: 700,
-                  padding: '0.7rem 1.3rem',
-                  borderRadius: '0.8rem',
-                  border: handRaised ? '2px solid #ffd36b' : '2px solid rgba(255,255,255,0.3)',
-                  background: handRaised ? 'rgba(255,211,107,0.18)' : 'transparent',
-                  color: 'inherit',
-                  cursor: 'pointer',
-                }}
-              >
-                {handRaised ? '✋ Abbassa la mano' : '✋ Alza la mano'}
-              </button>
-            )}
-            {phase === 'INTERVENTI' && myQueuePos >= 0 && (
-              <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0 }}>
-                Sei in coda: {myQueuePos + 1}º
-              </p>
-            )}
-
-            <ReactionBar onReact={sendReaction} />
-          </>
-        )}
-        {skipButton}
-      </main>
+      <DefenseView
+        phase={phase}
+        defense={game?.defense ?? null}
+        dilemma={game?.dilemma}
+        isDevilRound={game?.isDevilRound ?? false}
+        playerId={playerId}
+        handRaised={handRaised}
+        canFinishNow={canFinishNow}
+        minRemaining={minRemaining}
+        remaining={remaining}
+        speakerElapsed={speakerElapsed}
+        onFinish={sendFinish}
+        onToggleHand={toggleHand}
+        onReact={sendReaction}
+        skipButton={skipButton}
+      />
     );
   }
 
   if (joinedCode && phase === 'DUEL_ARGUE') {
-    const speaker = game?.duelTurn?.speaker ?? null;
-    const myTurn = speaker != null && speaker.id === playerId;
-    const sideOption = speaker
-      ? speaker.side === 'A'
-        ? game?.dilemma?.optionA
-        : game?.dilemma?.optionB
-      : undefined;
     return (
-      <main style={wrap}>
-        <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS.DUEL_ARGUE}</h1>
-        {remaining != null && (
-          <div
-            aria-label="Tempo rimanente"
-            style={{ fontSize: '3rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-          >
-            {remaining}s
-          </div>
-        )}
-        {myTurn ? (
-          <>
-            <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te! 🎤</p>
-            {game?.dilemma && (
-              <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0, maxWidth: '22rem' }}>
-                {game.dilemma.text}
-              </p>
-            )}
-            <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
-              Argomenta <strong>{speaker.side}</strong>
-              {sideOption ? `: ${sideOption}` : ''}
-            </p>
-          </>
-        ) : speaker ? (
-          <>
-            <p style={{ fontSize: '1.3rem', margin: 0 }}>
-              Sta argomentando <strong>{speaker.nickname}</strong> 🎤
-            </p>
-            <ReactionBar onReact={sendReaction} />
-          </>
-        ) : (
-          <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>Guarda lo schermo condiviso.</p>
-        )}
-        {skipButton}
-      </main>
+      <DuelArgueView
+        speaker={game?.duelTurn?.speaker}
+        dilemma={game?.dilemma}
+        playerId={playerId}
+        remaining={remaining}
+        onReact={sendReaction}
+        skipButton={skipButton}
+      />
     );
   }
 
   if (joinedCode && phase === 'SPEAKER_VOTE') {
     const candidates = (game?.speakerCandidates ?? []).filter((d) => d.id !== playerId);
     return (
-      <main style={wrap}>
-        <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.SPEAKER_VOTE}</h1>
-        <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
-          Chi è stato più convincente?
-        </p>
-        {remaining != null && (
-          <div
-            aria-label="Tempo rimanente"
-            style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-          >
-            {remaining}s
-          </div>
-        )}
-        {candidates.length === 0 ? (
-          <p style={{ opacity: 0.8, margin: 0 }}>Hai parlato tu: guarda lo schermo.</p>
-        ) : (
-          <div
-            role="group"
-            aria-label="Il tuo voto al miglior oratore"
-            style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(90vw, 22rem)' }}
-          >
-            {candidates.map((d) => {
-              const selected = speakerVote === d.id;
-              const accent = d.side === 'A' ? '84,134,196' : '199,122,69';
-              return (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => castSpeakerVote(d.id)}
-                  aria-pressed={selected}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    textAlign: 'left',
-                    padding: '1rem 1.1rem',
-                    borderRadius: '0.8rem',
-                    cursor: 'pointer',
-                    fontWeight: 700,
-                    color: 'inherit',
-                    background: selected ? `rgba(${accent},0.32)` : `rgba(${accent},0.12)`,
-                    border: `2px solid rgba(${accent},${selected ? 0.9 : 0.4})`,
-                  }}
-                >
-                  <span style={{ fontSize: '1.4rem', fontWeight: 800, opacity: 0.85 }}>{d.side}</span>
-                  <span style={{ fontSize: '1.1rem' }}>{d.nickname}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {speakerVote && (
-          <p style={{ opacity: 0.8, margin: 0 }}>Voto registrato. Puoi cambiare finché c’è tempo.</p>
-        )}
-        {skipButton}
-      </main>
+      <SpeakerVoteView
+        candidates={candidates}
+        remaining={remaining}
+        speakerVote={speakerVote}
+        onVote={castSpeakerVote}
+        skipButton={skipButton}
+      />
     );
   }
 
   if (joinedCode && phase === 'PREDICT') {
-    const dilemma = game?.dilemma;
-    const myKnowPair = game?.knowPairs?.find((p) => p.guesserId === playerId) ?? null;
-    if (myKnowPair) {
-      return (
-        <main style={wrap}>
-          <h1 style={{ fontSize: '1.5rem', margin: 0 }}>🔮 Quanto mi conosci</h1>
-          <p style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
-            Come ha votato <strong>{myKnowPair.targetNickname}</strong>?
-          </p>
-          {dilemma && (
-            <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0, maxWidth: '22rem' }}>{dilemma.text}</p>
-          )}
-          {remaining != null && (
-            <div
-              aria-label="Tempo rimanente"
-              style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-            >
-              {remaining}s
-            </div>
-          )}
-          <div
-            role="group"
-            aria-label="La tua ipotesi"
-            style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(90vw, 22rem)' }}
-          >
-            {(['A', 'B'] as const).map((letter) => {
-              const selected = knowGuess === letter;
-              const accent = letter === 'A' ? '79,140,255' : '255,140,79';
-              return (
-                <button
-                  key={letter}
-                  type="button"
-                  onClick={() => castKnowGuess(letter)}
-                  aria-pressed={selected}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    textAlign: 'left',
-                    padding: '1rem 1.1rem',
-                    borderRadius: '0.8rem',
-                    cursor: 'pointer',
-                    fontWeight: 700,
-                    color: 'inherit',
-                    background: selected ? `rgba(${accent},0.32)` : `rgba(${accent},0.12)`,
-                    border: `2px solid rgba(${accent},${selected ? 0.9 : 0.4})`,
-                  }}
-                >
-                  <span style={{ fontSize: '1.6rem', fontWeight: 800, opacity: 0.85 }}>{letter}</span>
-                  <span style={{ fontSize: '1.1rem' }}>
-                    {dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          {knowGuess ? (
-            <p style={{ opacity: 0.8, margin: 0 }}>
-              Hai scelto <strong>{knowGuess}</strong>. Conosci bene {myKnowPair.targetNickname}? 👀
-            </p>
-          ) : (
-            <p style={{ opacity: 0.7, margin: 0 }}>Indovina come ha votato.</p>
-          )}
-        </main>
-      );
-    }
     return (
-      <main style={wrap}>
-        <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.PREDICT}</h1>
-        <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
-          Chi vincerà <em>dopo</em> le difese?
-        </p>
-        {remaining != null && (
-          <div
-            aria-label="Tempo rimanente"
-            style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-          >
-            {remaining}s
-          </div>
-        )}
-        <div
-          role="group"
-          aria-label="Il tuo pronostico"
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: 'min(90vw, 22rem)' }}
-        >
-          {(['A', 'B'] as const).map((letter) => {
-            const selected = predicted === letter;
-            const accent = letter === 'A' ? '84,134,196' : '199,122,69';
-            return (
-              <button
-                key={letter}
-                type="button"
-                onClick={() => castPrediction(letter)}
-                aria-pressed={selected}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  textAlign: 'left',
-                  padding: '1rem 1.1rem',
-                  borderRadius: '0.8rem',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  color: 'inherit',
-                  background: selected ? `rgba(${accent},0.32)` : `rgba(${accent},0.12)`,
-                  border: `2px solid rgba(${accent},${selected ? 0.9 : 0.4})`,
-                }}
-              >
-                <span style={{ fontSize: '1.6rem', fontWeight: 800, opacity: 0.85 }}>{letter}</span>
-                <span style={{ fontSize: '1.1rem' }}>
-                  {dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        {predicted ? (
-          <p style={{ opacity: 0.8, margin: 0 }}>
-            Hai pronosticato <strong>{predicted}</strong>. Vediamo se indovini!
-          </p>
-        ) : (
-          <p style={{ opacity: 0.7, margin: 0 }}>Scegli chi pensi convincerà di più.</p>
-        )}
-        <div
-          role="group"
-          aria-label="La tua scommessa sul ribaltone"
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'min(90vw, 22rem)' }}
-        >
-          <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0.5rem 0 0' }}>
-            🎰 Ci sarà un ribaltone?
-          </p>
-          <div style={{ display: 'flex', gap: '0.6rem' }}>
-            {(
-              [
-                ['regge', 'REGGE', 'La maggioranza tiene'],
-                ['ribalta', 'RIBALTA', 'La maggioranza cambia'],
-              ] as const
-            ).map(([value, label, hint]) => {
-              const selected = swingBet === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => castSwingBet(value)}
-                  aria-pressed={selected}
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.2rem',
-                    padding: '0.75rem 0.6rem',
-                    borderRadius: '0.8rem',
-                    cursor: 'pointer',
-                    fontWeight: 800,
-                    color: 'inherit',
-                    background: selected ? 'rgba(168,130,255,0.32)' : 'rgba(168,130,255,0.12)',
-                    border: `2px solid rgba(168,130,255,${selected ? 0.9 : 0.4})`,
-                  }}
-                >
-                  <span style={{ fontSize: '1.05rem' }}>{label}</span>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 500, opacity: 0.8 }}>{hint}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        {skipButton}
-      </main>
+      <PredictView
+        dilemma={game?.dilemma}
+        knowPair={game?.knowPairs?.find((p) => p.guesserId === playerId) ?? null}
+        remaining={remaining}
+        predicted={predicted}
+        swingBet={swingBet}
+        knowGuess={knowGuess}
+        onPredict={castPrediction}
+        onSwingBet={castSwingBet}
+        onKnowGuess={castKnowGuess}
+        skipButton={skipButton}
+      />
     );
   }
 
   if (joinedCode && phase === 'ACCUSE') {
     const candidates = players.filter((p) => p.id !== playerId);
     return (
-      <main style={wrap}>
-        <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.ACCUSE}</h1>
-        <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
-          🕵️ Chi ha cercato di ribaltare il gruppo?
-        </p>
-        {remaining != null && (
-          <div
-            aria-label="Tempo rimanente"
-            style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-          >
-            {remaining}s
-          </div>
-        )}
-        <div
-          role="group"
-          aria-label="La tua accusa"
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: 'min(90vw, 22rem)' }}
-        >
-          {candidates.map((p) => {
-            const selected = myAccusation === p.id;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => castAccuse(p.id)}
-                aria-pressed={selected}
-                style={{
-                  padding: '0.9rem 1.1rem',
-                  borderRadius: '0.8rem',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  fontSize: '1.05rem',
-                  color: 'inherit',
-                  textAlign: 'left',
-                  background: selected ? 'rgba(168,130,255,0.32)' : 'rgba(168,130,255,0.12)',
-                  border: `2px solid rgba(168,130,255,${selected ? 0.9 : 0.4})`,
-                }}
-              >
-                {p.nickname}
-                {p.isBot ? ' 🤖' : ''}
-              </button>
-            );
-          })}
-        </div>
-        {myAccusation ? (
-          <p style={{ opacity: 0.8, margin: 0 }}>Accusa registrata. Vediamo chi era… 👀</p>
-        ) : (
-          <p style={{ opacity: 0.7, margin: 0 }}>Tocca chi sospetti.</p>
-        )}
-      </main>
+      <AccuseView
+        candidates={candidates}
+        remaining={remaining}
+        myAccusation={myAccusation}
+        onAccuse={castAccuse}
+      />
     );
   }
 
   if (joinedCode && phase !== 'LOBBY') {
     return (
-      <main style={wrap}>
-        <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
-        {remaining != null && (
-          <div
-            aria-label="Tempo rimanente"
-            style={{ fontSize: '3rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-          >
-            {remaining}s
-          </div>
-        )}
-        {phase === 'TAPPA_INTRO' ? (
-          game?.percorso ? (() => {
-            const meta = tappaMeta(game.percorso.currentTappa);
-            return (
-              <Card
-                glow="accent"
-                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.4rem', textAlign: 'center' }}
-              >
-                <p style={{ fontSize: '3rem', margin: 0 }}>{meta.emoji}</p>
-                <p style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>{meta.nome}</p>
-                <p style={{ fontSize: '0.95rem', opacity: 0.85, margin: 0 }}>{meta.sottotitolo}</p>
-                <p style={{ fontSize: '0.85rem', opacity: 0.7, margin: 0 }}>{meta.descrizione}</p>
-              </Card>
-            );
-          })() : null
-        ) : phase === 'TAPPA_RECAP' ? (
-          game?.percorso ? (() => {
-            const p = game.percorso;
-            const meta = tappaMeta(p.currentTappa);
-            const isLast = p.dilemmaIndex >= p.totalDilemmas;
-            return (
-              <Card
-                glow="accent"
-                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'center' }}
-              >
-                <p style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0 }}>{meta.emoji} {meta.nome} — fatto!</p>
-                <p style={{ fontSize: '0.95rem', opacity: 0.85, margin: 0 }}>
-                  {p.tappaDilemmas} {p.tappaDilemmas === 1 ? 'dilemma' : 'dilemmi'} · {p.tappaSwings} {p.tappaSwings === 1 ? 'ribaltone' : 'ribaltoni'}
-                </p>
-                <p style={{ fontSize: '0.9rem', opacity: 0.7, margin: 0 }}>
-                  {isLast ? 'Avete raggiunto la vetta 🏔️' : 'Pausa: riprendete quando volete.'}
-                </p>
-                {isLeader ? (
-                  <Button variant="primary" onClick={advance}>
-                    {isLast ? 'Vai ai premi ▶' : 'Continua ▶'}
-                  </Button>
-                ) : (
-                  <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem' }}>In attesa del leader…</p>
-                )}
-              </Card>
-            );
-          })() : null
-        ) : phase === 'PHASE_INTRO' ? (
-          <>
-            {infiltratoRole && (
-              <Card
-                glow="accent"
-                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.4rem', textAlign: 'center' }}
-              >
-                <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>🕵️ Sei l'Infiltrato!</p>
-                <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.9 }}>{infiltratoRole.mission}</p>
-              </Card>
-            )}
-            {(() => {
-              const myTeam = game?.teams?.assignments.find((a) => a.playerId === playerId)?.team;
-              return myTeam ? (
-                <p style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>
-                  {myTeam === 'blu' ? '🔵 Sei nel Team Blu' : '🟠 Sei nel Team Arancio'}
-                </p>
-              ) : null;
-            })()}
-            <p style={{ fontSize: '1.15rem', fontWeight: 600, margin: 0, maxWidth: '22rem' }}>
-              🎯 {OBJECTIVE}
-            </p>
-          </>
-        ) : phase === 'DILEMMA_REVEAL' ? (
-          game?.dilemma && <DilemmaCard dilemma={game.dilemma} />
-        ) : phase === 'SPLIT_REVEAL' ? (
-          <>
-            {game?.split && <SplitBar split={game.split} />}
-            {game?.dilemma && <DilemmaCard dilemma={game.dilemma} />}
-          </>
-        ) : phase === 'PHASE_RESULTS' ? (
-          <>
-            {game?.swing && <ResultsPanel swing={game.swing} />}
-            {predictionResult && (
-              <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-                {predictionResult.actual == null
-                  ? '🔮 Pareggio: nessun pronostico vince.'
-                  : predictionResult.correct
-                    ? '✅ Pronostico azzeccato!'
-                    : '❌ Stavolta non ci hai preso.'}
-              </p>
-            )}
-            {swingBetResult && (
-              <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-                {swingBetResult.correct
-                  ? `🎰 Ribaltone ${swingBetResult.flipped ? 'sì' : 'no'}: scommessa vinta!`
-                  : '🎰 Scommessa sul ribaltone persa.'}
-              </p>
-            )}
-            {knowResult && (
-              <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-                {knowResult.correct ? '🔮 Conosci bene il tuo amico!' : '🔮 Stavolta non l’hai indovinato.'}
-              </p>
-            )}
-          </>
-        ) : phase === 'FINAL_AWARDS' ? (
-          <>
-            {game?.teams && (
-              <Card
-                glow="accent"
-                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.3rem', textAlign: 'center' }}
-              >
-                <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>
-                  🔵 {game.teams.scores.blu} — {game.teams.scores.arancio} 🟠
-                </p>
-                <p style={{ margin: 0, fontSize: '1rem', opacity: 0.95 }}>
-                  {game.teams.scores.blu === game.teams.scores.arancio
-                    ? 'Pareggio fra le squadre!'
-                    : game.teams.scores.blu > game.teams.scores.arancio
-                      ? 'Vince il Team Blu! 🔵'
-                      : 'Vince il Team Arancio! 🟠'}
-                </p>
-              </Card>
-            )}
-            {game?.infiltratoResult && (
-              <Card
-                glow={game.infiltratoResult.won ? 'a' : 'accent'}
-                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.4rem', textAlign: 'center' }}
-              >
-                <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>
-                  🕵️ L'infiltrato era <strong>{game.infiltratoResult.infiltratorNickname}</strong>
-                </p>
-                <p style={{ margin: 0, fontSize: '1rem', opacity: 0.95 }}>
-                  {game.infiltratoResult.won
-                    ? `Ha vinto! Ha ribaltato ${game.infiltratoResult.flips} round senza farsi scoprire.`
-                    : game.infiltratoResult.caught
-                      ? 'Smascherato dal gruppo! 🎉'
-                      : 'Non è riuscito nella missione.'}
-                </p>
-              </Card>
-            )}
-            {game?.awards && <AwardsPanel awards={game.awards} />}
-            {blindSpot && (
-              <Card
-                glow="accent"
-                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'left' }}
-              >
-                <h3 style={{ margin: 0, fontSize: '1.05rem' }}>🔭 Il tuo punto cieco</h3>
-                <p style={{ margin: 0, fontWeight: 700 }}>{blindSpot.title}</p>
-                <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.9 }}>{blindSpot.advice}</p>
-              </Card>
-            )}
-            <Show when="signed-out">
-              <p style={{ fontSize: '1rem', opacity: 0.85, margin: '0.4rem 0 0' }}>
-                Accedi per salvare i tuoi premi.
-              </p>
-              <SignInButton mode="modal">
-                <button
-                  type="button"
-                  style={{ marginTop: '0.5rem', fontWeight: 700, padding: '0.6rem 1.4rem', borderRadius: '0.7rem', cursor: 'pointer' }}
-                >
-                  Accedi e salva
-                </button>
-              </SignInButton>
-            </Show>
-          </>
-        ) : phase === 'FINAL_DUEL' ? (
-          <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
-            Guarda il risultato sullo schermo!
-          </p>
-        ) : (
-          <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
-            Guarda lo schermo condiviso.
-          </p>
-        )}
-        {skipButton}
-      </main>
+      <StatusView
+        phase={phase}
+        game={game}
+        remaining={remaining}
+        playerId={playerId}
+        isLeader={isLeader}
+        onAdvance={advance}
+        infiltratoRole={infiltratoRole}
+        predictionResult={predictionResult}
+        swingBetResult={swingBetResult}
+        knowResult={knowResult}
+        blindSpot={blindSpot}
+        skipButton={skipButton}
+      />
     );
   }
 
@@ -1337,12 +641,12 @@ export default function PlayerApp() {
             fontSize: '2.5rem',
             fontWeight: 800,
             letterSpacing: '0.3rem',
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            fontFamily: 'var(--font-mono)',
           }}
         >
           {joinedCode}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-1)' }}>
           <JoinQr code={joinedCode} />
           <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.7 }}>
             Fai inquadrare il QR per entrare — oppure detta il codice
@@ -1358,7 +662,7 @@ export default function PlayerApp() {
             padding: 0,
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.4rem',
+            gap: 'var(--space-2)',
             width: 'min(90vw, 22rem)',
           }}
         >
@@ -1370,9 +674,9 @@ export default function PlayerApp() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.4rem',
+                  gap: 'var(--space-2)',
                   padding: '0.5rem 0.9rem',
-                  borderRadius: '0.6rem',
+                  borderRadius: 'var(--radius-md)',
                   background: p.isBot ? 'var(--gold-soft)' : 'rgba(127,127,127,0.18)',
                   fontWeight: 600,
                   opacity: absent ? 0.5 : 1,
@@ -1412,12 +716,12 @@ export default function PlayerApp() {
             width: 'min(90vw, 22rem)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.6rem',
+            gap: 'var(--space-2)',
             textAlign: 'left',
           }}
         >
           <h3 style={{ margin: 0, fontSize: '1.05rem' }}>Come funziona</h3>
-          <ol style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+          <ol style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
             {HOW_TO_PLAY.map((step) => (
               <li key={step} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{step}</li>
             ))}
@@ -1427,239 +731,45 @@ export default function PlayerApp() {
           </p>
         </Card>
 
-        <Card
-          style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.55rem', textAlign: 'left' }}
-        >
-          <h3 style={{ margin: 0, fontSize: '1.05rem' }}>✍️ Aggiungi un dilemma</h3>
-          <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.75 }}>
-            I vostri dilemmi entrano in gioco per primi · {game?.submittedCount ?? 0} dal gruppo
-          </p>
-          {mySubmitted >= MAX_SUBMISSIONS_PER_PLAYER ? (
-            <p style={{ margin: 0, fontWeight: 700, opacity: 0.9 }}>
-              Hai aggiunto {mySubmitted} dilemmi. Grazie! 🙌
-            </p>
-          ) : (
-            <>
-              <input
-                aria-label="La domanda"
-                placeholder="La domanda (es. Mare o montagna?)"
-                value={dilemmaText}
-                onChange={(e) => setDilemmaText(e.target.value)}
-                style={dilemmaFieldStyle}
-              />
-              <input
-                aria-label="Opzione A"
-                placeholder="Opzione A"
-                value={dilemmaA}
-                onChange={(e) => setDilemmaA(e.target.value)}
-                style={dilemmaFieldStyle}
-              />
-              <input
-                aria-label="Opzione B"
-                placeholder="Opzione B"
-                value={dilemmaB}
-                onChange={(e) => setDilemmaB(e.target.value)}
-                style={dilemmaFieldStyle}
-              />
-              <Button variant="ghost" onClick={submitDilemma} disabled={!canSubmitDilemma}>
-                Aggiungi dilemma{mySubmitted > 0 ? ` (${mySubmitted}/${MAX_SUBMISSIONS_PER_PLAYER})` : ''}
-              </Button>
-              {submitDilemmaError && <Alert>{submitDilemmaError}</Alert>}
-            </>
-          )}
-        </Card>
+        <SubmitDilemmaCard
+          submittedCount={game?.submittedCount ?? 0}
+          mySubmitted={mySubmitted}
+          text={dilemmaText}
+          optionA={dilemmaA}
+          optionB={dilemmaB}
+          onTextChange={setDilemmaText}
+          onOptionAChange={setDilemmaA}
+          onOptionBChange={setDilemmaB}
+          onSubmit={submitDilemma}
+          error={submitDilemmaError}
+        />
 
         {isLeader ? (
-          <Card
-            glow="accent"
-            style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.8rem', alignItems: 'center' }}
-          >
-            <h3 style={{ fontSize: '1.05rem', margin: 0 }}>Sei il leader — componi la serata</h3>
-
-            <div style={{ width: '100%' }}>
-              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Tipo di partita</p>
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Tipo di partita">
-                <Pill selected={!percorsoOn} onClick={() => setPercorsoOn(false)} aria-label="Classica: 3, 5 o 7 dilemmi">
-                  <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                    <span style={{ fontWeight: 700 }}>Classica</span>
-                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>3 · 5 · 7 dilemmi</span>
-                  </span>
-                </Pill>
-                <Pill
-                  selected={percorsoOn}
-                  onClick={() => {
-                    setPercorsoOn(true);
-                    setGameMode('gruppo');
-                  }}
-                  aria-label="Percorso: salita a tappe, 1-3 ore"
-                >
-                  <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                    <span style={{ fontWeight: 700 }}>🧗 Percorso</span>
-                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>salita a tappe · 1–3h</span>
-                  </span>
-                </Pill>
-              </div>
-            </div>
-
-            {!percorsoOn && (
-              <>
-                <div style={{ width: '100%' }}>
-                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità</p>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Modalità">
-                    {GAME_MODES.map((m) => (
-                      <Pill
-                        key={m}
-                        selected={gameMode === m}
-                        onClick={() => setGameMode(m)}
-                        aria-label={`${MODE_LABELS[m].nome}, ${MODE_LABELS[m].descr}`}
-                      >
-                        <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                          <span style={{ fontWeight: 700 }}>{MODE_LABELS[m].nome}</span>
-                          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{MODE_LABELS[m].descr}</span>
-                        </span>
-                      </Pill>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ width: '100%' }}>
-                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Argomenti</p>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Registro">
-                    {CONTENT_REGISTERS.map((r) => (
-                      <Pill
-                        key={r}
-                        selected={register === r}
-                        onClick={() => setRegister(r)}
-                        aria-label={REGISTER_LABELS[r]}
-                      >
-                        {REGISTER_LABELS[r]}
-                      </Pill>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ width: '100%' }}>
-                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Durata</p>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Formato">
-                    {SESSION_FORMATS.map((f) => (
-                      <Pill
-                        key={f}
-                        selected={format === f}
-                        onClick={() => setFormat(f)}
-                        aria-label={`${FORMAT_LABELS[f].nome}, ${FORMAT_LABELS[f].round} round, ${FORMAT_LABELS[f].durata}`}
-                      >
-                        <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                          <span style={{ fontWeight: 700 }}>{FORMAT_LABELS[f].nome}</span>
-                          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
-                            {FORMAT_LABELS[f].round} round · {FORMAT_LABELS[f].durata}
-                          </span>
-                        </span>
-                      </Pill>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {percorsoOn && (
-              <>
-                <div style={{ width: '100%' }}>
-                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Tappa di partenza</p>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Tappa di partenza">
-                    {TAPPE.map((t) => (
-                      <Pill
-                        key={t.id}
-                        selected={startTappa === t.id}
-                        onClick={() => setStartTappa(t.id)}
-                        aria-label={`${t.nome}: ${t.sottotitolo}`}
-                      >
-                        <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                          <span style={{ fontWeight: 700 }}>{t.emoji} {t.nome}</span>
-                          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{t.sottotitolo}</span>
-                        </span>
-                      </Pill>
-                    ))}
-                  </div>
-                  <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
-                    Si sale fino a 🌅 I Bilanci.
-                  </p>
-                </div>
-
-                <div style={{ width: '100%' }}>
-                  <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Durata</p>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Durata percorso">
-                    {DURATE.map((d) => (
-                      <Pill
-                        key={d}
-                        selected={durata === d}
-                        onClick={() => setDurata(d)}
-                        aria-label={`${DURATA_LABELS[d].nome}, ${DURATA_LABELS[d].durata}`}
-                      >
-                        <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                          <span style={{ fontWeight: 700 }}>{DURATA_LABELS[d].nome}</span>
-                          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{DURATA_LABELS[d].durata}</span>
-                        </span>
-                      </Pill>
-                    ))}
-                  </div>
-                  <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
-                    ~{estimatePercorsoDilemmi(game?.tappaCounts, startTappa, durata)} dilemmi · {DURATA_LABELS[durata].durata}
-                  </p>
-                </div>
-              </>
-            )}
-
-            {(percorsoOn || gameMode === 'gruppo') && (
-              <div style={{ width: '100%' }}>
-                <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità speciale</p>
-                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <Pill
-                    selected={infiltratoOn}
-                    onClick={() => {
-                      setInfiltratoOn((v) => !v);
-                      setSquadreOn(false);
-                    }}
-                    aria-label="L'Infiltrato (un giocatore segreto)"
-                  >
-                    🕵️ L'Infiltrato {infiltratoOn ? 'ON' : 'OFF'}
-                  </Pill>
-                  <Pill
-                    selected={squadreOn}
-                    onClick={() => {
-                      setSquadreOn((v) => !v);
-                      setInfiltratoOn(false);
-                    }}
-                    aria-label="Squadre (Blu contro Arancio)"
-                  >
-                    🔵🟠 Squadre {squadreOn ? 'ON' : 'OFF'}
-                  </Pill>
-                </div>
-                <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
-                  {squadreOn
-                    ? `Blu contro Arancio: vince chi convince di più · servono ≥${MIN_SQUADRE_PLAYERS} giocatori`
-                    : `Un giocatore segreto deve ribaltare il gruppo · servono ≥${MIN_INFILTRATO_HUMANS} persone`}
-                </p>
-              </div>
-            )}
-
-            <Button variant="ghost" onClick={addBot} disabled={!canAddBot}>
-              + Aggiungi bot 🤖
-            </Button>
-
-            <Button variant="primary" size="lg" onClick={startGame} disabled={!canStart}>
-              Avvia partita
-            </Button>
-            {!canStart && (
-              <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem' }}>
-                {gameMode === 'duello'
-                  ? 'Il 1v1 richiede esattamente 2 giocatori.'
-                  : humanCount < 1
-                    ? 'Serve almeno una persona (i bot da soli non bastano).'
-                    : `Servono almeno ${MIN_PLAYERS_TO_START} partecipanti: aggiungi giocatori o bot 🤖`}
-              </p>
-            )}
-            {startError && <Alert>{startError}</Alert>}
-          </Card>
+          <LeaderSetup
+            percorsoOn={percorsoOn}
+            setPercorsoOn={setPercorsoOn}
+            gameMode={gameMode}
+            setGameMode={setGameMode}
+            register={register}
+            setRegister={setRegister}
+            format={format}
+            setFormat={setFormat}
+            startTappa={startTappa}
+            setStartTappa={setStartTappa}
+            durata={durata}
+            setDurata={setDurata}
+            infiltratoOn={infiltratoOn}
+            setInfiltratoOn={setInfiltratoOn}
+            squadreOn={squadreOn}
+            setSquadreOn={setSquadreOn}
+            tappaCounts={game?.tappaCounts}
+            humanCount={humanCount}
+            canAddBot={canAddBot}
+            onAddBot={addBot}
+            canStart={canStart}
+            onStart={startGame}
+            startError={startError}
+          />
         ) : (
           <p style={{ opacity: 0.7, margin: 0 }}>In attesa che il leader avvii la partita…</p>
         )}
@@ -1698,14 +808,14 @@ export default function PlayerApp() {
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.9rem',
+          gap: 'var(--space-4)',
           width: 'min(90vw, 22rem)',
         }}
       >
         {!creating && (
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', textAlign: 'left' }}>
-            <span style={{ opacity: 0.8 }}>Codice stanza</span>
-            <input
+          <Field label="Codice stanza">
+            <TextInput
+              mono
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               placeholder="ABCD"
@@ -1713,46 +823,22 @@ export default function PlayerApp() {
               autoCorrect="off"
               spellCheck={false}
               maxLength={4}
-              style={{
-                fontSize: '1.5rem',
-                letterSpacing: '0.3rem',
-                textAlign: 'center',
-                padding: '0.6rem',
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                textTransform: 'uppercase',
-              }}
+              style={{ fontSize: '1.5rem' }}
             />
-          </label>
+          </Field>
         )}
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', textAlign: 'left' }}>
-          <span style={{ opacity: 0.8 }}>Nickname</span>
-          <input
+        <Field label="Nickname">
+          <TextInput
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             placeholder="Il tuo nome"
             maxLength={20}
-            style={{ fontSize: '1.25rem', padding: '0.6rem' }}
           />
-        </label>
-        {error && (
-          <p role="alert" style={{ color: '#ff6b6b', margin: 0, fontWeight: 600 }}>
-            {error}
-          </p>
-        )}
-        <button
-          type="submit"
-          disabled={submitting}
-          style={{
-            fontSize: '1.2rem',
-            fontWeight: 700,
-            padding: '0.7rem',
-            borderRadius: '0.6rem',
-            cursor: submitting ? 'default' : 'pointer',
-            opacity: submitting ? 0.6 : 1,
-          }}
-        >
+        </Field>
+        {error && <Alert>{error}</Alert>}
+        <Button type="submit" size="lg" disabled={submitting}>
           {submitting ? (creating ? 'Creo…' : 'Entro…') : creating ? 'Crea stanza' : 'Entra'}
-        </button>
+        </Button>
       </form>
       <button
         type="button"

@@ -7,6 +7,7 @@ import {
   isVotingPhase,
   PHASE_DURATIONS_MS,
   MAX_PLAYERS,
+  NICKNAME_MAX,
   MIN_PLAYERS_TO_START,
   DILEMMA_COUNT_OPTIONS,
   REACTIONS,
@@ -146,6 +147,14 @@ describe('RoomStore players (lobby)', () => {
     const ok = store.join(code, 'sock-2', '  Bob  ');
     expect(ok.ok).toBe(true);
     if (ok.ok) expect(ok.player.nickname).toBe('Bob');
+  });
+
+  it('caps an over-long nickname to NICKNAME_MAX chars', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    const res = store.join(code, 'sock-1', 'x'.repeat(100));
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.player.nickname.length).toBe(NICKNAME_MAX);
   });
 
   it(`blocks joining beyond ${MAX_PLAYERS} players with ROOM_FULL`, () => {
@@ -663,6 +672,7 @@ describe('RoomStore defense (US-010)', () => {
       queue: null,
       minEndsAt: 30_000,
       canFinish: false,
+      startedAt: 0,
     });
     store.advancePhase(code); // next turn -> side B speaker
     expect(store.publicDefense(code)).toEqual({
@@ -678,6 +688,7 @@ describe('RoomStore defense (US-010)', () => {
       queue: null,
       minEndsAt: 30_000,
       canFinish: false,
+      startedAt: 0,
     });
     store.advancePhase(code); // VOTE_2 -> defense no longer public
     expect(store.publicDefense(code)).toBeNull();
@@ -726,6 +737,7 @@ describe('RoomStore defense (US-010)', () => {
       queue: null,
       minEndsAt: null,
       canFinish: true,
+      startedAt: 0,
     });
     store.advancePhase(code); // -> VOTE_2
     expect(store.get(code)?.phase).toBe('VOTE_2');
@@ -1308,7 +1320,9 @@ describe('startGame con registro', () => {
     addPlayers(store, code, 3);
     const res = store.startGame(code, 3, 'vita');
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.room.deck?.remainingCount).toBe(1);
+    // Classic precomputes the ordered plan from the chosen register's deck, so the
+    // plan contains exactly the (single) vita dilemma available.
+    if (res.ok) expect(res.room.plannedDilemmas.map((d) => d.id)).toEqual(['x1']);
   });
 });
 
@@ -2260,6 +2274,14 @@ describe('armTurn on DEFENSE entry', () => {
     expect(room.phase).toBe('DEFENSE');
     expect(room.turnMinEndsAt).toBe(now + 30_000);
     expect(room.phaseExpiresAt).toBe(now + 180_000);
+  });
+
+  it('records the turn start (turnStartedAt) and exposes it as defense.startedAt', () => {
+    const now = 7_000;
+    const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']);
+    expect(store.get(code)!.turnStartedAt).toBe(now);
+    expect(store.publicDefense(code)!.startedAt).toBe(now);
   });
 });
 

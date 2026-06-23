@@ -8,7 +8,7 @@
   font-weight: 600;
   font-size: var(--text-sm);
 }
-button.pill { cursor: pointer; font-family: var(--font-display); transition: transform var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease); }
+button.pill { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; font-family: var(--font-display); transition: transform var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease); }
 button.pill:hover { transform: translateY(-1px); filter: brightness(1.15); }
 .selected { border-color: var(--faction-a); background: var(--faction-a-soft); box-shadow: var(--glow-a); }
 @media (prefers-reduced-motion: reduce) {

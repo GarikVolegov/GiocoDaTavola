@@ -1,0 +1,49 @@
+/* One-shot confetti burst for the game's emotional peaks (a swing, a duel win,
+   the awards). Decorative + non-interactive; CSS-only so it costs nothing and the
+   prefers-reduced-motion opt-out simply hides the whole overlay. */
+.root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 40;
+}
+.piece {
+  position: absolute;
+  top: -8vh;
+  width: 0.55rem;
+  height: 0.85rem;
+  border-radius: 1px;
+  opacity: 0;
+  will-change: transform, opacity;
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  animation-fill-mode: forwards;
+}
+.a {
+  background: var(--faction-a);
+}
+.b {
+  background: var(--faction-b);
+}
+.gold {
+  background: var(--gold);
+}
+@keyframes confetti-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--dx, 0), 112vh, 0) rotate(var(--rot, 540deg));
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    display: none;
+  }
+}

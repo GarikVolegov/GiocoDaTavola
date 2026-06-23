@@ -1,0 +1,55 @@
+/* Sfondo "bivio in prospettiva". Tutto coi token; nessun raster.
+   --bivio-k  : intensità (1 host, 0.4 player), impostata inline dal componente.
+   --bivio-lean : 0–100 (% lato A), impostata da HostApp su :root; default 50. */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 46% at 50% 0%, rgba(201, 163, 90, calc(0.16 * var(--bivio-k, 1))), transparent 70%),
+    var(--bg);
+}
+
+/* Due corsie a ventaglio dal centro-basso verso gli angoli alti. L'opacità
+   "pende" col lean: a 50 sono pari (0.75); A sale fino a 1 / B scende a 0.5. */
+.laneA,
+.laneB {
+  position: absolute;
+  inset: 0;
+}
+.laneA {
+  clip-path: polygon(50% 100%, 43% 100%, 0% 0%, 40% 0%);
+  background: linear-gradient(
+    to top,
+    rgba(84, 134, 196, calc(0.55 * var(--bivio-k, 1))),
+    rgba(84, 134, 196, calc(0.04 * var(--bivio-k, 1)))
+  );
+  opacity: calc(0.5 + var(--bivio-lean, 50) / 200);
+}
+.laneB {
+  clip-path: polygon(50% 100%, 57% 100%, 100% 0%, 60% 0%);
+  background: linear-gradient(
+    to top,
+    rgba(199, 122, 69, calc(0.55 * var(--bivio-k, 1))),
+    rgba(199, 122, 69, calc(0.04 * var(--bivio-k, 1)))
+  );
+  opacity: calc(1 - var(--bivio-lean, 50) / 200);
+}
+
+/* Velo: vignettatura in basso per far "sedere" la UI sopra la scena. */
+.veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(130% 75% at 50% 125%, transparent 42%, rgba(11, 14, 26, 0.78) 100%);
+}
+
+/* Il lean transita dolcemente solo se l'utente non ha chiesto reduced-motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .laneA,
+  .laneB {
+    transition: opacity 700ms var(--ease, ease-out);
+  }
+}

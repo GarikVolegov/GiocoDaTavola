@@ -1,0 +1,346 @@
+// @vitest-environment jsdom
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, act, cleanup } from '@testing-library/react';
+import type { ReactNode } from 'react';
+
+// A fake shared socket the test can drive: the component registers handlers via
+// `.on`, the test pushes server events via `serverEmit`. Built in vi.hoisted so
+// it exists when the (hoisted) vi.mock factory runs.
+const { fakeSocket, serverEmit, resetHandlers } = vi.hoisted(() => {
+  const handlers = new Map<string, Set<(p: unknown) => void>>();
+  const socket = {
+    on(event: string, h: (p: unknown) => void) {
+      let set = handlers.get(event);
+      if (!set) {
+        set = new Set();
+        handlers.set(event, set);
+      }
+      set.add(h);
+      return socket;
+    },
+    off(event: string, h: (p: unknown) => void) {
+      handlers.get(event)?.delete(h);
+      return socket;
+    },
+    once() {
+      return socket;
+    },
+    emit() {
+      return socket;
+    },
+    connected: true,
+  };
+  return {
+    fakeSocket: socket,
+    serverEmit: (event: string, payload: unknown) => {
+      handlers.get(event)?.forEach((h) => h(payload));
+    },
+    resetHandlers: () => handlers.clear(),
+  };
+});
+
+vi.mock('../shared/socket', () => ({ getSocket: () => fakeSocket }));
+vi.mock('@clerk/react', () => ({
+  useAuth: () => ({ isSignedIn: false, getToken: async () => null }),
+  Show: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  SignInButton: () => null,
+}));
+
+import PlayerApp from './PlayerApp';
+
+describe('PlayerApp', () => {
+  beforeEach(() => resetHandlers());
+  afterEach(() => cleanup()); // unmount between tests so DOM doesn't leak across them
+
+  it('shows the join screen before joining', () => {
+    render(<PlayerApp />);
+    expect(screen.getByText('Entra nella partita')).toBeInTheDocument();
+  });
+
+  it('renders the dilemma options at VOTE_1 after joining', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText('Mare')).toBeInTheDocument();
+    expect(screen.getByText('Montagna')).toBeInTheDocument();
+  });
+
+  it('shows the confirm affordance at VOTE_2', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_2',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        confirmedCount: 0,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/hai sentito le difese/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /confermo/i })).toBeInTheDocument();
+  });
+
+  it('lists the other defenders to vote at SPEAKER_VOTE (excluding self)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'SPEAKER_VOTE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        speakerCandidates: [
+          { id: 'p1', side: 'A', nickname: 'Alice' }, // self — filtered out
+          { id: 'p2', side: 'A', nickname: 'Bea' },
+          { id: 'p3', side: 'B', nickname: 'Carlo' },
+        ],
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText('Chi è stato più convincente?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Bea/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Carlo/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Alice/ })).toBeNull();
+  });
+
+  it('lists the other players to accuse at ACCUSE (excluding self)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+          { id: 'p3', nickname: 'Carlo' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'ACCUSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/chi ha cercato di ribaltare/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Bea/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Carlo/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Alice/ })).toBeNull();
+  });
+
+  it('shows the speaker + raise-hand for a spectator at DEFENSE', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: { speakerId: 'p2', speaker: { id: 'p2', nickname: 'Bea', side: 'A' } },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/sta parlando/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /alza la mano/i })).toBeInTheDocument();
+  });
+
+  it('shows the finish affordance when it is your turn at DEFENSE', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: { speakerId: 'p1', speaker: { id: 'p1', nickname: 'Alice', side: 'A' }, startedAt: Date.now() },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/tocca a te/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ho finito/i })).toBeInTheDocument();
+  });
+
+  it('shows prediction + swing bet at PREDICT (no know-pair)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PREDICT',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        knowPairs: null,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/chi vincerà/i)).toBeInTheDocument();
+    expect(screen.getByText(/ci sarà un ribaltone/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /REGGE/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /RIBALTA/ })).toBeInTheDocument();
+  });
+
+  it('shows the "quanto mi conosci" guess at PREDICT when assigned', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PREDICT',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        knowPairs: [{ guesserId: 'p1', guesserNickname: 'Alice', targetId: 'p2', targetNickname: 'Bea' }],
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/quanto mi conosci/i)).toBeInTheDocument();
+    expect(screen.getByText('Bea')).toBeInTheDocument(); // the target to guess
+  });
+
+  it('shows who is arguing for a spectator at DUEL_ARGUE', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DUEL_ARGUE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        duelTurn: { speaker: { id: 'p2', nickname: 'Bea', side: 'A' }, turn: 1, totalTurns: 4 },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/sta argomentando/i)).toBeInTheDocument();
+    expect(screen.getByText('Bea')).toBeInTheDocument();
+  });
+
+  it('shows the dilemma at DILEMMA_REVEAL (status view)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DILEMMA_REVEAL',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/mare o montagna/i)).toBeInTheDocument();
+  });
+
+  it('points to the shared screen at FINAL_DUEL (status view)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'FINAL_DUEL',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/guarda il risultato sullo schermo/i)).toBeInTheDocument();
+  });
+
+  it('shows the lobby with the add-dilemma card after joining (no game state yet)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', { players: [{ id: 'p1', nickname: 'Alice' }] });
+    });
+    expect(screen.getByText(/sei nella stanza/i)).toBeInTheDocument();
+    expect(screen.getByText(/aggiungi un dilemma/i)).toBeInTheDocument();
+  });
+
+  it('shows the leader setup panel when you are the leader', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', { players: [{ id: 'p1', nickname: 'Alice' }] });
+      serverEmit('game:state', {
+        phase: 'LOBBY',
+        dilemmaCount: 0,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        leaderId: 'p1',
+      });
+    });
+    expect(screen.getByText(/componi la serata/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /avvia partita/i })).toBeInTheDocument();
+  });
+});

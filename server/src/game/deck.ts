@@ -15,6 +15,17 @@ export type ContentRegister = 'vita' | 'business' | 'misto';
  */
 export type Tappa = 1 | 2 | 3 | 4;
 
+/**
+ * Cross-cutting debate-complexity tier (a universal difficulty ladder, present on
+ * every dilemma — classic and percorso). Ascending: 'alto' (real, accessible
+ * stakes) < 'max' (heavy personal/relational stakes) < 'power' (existential /
+ * moral / taboo). The deck has no banal entries: the floor is 'alto'.
+ */
+export type Complessita = 'alto' | 'max' | 'power';
+
+/** Ascending rank of a complexity tier (for ordering an escalation). */
+export const COMPLESSITA_RANK: Record<Complessita, number> = { alto: 0, max: 1, power: 2 };
+
 export interface Dilemma {
   id: string;
   text: string;
@@ -24,6 +35,8 @@ export interface Dilemma {
   register: 'vita' | 'business';
   /** Percorso chapter/level (1..4); absent ⇒ classic-only dilemma. */
   tappa?: Tappa;
+  /** Debate-complexity tier (alto < max < power). Present on every curated dilemma. */
+  complessita?: Complessita;
   /** 2–3 talking points for someone defending side A (optionA). */
   spuntiA: string[];
   /** 2–3 talking points for someone defending side B (optionB). */

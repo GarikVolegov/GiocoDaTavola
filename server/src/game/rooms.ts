@@ -2,19 +2,22 @@
 // only for the lifetime of the process (no DB).
 
 import { Deck, dilemmasForRegister, loadDilemmas, type Dilemma, type ContentRegister, type Tappa } from './deck';
-import { botDefenseArgument } from './botDefense';
+import * as knowRound from './knowRound';
+import * as infiltrato from './infiltrato';
+import * as predictions from './predictions';
+import * as speakerVote from './speakerVote';
+import * as submittedDilemmas from './submittedDilemmas';
+import * as voting from './voting';
+import * as defenseTurns from './defenseTurns';
+import * as reactions from './reactions';
+import * as devilAdvocate from './devilAdvocate';
+import * as roundStats from './roundStats';
+import * as botVotes from './botVotes';
+import * as defenseSetup from './defenseSetup';
+import * as dilemmaPlan from './dilemmaPlan';
 import {
   type GamePhase,
   PHASE_DURATIONS_MS,
-  DEFENSE_MIN_MS,
-  INTERVENTO_MIN_MS,
-  DEFENSE_MAX_MS,
-  INTERVENTI_MAX_MS,
-  TURN_BOT_MS,
-  isVotingPhase,
-  isSplitRevealed,
-  isDefensePhase,
-  isInterventiPhase,
   nextPhase,
   nextDuelPhase,
   nextPercorsoPhase,
@@ -26,7 +29,7 @@ import {
   N_TAPPE,
   type Durata,
 } from './percorso';
-import { ensureStats, computeAwards as computeAwardsFor, type Award, type PlayerStats } from './awards';
+import { computeAwards as computeAwardsFor, type Award, type PlayerStats } from './awards';
 import { computeBlindSpot, type BlindSpot } from './blindspots';
 import {
   duelPlayers,
@@ -54,11 +57,8 @@ const CODE_LENGTH = 4;
 /** Max players allowed in a single room (in-person party game). */
 export const MAX_PLAYERS = 8;
 
-/** Max player-submitted dilemmas a single player may add in the lobby. */
-export const MAX_SUBMISSIONS_PER_PLAYER = 2;
-/** Length caps for a player-submitted dilemma (prompt / each option). */
-const SUBMISSION_TEXT_MAX = 200;
-const SUBMISSION_OPTION_MAX = 100;
+/** Max nickname length — truncated (not rejected) for a forgiving UX. */
+export const NICKNAME_MAX = 24;
 
 /** Minimum connected players required before the host can start the game. */
 export const MIN_PLAYERS_TO_START = 3;
@@ -94,9 +94,6 @@ function isContentRegister(v: string): v is ContentRegister {
  */
 export const REACTIONS = ['👏', '🔥', '🤯', '😂', '🤔'] as const;
 export type Reaction = (typeof REACTIONS)[number];
-function isReaction(e: string): e is Reaction {
-  return (REACTIONS as readonly string[]).includes(e);
-}
 
 /** Minimum gap between two reactions from the SAME player (anti-spam), in ms. */
 export const REACTION_MIN_INTERVAL_MS = 400;
@@ -111,13 +108,7 @@ function isGameMode(v: string): v is GameMode {
   return v === 'gruppo' || v === 'duello';
 }
 
-function isVoteChoice(c: string): c is VoteChoice {
-  return c === 'A' || c === 'B';
-}
 
-function isSwingBet(b: string): b is SwingBet {
-  return b === 'ribalta' || b === 'regge';
-}
 
 export interface Player {
   /** Stable, public per-player id (NOT the socket id and NOT the reconnect
@@ -189,6 +180,8 @@ export interface DefenseState {
   minEndsAt: number | null;
   /** Whether the current speaker may end now (minimum elapsed). */
   canFinish: boolean;
+  /** When the current turn started (epoch ms); the client renders the count-up from here. */
+  startedAt: number | null;
 }
 
 export interface Room {
@@ -314,6 +307,11 @@ export interface Room {
    * rejected. null for bot/absent speakers (no floor) and outside DEFENSE/INTERVENTI.
    */
   turnMinEndsAt: number | null;
+  /**
+   * When the current DEFENSE/INTERVENTI turn started (epoch ms); source for the
+   * client's count-up timer. null outside a speaking turn.
+   */
+  turnStartedAt: number | null;
   /**
    * Per-player tallies accumulated across the game (keyed by player id), updated
    * once per round on entry to PHASE_RESULTS and read at FINAL_AWARDS. Empty
@@ -659,231 +657,9 @@ export class RoomStore {
    * rejected) plus a generous cap; a bot or absent speaker can't tap, so they get
    * only TURN_BOT_MS and no floor. Overrides whatever expiryFor set generically.
    */
-  private armTurn(room: Room): void {
-    const interventi = room.phase === 'INTERVENTI';
-    const speakerId = this.currentSpeakerId(room);
-    const speaker = speakerId ? room.players.get(speakerId) : undefined;
-    const now = this.now();
-    if (speaker && !speaker.isBot) {
-      room.turnMinEndsAt = now + (interventi ? INTERVENTO_MIN_MS : DEFENSE_MIN_MS);
-      room.phaseExpiresAt = now + (interventi ? INTERVENTI_MAX_MS : DEFENSE_MAX_MS);
-    } else {
-      room.turnMinEndsAt = null;
-      room.phaseExpiresAt = now + TURN_BOT_MS;
-    }
-  }
 
-  /**
-   * Auto-select one defender per side from that side's secret voters (side A
-   * before B). A side with 0 votes is skipped. Which of a side's voters speaks
-   * is chosen via the injectable rng, so tests can pin the pick.
-   */
-  private selectDefenders(room: Room): Defender[] {
-    const devil = this.isDevilRound(room);
-    const defenders: Defender[] = [];
-    for (const side of ['A', 'B'] as const) {
-      const voters = [...room.votes.entries()]
-        .filter(([, choice]) => choice === side)
-        .map(([id]) => id);
-      if (voters.length === 0) continue; // side with no votes -> no defender
-      // Equità: tra i votanti di questo lato scegli SEMPRE chi ha difeso meno
-      // volte finora, così su una partita tutti ottengono un turno. Un lato può
-      // essere difeso solo da chi l'ha votato: si pesca il meno-utilizzato tra
-      // loro, con pareggio risolto dall'rng iniettabile (resta imprevedibile e
-      // riproduce il vecchio comportamento quando i conteggi sono pari).
-      const min = Math.min(...voters.map((id) => room.defenseCounts.get(id) ?? 0));
-      const candidates = voters.filter((id) => (room.defenseCounts.get(id) ?? 0) === min);
-      const chosen = candidates[Math.floor(this.rng() * candidates.length)];
-      const player = room.players.get(chosen);
-      if (!player) continue;
-      room.defenseCounts.set(chosen, (room.defenseCounts.get(chosen) ?? 0) + 1);
-      if (devil) {
-        // "Avvocato del Diavolo": argue the OPPOSITE side. Everything downstream
-        // (bot/AI argument, attribution, persuasion, public display) keys off
-        // `side` = the side being argued, so no other code needs to know.
-        const argued: VoteChoice = side === 'A' ? 'B' : 'A';
-        defenders.push({ id: player.id, nickname: player.nickname, side: argued, devil: true });
-      } else {
-        defenders.push({ id: player.id, nickname: player.nickname, side });
-      }
-    }
-    return defenders;
-  }
 
-  /**
-   * Pick the surprise "Avvocato del Diavolo" round: a random 1-based dilemma
-   * index in [2..dilemmaCount] (never the first round, so the group learns the
-   * normal flow first). null when there are fewer than 2 dilemmas.
-   */
-  private pickDevilRound(dilemmaCount: number): number | null {
-    if (dilemmaCount < 2) return null;
-    return 2 + Math.floor(this.rng() * (dilemmaCount - 1));
-  }
 
-  /** True when the round in play is the "Avvocato del Diavolo" round. */
-  private isDevilRound(room: Room): boolean {
-    return room.devilRoundIndex !== null && room.dilemmaIndex === room.devilRoundIndex;
-  }
-
-  /**
-   * Pick the surprise "Quanto mi conosci" round: a random round in [2..count]
-   * distinct from the devil round. Only for longer games (>=5 dilemmas) so short
-   * sessions aren't over-twisted; null otherwise.
-   */
-  private pickKnowRound(dilemmaCount: number, devilRound: number | null): number | null {
-    if (dilemmaCount < 5) return null;
-    const options: number[] = [];
-    for (let i = 2; i <= dilemmaCount; i++) if (i !== devilRound) options.push(i);
-    if (options.length === 0) return null;
-    return options[Math.floor(this.rng() * options.length)];
-  }
-
-  /** True when the round in play is the "Quanto mi conosci" round. */
-  private isKnowRound(room: Room): boolean {
-    return room.knowRoundIndex !== null && room.dilemmaIndex === room.knowRoundIndex;
-  }
-
-  /**
-   * Assign each connected human a target to guess (a ring: everyone guesses the
-   * next player), clearing any stale guesses. Called on entry to PREDICT in the
-   * "Quanto mi conosci" round. With fewer than 2 humans nobody gets a target.
-   */
-  private assignKnowTargets(room: Room): void {
-    room.knowTargets.clear();
-    room.knowGuesses.clear();
-    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
-    if (humans.length < 2) return;
-    for (let i = 0; i < humans.length; i++) {
-      room.knowTargets.set(humans[i].id, humans[(i + 1) % humans.length].id);
-    }
-  }
-
-  /** Cast each bot's (random) first vote on entry to VOTE_1. */
-  private castBotFirstVotes(room: Room): void {
-    for (const p of room.players.values()) {
-      if (p.isBot) room.votes.set(p.id, this.rng() < 0.5 ? 'A' : 'B');
-    }
-  }
-
-  /**
-   * Apply each bot's VOTE_2 swing based on its persona and the revealed first-vote
-   * split (votes1): roccione holds; gregge drifts to the majority; bastian to the
-   * minority; indeciso/equilibrato flip with a persona-specific probability. On a
-   * tied split, gregge/bastian hold (no clear majority to chase).
-   */
-  private applyBotSecondVotes(room: Room): void {
-    const tally = RoomStore.tally(room.votes1);
-    const majority: VoteChoice | null = tally.A > tally.B ? 'A' : tally.B > tally.A ? 'B' : null;
-    const minority: VoteChoice | null = majority ? (majority === 'A' ? 'B' : 'A') : null;
-    for (const p of room.players.values()) {
-      if (!p.isBot || !p.persona) continue;
-      const current = room.votes.get(p.id);
-      if (!current) continue;
-      const other: VoteChoice = current === 'A' ? 'B' : 'A';
-      let next: VoteChoice = current;
-      switch (p.persona) {
-        case 'roccione': break;
-        case 'indeciso': next = this.rng() < 0.7 ? other : current; break;
-        case 'equilibrato': next = this.rng() < 0.35 ? other : current; break;
-        case 'gregge': if (minority && current === minority) next = majority as VoteChoice; break;
-        case 'bastian': if (majority && current === majority) next = minority as VoteChoice; break;
-      }
-      room.votes.set(p.id, next);
-    }
-  }
-
-  /** The canned argument for the current defender if a bot, else null (Fase B). */
-  private argumentForCurrentDefender(room: Room): string | null {
-    const defender = room.defenders[room.defenseTurnIndex];
-    if (!defender) return null;
-    const player = room.players.get(defender.id);
-    if (!player?.isBot || !player.persona || !room.currentDilemma) return null;
-    return botDefenseArgument(player.persona, room.currentDilemma, defender.side, this.rng);
-  }
-
-  /**
-   * Fold the just-finished round into each player's accumulating stats: who took
-   * part, who changed their mind, who ended on the majority/minority side, and
-   * how many votes each defender's side gained (persuasion). Called once on entry
-   * to PHASE_RESULTS, while votes1 (first vote), votes (second) and defenders are
-   * still intact for this round.
-   */
-  private recordRoundStats(room: Room): void {
-    const first = RoomStore.tally(room.votes1);
-    const second = RoomStore.tally(room.votes);
-    const majoritySide: VoteChoice | null =
-      second.A > second.B ? 'A' : second.B > second.A ? 'B' : null;
-    let roundSwitched = 0;
-    for (const [id, firstChoice] of room.votes1) {
-      const secondChoice = room.votes.get(id);
-      if (!secondChoice) continue; // left before the second vote -> skip this round
-      const s = ensureStats(room, id);
-      s.rounds++;
-      if (secondChoice !== firstChoice) {
-        s.changedCount++;
-        roundSwitched++;
-      }
-      if (majoritySide) {
-        if (secondChoice === majoritySide) s.majorityCount++;
-        else s.minorityCount++;
-      }
-    }
-    const netSwing: VoteTally = { A: second.A - first.A, B: second.B - first.B };
-    for (const d of room.defenders) {
-      const s = ensureStats(room, d.id);
-      s.defendedCount++;
-      if (netSwing[d.side] <= 0) continue;
-      s.persuasion += netSwing[d.side];
-      // In the "Avvocato del Diavolo" round, also bank it as devil persuasion (a
-      // subset of persuasion) for the 🎭 Il Voltagabbana award.
-      if (d.devil) s.devilPersuasion = (s.devilPersuasion ?? 0) + netSwing[d.side];
-    }
-    // Credit each predictor who called the post-defense majority (the second-vote
-    // majority). On a tie there is no majority, so nobody scores.
-    for (const [id, predicted] of room.predictions) {
-      if (majoritySide && predicted === majoritySide) {
-        const s = ensureStats(room, id);
-        s.correctPredictions = (s.correctPredictions ?? 0) + 1;
-      }
-    }
-    // Credit each swing bettor who correctly called whether the lead would change
-    // ('ribalta' when it flipped, 'regge' when it held).
-    const flipped = this.leadFlipped(room);
-    // "L'Infiltrato" mission: a round where the leading side flipped (the underdog
-    // overturned the favourite) scores for the infiltrator.
-    if (room.infiltratorId && flipped) room.infiltratorFlips++;
-    for (const [id, bet] of room.swingBets) {
-      if ((bet === 'ribalta') === flipped) {
-        const s = ensureStats(room, id);
-        s.correctSwingBets = (s.correctSwingBets ?? 0) + 1;
-      }
-    }
-    // Credit each defender with the peer "best speaker" votes they received.
-    for (const defenderId of room.speakerVotes.values()) {
-      const s = ensureStats(room, defenderId);
-      s.oratorVotes = (s.oratorVotes ?? 0) + 1;
-    }
-    // Credit each "Quanto mi conosci" guesser who read their target's first vote
-    // right (the 🔮 Il Telepate award).
-    for (const [guesserId, guess] of room.knowGuesses) {
-      const targetId = room.knowTargets.get(guesserId);
-      const actual = targetId ? room.votes1.get(targetId) : undefined;
-      if (actual && guess === actual) {
-        const s = ensureStats(room, guesserId);
-        s.knowCorrect = (s.knowCorrect ?? 0) + 1;
-      }
-    }
-    // Credit the author of a player-written dilemma with the minds it changed
-    // this round (the ✍️ L'Autore award).
-    const dilemmaId = room.currentDilemma?.id;
-    if (dilemmaId && roundSwitched > 0) {
-      const authorId = room.dilemmaAuthors.get(dilemmaId);
-      if (authorId) {
-        const s = ensureStats(room, authorId);
-        s.authoredSwing = (s.authoredSwing ?? 0) + roundSwitched;
-      }
-    }
-  }
 
   /**
    * Advance the 1v1 duel state machine one step (the duello analogue of the group
@@ -969,6 +745,7 @@ export class RoomStore {
       interventiQueue: [],
       interventiIndex: 0,
       turnMinEndsAt: null,
+      turnStartedAt: null,
       stats: new Map(),
       botSeq: 0,
       mode: 'gruppo',
@@ -1086,21 +863,21 @@ export class RoomStore {
       room.format = 'classic';
       room.startTappa = null;
       room.durata = null;
-      room.plannedDilemmas = [];
       room.plannedTappe = [];
-      room.dilemmaCount = dilemmaCount;
       // Validated above in this same (classic) branch via isContentRegister.
       room.register = register as ContentRegister;
       room.deck = this.makeDeck(register as ContentRegister);
-      // Play the group's own dilemmas first (shuffled), then the official deck fills
-      // the rest — so a submitted dilemma is sure to appear (within dilemmaCount).
-      room.submittedQueue = this.shuffle(room.submittedDilemmas);
+      // Precompute the ordered sequence: submitted dilemmas first, then the deck,
+      // finally escalating by complexity (alto → max → power) over the game.
+      room.plannedDilemmas = dilemmaPlan.buildClassicPlan(room.deck, room.submittedDilemmas, dilemmaCount, this.rng);
+      room.dilemmaCount = room.plannedDilemmas.length || dilemmaCount;
+      room.submittedQueue = []; // baked into plannedDilemmas
     }
     // Pick the surprise "Avvocato del Diavolo" round up front (group mode only).
     const totalRounds = room.dilemmaCount ?? 0;
-    room.devilRoundIndex = mode === 'gruppo' ? this.pickDevilRound(totalRounds) : null;
+    room.devilRoundIndex = mode === 'gruppo' ? devilAdvocate.pickDevilRound(totalRounds, this.rng) : null;
     // …and (longer games only) a "Quanto mi conosci" round, distinct from the devil one.
-    room.knowRoundIndex = mode === 'gruppo' ? this.pickKnowRound(totalRounds, room.devilRoundIndex) : null;
+    room.knowRoundIndex = mode === 'gruppo' ? knowRound.pickKnowRound(totalRounds, room.devilRoundIndex, this.rng) : null;
     room.stats = new Map();
     room.defenseCounts = new Map();
     room.duelScore = new Map();
@@ -1130,7 +907,7 @@ export class RoomStore {
     if (room.phase === 'ACCUSE') {
       room.phase = 'FINAL_AWARDS';
       room.phaseExpiresAt = this.expiryFor('FINAL_AWARDS');
-      this.resolveInfiltrato(room);
+      infiltrato.resolveInfiltrato(room);
       return { ok: true, room };
     }
 
@@ -1139,7 +916,7 @@ export class RoomStore {
     if (room.phase === 'INTERVENTI') {
       if (room.interventiIndex < room.interventiQueue.length - 1) {
         room.interventiIndex++;
-        this.armTurn(room);
+        defenseSetup.armTurn(room, this.now());
         return { ok: true, room };
       }
       room.interventiQueue = [];
@@ -1148,8 +925,8 @@ export class RoomStore {
         room.phase = 'DEFENSE';
         room.defenseTurnIndex++;
         room.raisedHands = [];
-        room.defenseArgument = this.argumentForCurrentDefender(room);
-        this.armTurn(room);
+        room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
+        defenseSetup.armTurn(room, this.now());
         return { ok: true, room };
       }
       // No defenders left: fall through to the normal DEFENSE -> VOTE_2 transition.
@@ -1164,14 +941,14 @@ export class RoomStore {
       room.interventiQueue = [...room.raisedHands];
       room.interventiIndex = 0;
       room.raisedHands = [];
-      this.armTurn(room);
+      defenseSetup.armTurn(room, this.now());
       return { ok: true, room };
     }
     if (room.phase === 'DEFENSE' && room.defenseTurnIndex < room.defenders.length - 1) {
       room.defenseTurnIndex++;
       room.raisedHands = [];
-      room.defenseArgument = this.argumentForCurrentDefender(room);
-      this.armTurn(room);
+      room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
+      defenseSetup.armTurn(room, this.now());
       return { ok: true, room };
     }
 
@@ -1213,8 +990,13 @@ export class RoomStore {
         room.currentDilemma = room.plannedDilemmas[transition.dilemmaIndex - 1] ?? null;
         room.currentTappa = (room.plannedTappe[transition.dilemmaIndex - 1] ?? null) as Tappa | null;
       } else {
-        // Player-submitted dilemmas (shuffled at start) come first; then the deck.
-        room.currentDilemma = room.submittedQueue.shift() ?? room.deck?.draw() ?? null;
+        // Classic: walk the precomputed complexity-escalating plan; fall back to
+        // the deck only if (for any reason) the plan is empty.
+        room.currentDilemma =
+          room.plannedDilemmas[transition.dilemmaIndex - 1] ??
+          room.submittedQueue.shift() ??
+          room.deck?.draw() ??
+          null;
       }
       room.votes.clear();
       room.votes1.clear();
@@ -1230,22 +1012,22 @@ export class RoomStore {
       room.turnMinEndsAt = null;
     }
     // Entering PREDICT in the "Quanto mi conosci" round assigns the guessing ring.
-    if (transition.phase === 'PREDICT' && this.isKnowRound(room)) {
-      this.assignKnowTargets(room);
+    if (transition.phase === 'PREDICT' && knowRound.isKnowRound(room)) {
+      knowRound.assignKnowTargets(room);
     }
     // Entering DEFENSE picks the defenders from this round's votes and starts at
     // the first turn (the per-turn timer was set by expiryFor above).
     if (transition.phase === 'DEFENSE') {
-      room.defenders = this.selectDefenders(room);
+      room.defenders = defenseSetup.selectDefenders(room, this.rng);
       room.defenseTurnIndex = 0;
-      room.defenseArgument = this.argumentForCurrentDefender(room);
+      room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
       room.raisedHands = [];
-      this.armTurn(room);
+      defenseSetup.armTurn(room, this.now());
     }
     // Entering VOTE_1: bots cast their (random) first vote so the human(s) only
     // wait on themselves; the per-choice split stays secret until SPLIT_REVEAL.
     if (transition.phase === 'VOTE_1') {
-      this.castBotFirstVotes(room);
+      botVotes.castBotFirstVotes(room, this.rng);
     }
     // Entering VOTE_2: snapshot the first vote so the live re-vote can be
     // compared against it (swing). `votes` is left intact, so each player's
@@ -1253,7 +1035,7 @@ export class RoomStore {
     // their persona-driven swing on top of that default.
     if (transition.phase === 'VOTE_2') {
       room.votes1 = new Map(room.votes);
-      this.applyBotSecondVotes(room);
+      botVotes.applyBotSecondVotes(room, this.rng);
       // Fresh round of confirmations; bots have already "decided", so confirm them
       // so they never block the (timer-less) auto-advance.
       room.confirmedVote2 = new Set();
@@ -1262,12 +1044,12 @@ export class RoomStore {
     // Entering PHASE_RESULTS: fold this round's outcome into the per-player stats
     // while the votes/votes1/defenders are still intact (cleared next reveal).
     if (transition.phase === 'PHASE_RESULTS') {
-      this.recordRoundStats(room);
+      roundStats.recordRoundStats(room);
       // Percorso: accumulate the tappa's aggregate recap (count + leading-side
       // flips). Aggregate only — no per-player data leaks into the recap.
       if (room.format === 'percorso') {
         room.tappaDilemmas++;
-        if (this.leadFlipped(room)) room.tappaSwings++;
+        if (predictions.leadFlipped(room)) room.tappaSwings++;
       }
     }
     return { ok: true, room };
@@ -1281,24 +1063,10 @@ export class RoomStore {
   vote(code: string, playerId: string, choice: string): VoteResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (!isVotingPhase(room.phase)) return { ok: false, error: 'NOT_VOTING_PHASE' };
-    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    if (!isVoteChoice(choice)) return { ok: false, error: 'INVALID_CHOICE' };
-
-    room.votes.set(playerId, choice);
-    // Casting/changing during VOTE_2 is itself a confirmation.
-    if (room.phase === 'VOTE_2') room.confirmedVote2.add(playerId);
-    return { ok: true, room };
+    return voting.vote(room, playerId, choice);
   }
 
   /** The id of the player currently speaking (defender in DEFENSE, arguer in DUEL_ARGUE), or null. */
-  private currentSpeakerId(room: Room): string | null {
-    if (room.phase === 'DEFENSE') return room.defenders[room.defenseTurnIndex]?.id ?? null;
-    if (room.phase === 'INTERVENTI') return room.interventiQueue[room.interventiIndex] ?? null;
-    if (room.phase === 'DUEL_ARGUE') return duelPlayers(room)[room.duelTurnIndex]?.id ?? null;
-    return null;
-  }
-
   /**
    * Record a live audience reaction from a phone during DEFENSE / DUEL_ARGUE. The
    * reaction is attributed to whoever is currently speaking (the defender/arguer),
@@ -1310,23 +1078,7 @@ export class RoomStore {
   react(code: string, playerId: string, emoji: string): ReactResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'DEFENSE' && room.phase !== 'INTERVENTI' && room.phase !== 'DUEL_ARGUE') {
-      return { ok: false, error: 'NOT_REACTING_PHASE' };
-    }
-    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    if (!isReaction(emoji)) return { ok: false, error: 'INVALID_EMOJI' };
-    const now = this.now();
-    const last = room.lastReactionAt.get(playerId);
-    if (last != null && now - last < REACTION_MIN_INTERVAL_MS) {
-      return { ok: false, error: 'RATE_LIMITED' };
-    }
-    room.lastReactionAt.set(playerId, now);
-    const speakerId = this.currentSpeakerId(room);
-    if (speakerId) {
-      const s = ensureStats(room, speakerId);
-      s.reactionsReceived = (s.reactionsReceived ?? 0) + 1;
-    }
-    return { ok: true, emoji };
+    return reactions.react(room, playerId, emoji, this.now());
   }
 
   /**
@@ -1338,16 +1090,7 @@ export class RoomStore {
   raiseHand(code: string, playerId: string): RaiseHandResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'DEFENSE') return { ok: false, error: 'NOT_RAISE_PHASE' };
-    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    if (this.currentSpeakerId(room) === playerId) return { ok: false, error: 'IS_SPEAKER' };
-    const i = room.raisedHands.indexOf(playerId);
-    if (i >= 0) {
-      room.raisedHands.splice(i, 1);
-      return { ok: true, room, raised: false };
-    }
-    room.raisedHands.push(playerId);
-    return { ok: true, room, raised: true };
+    return defenseTurns.raiseHand(room, playerId);
   }
 
   /**
@@ -1358,14 +1101,7 @@ export class RoomStore {
   finishTurn(code: string, playerId: string): FinishTurnResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'DEFENSE' && room.phase !== 'INTERVENTI') {
-      return { ok: false, error: 'NOT_FINISHING_PHASE' };
-    }
-    if (this.currentSpeakerId(room) !== playerId) return { ok: false, error: 'NOT_SPEAKER' };
-    if (room.turnMinEndsAt != null && this.now() < room.turnMinEndsAt) {
-      return { ok: false, error: 'TOO_EARLY' };
-    }
-    return { ok: true, room };
+    return defenseTurns.finishTurn(room, playerId, this.now());
   }
 
   /**
@@ -1377,77 +1113,47 @@ export class RoomStore {
   predict(code: string, playerId: string, choice: string): PredictResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'PREDICT') return { ok: false, error: 'NOT_PREDICT_PHASE' };
-    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    if (!isVoteChoice(choice)) return { ok: false, error: 'INVALID_CHOICE' };
-    room.predictions.set(playerId, choice);
-    return { ok: true, room };
+    return predictions.predict(room, playerId, choice);
   }
 
   /** How many players have made a prediction this round (aggregate only). */
   predictedCount(code: string): number {
-    return this.rooms.get(code)?.predictions.size ?? 0;
+    const room = this.rooms.get(code);
+    return room ? predictions.predictedCount(room) : 0;
   }
 
-  /**
-   * True once every CONNECTED HUMAN has predicted (and at least one is present).
-   * Bots never predict, so they're ignored; used only to short-circuit the
-   * PREDICT timer (the phase timer still bounds it regardless).
-   */
+  /** True once every connected human has predicted (ends PREDICT early). */
   allPredicted(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room) return false;
-    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
-    if (humans.length === 0) return false;
-    return humans.every((p) => room.predictions.has(p.id));
+    return room ? predictions.allPredicted(room) : false;
   }
 
   /**
    * Each predictor's own outcome for the just-finished round, for the private
-   * `player:predictionResult` emit at PHASE_RESULTS. `actual` is the second-vote
-   * majority (null on a tie); a prediction is correct only when it matches it.
+   * `player:predictionResult` emit at PHASE_RESULTS.
    */
   predictionResults(code: string): PredictionResult[] {
     const room = this.rooms.get(code);
-    if (!room) return [];
-    const tally = RoomStore.tally(room.votes);
-    const actual: VoteChoice | null = tally.A > tally.B ? 'A' : tally.B > tally.A ? 'B' : null;
-    return [...room.predictions].map(([playerId, predicted]) => ({
-      playerId,
-      predicted,
-      actual,
-      correct: actual != null && predicted === actual,
-    }));
+    return room ? predictions.predictionResults(room) : [];
   }
 
-  /**
-   * Record (or change) a player's secret swing bet during PREDICT: whether the
-   * leading side will change after the defenses. Overwritable until the phase
-   * ends; never leaves the server as an identity (only the aggregate count, plus
-   * each bettor's own result at PHASE_RESULTS).
-   */
+  /** Record (or change) a player's secret swing bet during PREDICT. */
   swingBet(code: string, playerId: string, bet: string): SwingBetResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'PREDICT') return { ok: false, error: 'NOT_PREDICT_PHASE' };
-    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    if (!isSwingBet(bet)) return { ok: false, error: 'INVALID_BET' };
-    room.swingBets.set(playerId, bet);
-    return { ok: true, room };
+    return predictions.swingBet(room, playerId, bet);
   }
 
   /** How many players have placed a swing bet this round (aggregate only). */
   swingBetCount(code: string): number {
-    return this.rooms.get(code)?.swingBets.size ?? 0;
+    const room = this.rooms.get(code);
+    return room ? predictions.swingBetCount(room) : 0;
   }
 
-  /** True once every CONNECTED HUMAN has placed a swing bet (mirror of allPredicted). */
+  /** True once every connected human has placed a swing bet (mirror of allPredicted). */
   allSwingBet(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room) return false;
-    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
-    if (humans.length === 0) return false;
-    return humans.every((p) => room.swingBets.has(p.id));
+    return room ? predictions.allSwingBet(room) : false;
   }
 
   /**
@@ -1456,35 +1162,10 @@ export class RoomStore {
    */
   swingBetResults(code: string): SwingBetOutcome[] {
     const room = this.rooms.get(code);
-    if (!room) return [];
-    const flipped = this.leadFlipped(room);
-    return [...room.swingBets].map(([playerId, bet]) => ({
-      playerId,
-      bet,
-      flipped,
-      correct: (bet === 'ribalta') === flipped,
-    }));
-  }
-
-  /**
-   * Whether the leading side changed between the first vote (votes1) and the
-   * second (votes) — a tie counts as its own "side", so A→tie or tie→A both flip.
-   */
-  private leadFlipped(room: Room): boolean {
-    const lead = (t: VoteTally): VoteChoice | null =>
-      t.A > t.B ? 'A' : t.B > t.A ? 'B' : null;
-    return lead(RoomStore.tally(room.votes1)) !== lead(RoomStore.tally(room.votes));
+    return room ? predictions.swingBetResults(room) : [];
   }
 
   /** A fresh shuffled copy of `arr` using the injectable rng (Fisher–Yates). */
-  private shuffle<T>(arr: T[]): T[] {
-    const out = [...arr];
-    for (let i = out.length - 1; i > 0; i--) {
-      const j = Math.floor(this.rng() * (i + 1));
-      [out[i], out[j]] = [out[j], out[i]];
-    }
-    return out;
-  }
 
   /**
    * Record a player-written dilemma during LOBBY (max 2/player). Trims + length-
@@ -1500,36 +1181,13 @@ export class RoomStore {
   ): SubmitDilemmaResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'LOBBY') return { ok: false, error: 'NOT_LOBBY' };
-    const player = room.players.get(playerId);
-    if (!player || player.isBot) return { ok: false, error: 'NOT_IN_ROOM' };
-    const t = text.trim();
-    const a = optionA.trim();
-    const b = optionB.trim();
-    if (!t || !a || !b) return { ok: false, error: 'EMPTY' };
-    if (t.length > SUBMISSION_TEXT_MAX || a.length > SUBMISSION_OPTION_MAX || b.length > SUBMISSION_OPTION_MAX) {
-      return { ok: false, error: 'TOO_LONG' };
-    }
-    if (a.toLowerCase() === b.toLowerCase()) return { ok: false, error: 'SAME_OPTIONS' };
-    const mine = [...room.dilemmaAuthors.values()].filter((v) => v === playerId).length;
-    if (mine >= MAX_SUBMISSIONS_PER_PLAYER) return { ok: false, error: 'LIMIT_REACHED' };
-    const id = `usr-${playerId}-${mine + 1}`;
-    room.submittedDilemmas.push({
-      id,
-      text: t,
-      optionA: a,
-      optionB: b,
-      register: 'vita',
-      spuntiA: [],
-      spuntiB: [],
-    });
-    room.dilemmaAuthors.set(id, playerId);
-    return { ok: true, room, count: mine + 1 };
+    return submittedDilemmas.submitDilemma(room, playerId, text, optionA, optionB);
   }
 
   /** How many player-written dilemmas the room has collected (aggregate, lobby UI). */
   submittedCount(code: string): number {
-    return this.rooms.get(code)?.submittedDilemmas.length ?? 0;
+    const room = this.rooms.get(code);
+    return room ? submittedDilemmas.submittedCount(room) : 0;
   }
 
   /**
@@ -1541,25 +1199,19 @@ export class RoomStore {
   knowGuess(code: string, guesserId: string, choice: string): KnowGuessResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'PREDICT' || !this.isKnowRound(room)) return { ok: false, error: 'NOT_KNOW_PHASE' };
-    if (!room.knowTargets.has(guesserId)) return { ok: false, error: 'NO_TARGET' };
-    if (!isVoteChoice(choice)) return { ok: false, error: 'INVALID_CHOICE' };
-    room.knowGuesses.set(guesserId, choice);
-    return { ok: true, room };
+    return knowRound.knowGuess(room, guesserId, choice);
   }
 
   /** How many guessers have guessed this round (aggregate only). */
   knowGuessedCount(code: string): number {
-    return this.rooms.get(code)?.knowGuesses.size ?? 0;
+    const room = this.rooms.get(code);
+    return room ? knowRound.knowGuessedCount(room) : 0;
   }
 
   /** True once every guesser in the ring has guessed (used to end PREDICT early). */
   allKnowGuessed(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room) return false;
-    const guessers = [...room.knowTargets.keys()];
-    if (guessers.length === 0) return false;
-    return guessers.every((id) => room.knowGuesses.has(id));
+    return room ? knowRound.allKnowGuessed(room) : false;
   }
 
   /**
@@ -1569,17 +1221,7 @@ export class RoomStore {
    */
   publicKnowPairs(code: string): KnowPair[] | null {
     const room = this.rooms.get(code);
-    if (!room || !this.isKnowRound(room)) return null;
-    const phaseOk =
-      room.phase === 'PREDICT' || room.phase === 'DEFENSE' ||
-      room.phase === 'VOTE_2' || room.phase === 'SPEAKER_VOTE' || room.phase === 'PHASE_RESULTS';
-    if (!phaseOk) return null;
-    return [...room.knowTargets].map(([guesserId, targetId]) => ({
-      guesserId,
-      guesserNickname: room.players.get(guesserId)?.nickname ?? '',
-      targetId,
-      targetNickname: room.players.get(targetId)?.nickname ?? '',
-    }));
+    return room ? knowRound.publicKnowPairs(room) : null;
   }
 
   /**
@@ -1588,12 +1230,7 @@ export class RoomStore {
    */
   knowGuessResults(code: string): KnowGuessOutcome[] {
     const room = this.rooms.get(code);
-    if (!room) return [];
-    return [...room.knowGuesses].map(([guesserId, guess]) => {
-      const targetId = room.knowTargets.get(guesserId) ?? '';
-      const actual = room.votes1.get(targetId) ?? null;
-      return { guesserId, targetId, guess, actual, correct: actual != null && guess === actual };
-    });
+    return room ? knowRound.knowGuessResults(room) : [];
   }
 
   /**
@@ -1603,32 +1240,25 @@ export class RoomStore {
   accuse(code: string, accuserId: string, accusedId: string): AccuseResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'ACCUSE') return { ok: false, error: 'NOT_ACCUSE_PHASE' };
-    if (!room.players.has(accuserId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    if (!room.players.has(accusedId) || accusedId === accuserId) return { ok: false, error: 'INVALID_TARGET' };
-    room.accusations.set(accuserId, accusedId);
-    return { ok: true, room };
+    return infiltrato.accuse(room, accuserId, accusedId);
   }
 
   /** How many players have accused this game (aggregate only). */
   accusedCount(code: string): number {
-    return this.rooms.get(code)?.accusations.size ?? 0;
+    const room = this.rooms.get(code);
+    return room ? infiltrato.accusedCount(room) : 0;
   }
 
   /** True once every connected human has accused (ends the ACCUSE phase early). */
   allAccused(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room) return false;
-    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
-    if (humans.length === 0) return false;
-    return humans.every((p) => room.accusations.has(p.id));
+    return room ? infiltrato.allAccused(room) : false;
   }
 
   /** The resolved infiltrator reveal, only at FINAL_AWARDS; null otherwise / normal games. */
   publicInfiltratoResult(code: string): InfiltratoResult | null {
     const room = this.rooms.get(code);
-    if (!room || room.phase !== 'FINAL_AWARDS') return null;
-    return room.infiltratoResult;
+    return room ? infiltrato.publicInfiltratoResult(room) : null;
   }
 
   /**
@@ -1647,36 +1277,6 @@ export class RoomStore {
   }
 
   /**
-   * Resolve the infiltrator outcome from the accusation tally: caught only on a
-   * UNIQUE top accusation that names them; they win if they overturned at least
-   * one round AND evaded that. Stored on the room for the FINAL_AWARDS reveal.
-   */
-  private resolveInfiltrato(room: Room): void {
-    const id = room.infiltratorId;
-    if (!id) {
-      room.infiltratoResult = null;
-      return;
-    }
-    const counts = new Map<string, number>();
-    for (const accused of room.accusations.values()) {
-      counts.set(accused, (counts.get(accused) ?? 0) + 1);
-    }
-    let top = 0;
-    for (const c of counts.values()) if (c > top) top = c;
-    const topAccused = [...counts.entries()].filter(([, c]) => c === top && top > 0).map(([pid]) => pid);
-    const caught = topAccused.length === 1 && topAccused[0] === id;
-    const flips = room.infiltratorFlips;
-    room.infiltratoResult = {
-      infiltratorId: id,
-      infiltratorNickname: room.players.get(id)?.nickname ?? '',
-      flips,
-      caught,
-      won: flips > 0 && !caught,
-      votesAgainst: counts.get(id) ?? 0,
-    };
-  }
-
-  /**
    * Record (or change) a player's secret vote for the most convincing defender
    * during SPEAKER_VOTE. The target must be one of this round's defenders and not
    * the voter themselves (no self-vote). Overwritable until the phase ends.
@@ -1684,108 +1284,60 @@ export class RoomStore {
   voteSpeaker(code: string, voterId: string, defenderId: string): SpeakerVoteResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'SPEAKER_VOTE') return { ok: false, error: 'NOT_SPEAKER_VOTE_PHASE' };
-    if (!room.players.has(voterId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    const isDefender = room.defenders.some((d) => d.id === defenderId);
-    if (!isDefender || defenderId === voterId) return { ok: false, error: 'INVALID_TARGET' };
-    room.speakerVotes.set(voterId, defenderId);
-    return { ok: true, room };
+    return speakerVote.voteSpeaker(room, voterId, defenderId);
   }
 
   /** The defenders to choose between during SPEAKER_VOTE; null otherwise. */
   speakerCandidates(code: string): Defender[] | null {
     const room = this.rooms.get(code);
-    if (!room || room.phase !== 'SPEAKER_VOTE') return null;
-    return room.defenders;
+    return room ? speakerVote.speakerCandidates(room) : null;
   }
 
   /** How many players have cast a best-speaker vote this round (aggregate only). */
   speakerVotedCount(code: string): number {
-    return this.rooms.get(code)?.speakerVotes.size ?? 0;
+    const room = this.rooms.get(code);
+    return room ? speakerVote.speakerVotedCount(room) : 0;
   }
 
-  /**
-   * True once every CONNECTED HUMAN has cast a best-speaker vote (and at least one
-   * is present). Bots never peer-vote, so they're ignored; used only to
-   * short-circuit the SPEAKER_VOTE timer.
-   */
+  /** True once every connected human has cast a best-speaker vote (ends the phase early). */
   allSpeakerVoted(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room) return false;
-    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
-    if (humans.length === 0) return false;
-    return humans.every((p) => room.speakerVotes.has(p.id));
+    return room ? speakerVote.allSpeakerVoted(room) : false;
   }
 
   /** How many connected players have cast a vote this round (aggregate only). */
   voteCount(code: string): number {
-    return this.rooms.get(code)?.votes.size ?? 0;
-  }
-
-  /** Aggregate A vs B counts of a votes map (no identities). */
-  private static tally(votes: Map<string, VoteChoice>): VoteTally {
-    const tally: VoteTally = { A: 0, B: 0 };
-    for (const choice of votes.values()) tally[choice]++;
-    return tally;
+    const room = this.rooms.get(code);
+    return room ? voting.voteCount(room) : 0;
   }
 
   /** Aggregate A vs B tally for the current round (no identities). */
   voteTally(code: string): VoteTally {
     const room = this.rooms.get(code);
-    return room ? RoomStore.tally(room.votes) : { A: 0, B: 0 };
+    return room ? voting.voteTally(room) : { A: 0, B: 0 };
   }
 
   /**
-   * Compare the second vote (VOTE_2, the live `votes`) against the first
-   * (the `votes1` snapshot taken when VOTE_2 began): the two aggregate tallies,
-   * how many voters changed side, and the net swing toward each side. Counts
-   * only — individual votes never leave the server. An unknown room yields zeros.
+   * Compare the second vote against the first: the two aggregate tallies, how many
+   * voters changed side, and the net swing toward each side. Zeros for unknown rooms.
    */
   computeSwing(code: string): SwingResult {
     const room = this.rooms.get(code);
-    const first = room ? RoomStore.tally(room.votes1) : { A: 0, B: 0 };
-    const second = room ? RoomStore.tally(room.votes) : { A: 0, B: 0 };
-    let switched = 0;
-    if (room) {
-      for (const [id, firstChoice] of room.votes1) {
-        const secondChoice = room.votes.get(id);
-        if (secondChoice && secondChoice !== firstChoice) switched++;
-      }
-    }
-    return {
-      first,
-      second,
-      switched,
-      netSwing: { A: second.A - first.A, B: second.B - first.B },
-    };
+    return room
+      ? voting.computeSwing(room)
+      : { first: { A: 0, B: 0 }, second: { A: 0, B: 0 }, switched: 0, netSwing: { A: 0, B: 0 } };
   }
 
-  /**
-   * Public results view, only during PHASE_RESULTS (null otherwise): the swing
-   * plus, for each defender whose side gained votes, how many votes moved their
-   * way. Aggregate only; the only identities are the (already public) defenders.
-   */
+  /** Public PHASE_RESULTS view: the swing + per-defender attribution; null otherwise. */
   publicSwing(code: string): PublicSwing | null {
     const room = this.rooms.get(code);
-    if (!room || room.phase !== 'PHASE_RESULTS') return null;
-    const swing = this.computeSwing(code);
-    const attribution: DefenseImpact[] = [];
-    for (const d of room.defenders) {
-      const gained = swing.netSwing[d.side];
-      if (gained > 0) attribution.push({ defender: d, votes: gained });
-    }
-    return { ...swing, attribution };
+    return room ? voting.publicSwing(room) : null;
   }
 
-  /**
-   * The aggregate A/B split when the current phase reveals it (SPLIT_REVEAL),
-   * otherwise null — the gated, public-facing version of voteTally that the
-   * server broadcasts. Counts only; never identities.
-   */
+  /** The aggregate A/B split when the phase reveals it (SPLIT_REVEAL); otherwise null. */
   publicSplit(code: string): { A: number; B: number } | null {
     const room = this.rooms.get(code);
-    if (!room || !isSplitRevealed(room.phase)) return null;
-    return this.voteTally(code);
+    return room ? voting.publicSplit(room) : null;
   }
 
   /**
@@ -1827,13 +1379,7 @@ export class RoomStore {
    */
   publicDevilRound(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room || !this.isDevilRound(room)) return false;
-    return (
-      room.phase === 'DEFENSE' ||
-      room.phase === 'VOTE_2' ||
-      room.phase === 'SPEAKER_VOTE' ||
-      room.phase === 'PHASE_RESULTS'
-    );
+    return room ? devilAdvocate.publicDevilRound(room) : false;
   }
 
   /**
@@ -1845,57 +1391,7 @@ export class RoomStore {
    */
   publicDefense(code: string): DefenseState | null {
     const room = this.rooms.get(code);
-    if (!room) return null;
-    if (!isDefensePhase(room.phase) && !isInterventiPhase(room.phase)) return null;
-    const canFinish = room.turnMinEndsAt == null || this.now() >= room.turnMinEndsAt;
-
-    if (room.phase === 'INTERVENTI') {
-      const speakerId = room.interventiQueue[room.interventiIndex] ?? null;
-      const sp = speakerId ? room.players.get(speakerId) : undefined;
-      const queue = room.interventiQueue
-        .map((id) => {
-          const p = room.players.get(id);
-          return p ? { id: p.id, nickname: p.nickname } : null;
-        })
-        .filter((x): x is { id: string; nickname: string } => x != null);
-      return {
-        kind: 'intervento',
-        speaker: null,
-        intervenor: sp ? { id: sp.id, nickname: sp.nickname } : null,
-        speakerId,
-        turn: room.interventiIndex + 1,
-        totalTurns: room.interventiQueue.length,
-        argument: null,
-        spunti: null,
-        raisedCount: 0,
-        queue,
-        minEndsAt: room.turnMinEndsAt,
-        canFinish,
-      };
-    }
-
-    const totalTurns = room.defenders.length;
-    const speaker = room.defenders[room.defenseTurnIndex] ?? null;
-    const spunti =
-      speaker && room.currentDilemma
-        ? speaker.side === 'A'
-          ? room.currentDilemma.spuntiA
-          : room.currentDilemma.spuntiB
-        : null;
-    return {
-      kind: 'defense',
-      speaker,
-      intervenor: null,
-      speakerId: speaker?.id ?? null,
-      turn: totalTurns === 0 ? 0 : room.defenseTurnIndex + 1,
-      totalTurns,
-      argument: room.defenseArgument,
-      spunti,
-      raisedCount: room.raisedHands.length,
-      queue: null,
-      minEndsAt: room.turnMinEndsAt,
-      canFinish,
-    };
+    return room ? defenseTurns.publicDefense(room, this.now()) : null;
   }
 
   /**
@@ -2016,38 +1512,26 @@ export class RoomStore {
    */
   allVoted(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room) return false;
-    const present = [...room.players.values()].filter((p) => p.connected !== false);
-    if (present.length === 0) return false;
-    return present.every((p) => room.votes.has(p.id));
+    return room ? voting.allVoted(room) : false;
   }
 
   /** Mark a player's (pre-filled) second vote as explicitly confirmed. VOTE_2 only. */
   confirmVote(code: string, playerId: string): { ok: true; room: Room } | { ok: false; error: 'ROOM_NOT_FOUND' | 'NOT_VOTE2_PHASE' | 'NOT_IN_ROOM' } {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'VOTE_2') return { ok: false, error: 'NOT_VOTE2_PHASE' };
-    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    room.confirmedVote2.add(playerId);
-    return { ok: true, room };
+    return voting.confirmVote(room, playerId);
   }
 
   /** How many players have confirmed their second vote this round (aggregate only). */
   confirmedCount(code: string): number {
-    return this.rooms.get(code)?.confirmedVote2.size ?? 0;
+    const room = this.rooms.get(code);
+    return room ? voting.confirmedCount(room) : 0;
   }
 
-  /**
-   * True once every CONNECTED player has confirmed their second vote (and at least
-   * one is present). Disconnected players (grace period) are ignored so a locked
-   * phone doesn't block; bots are pre-confirmed on entry to VOTE_2.
-   */
+  /** True once every connected player has confirmed their second vote (ends VOTE_2 early). */
   allConfirmed(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room) return false;
-    const present = [...room.players.values()].filter((p) => p.connected !== false);
-    if (present.length === 0) return false;
-    return present.every((p) => room.confirmedVote2.has(p.id));
+    return room ? voting.allConfirmed(room) : false;
   }
 
   /**
@@ -2081,7 +1565,7 @@ export class RoomStore {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
 
-    const name = nickname.trim();
+    const name = nickname.trim().slice(0, NICKNAME_MAX);
     if (!name) return { ok: false, error: 'NICKNAME_REQUIRED' };
 
     const existing = room.players.get(playerId);
