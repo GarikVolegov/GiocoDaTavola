@@ -16,6 +16,7 @@ verso **NorthStar** (SaaS di orientamento e crescita professionale, Pro 24€/me
 | [`calendario-editoriale.md`](calendario-editoriale.md) | Ritmo settimanale sostenibile + calendario 4 settimane + checklist |
 | [`creator-outreach.md`](creator-outreach.md) | Playbook per dare il gioco ai creator + 3 template di contatto |
 | [`tracking-e-link.md`](tracking-e-link.md) | Schema UTM, codice affiliato NorthStar, KPI settimanali |
+| [`setup-canali.md`](setup-canali.md) | Testi pronti da incollare: bio YT+IG, metadati primo video, link settimana 1 |
 
 Strategia e piano completi:
 - Spec: [`../superpowers/specs/2026-06-23-marketing-funnel-northstar-design.md`](../superpowers/specs/2026-06-23-marketing-funnel-northstar-design.md)
