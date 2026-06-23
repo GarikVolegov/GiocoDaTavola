@@ -6,7 +6,8 @@ import { formatMSS, isWaitingPhase } from '../shared/time';
 import { unlockAudio } from './audio/engine';
 import { startMusic, stopMusic, setMusicIntensity } from './audio/music';
 import { play as playSfx } from './audio/sfx';
-import { sfxForTransition } from './audio/cues';
+import { sfxForTransition, shouldWarnAt, handRaised } from './audio/cues';
+import { MuteButton } from './MuteButton';
 import {
   SocketEvents,
   PHASE_LABELS,
@@ -170,6 +171,24 @@ export default function HostApp() {
     if (cue) playSfx(cue);
   }, [phase, audioReady, game]);
 
+  // Soft ticks in the final seconds of a countdown — but not while someone is speaking,
+  // where the timer is a safety cap, not a deadline to race.
+  const prevRemainingRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prev = prevRemainingRef.current;
+    prevRemainingRef.current = remaining;
+    if (audioReady && !speaking && shouldWarnAt(prev, remaining)) playSfx('timerWarn');
+  }, [remaining, audioReady, speaking]);
+
+  // A gentle ding whenever a new hand joins the intervention queue.
+  const prevQueueLenRef = useRef<number | null>(null);
+  useEffect(() => {
+    const len = phase === 'INTERVENTI' ? game?.defense?.queue?.length ?? null : null;
+    const prev = prevQueueLenRef.current;
+    prevQueueLenRef.current = len;
+    if (audioReady && handRaised(prev, len)) playSfx('handRaise');
+  }, [phase, audioReady, game]);
+
   // Sfondo "bivio": al SPLIT_REVEAL la scena pende verso il lato in testa
   // (voto AGGREGATO — i voti restano segreti, nessun aggancio durante VOTE_*).
   // In ogni altra fase resta neutra (50). La var vive su :root così la legge il
@@ -231,6 +250,7 @@ export default function HostApp() {
     return (
       <main style={screen}>
         <ReactionSwarm />
+        <MuteButton />
         {/* Latecomers can still join mid-game: keep the code + QR in the corner. */}
         {code && <RoomCodeChip code={code} />}
         {/* Percorso: the climb map (current tappa highlighted) sits above the phase. */}
@@ -635,6 +655,7 @@ export default function HostApp() {
   // LOBBY: show the code + roster + a passive "waiting for the leader" line.
   return (
     <main style={screen}>
+      <MuteButton />
       <Logo size={64} payoff />
       <p style={{ opacity: 0.7, margin: 0 }}>
         Entra da <strong>{window.location.host}</strong> con il codice

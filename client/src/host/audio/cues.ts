@@ -36,3 +36,19 @@ export function sfxForTransition(
       return null;
   }
 }
+
+/** Seconds left at/below which the countdown starts ticking. */
+const WARN_FROM = 5;
+
+/** True when the countdown just dropped to a new second within the final stretch (1..WARN_FROM). */
+export function shouldWarnAt(prev: number | null, curr: number | null): boolean {
+  if (prev == null || curr == null) return false;
+  if (curr < 1 || curr > WARN_FROM) return false;
+  return curr < prev; // only while counting down, not on a reset
+}
+
+/** True when the intervention queue grew, i.e. a new hand went up. */
+export function handRaised(prevLen: number | null, currLen: number | null): boolean {
+  if (prevLen == null || currLen == null) return false;
+  return currLen > prevLen;
+}
