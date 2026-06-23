@@ -12,6 +12,7 @@ import {
   type PlayerKnowGuessResultPayload,
 } from '../../shared/events';
 import { Card, Button, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel } from '../../shared/ui';
+import { NORTHSTAR_URL } from '../../shared/northstar';
 import { wrap } from './layout';
 
 interface StatusViewProps {
@@ -284,6 +285,31 @@ export default function StatusView({
             </Card>
           )}
           {game?.awards && <AwardsPanel awards={game.awards} />}
+          <Card
+            glow="a"
+            style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
+          >
+            <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Questo era un gioco. ⚡</p>
+            <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.9 }}>
+              Vuoi decidere così sul serio — sulla tua carriera e la tua crescita?
+            </p>
+            <a
+              href={NORTHSTAR_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                marginTop: '0.2rem',
+                fontWeight: 700,
+                textDecoration: 'none',
+                padding: '0.6rem 1.4rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--faction-a)',
+                color: 'var(--bg)',
+              }}
+            >
+              Scopri NorthStar →
+            </a>
+          </Card>
           {blindSpot && (
             <Card
               glow="accent"
