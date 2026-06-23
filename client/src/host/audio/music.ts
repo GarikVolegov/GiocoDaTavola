@@ -18,7 +18,9 @@ export type MusicIntensity = 'full' | 'soft';
 const LOOKAHEAD_MS = 100; // how often the scheduler wakes
 const SCHEDULE_AHEAD = 0.25; // seconds of audio to queue in advance
 // Overall loudness of the bed; "soft" ducks under a speaker without going silent.
-const BED_GAIN: Record<MusicIntensity, number> = { full: 0.1, soft: 0.045 };
+// Tuned so the musichetta is clearly audible as background music (not a faint hum) —
+// see /tmp audio probe: full ≈ -15 dBFS peak.
+const BED_GAIN: Record<MusicIntensity, number> = { full: 0.34, soft: 0.16 };
 
 function scheduleNote(note: NoteEvent, when: number): void {
   const ctx = getCtx();
