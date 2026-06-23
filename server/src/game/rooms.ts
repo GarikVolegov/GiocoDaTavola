@@ -2,7 +2,6 @@
 // only for the lifetime of the process (no DB).
 
 import { Deck, dilemmasForRegister, loadDilemmas, COMPLESSITA_RANK, type Dilemma, type ContentRegister, type Tappa } from './deck';
-import { botDefenseArgument } from './botDefense';
 import * as knowRound from './knowRound';
 import * as infiltrato from './infiltrato';
 import * as predictions from './predictions';
@@ -14,14 +13,10 @@ import * as reactions from './reactions';
 import * as devilAdvocate from './devilAdvocate';
 import * as roundStats from './roundStats';
 import * as botVotes from './botVotes';
+import * as defenseSetup from './defenseSetup';
 import {
   type GamePhase,
   PHASE_DURATIONS_MS,
-  DEFENSE_MIN_MS,
-  INTERVENTO_MIN_MS,
-  DEFENSE_MAX_MS,
-  INTERVENTI_MAX_MS,
-  TURN_BOT_MS,
   nextPhase,
   nextDuelPhase,
   nextPercorsoPhase,
@@ -661,57 +656,6 @@ export class RoomStore {
    * rejected) plus a generous cap; a bot or absent speaker can't tap, so they get
    * only TURN_BOT_MS and no floor. Overrides whatever expiryFor set generically.
    */
-  private armTurn(room: Room): void {
-    const interventi = room.phase === 'INTERVENTI';
-    const speakerId = defenseTurns.currentSpeakerId(room);
-    const speaker = speakerId ? room.players.get(speakerId) : undefined;
-    const now = this.now();
-    room.turnStartedAt = now;
-    if (speaker && !speaker.isBot) {
-      room.turnMinEndsAt = now + (interventi ? INTERVENTO_MIN_MS : DEFENSE_MIN_MS);
-      room.phaseExpiresAt = now + (interventi ? INTERVENTI_MAX_MS : DEFENSE_MAX_MS);
-    } else {
-      room.turnMinEndsAt = null;
-      room.phaseExpiresAt = now + TURN_BOT_MS;
-    }
-  }
-
-  /**
-   * Auto-select one defender per side from that side's secret voters (side A
-   * before B). A side with 0 votes is skipped. Which of a side's voters speaks
-   * is chosen via the injectable rng, so tests can pin the pick.
-   */
-  private selectDefenders(room: Room): Defender[] {
-    const devil = devilAdvocate.isDevilRound(room);
-    const defenders: Defender[] = [];
-    for (const side of ['A', 'B'] as const) {
-      const voters = [...room.votes.entries()]
-        .filter(([, choice]) => choice === side)
-        .map(([id]) => id);
-      if (voters.length === 0) continue; // side with no votes -> no defender
-      // Equità: tra i votanti di questo lato scegli SEMPRE chi ha difeso meno
-      // volte finora, così su una partita tutti ottengono un turno. Un lato può
-      // essere difeso solo da chi l'ha votato: si pesca il meno-utilizzato tra
-      // loro, con pareggio risolto dall'rng iniettabile (resta imprevedibile e
-      // riproduce il vecchio comportamento quando i conteggi sono pari).
-      const min = Math.min(...voters.map((id) => room.defenseCounts.get(id) ?? 0));
-      const candidates = voters.filter((id) => (room.defenseCounts.get(id) ?? 0) === min);
-      const chosen = candidates[Math.floor(this.rng() * candidates.length)];
-      const player = room.players.get(chosen);
-      if (!player) continue;
-      room.defenseCounts.set(chosen, (room.defenseCounts.get(chosen) ?? 0) + 1);
-      if (devil) {
-        // "Avvocato del Diavolo": argue the OPPOSITE side. Everything downstream
-        // (bot/AI argument, attribution, persuasion, public display) keys off
-        // `side` = the side being argued, so no other code needs to know.
-        const argued: VoteChoice = side === 'A' ? 'B' : 'A';
-        defenders.push({ id: player.id, nickname: player.nickname, side: argued, devil: true });
-      } else {
-        defenders.push({ id: player.id, nickname: player.nickname, side });
-      }
-    }
-    return defenders;
-  }
 
   /**
    * Pick the surprise "Avvocato del Diavolo" round: a random 1-based dilemma
@@ -754,14 +698,6 @@ export class RoomStore {
   }
 
 
-  /** The canned argument for the current defender if a bot, else null (Fase B). */
-  private argumentForCurrentDefender(room: Room): string | null {
-    const defender = room.defenders[room.defenseTurnIndex];
-    if (!defender) return null;
-    const player = room.players.get(defender.id);
-    if (!player?.isBot || !player.persona || !room.currentDilemma) return null;
-    return botDefenseArgument(player.persona, room.currentDilemma, defender.side, this.rng);
-  }
 
 
   /**
@@ -1019,7 +955,7 @@ export class RoomStore {
     if (room.phase === 'INTERVENTI') {
       if (room.interventiIndex < room.interventiQueue.length - 1) {
         room.interventiIndex++;
-        this.armTurn(room);
+        defenseSetup.armTurn(room, this.now());
         return { ok: true, room };
       }
       room.interventiQueue = [];
@@ -1028,8 +964,8 @@ export class RoomStore {
         room.phase = 'DEFENSE';
         room.defenseTurnIndex++;
         room.raisedHands = [];
-        room.defenseArgument = this.argumentForCurrentDefender(room);
-        this.armTurn(room);
+        room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
+        defenseSetup.armTurn(room, this.now());
         return { ok: true, room };
       }
       // No defenders left: fall through to the normal DEFENSE -> VOTE_2 transition.
@@ -1044,14 +980,14 @@ export class RoomStore {
       room.interventiQueue = [...room.raisedHands];
       room.interventiIndex = 0;
       room.raisedHands = [];
-      this.armTurn(room);
+      defenseSetup.armTurn(room, this.now());
       return { ok: true, room };
     }
     if (room.phase === 'DEFENSE' && room.defenseTurnIndex < room.defenders.length - 1) {
       room.defenseTurnIndex++;
       room.raisedHands = [];
-      room.defenseArgument = this.argumentForCurrentDefender(room);
-      this.armTurn(room);
+      room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
+      defenseSetup.armTurn(room, this.now());
       return { ok: true, room };
     }
 
@@ -1121,11 +1057,11 @@ export class RoomStore {
     // Entering DEFENSE picks the defenders from this round's votes and starts at
     // the first turn (the per-turn timer was set by expiryFor above).
     if (transition.phase === 'DEFENSE') {
-      room.defenders = this.selectDefenders(room);
+      room.defenders = defenseSetup.selectDefenders(room, this.rng);
       room.defenseTurnIndex = 0;
-      room.defenseArgument = this.argumentForCurrentDefender(room);
+      room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
       room.raisedHands = [];
-      this.armTurn(room);
+      defenseSetup.armTurn(room, this.now());
     }
     // Entering VOTE_1: bots cast their (random) first vote so the human(s) only
     // wait on themselves; the per-choice split stays secret until SPLIT_REVEAL.
