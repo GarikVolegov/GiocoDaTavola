@@ -13,6 +13,7 @@ export { TextInput } from './TextInput';
 export { Alert } from './Alert';
 export { DilemmaCard, SplitBar, ResultsPanel, AwardsPanel } from './PublicViews';
 export { Logo } from './Logo';
+export { Avatar } from './Avatar';
 export { Swing } from './Swing';
 export { JoinQr } from './JoinQr';
 export { RoomCodeChip } from './RoomCodeChip';

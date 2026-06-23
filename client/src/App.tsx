@@ -10,6 +10,7 @@ const HostApp = lazy(() => import('./host/HostApp'));
 const PlayerApp = lazy(() => import('./player/PlayerApp'));
 const Profile = lazy(() => import('./profile/Profile'));
 const Home = lazy(() => import('./home/Home'));
+const Settings = lazy(() => import('./settings/Settings'));
 // Realtime-connection banner, shown only on the socket-backed routes (/host, /join).
 const ConnectionBanner = lazy(() => import('./shared/ConnectionBanner'));
 
@@ -32,6 +33,7 @@ export default function App() {
             <Route path="/host" element={<><ConnectionBanner /><HostApp /></>} />
             <Route path="/join" element={<><ConnectionBanner /><PlayerApp /></>} />
             <Route path="/profilo" element={<Profile />} />
+            <Route path="/impostazioni" element={<Settings />} />
           </Routes>
         </Suspense>
       </BrowserRouter>

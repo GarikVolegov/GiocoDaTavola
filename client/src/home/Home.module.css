@@ -54,6 +54,68 @@
   color: var(--danger);
 }
 
+/* First-run onboarding: a single welcome card instead of two empty sections. */
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-5);
+  text-align: center;
+}
+.welcomeEmoji {
+  font-size: 2.6rem;
+}
+.welcomeTitle {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+.welcomeText {
+  margin: 0;
+  max-width: 30rem;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+
+/* Loading skeleton: shimmer placeholders that mirror the real layout. */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.skelLine {
+  height: 1.2rem;
+  width: 40%;
+  border-radius: var(--radius-sm);
+}
+.skel {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2);
+  min-height: 4.5rem;
+}
+.skel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+  animation: shimmer 1.3s var(--ease) infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skel::after {
+    animation: none;
+  }
+}
+
 /* Stats: 2-up on phones, 4-up from 640px. */
 .statsGrid {
   display: grid;

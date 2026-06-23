@@ -41,6 +41,7 @@ import {
   type PlayerKnowGuessResultPayload,
   type PlayerInfiltratoRolePayload,
   type PlayerAccusedPayload,
+  type MyProfile,
 } from '../shared/events';
 import { Card, JoinQr, Button, Field, TextInput, Alert } from '../shared/ui';
 import { useAuth } from '@clerk/react';
@@ -323,6 +324,31 @@ export default function PlayerApp() {
       cancelled = true;
     };
   }, [isSignedIn, joinedCode]);
+
+  // Pre-fill the join nickname from the signed-in user's saved profile, but never
+  // clobber a value they already have (typed, or restored from a saved session).
+  useEffect(() => {
+    if (!isSignedIn) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const token = await getToken();
+        const res = await fetch('/api/me/profile', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!res.ok) return;
+        const p = (await res.json()) as MyProfile;
+        if (!cancelled && p.displayName) {
+          setNickname((cur) => (cur.trim() === '' ? p.displayName ?? '' : cur));
+        }
+      } catch {
+        /* best-effort prefill */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn, getToken]);
 
   // Buzz the phone the moment it becomes this player's turn to speak (defense or
   // duel) so they look up from the screen — easy to miss on a shared TV.

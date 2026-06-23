@@ -9,6 +9,7 @@ import { loadDilemmas } from './game/deck';
 import { generateBotDefense, aiDefenseEnabled } from './game/aiDefense';
 import { migrate, dbEnabled, pool } from './db';
 import { saveAwards, awardsToPersist, saveGameRecords, gamesToPersist } from './persistence';
+import { validateProfileInput, loadProfile, saveProfile } from './profile';
 import { verifyClerkToken } from './clerk';
 import { serializeRoom, deserializeRoom } from './game/roomSnapshot';
 import { persistSnapshot, loadAllSnapshots, deleteSnapshot } from './snapshotStore';
@@ -22,6 +23,9 @@ if (fs.existsSync(envFile)) {
 }
 
 const app = express();
+// Parse JSON request bodies (the profile PUT). Capped well above a resized
+// avatar data-URL (~tens of KB) but small enough to bound hostile payloads.
+app.use(express.json({ limit: '500kb' }));
 // Exported so integration tests can listen on an ephemeral port without the
 // module auto-starting on its own (see the NODE_ENV guard around listen below).
 export const httpServer = createServer(app);
@@ -382,12 +386,13 @@ app.get('/api/me/dashboard', async (req, res) => {
     stats: { gamesPlayed: 0, totalPersuasion: 0, bestPersuasion: 0, awardsCount: 0 },
     recentGames: [],
     recentAwards: [],
+    profile: { displayName: null, avatar: null },
   };
   if (!dbEnabled() || !pool) {
     res.json(empty);
     return;
   }
-  const [agg, games, awards, awardsCount] = await Promise.all([
+  const [agg, games, awards, awardsCount, profile] = await Promise.all([
     pool.query(
       `SELECT count(*)::int AS games_played,
               coalesce(sum(persuasion), 0)::int AS total_persuasion,
@@ -406,6 +411,7 @@ app.get('/api/me/dashboard', async (req, res) => {
       [userId],
     ),
     pool.query(`SELECT count(*)::int AS n FROM awards WHERE clerk_user_id = $1`, [userId]),
+    loadProfile(userId),
   ]);
   res.json({
     stats: {
@@ -414,6 +420,7 @@ app.get('/api/me/dashboard', async (req, res) => {
       bestPersuasion: agg.rows[0].best_persuasion,
       awardsCount: awardsCount.rows[0].n,
     },
+    profile,
     recentGames: games.rows.map((r) => ({
       id: String(r.id),
       gameCode: r.game_code,
@@ -434,6 +441,41 @@ app.get('/api/me/dashboard', async (req, res) => {
       wonAt: r.won_at,
     })),
   });
+});
+
+// The caller's profile (display name + avatar). Same Bearer-token auth.
+app.get('/api/me/profile', async (req, res) => {
+  const header = req.header('authorization') ?? '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const userId = await verifyClerkToken(token);
+  if (!userId) {
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
+  res.json(await loadProfile(userId));
+});
+
+// Update the caller's profile. Validates (trim/cap name; preset or small raster
+// data-URL avatar) then upserts. Needs the DB; 503 when DB-less.
+app.put('/api/me/profile', async (req, res) => {
+  const header = req.header('authorization') ?? '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const userId = await verifyClerkToken(token);
+  if (!userId) {
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
+  const result = validateProfileInput((req.body ?? {}) as Record<string, unknown>);
+  if (!result.ok) {
+    res.status(400).json({ error: result.error });
+    return;
+  }
+  if (!dbEnabled() || !pool) {
+    res.status(503).json({ error: 'db-unavailable' });
+    return;
+  }
+  await saveProfile(userId, result.value);
+  res.json(result.value);
 });
 
 io.on('connection', (socket) => {

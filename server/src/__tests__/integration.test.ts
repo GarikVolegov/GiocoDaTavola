@@ -137,4 +137,16 @@ describe('socket integration', () => {
     expect(body.ok).toBe(true);
     expect(body.db).toBe('disabled'); // no DATABASE_URL in tests
   });
+
+  it('rejects profile reads/writes without a valid bearer token', async () => {
+    const get = await fetch(`http://localhost:${port}/api/me/profile`);
+    expect(get.status).toBe(401);
+
+    const put = await fetch(`http://localhost:${port}/api/me/profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Ann', avatar: null }),
+    });
+    expect(put.status).toBe(401);
+  });
 });

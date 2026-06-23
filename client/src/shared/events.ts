@@ -666,11 +666,19 @@ export interface MyGameRecord {
   playedAt: string;
 }
 
+/** A signed-in user's editable profile (GET/PUT /api/me/profile). `avatar` is a
+ *  `preset:<id>` or a small raster data-URL; null means none chosen. */
+export interface MyProfile {
+  displayName: string | null;
+  avatar: string | null;
+}
+
 /** Payload of GET /api/me/dashboard: stats + recent games + a small awards preview. */
 export interface MyDashboard {
   stats: MyStats;
   recentGames: MyGameRecord[];
   recentAwards: Pick<MyAward, 'id' | 'awardId' | 'title' | 'emoji' | 'description' | 'nickname' | 'wonAt'>[];
+  profile: MyProfile;
 }
 
 export interface PlayerVotePayload {

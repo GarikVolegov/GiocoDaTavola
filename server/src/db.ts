@@ -18,6 +18,11 @@ export async function migrate(): Promise<void> {
       created_at    timestamptz NOT NULL DEFAULT now(),
       last_seen     timestamptz NOT NULL DEFAULT now()
     );`);
+  // Profile fields (added later): display name + avatar. Idempotent ALTER so an
+  // already-deployed users table picks them up. `avatar` holds a `preset:<id>` or
+  // a small raster data-URL (see profile.ts).
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name text;`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar       text;`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS awards (
       id            bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
