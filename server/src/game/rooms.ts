@@ -4,6 +4,7 @@
 import { Deck, dilemmasForRegister, loadDilemmas, COMPLESSITA_RANK, type Dilemma, type ContentRegister, type Tappa } from './deck';
 import { botDefenseArgument } from './botDefense';
 import * as knowRound from './knowRound';
+import * as infiltrato from './infiltrato';
 import {
   type GamePhase,
   PHASE_DURATIONS_MS,
@@ -1138,7 +1139,7 @@ export class RoomStore {
     if (room.phase === 'ACCUSE') {
       room.phase = 'FINAL_AWARDS';
       room.phaseExpiresAt = this.expiryFor('FINAL_AWARDS');
-      this.resolveInfiltrato(room);
+      infiltrato.resolveInfiltrato(room);
       return { ok: true, room };
     }
 
@@ -1616,32 +1617,25 @@ export class RoomStore {
   accuse(code: string, accuserId: string, accusedId: string): AccuseResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'ACCUSE') return { ok: false, error: 'NOT_ACCUSE_PHASE' };
-    if (!room.players.has(accuserId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    if (!room.players.has(accusedId) || accusedId === accuserId) return { ok: false, error: 'INVALID_TARGET' };
-    room.accusations.set(accuserId, accusedId);
-    return { ok: true, room };
+    return infiltrato.accuse(room, accuserId, accusedId);
   }
 
   /** How many players have accused this game (aggregate only). */
   accusedCount(code: string): number {
-    return this.rooms.get(code)?.accusations.size ?? 0;
+    const room = this.rooms.get(code);
+    return room ? infiltrato.accusedCount(room) : 0;
   }
 
   /** True once every connected human has accused (ends the ACCUSE phase early). */
   allAccused(code: string): boolean {
     const room = this.rooms.get(code);
-    if (!room) return false;
-    const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
-    if (humans.length === 0) return false;
-    return humans.every((p) => room.accusations.has(p.id));
+    return room ? infiltrato.allAccused(room) : false;
   }
 
   /** The resolved infiltrator reveal, only at FINAL_AWARDS; null otherwise / normal games. */
   publicInfiltratoResult(code: string): InfiltratoResult | null {
     const room = this.rooms.get(code);
-    if (!room || room.phase !== 'FINAL_AWARDS') return null;
-    return room.infiltratoResult;
+    return room ? infiltrato.publicInfiltratoResult(room) : null;
   }
 
   /**
@@ -1657,36 +1651,6 @@ export class RoomStore {
       return { playerId, nickname: room.players.get(playerId)?.nickname ?? '', team };
     });
     return { assignments, scores };
-  }
-
-  /**
-   * Resolve the infiltrator outcome from the accusation tally: caught only on a
-   * UNIQUE top accusation that names them; they win if they overturned at least
-   * one round AND evaded that. Stored on the room for the FINAL_AWARDS reveal.
-   */
-  private resolveInfiltrato(room: Room): void {
-    const id = room.infiltratorId;
-    if (!id) {
-      room.infiltratoResult = null;
-      return;
-    }
-    const counts = new Map<string, number>();
-    for (const accused of room.accusations.values()) {
-      counts.set(accused, (counts.get(accused) ?? 0) + 1);
-    }
-    let top = 0;
-    for (const c of counts.values()) if (c > top) top = c;
-    const topAccused = [...counts.entries()].filter(([, c]) => c === top && top > 0).map(([pid]) => pid);
-    const caught = topAccused.length === 1 && topAccused[0] === id;
-    const flips = room.infiltratorFlips;
-    room.infiltratoResult = {
-      infiltratorId: id,
-      infiltratorNickname: room.players.get(id)?.nickname ?? '',
-      flips,
-      caught,
-      won: flips > 0 && !caught,
-      votesAgainst: counts.get(id) ?? 0,
-    };
   }
 
   /**
