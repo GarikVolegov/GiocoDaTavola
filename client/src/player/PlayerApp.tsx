@@ -160,6 +160,12 @@ export default function PlayerApp() {
   // Current credentials, kept in a ref so the socket 'connect' handler can
   // re-claim the seat after a network blip without re-subscribing.
   const credsRef = useRef<SavedSession | null>(null);
+  // Was the in-flight join triggered by the user pressing a form button? Only
+  // then should a join failure surface as a form error. Background replays
+  // (auto-rejoin on mount, reconnect after a blip) of a now-dead saved room must
+  // recover silently — otherwise a stale "Codice stanza non valido" pops up on
+  // the create/join screen for a room the user never tried to enter.
+  const userInitiatedRef = useRef(false);
 
   useEffect(() => {
     const socket = getSocket();
@@ -173,8 +179,13 @@ export default function PlayerApp() {
       saveSession(creds); // persist so a refresh/lock can reconnect
     };
     const onJoinError = ({ error }: PlayerJoinErrorPayload) => {
-      setError(JOIN_ERROR_MESSAGES[error] ?? 'Errore durante l’accesso');
       setSubmitting(false);
+      // Only show the error if the user actually pressed Entra/Crea; a failed
+      // background replay just recovers silently below.
+      if (userInitiatedRef.current) {
+        setError(JOIN_ERROR_MESSAGES[error] ?? 'Errore durante l’accesso');
+      }
+      userInitiatedRef.current = false;
       // A stale saved room (server restarted, room gone) — drop it so we don't
       // keep auto-rejoining a dead game.
       if (error === 'ROOM_NOT_FOUND') {
@@ -233,7 +244,10 @@ export default function PlayerApp() {
     // socket-level reconnects (network blip) without a page reload.
     const onConnect = () => {
       const creds = credsRef.current;
-      if (creds) socket.emit(SocketEvents.PlayerJoin, creds);
+      if (creds) {
+        userInitiatedRef.current = false; // background reclaim — fail silently
+        socket.emit(SocketEvents.PlayerJoin, creds);
+      }
     };
     socket.on(SocketEvents.PlayerJoined, onJoined);
     socket.on(SocketEvents.PlayerJoinError, onJoinError);
@@ -250,6 +264,7 @@ export default function PlayerApp() {
     const fromQr = urlRoom();
     if (saved && (!fromQr || fromQr === saved.code)) {
       credsRef.current = saved;
+      userInitiatedRef.current = false; // background auto-rejoin — fail silently
       setSubmitting(true);
       socket.emit(SocketEvents.PlayerJoin, saved);
     }
@@ -432,6 +447,7 @@ export default function PlayerApp() {
     }
     setError(null);
     setSubmitting(true);
+    userInitiatedRef.current = true;
     getSocket().emit(SocketEvents.PlayerJoin, { code: trimmedCode, nickname: trimmedNick });
   };
 
@@ -446,6 +462,7 @@ export default function PlayerApp() {
     }
     setError(null);
     setSubmitting(true);
+    userInitiatedRef.current = true;
     getSocket().emit(SocketEvents.PlayerCreateRoom, { nickname: nick });
   };
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, act, cleanup } from '@testing-library/react';
+import { render, screen, act, cleanup, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 // A fake shared socket the test can drive: the component registers handlers via
@@ -49,12 +49,43 @@ vi.mock('@clerk/react', () => ({
 import PlayerApp from './PlayerApp';
 
 describe('PlayerApp', () => {
-  beforeEach(() => resetHandlers());
+  beforeEach(() => {
+    resetHandlers();
+    localStorage.clear();
+  });
   afterEach(() => cleanup()); // unmount between tests so DOM doesn't leak across them
 
   it('shows the join screen before joining', () => {
     render(<PlayerApp />);
     expect(screen.getByText('Entra nella partita')).toBeInTheDocument();
+  });
+
+  it('stays silent when a stale saved session fails auto-rejoin (no scary error on the form)', () => {
+    // A leftover session from a room that no longer exists (server restarted /
+    // room expired). On mount the app silently replays it; the failure must NOT
+    // surface as a red error on the join/create form — the user never asked for it.
+    localStorage.setItem(
+      'schierati:session',
+      JSON.stringify({ code: 'WXYZ', nickname: 'Vecchio', token: 'staletok' }),
+    );
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joinError', { error: 'ROOM_NOT_FOUND' });
+    });
+    expect(screen.queryByText('Codice stanza non valido')).toBeNull();
+    // The form is still there and usable.
+    expect(screen.getByText('Entra nella partita')).toBeInTheDocument();
+  });
+
+  it('shows the error when the user explicitly submits a bad code', () => {
+    render(<PlayerApp />);
+    fireEvent.change(screen.getByPlaceholderText('ABCD'), { target: { value: 'WXYZ' } });
+    fireEvent.change(screen.getByPlaceholderText('Il tuo nome'), { target: { value: 'Anna' } });
+    fireEvent.click(screen.getByRole('button', { name: /entra/i }));
+    act(() => {
+      serverEmit('player:joinError', { error: 'ROOM_NOT_FOUND' });
+    });
+    expect(screen.getByText('Codice stanza non valido')).toBeInTheDocument();
   });
 
   it('renders the dilemma options at VOTE_1 after joining', () => {
