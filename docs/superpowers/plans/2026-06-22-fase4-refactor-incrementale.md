@@ -63,7 +63,7 @@ Residuo in PlayerApp = container (stato + wiring socket + handlers + roster/how-
 ## Track server — `RoomStore` decomposto per dominio ✅ (in corso)
 Pattern: funzioni pure su `Room` in moduli dedicati; `RoomStore` fa lookup + delega.
 Import type-only da rooms.ts → nessun ciclo runtime. Rete: 327 unit + integrazione.
-**rooms.ts: 2273 → 1973 righe** (-300), logica spostata in **9 moduli** testabili:
+**rooms.ts: 2273 → 1883 righe** (-390, -17%), logica spostata in **11 moduli** testabili:
 - `voteCount.ts` — fondazionale: `tally` + `isVoteChoice`/`isSwingBet`.
 - `voting.ts` — core: vote/confirm/tally/split/swing.
 - `predictions.ts` — pronostico + swing bet (+ leadFlipped), usa voteCount.
@@ -73,14 +73,17 @@ Import type-only da rooms.ts → nessun ciclo runtime. Rete: 327 unit + integraz
 - `submittedDilemmas.ts` — dilemmi dei giocatori (+ costanti submission).
 - `defenseTurns.ts` — currentSpeakerId/raiseHand/finishTurn/publicDefense.
 - `reactions.ts` — react (1 ciclo call-time benigno per le costanti reaction).
-Ognuno: gate verdi → commit → push. 359 test verdi.
+- `devilAdvocate.ts` — isDevilRound/publicDevilRound.
+- `roundStats.ts` — scoring di fine round (recordRoundStats).
+Ognuno: gate verdi → commit → push. 361 test verdi.
 
 ### Rimane (engine centrale, NON estratto — più rischioso)
-La macchina a stati (`advancePhase` ~170 righe, `startGame` ~120), `selectDefenders`/
-`armTurn`, la logica voti-bot (`applyBotSecondVotes`), il percorso planning. Sono il
-cuore che coordina l'intero flusso e muta il room su più concern: vanno estratti
-con attenzione dedicata (non in loop rapido), eventualmente con un modulo
-state-machine apposito. La gestione lobby (join/leave/create/bot) resta
+La macchina a stati (`advancePhase` ~170 righe, `startGame` ~120, `advanceDuelPhase`),
+`selectDefenders`/`armTurn`/`argumentForCurrentDefender` (rng-coupled), i voti-bot
+(`applyBotSecondVotes`), `botDefenderContext`/`setBotDefenseArgument`, il percorso
+planning. Sono il cuore che coordina l'intero flusso e muta il room su più concern:
+vanno estratti con attenzione dedicata (non in loop rapido), eventualmente con un
+modulo state-machine apposito. La gestione lobby (join/leave/create/bot) resta
 legittimamente in RoomStore (gestisce la collezione di room, non un singolo Room).
 - Estrarre le altre viste di fase di PlayerApp (DEFENSE/INTERVENTI, SPEAKER_VOTE,
   PREDICT, ACCUSE, lo switch finale TAPPA/SPLIT/RESULTS/AWARDS), aggiungendo un
