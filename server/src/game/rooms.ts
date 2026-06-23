@@ -13,7 +13,7 @@ import * as defenseTurns from './defenseTurns';
 import * as reactions from './reactions';
 import * as devilAdvocate from './devilAdvocate';
 import * as roundStats from './roundStats';
-import { tally } from './voteCount';
+import * as botVotes from './botVotes';
 import {
   type GamePhase,
   PHASE_DURATIONS_MS,
@@ -753,39 +753,6 @@ export class RoomStore {
     }
   }
 
-  /** Cast each bot's (random) first vote on entry to VOTE_1. */
-  private castBotFirstVotes(room: Room): void {
-    for (const p of room.players.values()) {
-      if (p.isBot) room.votes.set(p.id, this.rng() < 0.5 ? 'A' : 'B');
-    }
-  }
-
-  /**
-   * Apply each bot's VOTE_2 swing based on its persona and the revealed first-vote
-   * split (votes1): roccione holds; gregge drifts to the majority; bastian to the
-   * minority; indeciso/equilibrato flip with a persona-specific probability. On a
-   * tied split, gregge/bastian hold (no clear majority to chase).
-   */
-  private applyBotSecondVotes(room: Room): void {
-    const t = tally(room.votes1);
-    const majority: VoteChoice | null = t.A > t.B ? 'A' : t.B > t.A ? 'B' : null;
-    const minority: VoteChoice | null = majority ? (majority === 'A' ? 'B' : 'A') : null;
-    for (const p of room.players.values()) {
-      if (!p.isBot || !p.persona) continue;
-      const current = room.votes.get(p.id);
-      if (!current) continue;
-      const other: VoteChoice = current === 'A' ? 'B' : 'A';
-      let next: VoteChoice = current;
-      switch (p.persona) {
-        case 'roccione': break;
-        case 'indeciso': next = this.rng() < 0.7 ? other : current; break;
-        case 'equilibrato': next = this.rng() < 0.35 ? other : current; break;
-        case 'gregge': if (minority && current === minority) next = majority as VoteChoice; break;
-        case 'bastian': if (majority && current === majority) next = minority as VoteChoice; break;
-      }
-      room.votes.set(p.id, next);
-    }
-  }
 
   /** The canned argument for the current defender if a bot, else null (Fase B). */
   private argumentForCurrentDefender(room: Room): string | null {
@@ -1163,7 +1130,7 @@ export class RoomStore {
     // Entering VOTE_1: bots cast their (random) first vote so the human(s) only
     // wait on themselves; the per-choice split stays secret until SPLIT_REVEAL.
     if (transition.phase === 'VOTE_1') {
-      this.castBotFirstVotes(room);
+      botVotes.castBotFirstVotes(room, this.rng);
     }
     // Entering VOTE_2: snapshot the first vote so the live re-vote can be
     // compared against it (swing). `votes` is left intact, so each player's
@@ -1171,7 +1138,7 @@ export class RoomStore {
     // their persona-driven swing on top of that default.
     if (transition.phase === 'VOTE_2') {
       room.votes1 = new Map(room.votes);
-      this.applyBotSecondVotes(room);
+      botVotes.applyBotSecondVotes(room, this.rng);
       // Fresh round of confirmations; bots have already "decided", so confirm them
       // so they never block the (timer-less) auto-advance.
       room.confirmedVote2 = new Set();
