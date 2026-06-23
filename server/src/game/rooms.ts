@@ -9,6 +9,7 @@ import * as predictions from './predictions';
 import * as speakerVote from './speakerVote';
 import * as submittedDilemmas from './submittedDilemmas';
 import * as voting from './voting';
+import * as defenseTurns from './defenseTurns';
 import { tally } from './voteCount';
 import {
   type GamePhase,
@@ -664,7 +665,7 @@ export class RoomStore {
    */
   private armTurn(room: Room): void {
     const interventi = room.phase === 'INTERVENTI';
-    const speakerId = this.currentSpeakerId(room);
+    const speakerId = defenseTurns.currentSpeakerId(room);
     const speaker = speakerId ? room.players.get(speakerId) : undefined;
     const now = this.now();
     room.turnStartedAt = now;
@@ -1290,13 +1291,6 @@ export class RoomStore {
   }
 
   /** The id of the player currently speaking (defender in DEFENSE, arguer in DUEL_ARGUE), or null. */
-  private currentSpeakerId(room: Room): string | null {
-    if (room.phase === 'DEFENSE') return room.defenders[room.defenseTurnIndex]?.id ?? null;
-    if (room.phase === 'INTERVENTI') return room.interventiQueue[room.interventiIndex] ?? null;
-    if (room.phase === 'DUEL_ARGUE') return duelPlayers(room)[room.duelTurnIndex]?.id ?? null;
-    return null;
-  }
-
   /**
    * Record a live audience reaction from a phone during DEFENSE / DUEL_ARGUE. The
    * reaction is attributed to whoever is currently speaking (the defender/arguer),
@@ -1319,7 +1313,7 @@ export class RoomStore {
       return { ok: false, error: 'RATE_LIMITED' };
     }
     room.lastReactionAt.set(playerId, now);
-    const speakerId = this.currentSpeakerId(room);
+    const speakerId = defenseTurns.currentSpeakerId(room);
     if (speakerId) {
       const s = ensureStats(room, speakerId);
       s.reactionsReceived = (s.reactionsReceived ?? 0) + 1;
@@ -1336,16 +1330,7 @@ export class RoomStore {
   raiseHand(code: string, playerId: string): RaiseHandResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'DEFENSE') return { ok: false, error: 'NOT_RAISE_PHASE' };
-    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
-    if (this.currentSpeakerId(room) === playerId) return { ok: false, error: 'IS_SPEAKER' };
-    const i = room.raisedHands.indexOf(playerId);
-    if (i >= 0) {
-      room.raisedHands.splice(i, 1);
-      return { ok: true, room, raised: false };
-    }
-    room.raisedHands.push(playerId);
-    return { ok: true, room, raised: true };
+    return defenseTurns.raiseHand(room, playerId);
   }
 
   /**
@@ -1356,14 +1341,7 @@ export class RoomStore {
   finishTurn(code: string, playerId: string): FinishTurnResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'DEFENSE' && room.phase !== 'INTERVENTI') {
-      return { ok: false, error: 'NOT_FINISHING_PHASE' };
-    }
-    if (this.currentSpeakerId(room) !== playerId) return { ok: false, error: 'NOT_SPEAKER' };
-    if (room.turnMinEndsAt != null && this.now() < room.turnMinEndsAt) {
-      return { ok: false, error: 'TOO_EARLY' };
-    }
-    return { ok: true, room };
+    return defenseTurns.finishTurn(room, playerId, this.now());
   }
 
   /**
