@@ -2,6 +2,7 @@
    Reuses the global design tokens (tokens.css) and shared <Card>/<Button>/<Logo>. */
 .page {
   min-height: 100vh;
+  min-height: 100dvh;
   max-width: 56rem;
   margin: 0 auto;
   padding: 1.25rem 1.25rem 4rem;

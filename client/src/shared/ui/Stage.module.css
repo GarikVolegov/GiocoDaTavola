@@ -4,6 +4,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  min-height: 100dvh;
   text-align: center;
 }
 .player { padding: var(--space-5); gap: var(--space-4); }
