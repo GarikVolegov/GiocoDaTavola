@@ -18,30 +18,37 @@ Esempio (Short YouTube sul ribaltone):
 
 ### b) Link a NorthStar (per i post-ponte e per la CTA di fine partita nel gioco)
 NorthStar **cattura il referral nella pagina `/sign-up`** (legge `?ref=` o `?referralCode=`). Per
-avere **attribuzione affiliato certa**, manda il traffico di conversione lì:
+avere **attribuzione affiliato certa**, manda il traffico di conversione lì.
+
+**Valori confermati (2026-06-23):**
+- Dominio prod: **`https://ainorthstar.vercel.app`** (verificato live, serve `/sign-up`).
+- Codice affiliato del founder (canale SCHIERATI accreditato a lui): **`GARIKVOLEG76142`**.
+
+Link di conversione (è quello cablato nella CTA di fine partita):
 ```
-https://<DOMINIO-NORTHSTAR>/sign-up?ref=<CODICE_AFFILIATO>&utm_source=schierati&utm_medium=<formato>&utm_campaign=<tema>
+https://ainorthstar.vercel.app/sign-up?ref=GARIKVOLEG76142&utm_source=schierati&utm_medium=<formato>&utm_campaign=<tema>
 ```
 Per traffico "esplorativo" (far scoprire NorthStar senza spingere subito l'iscrizione) va bene
 anche la home con i soli UTM:
 ```
-https://<DOMINIO-NORTHSTAR>/?utm_source=schierati&utm_medium=<formato>&utm_campaign=<tema>
+https://ainorthstar.vercel.app/?utm_source=schierati&utm_medium=<formato>&utm_campaign=<tema>
 ```
 
-> ⚠️ **Da confermare con te (autorizzazione):**
-> 1. Il **dominio di produzione** di NorthStar (es. `ainorthstar.vercel.app` o un dominio custom).
-> 2. Il **codice affiliato** da usare per SCHIERATI (creato nell'area affiliazione di NorthStar).
-> Appena me li dai, li metto: in **un solo punto** nel gioco (`client/src/shared/northstar.ts`,
-> costante `NORTHSTAR_URL`) e qui nei template.
+> ⚠️ **Note di verità (importanti):**
+> - Il link **Railway** fornito inizialmente (`web-production-91c8.up.railway.app/sign-up?ref=...`)
+>   dava **404 anche sulla root** → NON usato. Se in futuro Railway diventa il dominio buono,
+>   basta cambiare la costante in `client/src/shared/northstar.ts`.
+> - Da fare una volta: **iscrizione di prova** dal link sopra per confermare che il `ref` venga
+>   davvero registrato dall'area affiliazione di NorthStar (il deploy Vercel potrebbe essere una
+>   linea più vecchia).
 
 ## 2. Il "ponte" dentro il gioco (già implementato)
 
 A fine partita (schermata premi, sul telefono di ogni giocatore) compare la card:
 *"Questo era un gioco. Vuoi decidere così sul serio sulla tua carriera? → Scopri NorthStar"*.
-Il link è la costante `NORTHSTAR_URL` in `client/src/shared/northstar.ts`. Oggi punta a
-`https://ainorthstar.vercel.app/?utm_source=schierati&utm_medium=app&utm_campaign=fine-partita`.
-**Quando mi confermi dominio + codice affiliato**, lo aggiorno a `/sign-up?ref=<codice>&utm_...`
-così ogni iscrizione che nasce dal gioco è attribuita.
+Il link è la costante `NORTHSTAR_URL` in `client/src/shared/northstar.ts`. Punta a
+`https://ainorthstar.vercel.app/sign-up?ref=GARIKVOLEG76142&utm_source=schierati&utm_medium=app&utm_campaign=fine-partita`
+così ogni iscrizione che nasce dal gioco è attribuita al codice affiliato del founder.
 
 ## 3. KPI — cosa guardare ogni settimana (niente vanity)
 

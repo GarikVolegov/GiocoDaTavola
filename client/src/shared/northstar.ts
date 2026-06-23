@@ -2,10 +2,11 @@
 // (https://github.com/GarikVolegov/NorthStar). SCHIERATI è il gioco gratuito che fa da
 // porta d'ingresso; questa è l'unica fonte di verità per il link tracciato.
 //
-// Da confermare con il founder (vedi docs/marketing/tracking-e-link.md):
-//   1. il DOMINIO di produzione di NorthStar;
-//   2. il CODICE AFFILIATO per attribuire le iscrizioni che nascono dal gioco.
-// NorthStar cattura il referral su /sign-up (`?ref=` o `?referralCode=`): per attribuire
-// le iscrizioni, sostituire con `https://<dominio>/sign-up?ref=<codice>&utm_...`.
+// Dominio confermato dal founder: ainorthstar.vercel.app (verificato live, 200, serve
+// /sign-up). NorthStar cattura il referral su /sign-up (`?ref=`), quindi la CTA punta lì
+// per attribuire le iscrizioni che nascono dal gioco. `GARIKVOLEG76142` è il codice
+// affiliato del founder (il canale SCHIERATI è accreditato a lui).
+// NB: il link Railway (web-production-91c8.up.railway.app) fornito inizialmente dava 404 →
+// non usato. Verificare con un'iscrizione di prova che il `ref` venga registrato.
 export const NORTHSTAR_URL =
-  'https://ainorthstar.vercel.app/?utm_source=schierati&utm_medium=app&utm_campaign=fine-partita';
+  'https://ainorthstar.vercel.app/sign-up?ref=GARIKVOLEG76142&utm_source=schierati&utm_medium=app&utm_campaign=fine-partita';
