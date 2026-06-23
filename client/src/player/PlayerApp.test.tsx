@@ -633,6 +633,60 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/entra nella partita/i)).toBeInTheDocument();
   });
 
+  it('hides an in-game exit behind the ⋮ menu with a two-tap confirm', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: null,
+      });
+    });
+    // In-game the exit is hidden until you deliberately open the menu.
+    expect(screen.queryByRole('button', { name: /esci dalla partita/i })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /menu della partita/i }));
+    // One tap on the exit only arms it — it must NOT leave the game.
+    fireEvent.click(screen.getByRole('button', { name: /^esci dalla partita$/i }));
+    expect(screen.getByText('Mare')).toBeInTheDocument();
+    // Confirming actually leaves, back to the join form.
+    fireEvent.click(screen.getByRole('button', { name: /esci davvero/i }));
+    expect(screen.getByText(/entra nella partita/i)).toBeInTheDocument();
+  });
+
+  it('the in-game ⋮ menu can be dismissed without leaving', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: null,
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /menu della partita/i }));
+    fireEvent.click(screen.getByRole('button', { name: /annulla/i }));
+    // Menu closed, exit hidden again, still in the game.
+    expect(screen.queryByRole('button', { name: /esci dalla partita/i })).toBeNull();
+    expect(screen.getByText('Mare')).toBeInTheDocument();
+  });
+
   it('shows the leader setup panel when you are the leader', () => {
     render(<PlayerApp />);
     act(() => {

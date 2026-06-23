@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, lazy, Suspense, type FormEvent } from 'react';
+import { useEffect, useRef, useState, lazy, Suspense, type FormEvent, type ReactNode } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import { useElapsed } from '../shared/useElapsed';
@@ -57,6 +57,7 @@ import DefenseView from './views/DefenseView';
 import PredictView from './views/PredictView';
 import DuelArgueView from './views/DuelArgueView';
 import StatusView from './views/StatusView';
+import LeaveGameMenu from './LeaveGameMenu';
 import SubmitDilemmaCard from './views/SubmitDilemmaCard';
 import LeaderSetup, { type TipoPartita } from './views/LeaderSetup';
 import { wrap } from './views/layout';
@@ -595,11 +596,20 @@ export default function PlayerApp() {
       </Button>
     ) : null;
 
+  // Every in-game screen gets the discreet ⋮ exit (hidden, two-tap confirm). The
+  // lobby keeps its own visible "Esci dalla stanza" link, so it's not wrapped here.
+  const withLeaveMenu = (node: ReactNode) => (
+    <>
+      {node}
+      <LeaveGameMenu onLeave={leaveRoom} />
+    </>
+  );
+
   if (
     joinedCode &&
     (phase === 'VOTE_1' || phase === 'VOTE_2' || phase === 'DUEL_PICK' || phase === 'DUEL_REPICK')
   ) {
-    return (
+    return withLeaveMenu(
       <VoteView
         phase={phase}
         dilemma={game?.dilemma}
@@ -621,7 +631,7 @@ export default function PlayerApp() {
   }
 
   if (joinedCode && (phase === 'DEFENSE' || phase === 'INTERVENTI')) {
-    return (
+    return withLeaveMenu(
       <DefenseView
         phase={phase}
         defense={game?.defense ?? null}
@@ -642,7 +652,7 @@ export default function PlayerApp() {
   }
 
   if (joinedCode && phase === 'DUEL_ARGUE') {
-    return (
+    return withLeaveMenu(
       <DuelArgueView
         speaker={game?.duelTurn?.speaker}
         dilemma={game?.dilemma}
@@ -656,7 +666,7 @@ export default function PlayerApp() {
 
   if (joinedCode && phase === 'SPEAKER_VOTE') {
     const candidates = (game?.speakerCandidates ?? []).filter((d) => d.id !== playerId);
-    return (
+    return withLeaveMenu(
       <SpeakerVoteView
         candidates={candidates}
         remaining={remaining}
@@ -670,7 +680,7 @@ export default function PlayerApp() {
   }
 
   if (joinedCode && phase === 'PREDICT') {
-    return (
+    return withLeaveMenu(
       <PredictView
         dilemma={game?.dilemma}
         knowPair={game?.knowPairs?.find((p) => p.guesserId === playerId) ?? null}
@@ -690,7 +700,7 @@ export default function PlayerApp() {
 
   if (joinedCode && phase === 'ACCUSE') {
     const candidates = players.filter((p) => p.id !== playerId);
-    return (
+    return withLeaveMenu(
       <AccuseView
         candidates={candidates}
         remaining={remaining}
@@ -701,7 +711,7 @@ export default function PlayerApp() {
   }
 
   if (joinedCode && phase !== 'LOBBY') {
-    return (
+    return withLeaveMenu(
       <>
         {leaderAudio}
         <StatusView
