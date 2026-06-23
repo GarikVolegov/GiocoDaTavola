@@ -7,6 +7,7 @@ import * as knowRound from './knowRound';
 import * as infiltrato from './infiltrato';
 import * as predictions from './predictions';
 import * as speakerVote from './speakerVote';
+import * as submittedDilemmas from './submittedDilemmas';
 import { tally, isVoteChoice } from './voteCount';
 import {
   type GamePhase,
@@ -61,12 +62,6 @@ export const MAX_PLAYERS = 8;
 
 /** Max nickname length — truncated (not rejected) for a forgiving UX. */
 export const NICKNAME_MAX = 24;
-
-/** Max player-submitted dilemmas a single player may add in the lobby. */
-export const MAX_SUBMISSIONS_PER_PLAYER = 2;
-/** Length caps for a player-submitted dilemma (prompt / each option). */
-const SUBMISSION_TEXT_MAX = 200;
-const SUBMISSION_OPTION_MAX = 100;
 
 /** Minimum connected players required before the host can start the game. */
 export const MIN_PLAYERS_TO_START = 3;
@@ -1485,36 +1480,13 @@ export class RoomStore {
   ): SubmitDilemmaResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'LOBBY') return { ok: false, error: 'NOT_LOBBY' };
-    const player = room.players.get(playerId);
-    if (!player || player.isBot) return { ok: false, error: 'NOT_IN_ROOM' };
-    const t = text.trim();
-    const a = optionA.trim();
-    const b = optionB.trim();
-    if (!t || !a || !b) return { ok: false, error: 'EMPTY' };
-    if (t.length > SUBMISSION_TEXT_MAX || a.length > SUBMISSION_OPTION_MAX || b.length > SUBMISSION_OPTION_MAX) {
-      return { ok: false, error: 'TOO_LONG' };
-    }
-    if (a.toLowerCase() === b.toLowerCase()) return { ok: false, error: 'SAME_OPTIONS' };
-    const mine = [...room.dilemmaAuthors.values()].filter((v) => v === playerId).length;
-    if (mine >= MAX_SUBMISSIONS_PER_PLAYER) return { ok: false, error: 'LIMIT_REACHED' };
-    const id = `usr-${playerId}-${mine + 1}`;
-    room.submittedDilemmas.push({
-      id,
-      text: t,
-      optionA: a,
-      optionB: b,
-      register: 'vita',
-      spuntiA: [],
-      spuntiB: [],
-    });
-    room.dilemmaAuthors.set(id, playerId);
-    return { ok: true, room, count: mine + 1 };
+    return submittedDilemmas.submitDilemma(room, playerId, text, optionA, optionB);
   }
 
   /** How many player-written dilemmas the room has collected (aggregate, lobby UI). */
   submittedCount(code: string): number {
-    return this.rooms.get(code)?.submittedDilemmas.length ?? 0;
+    const room = this.rooms.get(code);
+    return room ? submittedDilemmas.submittedCount(room) : 0;
   }
 
   /**
