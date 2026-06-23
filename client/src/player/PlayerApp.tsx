@@ -42,7 +42,7 @@ import {
   type PlayerInfiltratoRolePayload,
   type PlayerAccusedPayload,
 } from '../shared/events';
-import { Card, JoinQr } from '../shared/ui';
+import { Card, JoinQr, Button, Field, TextInput, Alert } from '../shared/ui';
 import { useAuth } from '@clerk/react';
 import VoteView from './views/VoteView';
 import SpeakerVoteView from './views/SpeakerVoteView';
@@ -486,19 +486,9 @@ export default function PlayerApp() {
   // during a phase that has a countdown. Rendered in each in-game branch.
   const skipButton =
     isLeader && phaseHasTimer(phase) ? (
-      <button
-        type="button"
-        onClick={advance}
-        style={{
-          fontSize: '1rem',
-          fontWeight: 700,
-          padding: '0.5rem 1.3rem',
-          borderRadius: '0.6rem',
-          cursor: 'pointer',
-        }}
-      >
+      <Button variant="ghost" onClick={advance}>
         Salta ▶
-      </button>
+      </Button>
     ) : null;
 
   if (
@@ -797,9 +787,9 @@ export default function PlayerApp() {
         }}
       >
         {!creating && (
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', textAlign: 'left' }}>
-            <span style={{ opacity: 0.8 }}>Codice stanza</span>
-            <input
+          <Field label="Codice stanza">
+            <TextInput
+              mono
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               placeholder="ABCD"
@@ -807,46 +797,22 @@ export default function PlayerApp() {
               autoCorrect="off"
               spellCheck={false}
               maxLength={4}
-              style={{
-                fontSize: '1.5rem',
-                letterSpacing: '0.3rem',
-                textAlign: 'center',
-                padding: '0.6rem',
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                textTransform: 'uppercase',
-              }}
+              style={{ fontSize: '1.5rem' }}
             />
-          </label>
+          </Field>
         )}
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', textAlign: 'left' }}>
-          <span style={{ opacity: 0.8 }}>Nickname</span>
-          <input
+        <Field label="Nickname">
+          <TextInput
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             placeholder="Il tuo nome"
             maxLength={20}
-            style={{ fontSize: '1.25rem', padding: '0.6rem' }}
           />
-        </label>
-        {error && (
-          <p role="alert" style={{ color: '#ff6b6b', margin: 0, fontWeight: 600 }}>
-            {error}
-          </p>
-        )}
-        <button
-          type="submit"
-          disabled={submitting}
-          style={{
-            fontSize: '1.2rem',
-            fontWeight: 700,
-            padding: '0.7rem',
-            borderRadius: '0.6rem',
-            cursor: submitting ? 'default' : 'pointer',
-            opacity: submitting ? 0.6 : 1,
-          }}
-        >
+        </Field>
+        {error && <Alert>{error}</Alert>}
+        <Button type="submit" size="lg" disabled={submitting}>
           {submitting ? (creating ? 'Creo…' : 'Entro…') : creating ? 'Crea stanza' : 'Entra'}
-        </button>
+        </Button>
       </form>
       <button
         type="button"

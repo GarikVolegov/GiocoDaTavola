@@ -6,7 +6,7 @@ export const wrap: CSSProperties = {
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  minHeight: '100vh',
+  minHeight: '100dvh',
   textAlign: 'center',
   padding: '1.5rem',
   gap: '1rem',

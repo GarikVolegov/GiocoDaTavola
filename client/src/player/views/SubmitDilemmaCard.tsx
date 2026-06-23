@@ -1,6 +1,5 @@
-import type { CSSProperties } from 'react';
 import { MAX_SUBMISSIONS_PER_PLAYER } from '../../shared/events';
-import { Card, Button, Alert } from '../../shared/ui';
+import { Card, Button, Alert, TextInput } from '../../shared/ui';
 
 interface SubmitDilemmaCardProps {
   submittedCount: number;
@@ -14,17 +13,6 @@ interface SubmitDilemmaCardProps {
   onSubmit: () => void;
   error: string | null;
 }
-
-const fieldStyle: CSSProperties = {
-  width: '100%',
-  padding: '0.6rem 0.7rem',
-  borderRadius: '0.6rem',
-  border: '1px solid rgba(242,243,255,0.18)',
-  background: 'rgba(242,243,255,0.06)',
-  color: 'inherit',
-  fontSize: '0.95rem',
-  boxSizing: 'border-box',
-};
 
 // The lobby card where any player can add up to MAX_SUBMISSIONS_PER_PLAYER of
 // their own dilemmas (they enter the game first). Presentational: the parent owns
@@ -60,26 +48,23 @@ export default function SubmitDilemmaCard({
         </p>
       ) : (
         <>
-          <input
+          <TextInput
             aria-label="La domanda"
             placeholder="La domanda (es. Mare o montagna?)"
             value={text}
             onChange={(e) => onTextChange(e.target.value)}
-            style={fieldStyle}
           />
-          <input
+          <TextInput
             aria-label="Opzione A"
             placeholder="Opzione A"
             value={optionA}
             onChange={(e) => onOptionAChange(e.target.value)}
-            style={fieldStyle}
           />
-          <input
+          <TextInput
             aria-label="Opzione B"
             placeholder="Opzione B"
             value={optionB}
             onChange={(e) => onOptionBChange(e.target.value)}
-            style={fieldStyle}
           />
           <Button variant="ghost" onClick={onSubmit} disabled={!canSubmit}>
             Aggiungi dilemma{mySubmitted > 0 ? ` (${mySubmitted}/${MAX_SUBMISSIONS_PER_PLAYER})` : ''}

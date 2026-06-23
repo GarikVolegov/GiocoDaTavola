@@ -3,6 +3,7 @@ import { PHASE_LABELS, type DefenseState, type Reaction } from '../../shared/eve
 import { formatMSS } from '../../shared/time';
 import ReactionSwarm from '../../shared/ReactionSwarm';
 import ReactionBar from './ReactionBar';
+import { Button } from '../../shared/ui';
 import { wrap } from './layout';
 
 interface DefenseDilemma {
@@ -57,22 +58,9 @@ export default function DefenseView({
 
   const finishButton = (
     <>
-      <button
-        type="button"
-        onClick={onFinish}
-        disabled={!canFinishNow}
-        style={{
-          fontSize: '1.2rem',
-          fontWeight: 800,
-          padding: '0.9rem 1.6rem',
-          borderRadius: '0.9rem',
-          border: 'none',
-          cursor: canFinishNow ? 'pointer' : 'not-allowed',
-          opacity: canFinishNow ? 1 : 0.5,
-        }}
-      >
+      <Button variant="primary" size="lg" onClick={onFinish} disabled={!canFinishNow}>
         {canFinishNow ? 'Ho finito ▶' : `Ho finito tra ${minRemaining ?? ''}s`}
-      </button>
+      </Button>
       {remaining != null && (
         <p style={{ fontSize: '0.85rem', opacity: 0.6, margin: 0 }}>max {remaining}s</p>
       )}
@@ -89,7 +77,7 @@ export default function DefenseView({
           {phase === 'INTERVENTI' ? (
             <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te: intervieni! 🙋</p>
           ) : speaker?.devil ? (
-            <p style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#ffd36b' }}>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: 'var(--gold)' }}>
               🎭 Avvocato del Diavolo!
             </p>
           ) : (
@@ -146,7 +134,7 @@ export default function DefenseView({
       ) : (
         <>
           {phase === 'DEFENSE' && isDevilRound && (
-            <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#ffd36b' }}>
+            <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--gold)' }}>
               🎭 Round Avvocato del Diavolo — difende il contrario!
             </p>
           )}
@@ -162,13 +150,14 @@ export default function DefenseView({
             <button
               type="button"
               onClick={onToggleHand}
+              aria-pressed={handRaised}
               style={{
                 fontSize: '1.05rem',
                 fontWeight: 700,
                 padding: '0.7rem 1.3rem',
                 borderRadius: '0.8rem',
-                border: handRaised ? '2px solid #ffd36b' : '2px solid rgba(255,255,255,0.3)',
-                background: handRaised ? 'rgba(255,211,107,0.18)' : 'transparent',
+                border: handRaised ? '2px solid var(--gold)' : '2px solid var(--border-strong)',
+                background: handRaised ? 'var(--gold-soft)' : 'transparent',
                 color: 'inherit',
                 cursor: 'pointer',
               }}
