@@ -20,8 +20,6 @@ import {
   DEFENSE_MAX_MS,
   INTERVENTI_MAX_MS,
   TURN_BOT_MS,
-  isDefensePhase,
-  isInterventiPhase,
   nextPhase,
   nextDuelPhase,
   nextPercorsoPhase,
@@ -1648,59 +1646,7 @@ export class RoomStore {
    */
   publicDefense(code: string): DefenseState | null {
     const room = this.rooms.get(code);
-    if (!room) return null;
-    if (!isDefensePhase(room.phase) && !isInterventiPhase(room.phase)) return null;
-    const canFinish = room.turnMinEndsAt == null || this.now() >= room.turnMinEndsAt;
-
-    if (room.phase === 'INTERVENTI') {
-      const speakerId = room.interventiQueue[room.interventiIndex] ?? null;
-      const sp = speakerId ? room.players.get(speakerId) : undefined;
-      const queue = room.interventiQueue
-        .map((id) => {
-          const p = room.players.get(id);
-          return p ? { id: p.id, nickname: p.nickname } : null;
-        })
-        .filter((x): x is { id: string; nickname: string } => x != null);
-      return {
-        kind: 'intervento',
-        speaker: null,
-        intervenor: sp ? { id: sp.id, nickname: sp.nickname } : null,
-        speakerId,
-        turn: room.interventiIndex + 1,
-        totalTurns: room.interventiQueue.length,
-        argument: null,
-        spunti: null,
-        raisedCount: 0,
-        queue,
-        minEndsAt: room.turnMinEndsAt,
-        canFinish,
-        startedAt: room.turnStartedAt,
-      };
-    }
-
-    const totalTurns = room.defenders.length;
-    const speaker = room.defenders[room.defenseTurnIndex] ?? null;
-    const spunti =
-      speaker && room.currentDilemma
-        ? speaker.side === 'A'
-          ? room.currentDilemma.spuntiA
-          : room.currentDilemma.spuntiB
-        : null;
-    return {
-      kind: 'defense',
-      speaker,
-      intervenor: null,
-      speakerId: speaker?.id ?? null,
-      turn: totalTurns === 0 ? 0 : room.defenseTurnIndex + 1,
-      totalTurns,
-      argument: room.defenseArgument,
-      spunti,
-      raisedCount: room.raisedHands.length,
-      queue: null,
-      minEndsAt: room.turnMinEndsAt,
-      canFinish,
-      startedAt: room.turnStartedAt,
-    };
+    return room ? defenseTurns.publicDefense(room, this.now()) : null;
   }
 
   /**
