@@ -8,6 +8,7 @@ import { startMusic, stopMusic, setMusicIntensity } from './audio/music';
 import { play as playSfx } from './audio/sfx';
 import { sfxForTransition, shouldWarnAt, handRaised } from './audio/cues';
 import { MuteButton } from './MuteButton';
+import { AudioGate } from './AudioGate';
 import {
   SocketEvents,
   PHASE_LABELS,
@@ -136,6 +137,13 @@ export default function HostApp() {
   // phases plus event sound effects. Unlock on the first user gesture (the "Collega TV"
   // submit is a pointerdown, so it counts) per the browser autoplay policy.
   const [audioReady, setAudioReady] = useState(false);
+  // Explicit activation (from the tap-to-enable gate): unlock + an immediate confirmation
+  // chime so the host instantly knows sound is on, then let the effects start the music.
+  const activateAudio = () => {
+    unlockAudio();
+    setAudioReady(true);
+    playSfx('reveal');
+  };
   useEffect(() => {
     const onGesture = () => {
       unlockAudio();
@@ -206,6 +214,7 @@ export default function HostApp() {
   if (!code) {
     return (
       <main style={screen}>
+        {!audioReady && <AudioGate onActivate={activateAudio} />}
         <Logo size={64} payoff />
         <p style={{ opacity: 0.8, margin: 0, maxWidth: '32rem' }}>
           Collega questo schermo a una partita: inserisci il codice mostrato sul telefono del leader.
@@ -249,6 +258,7 @@ export default function HostApp() {
     const duelSummary = game.duelSummary;
     return (
       <main style={screen}>
+        {!audioReady && <AudioGate onActivate={activateAudio} />}
         <ReactionSwarm />
         <MuteButton />
         {/* Latecomers can still join mid-game: keep the code + QR in the corner. */}
@@ -655,6 +665,7 @@ export default function HostApp() {
   // LOBBY: show the code + roster + a passive "waiting for the leader" line.
   return (
     <main style={screen}>
+      {!audioReady && <AudioGate onActivate={activateAudio} />}
       <MuteButton />
       <Logo size={64} payoff />
       <p style={{ opacity: 0.7, margin: 0 }}>
