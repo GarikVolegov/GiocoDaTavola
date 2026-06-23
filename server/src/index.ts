@@ -7,7 +7,7 @@ import { randomUUID } from 'crypto';
 import { RoomStore, isVotingPhase, tappaCounts, storieCatalog, loadStories, type Room } from './game/rooms';
 import { loadDilemmas } from './game/deck';
 import { generateBotDefense, aiDefenseEnabled } from './game/aiDefense';
-import { migrate, dbEnabled, pool } from './db';
+import { migrate, dbEnabled, getPool } from './db';
 import { saveAwards, awardsToPersist, saveGameRecords, gamesToPersist } from './persistence';
 import { validateProfileInput, loadProfile, saveProfile } from './profile';
 import { verifyClerkToken } from './clerk';
@@ -15,10 +15,13 @@ import { serializeRoom, deserializeRoom } from './game/roomSnapshot';
 import { persistSnapshot, loadAllSnapshots, deleteSnapshot } from './snapshotStore';
 import { createRateLimiter } from './rateLimit';
 
-// Load server/.env (e.g. AI_BASE_URL / AI_MODEL for self-hosted LLM defenses) if
+// Load server/.env (DATABASE_URL, CLERK_SECRET_KEY, AI_BASE_URL/AI_MODEL, …) if
 // present. Zero-dependency: uses Node's built-in env-file loader (Node 20.12+).
+// Skipped under test so the suite stays hermetic / DB-less regardless of a
+// developer's local .env (the pool is resolved lazily in ./db, so it would
+// otherwise pick up a real DATABASE_URL and hit Postgres during tests).
 const envFile = path.resolve(__dirname, '../.env');
-if (fs.existsSync(envFile)) {
+if (process.env.NODE_ENV !== 'test' && fs.existsSync(envFile)) {
   (process as NodeJS.Process & { loadEnvFile?: (p: string) => void }).loadEnvFile?.(envFile);
 }
 
@@ -335,7 +338,8 @@ app.get('/api/health', async (_req, res) => {
   // Report DB reachability too: 'disabled' when DB-less, 'ok'/'down' otherwise.
   // A down DB still returns ok:true (the game runs in-memory without it).
   let db: 'disabled' | 'ok' | 'down' = 'disabled';
-  if (dbEnabled() && pool) {
+  const pool = getPool();
+  if (pool) {
     try {
       await pool.query('SELECT 1');
       db = 'ok';
@@ -355,7 +359,8 @@ app.get('/api/me/awards', async (req, res) => {
     res.status(401).json({ error: 'unauthorized' });
     return;
   }
-  if (!dbEnabled() || !pool) {
+  const pool = getPool();
+  if (!pool) {
     res.json({ awards: [] });
     return;
   }
@@ -395,7 +400,8 @@ app.get('/api/me/dashboard', async (req, res) => {
     recentAwards: [],
     profile: { displayName: null, avatar: null },
   };
-  if (!dbEnabled() || !pool) {
+  const pool = getPool();
+  if (!pool) {
     res.json(empty);
     return;
   }
@@ -477,7 +483,7 @@ app.put('/api/me/profile', async (req, res) => {
     res.status(400).json({ error: result.error });
     return;
   }
-  if (!dbEnabled() || !pool) {
+  if (!dbEnabled()) {
     res.status(503).json({ error: 'db-unavailable' });
     return;
   }

@@ -85,14 +85,15 @@ export function gamesToPersist(room: Room): PersistableGame[] {
   return rows;
 }
 
-import { pool, dbEnabled } from './db';
+import { getPool } from './db';
 
 /**
  * Persist award rows: upsert the user, then insert each award idempotently
  * (ON CONFLICT on the natural key). No-op when the DB is disabled or rows empty.
  */
 export async function saveAwards(rows: PersistableAward[]): Promise<void> {
-  if (!dbEnabled() || !pool || rows.length === 0) return;
+  const pool = getPool();
+  if (!pool || rows.length === 0) return;
   const client = await pool.connect();
   try {
     for (const r of rows) {
@@ -119,7 +120,8 @@ export async function saveAwards(rows: PersistableAward[]): Promise<void> {
  * DO UPDATE keeps a late player:identify re-save safe. No-op when DB disabled/empty.
  */
 export async function saveGameRecords(rows: PersistableGame[]): Promise<void> {
-  if (!dbEnabled() || !pool || rows.length === 0) return;
+  const pool = getPool();
+  if (!pool || rows.length === 0) return;
   const client = await pool.connect();
   try {
     for (const r of rows) {

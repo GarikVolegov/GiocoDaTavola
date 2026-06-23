@@ -2,7 +2,7 @@
 // first so it stays unit-testable without a DB, then the Postgres read/write.
 // Avatars are either a whitelisted `preset:<id>` or a small raster data-URL the
 // client already resized — never an external URL or SVG (those can carry script).
-import { pool, dbEnabled } from './db';
+import { getPool } from './db';
 
 // Mirrors NICKNAME_MAX in game/rooms.ts: the in-game nickname cap.
 export const DISPLAY_NAME_MAX = 24;
@@ -66,7 +66,8 @@ export function validateProfileInput(input: ProfileInput): ValidationResult {
 /** Persist a validated profile: upsert the user row (mirrors the upsert in
  *  persistence.ts). No-op when the DB is disabled. */
 export async function saveProfile(userId: string, p: Profile): Promise<void> {
-  if (!dbEnabled() || !pool) return;
+  const pool = getPool();
+  if (!pool) return;
   await pool.query(
     `INSERT INTO users (clerk_user_id, display_name, avatar, last_seen)
      VALUES ($1, $2, $3, now())
@@ -78,7 +79,8 @@ export async function saveProfile(userId: string, p: Profile): Promise<void> {
 
 /** Read a user's profile. Returns an empty profile when DB-disabled or unknown. */
 export async function loadProfile(userId: string): Promise<Profile> {
-  if (!dbEnabled() || !pool) return { displayName: null, avatar: null };
+  const pool = getPool();
+  if (!pool) return { displayName: null, avatar: null };
   const { rows } = await pool.query(
     `SELECT display_name, avatar FROM users WHERE clerk_user_id = $1`,
     [userId],

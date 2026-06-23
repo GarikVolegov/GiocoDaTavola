@@ -276,7 +276,7 @@ export default function StatusView({
             <p style={{ fontSize: '1rem', opacity: 0.85, margin: '0.4rem 0 0' }}>
               Accedi per salvare i tuoi premi.
             </p>
-            <SignInButton mode="modal">
+            <SignInButton mode="modal" forceRedirectUrl="/casa" signUpForceRedirectUrl="/casa">
               <button
                 type="button"
                 style={{ marginTop: '0.5rem', fontWeight: 700, padding: '0.6rem 1.4rem', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}

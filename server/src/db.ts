@@ -2,15 +2,37 @@
 // every caller no-ops, so the game runs DB-less (accounts are optional).
 import { Pool } from 'pg';
 
-const url = process.env.DATABASE_URL;
-export const pool: Pool | null = url ? new Pool({ connectionString: url }) : null;
+// Resolve the pool LAZILY (memoized), not at import time. index.ts loads
+// server/.env *after* its imports run, so a top-level `const pool =
+// process.env.DATABASE_URL ? …` would snapshot the var before the .env file
+// populates it — leaving the DB wrongly disabled in dev (503 on profile save).
+// Reading at first use sidesteps the import-vs-.env ordering entirely.
+let resolved = false;
+let _pool: Pool | null = null;
+
+/** The shared pool, or null when DB-less. Resolved on first call from the env. */
+export function getPool(): Pool | null {
+  if (!resolved) {
+    const url = process.env.DATABASE_URL;
+    _pool = url ? new Pool({ connectionString: url }) : null;
+    resolved = true;
+  }
+  return _pool;
+}
 
 export function dbEnabled(): boolean {
-  return pool !== null;
+  return getPool() !== null;
+}
+
+/** Test-only: forget the memoized pool so a test can re-resolve from a changed env. */
+export function __resetPoolForTests(): void {
+  resolved = false;
+  _pool = null;
 }
 
 /** Create tables/indexes if missing. No-op when the DB is disabled. Idempotent. */
 export async function migrate(): Promise<void> {
+  const pool = getPool();
   if (!pool) return;
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
