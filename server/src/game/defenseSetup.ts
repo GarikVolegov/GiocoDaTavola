@@ -19,7 +19,7 @@ export function armTurn(room: Room, now: number): void {
   const speakerId = defenseTurns.currentSpeakerId(room);
   const speaker = speakerId ? room.players.get(speakerId) : undefined;
   room.turnStartedAt = now;
-  if (speaker && !speaker.isBot) {
+  if (speaker && !speaker.isBot && speaker.connected !== false) {
     room.turnMinEndsAt = now + (interventi ? INTERVENTO_MIN_MS : DEFENSE_MIN_MS);
     room.phaseExpiresAt = now + (interventi ? INTERVENTI_MAX_MS : DEFENSE_MAX_MS);
   } else {
@@ -40,7 +40,8 @@ export function selectDefenders(room: Room, rng: () => number): Defender[] {
   for (const side of ['A', 'B'] as const) {
     const voters = [...room.votes.entries()]
       .filter(([, choice]) => choice === side)
-      .map(([id]) => id);
+      .map(([id]) => id)
+      .filter((id) => room.players.get(id)?.connected !== false);
     if (voters.length === 0) continue; // side with no votes -> no defender
     const min = Math.min(...voters.map((id) => room.defenseCounts.get(id) ?? 0));
     const candidates = voters.filter((id) => (room.defenseCounts.get(id) ?? 0) === min);
