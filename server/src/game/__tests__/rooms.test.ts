@@ -943,9 +943,16 @@ describe('RoomStore per-player stats (Fase A)', () => {
     // hasn't (count=0). So round 2 picks sock-2 for A (lowest count).
     playRound(store, code, { 'sock-0': 'A', 'sock-1': 'A', 'sock-2': 'A' });
     const stats = store.get(code)!.stats;
-    expect(stats.get('sock-0')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 2, minorityCount: 0, persuasion: 1, defendedCount: 1 });
-    expect(stats.get('sock-1')).toEqual({ rounds: 2, changedCount: 1, majorityCount: 2, minorityCount: 0, persuasion: 0, defendedCount: 1 });
-    expect(stats.get('sock-2')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 1, minorityCount: 1, persuasion: 0, defendedCount: 1 });
+    // Round 2's PREDICT phase is left with nobody having predicted (playRound
+    // never calls predict/swingBet), so the soft-timeout auto-default (task 0.1)
+    // backfills everyone to the leading side ("A") + "regge" on exit — which
+    // happens to match round 2's actual outcome, crediting correctPredictions
+    // and correctSwingBets for all three players. Round 1's defaults (to "B",
+    // the round-1 leading side at PREDICT time) don't match its actual outcome
+    // (A), so they credit nothing there.
+    expect(stats.get('sock-0')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 2, minorityCount: 0, persuasion: 1, defendedCount: 1, correctPredictions: 1, correctSwingBets: 1 });
+    expect(stats.get('sock-1')).toEqual({ rounds: 2, changedCount: 1, majorityCount: 2, minorityCount: 0, persuasion: 0, defendedCount: 1, correctPredictions: 1, correctSwingBets: 1 });
+    expect(stats.get('sock-2')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 1, minorityCount: 1, persuasion: 0, defendedCount: 1, correctPredictions: 1, correctSwingBets: 1 });
   });
 
   it('counts a round each defender defended (defendedCount)', () => {

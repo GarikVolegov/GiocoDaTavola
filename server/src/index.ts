@@ -123,6 +123,7 @@ function refreshAfterRosterChange(code: string): void {
   } else if (room.phase === 'VOTE_2' && rooms.allConfirmed(code)) {
     advanceAndBroadcast(code); // a leaver was the last unconfirmed -> don't block
   } else {
+    if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
     broadcastGameState(code);
   }
 }
@@ -668,6 +669,7 @@ io.on('connection', (socket) => {
     } else if (phase === 'VOTE_2' && rooms.allConfirmed(code)) {
       advanceAndBroadcast(code);
     } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code); // refresh the count for the host
     }
   });
@@ -681,8 +683,12 @@ io.on('connection', (socket) => {
     const { code } = session;
     const result = rooms.confirmVote(code, session.playerId);
     if (!result.ok) return;
-    if (rooms.allConfirmed(code)) advanceAndBroadcast(code);
-    else broadcastGameState(code);
+    if (rooms.allConfirmed(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
+      broadcastGameState(code);
+    }
   });
 
   // A player taps a live reaction during DEFENSE / DUEL_ARGUE. The store validates
@@ -743,6 +749,7 @@ io.on('connection', (socket) => {
     if (rooms.predictPhaseComplete(code)) {
       advanceAndBroadcast(code);
     } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code); // refresh the predicted count for the host
     }
   });
@@ -762,6 +769,7 @@ io.on('connection', (socket) => {
     if (rooms.predictPhaseComplete(code)) {
       advanceAndBroadcast(code);
     } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code); // refresh the swing-bet count for the host
     }
   });
@@ -802,6 +810,7 @@ io.on('connection', (socket) => {
     if (rooms.predictPhaseComplete(code)) {
       advanceAndBroadcast(code);
     } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code); // refresh the guessed count
     }
   });
@@ -842,6 +851,7 @@ io.on('connection', (socket) => {
     if (rooms.allSpeakerVoted(code)) {
       advanceAndBroadcast(code);
     } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code);
     }
   });

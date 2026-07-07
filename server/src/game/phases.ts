@@ -58,6 +58,15 @@ export const INTERVENTI_MAX_MS = 90_000;
 export const TURN_BOT_MS = 60_000;
 
 /**
+ * Self-paced phases (VOTE_1/VOTE_2/PREDICT/SPEAKER_VOTE) have no fixed timer —
+ * they end once every present player has acted, or the leader skips. Once
+ * this fraction of the players a phase is waiting on have acted, a visible
+ * soft deadline kicks in so one distracted holdout can't freeze it forever.
+ */
+export const SOFT_TIMEOUT_THRESHOLD = 0.7;
+export const SOFT_TIMEOUT_MS = 50_000;
+
+/**
  * How long each phase lasts before the server auto-advances, in ms. `null`
  * means the phase has no timer: LOBBY waits for the host to start, FINAL_AWARDS
  * is terminal. Timers are authoritative server-side; clients only render the

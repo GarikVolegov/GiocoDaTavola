@@ -18,6 +18,8 @@ import * as dilemmaPlan from './dilemmaPlan';
 import {
   type GamePhase,
   PHASE_DURATIONS_MS,
+  SOFT_TIMEOUT_THRESHOLD,
+  SOFT_TIMEOUT_MS,
   nextPhase,
   nextDuelPhase,
   nextPercorsoPhase,
@@ -1084,6 +1086,10 @@ export class RoomStore {
         : room.format === 'storia'
           ? nextStoriaPhase(phase, idx, room.dilemmaCount ?? 0)
           : nextPhase(phase, idx, room.dilemmaCount ?? 0);
+    // Backfill anyone still missing a PREDICT action so a forced advance
+    // (soft-timeout or leader skip) doesn't just silently drop their result.
+    // A no-op once everyone has already acted (the normal early-advance path).
+    if (room.phase === 'PREDICT') predictions.applyPredictDefaults(room);
     let transition = step(room.phase, room.dilemmaIndex);
     // The peer "best speaker" vote needs at least two defenders to choose between;
     // with 0 or 1 it's degenerate, so skip straight to the results.
@@ -1209,6 +1215,50 @@ export class RoomStore {
       }
     }
     return { ok: true, room };
+  }
+
+  /**
+   * Arm a one-time soft deadline for a self-paced voting phase (VOTE_1/
+   * VOTE_2/PREDICT/SPEAKER_VOTE) once ~70% of the players it's waiting on
+   * have acted, so one distracted holdout can't freeze it forever — the
+   * existing schedulePhase/advanceAndBroadcast timer machinery (index.ts)
+   * then forces it through exactly like any timed phase. No-ops if the phase
+   * already has a deadline (a real timer, or an already-armed soft one),
+   * isn't one of these four, or nobody is actually missing.
+   */
+  maybeArmSoftTimeout(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room || room.phaseExpiresAt != null) return false;
+    let total = 0;
+    let acted = 0;
+    if (room.phase === 'VOTE_1' || room.phase === 'VOTE_2') {
+      const present = [...room.players.values()].filter((p) => p.connected !== false);
+      total = present.length;
+      acted =
+        room.phase === 'VOTE_2'
+          ? present.filter((p) => room.confirmedVote2.has(p.id)).length
+          : present.filter((p) => room.votes.has(p.id)).length;
+    } else if (room.phase === 'PREDICT') {
+      const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+      const know = knowRound.isKnowRound(room);
+      total = humans.length;
+      acted = humans.filter(
+        (p) =>
+          room.predictions.has(p.id) &&
+          room.swingBets.has(p.id) &&
+          (!know || !room.knowTargets.has(p.id) || room.knowGuesses.has(p.id)),
+      ).length;
+    } else if (room.phase === 'SPEAKER_VOTE') {
+      const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+      total = humans.length;
+      acted = humans.filter((p) => room.speakerVotes.has(p.id)).length;
+    } else {
+      return false;
+    }
+    if (total === 0 || acted === total) return false;
+    if (acted / total < SOFT_TIMEOUT_THRESHOLD) return false;
+    room.phaseExpiresAt = this.now() + SOFT_TIMEOUT_MS;
+    return true;
   }
 
   /**

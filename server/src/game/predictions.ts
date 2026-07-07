@@ -123,6 +123,25 @@ export function predictPhaseComplete(room: Room): boolean {
   return progress != null && progress.total > 0 && progress.done === progress.total;
 }
 
+/**
+ * Force a plausible default for any connected human still missing a PREDICT
+ * action once the phase is forced through (soft-timeout or a leader skip):
+ * the side prediction defaults to the currently-leading side (a tie -> A),
+ * the swing bet defaults to "regge" (majority holds). Idempotent — a no-op
+ * for anyone who already acted, so it's safe to call unconditionally on
+ * every PREDICT exit.
+ */
+export function applyPredictDefaults(room: Room): void {
+  if (room.phase !== 'PREDICT') return;
+  const t = tally(room.votes);
+  const leading: VoteChoice = t.A >= t.B ? 'A' : 'B';
+  const present = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+  for (const p of present) {
+    if (!room.predictions.has(p.id)) room.predictions.set(p.id, leading);
+    if (!room.swingBets.has(p.id)) room.swingBets.set(p.id, 'regge');
+  }
+}
+
 /** Each bettor's own swing-bet outcome (private emit at PHASE_RESULTS). */
 export function swingBetResults(room: Room): SwingBetOutcome[] {
   const flipped = leadFlipped(room);
