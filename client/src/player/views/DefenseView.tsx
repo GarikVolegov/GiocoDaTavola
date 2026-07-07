@@ -154,6 +154,20 @@ export default function DefenseView({
             )}
           </p>
 
+          {phase === 'DEFENSE' && speaker && (
+            <>
+              {dilemma && (
+                <p style={{ fontSize: '0.95rem', opacity: 0.75, margin: 0, maxWidth: '22rem' }}>
+                  {dilemma.text}
+                </p>
+              )}
+              <p style={{ fontSize: '1rem', opacity: 0.9, margin: 0 }}>
+                Sta difendendo <strong>{speaker.side}</strong>
+                {sideOption ? `: ${sideOption}` : ''}
+              </p>
+            </>
+          )}
+
           {phase === 'DEFENSE' && d?.speakerId != null && (
             <button
               type="button"

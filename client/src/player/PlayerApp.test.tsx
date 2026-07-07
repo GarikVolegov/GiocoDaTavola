@@ -211,6 +211,41 @@ describe('PlayerApp', () => {
     expect(screen.getByRole('button', { name: /alza la mano/i })).toBeInTheDocument();
   });
 
+  it('shows the dilemma and defended side to a listener (not just the speaker) at DEFENSE', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: {
+          kind: 'defense',
+          speaker: { id: 'p2', nickname: 'Bea', side: 'A' },
+          speakerId: 'p2',
+          turn: 1,
+          totalTurns: 2,
+          argument: null,
+          spunti: null,
+          raisedCount: 0,
+          queue: null,
+          minEndsAt: null,
+          canFinish: true,
+          startedAt: null,
+        },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText('Mare o montagna?')).toBeInTheDocument();
+    expect(screen.getByText(/difendendo.*mare/i)).toBeInTheDocument();
+  });
+
   it('shows the finish affordance when it is your turn at DEFENSE', () => {
     render(<PlayerApp />);
     act(() => {
