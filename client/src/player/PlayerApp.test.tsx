@@ -803,4 +803,53 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/componi la serata/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /avvia partita/i })).toBeInTheDocument();
   });
+
+  it('requires a second tap of "Salta" during a secret-vote phase (VOTE_1)', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: 9_999_999_999_999,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: 'p1', // I'm the leader
+      });
+    });
+    const skip = screen.getByRole('button', { name: /salta/i });
+    fireEvent.click(skip);
+    expect(emitSpy).not.toHaveBeenCalledWith('leader:advancePhase');
+    fireEvent.click(screen.getByRole('button', { name: /salta/i })); // 2nd tap, now confirming
+    expect(emitSpy).toHaveBeenCalledWith('leader:advancePhase');
+  });
+
+  it('advances on a single tap of "Salta" during a speaking-turn phase (DEFENSE)', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: 9_999_999_999_999,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: null,
+        leaderId: 'p1',
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /salta/i }));
+    expect(emitSpy).toHaveBeenCalledWith('leader:advancePhase');
+  });
 });

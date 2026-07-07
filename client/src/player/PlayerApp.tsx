@@ -157,6 +157,10 @@ export default function PlayerApp() {
   // Two-step guard on the lobby's "leave room" link: the first tap arms it, the
   // second actually leaves — so a stray tap never drops the player out of the room.
   const [confirmingLeave, setConfirmingLeave] = useState(false);
+  // "Salta ▶" needs a 2nd tap during a secret-vote phase (VOTE_1/VOTE_2/
+  // PREDICT/SPEAKER_VOTE/DUEL_PICK/DUEL_REPICK) so an impatient leader can't
+  // silently cut off someone else's still-forming vote with one stray tap.
+  const [confirmingSkip, setConfirmingSkip] = useState(false);
   // Player-written dilemmas (lobby): the draft form + how many we've added.
   const [dilemmaText, setDilemmaText] = useState('');
   const [dilemmaA, setDilemmaA] = useState('');
@@ -418,6 +422,12 @@ export default function PlayerApp() {
     setRaiseHandError(null);
   }, [turnSpeakerId, phase]);
 
+  // A "confirming skip" belongs to one phase only: a leftover armed state must
+  // never carry into the next phase and fire an unintended skip on its first tap.
+  useEffect(() => {
+    setConfirmingSkip(false);
+  }, [phase]);
+
   // A confirmation belongs to one VOTE_2 round only: drop it whenever the phase
   // changes so the next second-vote starts from the "Confermo" affordance again.
   useEffect(() => {
@@ -602,13 +612,39 @@ export default function PlayerApp() {
     p !== 'SCENE_CONSEQUENCE' &&
     p !== 'STORY_EPILOGUE';
 
+  // Phases where skipping cuts off OTHER players' still-secret input, so
+  // "Salta ▶" needs a confirming 2nd tap instead of firing immediately.
+  const isSecretVotePhase = (p: GameStatePayload['phase']) =>
+    p === 'VOTE_1' ||
+    p === 'VOTE_2' ||
+    p === 'PREDICT' ||
+    p === 'SPEAKER_VOTE' ||
+    p === 'DUEL_PICK' ||
+    p === 'DUEL_REPICK';
+
   // The leader's "skip the rest of this phase" button — only shown to the leader
   // during a phase that has a countdown. Rendered in each in-game branch.
   const skipButton =
     isLeader && phaseHasTimer(phase) ? (
-      <Button variant="ghost" onClick={advance}>
-        Salta ▶
-      </Button>
+      isSecretVotePhase(phase) ? (
+        <Button
+          variant="ghost"
+          onClick={() => {
+            if (confirmingSkip) {
+              setConfirmingSkip(false);
+              advance();
+            } else {
+              setConfirmingSkip(true);
+            }
+          }}
+        >
+          {confirmingSkip ? 'Sicuro? Salta di nuovo ▶' : 'Salta ▶'}
+        </Button>
+      ) : (
+        <Button variant="ghost" onClick={advance}>
+          Salta ▶
+        </Button>
+      )
     ) : null;
 
   // Every in-game screen gets the discreet ⋮ exit (hidden, two-tap confirm). The
