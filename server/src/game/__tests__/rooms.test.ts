@@ -1611,6 +1611,31 @@ describe('RoomStore leadership', () => {
   });
 });
 
+describe('leave() leadership migration', () => {
+  it('skips a disconnected player when picking the next leader', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    store.join(code, 'p2', 'Bob');
+    store.join(code, 'p3', 'Cid');
+    store.setLeader(code, 'p1');
+    store.get(code)!.players.get('p2')!.connected = false; // Bob is mid-grace
+    store.leave(code, 'p1'); // the leader (Ann) leaves for good
+    expect(store.get(code)!.leaderId).toBe('p3'); // Cid, not the offline Bob
+  });
+
+  it('falls back to a disconnected human if nobody else is connected', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    store.join(code, 'p2', 'Bob');
+    store.setLeader(code, 'p1');
+    store.get(code)!.players.get('p2')!.connected = false; // Bob is the only one left, and offline
+    store.leave(code, 'p1');
+    expect(store.get(code)!.leaderId).toBe('p2'); // better than null — they get control back on reconnect
+  });
+});
+
 describe('RoomStore.setPlayerUser', () => {
   it('tags a player with a clerk user id; false for unknown room/player', () => {
     const store = new RoomStore();

@@ -1791,8 +1791,9 @@ export class RoomStore {
     }
     const removed = room.players.delete(playerId);
     if (removed && room.leaderId === playerId) {
-      const nextHuman = [...room.players.values()].find((p) => !p.isBot);
-      room.leaderId = nextHuman ? nextHuman.id : null;
+      const humans = [...room.players.values()].filter((p) => !p.isBot);
+      const nextLeader = humans.find((p) => p.connected !== false) ?? humans[0];
+      room.leaderId = nextLeader ? nextLeader.id : null;
     }
     return removed;
   }
