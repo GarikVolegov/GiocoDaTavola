@@ -676,6 +676,7 @@ export default function PlayerApp() {
         votedCount={game?.votedCount ?? 0}
         confirmedCount={game?.confirmedCount ?? 0}
         playerCount={players.length}
+        missingVoters={game?.missingVoters ?? null}
         skipButton={skipButton}
       />
     );
@@ -749,6 +750,7 @@ export default function PlayerApp() {
         onKnowGuess={castKnowGuess}
         predictedCount={game?.predictedCount ?? 0}
         playerCount={players.length}
+        missingPredictors={game?.missingPredictors ?? null}
         skipButton={skipButton}
       />
     );

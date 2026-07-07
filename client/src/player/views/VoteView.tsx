@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { PHASE_LABELS, type VoteChoice } from '../../shared/events';
 import { Button, VoteOption, Alert } from '../../shared/ui';
-import { wrap } from './layout';
+import { wrap, formatWaitingList } from './layout';
 
 type VotePhase = 'VOTE_1' | 'VOTE_2' | 'DUEL_PICK' | 'DUEL_REPICK';
 
@@ -23,6 +23,7 @@ interface VoteViewProps {
   votedCount: number;
   confirmedCount: number;
   playerCount: number;
+  missingVoters: string[] | null;
   skipButton: ReactNode;
 }
 
@@ -40,6 +41,7 @@ export default function VoteView({
   votedCount,
   confirmedCount,
   playerCount,
+  missingVoters,
   skipButton,
 }: VoteViewProps) {
   // VOTE_2 / DUEL_REPICK keep the player's first choice as the default they can
@@ -94,11 +96,16 @@ export default function VoteView({
       ) : (
         <p style={{ opacity: 0.7, margin: 0 }}>Tocca A o B per votare.</p>
       )}
-      {(phase === 'VOTE_1' || phase === 'DUEL_PICK') && (
-        <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
-          Hanno votato {votedCount}/{playerCount}
-        </p>
-      )}
+      {(phase === 'VOTE_1' || phase === 'DUEL_PICK') &&
+        (missingVoters && missingVoters.length > 0 ? (
+          <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
+            Aspettiamo {formatWaitingList(missingVoters)}…
+          </p>
+        ) : (
+          <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
+            Hanno votato {votedCount}/{playerCount}
+          </p>
+        ))}
       {phase === 'VOTE_2' &&
         (confirmed ? (
           <>
@@ -106,7 +113,9 @@ export default function VoteView({
               ✓ Hai confermato
             </p>
             <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
-              Aspettiamo gli altri… {confirmedCount}/{playerCount}
+              {missingVoters && missingVoters.length > 0
+                ? `Aspettiamo ${formatWaitingList(missingVoters)}…`
+                : `Aspettiamo gli altri… ${confirmedCount}/${playerCount}`}
             </p>
           </>
         ) : (

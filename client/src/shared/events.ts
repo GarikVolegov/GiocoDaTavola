@@ -624,10 +624,22 @@ export interface GameStatePayload {
   /** How many players have confirmed their second vote (VOTE_2). Aggregate only. */
   confirmedCount: number;
   /**
+   * Nicknames of connected players still missing their vote/confirmation
+   * this voting phase (VOTE_1/VOTE_2/DUEL_PICK/DUEL_REPICK); null otherwise.
+   * Never reveals which choice — presence only.
+   */
+  missingVoters: string[] | null;
+  /**
    * How many players have made a secret prediction this round (PREDICT phase).
    * Aggregate count only — never who predicted what.
    */
   predictedCount: number;
+  /**
+   * Nicknames of connected humans still missing a PREDICT-phase action
+   * (prediction, swing bet, or — in the know round — their guess); null
+   * outside PREDICT.
+   */
+  missingPredictors: string[] | null;
   /**
    * How many players have placed a secret swing bet this round (PREDICT phase).
    * Aggregate count only — never who bet what.

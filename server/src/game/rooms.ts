@@ -1569,6 +1569,13 @@ export class RoomStore {
     return room ? voting.publicSplit(room) : null;
   }
 
+  /** Nicknames of connected players still missing their vote/confirmation
+   * this voting phase; null outside one. Never reveals which choice. */
+  missingVoters(code: string): string[] | null {
+    const room = this.rooms.get(code);
+    return room ? voting.missingVoters(room) : null;
+  }
+
   /**
    * The secret-safe percorso view for the host/phones: the chosen start + duration,
    * the live tappa, overall progress, and per-tappa totals/done — plus the current

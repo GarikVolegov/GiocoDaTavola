@@ -159,9 +159,17 @@ function gameStatePayload(room: Room) {
     // choice split stays secret until SPLIT_REVEAL.
     votedCount: room.votes.size,
     confirmedCount: rooms.confirmedCount(room.code),
+    // Nicknames of connected players still missing their action this voting
+    // phase (VOTE_1/VOTE_2/DUEL_PICK/DUEL_REPICK); null otherwise. Never
+    // reveals WHICH choice — presence only.
+    missingVoters: rooms.missingVoters(room.code),
     // How many players have made a secret prediction this round (PREDICT phase).
     // Aggregate count only — never who predicted what.
     predictedCount: room.predictions.size,
+    // Nicknames of connected humans still missing a PREDICT action
+    // (prediction, swing bet, or — in the know round — their guess); null
+    // outside PREDICT.
+    missingPredictors: rooms.predictProgress(room.code)?.missingNicknames ?? null,
     // How many players have placed a secret swing bet this round (PREDICT phase).
     // Aggregate count only — never who bet what.
     swingBetCount: room.swingBets.size,

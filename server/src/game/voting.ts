@@ -99,3 +99,19 @@ export function allConfirmed(room: Room): boolean {
   if (present.length === 0) return false;
   return present.every((p) => room.confirmedVote2.has(p.id));
 }
+
+/**
+ * Nicknames of connected players still missing their action this voting
+ * phase — VOTE_1/DUEL_PICK: haven't cast a vote yet; VOTE_2/DUEL_REPICK:
+ * haven't confirmed (their VOTE_1 choice already carried over as the
+ * default). Never reveals WHICH choice, only presence — safe to broadcast.
+ * Null outside a voting phase.
+ */
+export function missingVoters(room: Room): string[] | null {
+  if (!isVotingPhase(room.phase)) return null;
+  const present = [...room.players.values()].filter((p) => p.connected !== false);
+  const isConfirmPhase = room.phase === 'VOTE_2' || room.phase === 'DUEL_REPICK';
+  return present
+    .filter((p) => (isConfirmPhase ? !room.confirmedVote2.has(p.id) : !room.votes.has(p.id)))
+    .map((p) => p.nickname);
+}

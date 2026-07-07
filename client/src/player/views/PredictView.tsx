@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { PHASE_LABELS, type KnowPair, type VoteChoice, type SwingBet } from '../../shared/events';
 import { VoteOption } from '../../shared/ui';
-import { wrap } from './layout';
+import { wrap, formatWaitingList } from './layout';
 
 interface PredictDilemma {
   text: string;
@@ -21,6 +21,7 @@ interface PredictViewProps {
   onKnowGuess: (choice: VoteChoice) => void;
   predictedCount: number;
   playerCount: number;
+  missingPredictors: string[] | null;
   skipButton: ReactNode;
 }
 
@@ -39,6 +40,7 @@ export default function PredictView({
   onKnowGuess,
   predictedCount,
   playerCount,
+  missingPredictors,
   skipButton,
 }: PredictViewProps) {
   if (knowPair) {
@@ -123,7 +125,9 @@ export default function PredictView({
         <p style={{ opacity: 0.7, margin: 0 }}>Scegli chi pensi convincerà di più.</p>
       )}
       <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
-        Hanno pronosticato {predictedCount}/{playerCount}
+        {missingPredictors && missingPredictors.length > 0
+          ? `Aspettiamo ${formatWaitingList(missingPredictors)}…`
+          : `Hanno pronosticato ${predictedCount}/${playerCount}`}
       </p>
       <div
         role="group"

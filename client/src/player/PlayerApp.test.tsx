@@ -440,6 +440,87 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/hanno votato 2\/3/i)).toBeInTheDocument();
   });
 
+  it('shows who is missing instead of the counter at VOTE_1', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+          { id: 'p3', nickname: 'Carlo' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 2,
+        missingVoters: ['Marco', 'Giulia'],
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/aspettiamo marco e giulia/i)).toBeInTheDocument();
+    expect(screen.queryByText(/hanno votato/i)).toBeNull();
+  });
+
+  it('falls back to the counter at VOTE_1 when nobody is missing yet (list not sent)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+          { id: 'p3', nickname: 'Carlo' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 2,
+        missingVoters: null,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/hanno votato 2\/3/i)).toBeInTheDocument();
+  });
+
+  it('shows who is missing instead of the counter at PREDICT', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PREDICT',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        predictedCount: 1,
+        missingPredictors: ['Marco'],
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/aspettiamo marco/i)).toBeInTheDocument();
+  });
+
   it('gives personal feedback after confirming the second vote', () => {
     render(<PlayerApp />);
     act(() => {
