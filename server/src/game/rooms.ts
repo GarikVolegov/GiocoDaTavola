@@ -20,6 +20,7 @@ import {
   PHASE_DURATIONS_MS,
   SOFT_TIMEOUT_THRESHOLD,
   SOFT_TIMEOUT_MS,
+  DUEL_TURN_MIN_MS,
   nextPhase,
   nextDuelPhase,
   nextPercorsoPhase,
@@ -742,6 +743,8 @@ export class RoomStore {
     if (room.phase === 'DUEL_ARGUE' && room.duelTurnIndex < duelPlayers(room).length - 1) {
       room.duelTurnIndex++;
       room.phaseExpiresAt = this.expiryFor('DUEL_ARGUE');
+      room.turnStartedAt = this.now();
+      room.turnMinEndsAt = this.now() + DUEL_TURN_MIN_MS;
       return { ok: true, room };
     }
     const agreed = room.phase === 'DUEL_REVEAL' ? duelAgreed(room) : false;
@@ -754,6 +757,10 @@ export class RoomStore {
       room.votes.clear();
       room.votes1.clear();
       room.duelTurnIndex = 0;
+    }
+    if (t.phase === 'DUEL_ARGUE') {
+      room.turnStartedAt = this.now();
+      room.turnMinEndsAt = this.now() + DUEL_TURN_MIN_MS;
     }
     if (t.phase === 'DUEL_REPICK') {
       room.votes1 = new Map(room.votes);
@@ -1660,7 +1667,7 @@ export class RoomStore {
    */
   publicDuelTurn(code: string) {
     const room = this.rooms.get(code);
-    return room ? duelTurn(room) : null;
+    return room ? duelTurn(room, this.now()) : null;
   }
 
   /**

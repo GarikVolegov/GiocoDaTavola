@@ -341,6 +341,10 @@ export default function PlayerApp() {
   const canFinishNow = game?.defense?.minEndsAt == null || (minRemaining ?? 0) <= 0;
   // The speaker's elapsed time, counting UP from the turn start.
   const speakerElapsed = useElapsed(game?.defense?.startedAt ?? null);
+  // Self-paced turn (DUEL_ARGUE): the floor countdown gates "Ho finito".
+  const duelMinRemaining = useCountdown(game?.duelTurn?.minEndsAt ?? null);
+  const duelCanFinishNow = game?.duelTurn?.minEndsAt == null || (duelMinRemaining ?? 0) <= 0;
+  const duelSpeakerElapsed = useElapsed(game?.duelTurn?.startedAt ?? null);
 
   // Each new dilemma round starts with a clean (unselected) vote + prediction.
   useEffect(() => {
@@ -670,6 +674,10 @@ export default function PlayerApp() {
         dilemma={game?.dilemma}
         playerId={playerId}
         remaining={remaining}
+        canFinishNow={duelCanFinishNow}
+        minRemaining={duelMinRemaining}
+        speakerElapsed={duelSpeakerElapsed}
+        onFinish={sendFinish}
         onReact={sendReaction}
         skipButton={skipButton}
       />

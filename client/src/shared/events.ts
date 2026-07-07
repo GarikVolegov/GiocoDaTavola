@@ -510,6 +510,9 @@ export interface DuelTurn {
   speaker: { id: string; nickname: string; side: VoteChoice } | null;
   turn: number;
   totalTurns: number;
+  minEndsAt: number | null;
+  canFinish: boolean;
+  startedAt: number | null;
 }
 
 /** Duel round result (DUEL_RESULT): agreement, or who convinced whom. */

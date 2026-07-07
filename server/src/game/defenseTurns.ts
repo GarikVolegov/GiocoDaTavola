@@ -46,7 +46,7 @@ export function raiseHand(room: Room, playerId: string): RaiseHandResult {
  * once the per-turn minimum has elapsed; the caller then advances the turn.
  */
 export function finishTurn(room: Room, playerId: string, now: number): FinishTurnResult {
-  if (room.phase !== 'DEFENSE' && room.phase !== 'INTERVENTI') {
+  if (room.phase !== 'DEFENSE' && room.phase !== 'INTERVENTI' && room.phase !== 'DUEL_ARGUE') {
     return { ok: false, error: 'NOT_FINISHING_PHASE' };
   }
   if (currentSpeakerId(room) !== playerId) return { ok: false, error: 'NOT_SPEAKER' };

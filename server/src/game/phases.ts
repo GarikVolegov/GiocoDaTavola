@@ -55,7 +55,11 @@ export const DEFENSE_MIN_MS = 30_000;
 export const INTERVENTO_MIN_MS = 15_000;
 export const DEFENSE_MAX_MS = 180_000;
 export const INTERVENTI_MAX_MS = 90_000;
-export const TURN_BOT_MS = 60_000;
+export const TURN_BOT_MS = 20_000;
+
+/** Per-turn floor for a human's DUEL_ARGUE turn — mirrors INTERVENTO_MIN_MS;
+ * kept separate so the two can diverge later without cross-affecting. */
+export const DUEL_TURN_MIN_MS = 15_000;
 
 /**
  * Self-paced phases (VOTE_1/VOTE_2/PREDICT/SPEAKER_VOTE) have no fixed timer —

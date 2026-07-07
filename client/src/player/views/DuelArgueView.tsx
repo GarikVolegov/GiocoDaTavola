@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { PHASE_LABELS, type VoteChoice, type Reaction } from '../../shared/events';
+import { formatMSS } from '../../shared/time';
+import { Button } from '../../shared/ui';
 import ReactionBar from './ReactionBar';
 import { wrap } from './layout';
 
@@ -20,6 +22,10 @@ interface DuelArgueViewProps {
   dilemma: DuelDilemma | null | undefined;
   playerId: string | null;
   remaining: number | null;
+  canFinishNow: boolean;
+  minRemaining: number | null;
+  speakerElapsed: number | null;
+  onFinish: () => void;
   onReact: (emoji: Reaction) => void;
   skipButton: ReactNode;
 }
@@ -31,6 +37,10 @@ export default function DuelArgueView({
   dilemma,
   playerId,
   remaining,
+  canFinishNow,
+  minRemaining,
+  speakerElapsed,
+  onFinish,
   onReact,
   skipButton,
 }: DuelArgueViewProps) {
@@ -63,6 +73,20 @@ export default function DuelArgueView({
             Argomenta <strong>{speaker.side}</strong>
             {sideOption ? `: ${sideOption}` : ''}
           </p>
+          <div
+            aria-label="Tempo trascorso"
+            style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+          >
+            {formatMSS(speakerElapsed ?? 0)}
+          </div>
+          <Button variant="primary" size="lg" onClick={onFinish} disabled={!canFinishNow}>
+            Ho finito ▶
+          </Button>
+          {!canFinishNow && (
+            <p style={{ fontSize: '0.85rem', opacity: 0.6, margin: 0 }}>
+              Parla ancora {minRemaining ?? ''}s prima di poter passare
+            </p>
+          )}
         </>
       ) : speaker ? (
         <>

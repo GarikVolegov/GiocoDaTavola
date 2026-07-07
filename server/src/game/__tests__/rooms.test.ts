@@ -1462,6 +1462,40 @@ describe('duel public readers', () => {
   });
 });
 
+describe('DUEL_ARGUE "Ho finito"', () => {
+  it('lets the current arguer finish once the floor has passed, rejects before', () => {
+    const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    store.join(code, 'p2', 'Bob');
+    store.startGame(code, 3, 'misto', 'duello');
+    store.advancePhase(code); // DUEL_PICK
+    store.vote(code, 'p1', 'A');
+    store.vote(code, 'p2', 'B');
+    store.advancePhase(code); // DUEL_REVEAL (disagree)
+    store.advancePhase(code); // DUEL_ARGUE, p1's turn
+    expect(store.get(code)!.phase).toBe('DUEL_ARGUE');
+    expect(store.finishTurn(code, 'p1')).toEqual({
+      ok: false,
+      error: 'TOO_EARLY',
+    });
+  });
+
+  it('rejects a finish from the player who is not currently arguing', () => {
+    const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    store.join(code, 'p2', 'Bob');
+    store.startGame(code, 3, 'misto', 'duello');
+    store.advancePhase(code);
+    store.vote(code, 'p1', 'A');
+    store.vote(code, 'p2', 'B');
+    store.advancePhase(code);
+    store.advancePhase(code); // DUEL_ARGUE, p1's turn
+    expect(store.finishTurn(code, 'p2')).toEqual({ ok: false, error: 'NOT_SPEAKER' });
+  });
+});
+
 describe('RoomStore reconnection / connected state', () => {
   // Drive a fresh 3-player room into VOTE_1 (mirror of the vote suite helper).
   function votingRoom(store: RoomStore, count = 3): string {
@@ -2276,7 +2310,7 @@ describe('RoomStore defense — equa rotazione difensori', () => {
 describe('INTERVENTI phase constants + room fields', () => {
   it('exposes the floor/cap/bot durations', () => {
     expect([DEFENSE_MIN_MS, INTERVENTO_MIN_MS, DEFENSE_MAX_MS, INTERVENTI_MAX_MS, TURN_BOT_MS])
-      .toEqual([30_000, 15_000, 180_000, 90_000, 60_000]);
+      .toEqual([30_000, 15_000, 180_000, 90_000, 20_000]);
   });
   it('DEFENSE cap is the 3-minute safety net', () => {
     expect(PHASE_DURATIONS_MS.DEFENSE).toBe(180_000);

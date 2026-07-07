@@ -301,6 +301,64 @@ describe('PlayerApp', () => {
     expect(screen.getByText('Bea')).toBeInTheDocument();
   });
 
+  it('shows the finish affordance once the floor lifts at DUEL_ARGUE', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DUEL_ARGUE',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        mode: 'duello',
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        duelTurn: {
+          speaker: { id: 'p1', nickname: 'Alice', side: 'A' },
+          turn: 1,
+          totalTurns: 2,
+          minEndsAt: null,
+          canFinish: true,
+          startedAt: Date.now(),
+        },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByRole('button', { name: /ho finito/i })).toBeEnabled();
+  });
+
+  it('locks the finish button before the floor lifts at DUEL_ARGUE', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DUEL_ARGUE',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        mode: 'duello',
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        duelTurn: {
+          speaker: { id: 'p1', nickname: 'Alice', side: 'A' },
+          turn: 1,
+          totalTurns: 2,
+          minEndsAt: Date.now() + 15_000,
+          canFinish: false,
+          startedAt: Date.now(),
+        },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByRole('button', { name: /ho finito/i })).toBeDisabled();
+  });
+
   it('shows the dilemma at DILEMMA_REVEAL (status view)', () => {
     render(<PlayerApp />);
     act(() => {

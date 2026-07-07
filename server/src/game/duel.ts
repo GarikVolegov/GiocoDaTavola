@@ -24,6 +24,12 @@ export interface DuelTurn {
   speaker: DuelSpeaker | null;
   turn: number;
   totalTurns: number;
+  /** When the current turn's "Ho finito" floor lifts; null if there is none. */
+  minEndsAt: number | null;
+  /** Whether the current arguer may end their turn early right now. */
+  canFinish: boolean;
+  /** When the current turn started, for the client's count-up display. */
+  startedAt: number | null;
 }
 export interface DuelConvinced {
   persuader: { id: string; nickname: string };
@@ -100,7 +106,7 @@ export function duelReveal(room: Room): DuelReveal | null {
  * Public duel argue turn (only DUEL_ARGUE, null otherwise): who is arguing now
  * (the current player + their picked side) and the turn progress.
  */
-export function duelTurn(room: Room): DuelTurn | null {
+export function duelTurn(room: Room, now: number): DuelTurn | null {
   if (room.phase !== 'DUEL_ARGUE') return null;
   const players = duelPlayers(room);
   const total = players.length;
@@ -110,6 +116,9 @@ export function duelTurn(room: Room): DuelTurn | null {
     speaker: cur && side ? { id: cur.id, nickname: cur.nickname, side } : null,
     turn: total === 0 ? 0 : room.duelTurnIndex + 1,
     totalTurns: total,
+    minEndsAt: room.turnMinEndsAt,
+    canFinish: room.turnMinEndsAt == null || now >= room.turnMinEndsAt,
+    startedAt: room.turnStartedAt,
   };
 }
 
