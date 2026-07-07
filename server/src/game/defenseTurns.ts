@@ -14,10 +14,16 @@ export function currentSpeakerId(room: Room): string | null {
   return null;
 }
 
+/** Max simultaneous raised hands during a defender's turn — keeps the
+ * post-defense INTERVENTI mini-round bounded no matter how big the room is. */
+export const INTERVENTI_QUEUE_MAX = 3;
+
 /**
  * Toggle a player's raised hand during a defender's turn (DEFENSE only). Anyone
  * present except the current speaker may queue; raising again lowers it. The FIFO
- * order is the speaking order for the INTERVENTI mini-turns that follow.
+ * order is the speaking order for the INTERVENTI mini-turns that follow. Once
+ * INTERVENTI_QUEUE_MAX hands are raised, further raises are rejected with
+ * QUEUE_FULL (lowering an already-raised hand is always allowed).
  */
 export function raiseHand(room: Room, playerId: string): RaiseHandResult {
   if (room.phase !== 'DEFENSE') return { ok: false, error: 'NOT_RAISE_PHASE' };
@@ -27,6 +33,9 @@ export function raiseHand(room: Room, playerId: string): RaiseHandResult {
   if (i >= 0) {
     room.raisedHands.splice(i, 1);
     return { ok: true, room, raised: false };
+  }
+  if (room.raisedHands.length >= INTERVENTI_QUEUE_MAX) {
+    return { ok: false, error: 'QUEUE_FULL' };
   }
   room.raisedHands.push(playerId);
   return { ok: true, room, raised: true };

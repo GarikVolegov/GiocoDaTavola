@@ -19,6 +19,7 @@ interface DefenseViewProps {
   isDevilRound: boolean;
   playerId: string | null;
   handRaised: boolean;
+  raiseHandError: string | null;
   canFinishNow: boolean;
   minRemaining: number | null;
   remaining: number | null;
@@ -38,6 +39,7 @@ export default function DefenseView({
   isDevilRound,
   playerId,
   handRaised,
+  raiseHandError,
   canFinishNow,
   minRemaining,
   remaining,
@@ -173,9 +175,11 @@ export default function DefenseView({
           )}
           {phase === 'DEFENSE' && d?.speakerId != null && (
             <p style={{ fontSize: '0.9rem', opacity: 0.7, margin: 0 }}>
-              {handRaised
-                ? '✋ Mano alzata — potrai intervenire dopo le difese'
-                : 'Alza la mano per intervenire dopo'}
+              {raiseHandError
+                ? raiseHandError
+                : handRaised
+                  ? '✋ Mano alzata — potrai intervenire dopo le difese'
+                  : 'Alza la mano per intervenire dopo'}
             </p>
           )}
           {phase === 'INTERVENTI' && myQueuePos >= 0 && (

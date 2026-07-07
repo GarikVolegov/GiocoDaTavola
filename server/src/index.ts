@@ -703,7 +703,10 @@ io.on('connection', (socket) => {
     const session = sessions.get(socket.id);
     if (!session) return;
     const result = rooms.raiseHand(session.code, session.playerId);
-    if (!result.ok) return;
+    if (!result.ok) {
+      socket.emit('player:raiseHandError', { error: result.error });
+      return;
+    }
     socket.emit('player:handRaised', { raised: result.raised });
     broadcastGameState(session.code);
   });

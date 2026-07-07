@@ -541,7 +541,7 @@ export type ReactResult =
   | { ok: true; emoji: Reaction }
   | { ok: false; error: ReactError };
 
-export type RaiseHandError = 'ROOM_NOT_FOUND' | 'NOT_RAISE_PHASE' | 'NOT_IN_ROOM' | 'IS_SPEAKER';
+export type RaiseHandError = 'ROOM_NOT_FOUND' | 'NOT_RAISE_PHASE' | 'NOT_IN_ROOM' | 'IS_SPEAKER' | 'QUEUE_FULL';
 export type RaiseHandResult =
   | { ok: true; room: Room; raised: boolean }
   | { ok: false; error: RaiseHandError };

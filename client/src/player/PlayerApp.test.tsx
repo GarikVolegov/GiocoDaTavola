@@ -485,6 +485,44 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/mano alzata/i)).toBeInTheDocument();
   });
 
+  it('shows "coda piena" when the hand-raise queue is full (DEFENSE)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: {
+          kind: 'defense',
+          speaker: { id: 'p2', nickname: 'Bea', side: 'A' },
+          speakerId: 'p2',
+          turn: 1,
+          totalTurns: 2,
+          argument: null,
+          spunti: null,
+          raisedCount: 3,
+          queue: null,
+          minEndsAt: null,
+          canFinish: true,
+          startedAt: null,
+        },
+        leaderId: null,
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /alza la mano/i }));
+    act(() => {
+      serverEmit('player:raiseHandError', { error: 'QUEUE_FULL' });
+    });
+    expect(screen.getByText(/coda piena/i)).toBeInTheDocument();
+  });
+
   it('cues the next step at DILEMMA_REVEAL (status view)', () => {
     render(<PlayerApp />);
     act(() => {

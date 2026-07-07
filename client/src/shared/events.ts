@@ -44,6 +44,8 @@ export const SocketEvents = {
   PlayerRaiseHand: 'player:raiseHand',
   /** Server confirms the player's current raised-hand state back to them only. */
   PlayerHandRaised: 'player:handRaised',
+  /** Server rejects the hand-raise (wrong phase, not in room, you're the speaker, queue full). */
+  PlayerRaiseHandError: 'player:raiseHandError',
   /** Current speaker (defender/intervenor) signals they are done (after the minimum). */
   PlayerFinishTurn: 'player:finishTurn',
   /** Server rejects the finish (too early / not the speaker / wrong phase). */
@@ -830,6 +832,23 @@ export const SUBMIT_DILEMMA_ERROR_MESSAGES: Record<SubmitDilemmaError, string> =
   TOO_LONG: 'Testo troppo lungo',
   SAME_OPTIONS: 'Le due opzioni devono essere diverse',
   LIMIT_REACHED: 'Hai già aggiunto il massimo dei dilemmi',
+};
+
+export type RaiseHandError = 'ROOM_NOT_FOUND' | 'NOT_RAISE_PHASE' | 'NOT_IN_ROOM' | 'IS_SPEAKER' | 'QUEUE_FULL';
+
+export interface PlayerRaiseHandErrorPayload {
+  error: RaiseHandError;
+}
+
+/** User-facing (Italian) messages for hand-raise errors. Only QUEUE_FULL is
+ * normally reachable (the raise button is only shown when the phase/turn
+ * already make the others valid) — the rest are defensive fallbacks. */
+export const RAISE_HAND_ERROR_MESSAGES: Record<RaiseHandError, string> = {
+  ROOM_NOT_FOUND: 'Stanza non trovata',
+  NOT_RAISE_PHASE: 'Non è il momento di alzare la mano',
+  NOT_IN_ROOM: 'Non sei in questa stanza',
+  IS_SPEAKER: 'Stai già parlando tu',
+  QUEUE_FULL: 'Coda piena — reagisci! 👏',
 };
 
 /** A guesser→target pair, shown publicly during the "Quanto mi conosci" round. */

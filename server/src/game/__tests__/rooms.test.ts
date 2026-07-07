@@ -2335,6 +2335,38 @@ describe('raiseHand', () => {
   });
 });
 
+describe('INTERVENTI queue cap', () => {
+  it('rejects a 4th raised hand with QUEUE_FULL', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    for (let i = 0; i < 5; i++) store.join(code, `p${i}`, `P${i}`);
+    const room = store.get(code)!;
+    room.phase = 'DEFENSE';
+    room.defenders = [{ id: 'p0', nickname: 'P0', side: 'A' }];
+    room.defenseTurnIndex = 0;
+    expect(store.raiseHand(code, 'p1')).toEqual({ ok: true, room, raised: true });
+    expect(store.raiseHand(code, 'p2')).toEqual({ ok: true, room, raised: true });
+    expect(store.raiseHand(code, 'p3')).toEqual({ ok: true, room, raised: true });
+    expect(store.raiseHand(code, 'p4')).toEqual({ ok: false, error: 'QUEUE_FULL' });
+    expect(room.raisedHands).toHaveLength(3);
+  });
+
+  it('still allows lowering a hand even when the queue is full', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    for (let i = 0; i < 5; i++) store.join(code, `p${i}`, `P${i}`);
+    const room = store.get(code)!;
+    room.phase = 'DEFENSE';
+    room.defenders = [{ id: 'p0', nickname: 'P0', side: 'A' }];
+    room.defenseTurnIndex = 0;
+    store.raiseHand(code, 'p1');
+    store.raiseHand(code, 'p2');
+    store.raiseHand(code, 'p3');
+    expect(store.raiseHand(code, 'p1')).toEqual({ ok: true, room, raised: false }); // lowers, not blocked
+    expect(store.raiseHand(code, 'p4')).toEqual({ ok: true, room, raised: true }); // a slot freed up
+  });
+});
+
 describe('finishTurn', () => {
   it('is rejected before the minimum, accepted after, and only from the speaker', () => {
     let now = 1_000;

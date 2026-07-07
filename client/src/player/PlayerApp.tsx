@@ -42,6 +42,8 @@ import {
   type PlayerInfiltratoRolePayload,
   type PlayerAccusedPayload,
   type MyProfile,
+  type RaiseHandError,
+  RAISE_HAND_ERROR_MESSAGES,
 } from '../shared/events';
 import { Card, JoinQr, Button, Field, TextInput, Alert } from '../shared/ui';
 import { useHostAudio } from '../host/audio/useHostAudio';
@@ -151,6 +153,7 @@ export default function PlayerApp() {
   const [myAccusation, setMyAccusation] = useState<string | null>(null);
   const [speakerVote, setSpeakerVote] = useState<string | null>(null);
   const [handRaised, setHandRaised] = useState(false);
+  const [raiseHandError, setRaiseHandError] = useState<string | null>(null);
   // Two-step guard on the lobby's "leave room" link: the first tap arms it, the
   // second actually leaves — so a stray tap never drops the player out of the room.
   const [confirmingLeave, setConfirmingLeave] = useState(false);
@@ -236,7 +239,12 @@ export default function PlayerApp() {
     const onInfiltratoRole = (payload: PlayerInfiltratoRolePayload) => setInfiltratoRole(payload);
     const onAccused = ({ accusedId }: PlayerAccusedPayload) => setMyAccusation(accusedId);
     const onSpeakerVoted = ({ defenderId }: PlayerSpeakerVotedPayload) => setSpeakerVote(defenderId);
-    const onHandRaised = ({ raised }: { raised: boolean }) => setHandRaised(raised);
+    const onHandRaised = ({ raised }: { raised: boolean }) => {
+      setHandRaised(raised);
+      setRaiseHandError(null);
+    };
+    const onRaiseHandError = ({ error }: { error: RaiseHandError }) =>
+      setRaiseHandError(RAISE_HAND_ERROR_MESSAGES[error] ?? 'Non puoi alzare la mano ora');
     const onDilemmaSubmitted = ({ count }: PlayerDilemmaSubmittedPayload) => {
       setMySubmitted(count);
       setSubmitDilemmaError(null);
@@ -258,6 +266,7 @@ export default function PlayerApp() {
     socket.on(SocketEvents.PlayerSubmitDilemmaError, onSubmitDilemmaError);
     socket.on(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
     socket.on(SocketEvents.PlayerHandRaised, onHandRaised);
+    socket.on(SocketEvents.PlayerRaiseHandError, onRaiseHandError);
     // On every (re)connect, if we hold a token, reclaim the same seat. Covers
     // socket-level reconnects (network blip) without a page reload.
     const onConnect = () => {
@@ -307,6 +316,7 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerSubmitDilemmaError, onSubmitDilemmaError);
       socket.off(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
       socket.off(SocketEvents.PlayerHandRaised, onHandRaised);
+      socket.off(SocketEvents.PlayerRaiseHandError, onRaiseHandError);
       socket.off('connect', onConnect);
     };
   }, []);
@@ -401,6 +411,7 @@ export default function PlayerApp() {
   // raised-hand queue at the start of each defender turn, so mirror that locally.
   useEffect(() => {
     setHandRaised(false);
+    setRaiseHandError(null);
   }, [turnSpeakerId, phase]);
 
   // A confirmation belongs to one VOTE_2 round only: drop it whenever the phase
@@ -639,6 +650,7 @@ export default function PlayerApp() {
         isDevilRound={game?.isDevilRound ?? false}
         playerId={playerId}
         handRaised={handRaised}
+        raiseHandError={raiseHandError}
         canFinishNow={canFinishNow}
         minRemaining={minRemaining}
         remaining={remaining}
