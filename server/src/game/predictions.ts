@@ -12,6 +12,7 @@ import type {
   SwingBetOutcome,
 } from './rooms';
 import { tally, isVoteChoice, isSwingBet } from './voteCount';
+import { isKnowRound } from './knowRound';
 
 /** Record (or change) a player's secret post-defense prediction. */
 export function predict(room: Room, playerId: string, choice: string): PredictResult {
@@ -77,6 +78,49 @@ export function allSwingBet(room: Room): boolean {
 export function leadFlipped(room: Room): boolean {
   const lead = (t: VoteTally): VoteChoice | null => (t.A > t.B ? 'A' : t.B > t.A ? 'B' : null);
   return lead(tally(room.votes1)) !== lead(tally(room.votes));
+}
+
+/** Whether one connected human has finished every action PREDICT asks of
+ * them: the side prediction, the swing bet, and — in the "Quanto mi conosci"
+ * round, only if they were assigned a target — their guess. */
+function predictActionDone(room: Room, playerId: string): boolean {
+  if (!room.predictions.has(playerId)) return false;
+  if (!room.swingBets.has(playerId)) return false;
+  if (isKnowRound(room) && room.knowTargets.has(playerId) && !room.knowGuesses.has(playerId)) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * How many connected humans have finished PREDICT and who's still missing
+ * something (by nickname only — never which choice). Null outside PREDICT.
+ * The single source of truth for both the early-advance gate below and the
+ * "who are we waiting on" UI.
+ */
+export function predictProgress(
+  room: Room,
+): { done: number; total: number; missingNicknames: string[] } | null {
+  if (room.phase !== 'PREDICT') return null;
+  const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+  const missing = humans.filter((p) => !predictActionDone(room, p.id));
+  return {
+    done: humans.length - missing.length,
+    total: humans.length,
+    missingNicknames: missing.map((p) => p.nickname),
+  };
+}
+
+/**
+ * Single source of truth for "has everyone finished PREDICT?" — replaces the
+ * old two independent call sites (the predict/swingBet handlers checked
+ * predict+swingBet only; the knowGuess handler checked knowGuessed only),
+ * which in the know round could each fire the early-advance before the
+ * OTHER kind of input was done, cutting a player's action short.
+ */
+export function predictPhaseComplete(room: Room): boolean {
+  const progress = predictProgress(room);
+  return progress != null && progress.total > 0 && progress.done === progress.total;
 }
 
 /** Each bettor's own swing-bet outcome (private emit at PHASE_RESULTS). */

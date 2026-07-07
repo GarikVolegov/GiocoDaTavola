@@ -740,7 +740,7 @@ io.on('connection', (socket) => {
     socket.emit('player:predicted', { choice: result.room.predictions.get(playerId) });
     // End PREDICT early only once everyone has done BOTH the side prediction AND
     // the swing bet, so nobody's bet is cut off.
-    if (rooms.allPredicted(code) && rooms.allSwingBet(code)) {
+    if (rooms.predictPhaseComplete(code)) {
       advanceAndBroadcast(code);
     } else {
       broadcastGameState(code); // refresh the predicted count for the host
@@ -759,7 +759,7 @@ io.on('connection', (socket) => {
       return;
     }
     socket.emit('player:swingBetted', { bet: result.room.swingBets.get(playerId) });
-    if (rooms.allPredicted(code) && rooms.allSwingBet(code)) {
+    if (rooms.predictPhaseComplete(code)) {
       advanceAndBroadcast(code);
     } else {
       broadcastGameState(code); // refresh the swing-bet count for the host
@@ -799,7 +799,7 @@ io.on('connection', (socket) => {
       return;
     }
     socket.emit('player:knowGuessed', { choice: result.room.knowGuesses.get(playerId) });
-    if (rooms.allKnowGuessed(code)) {
+    if (rooms.predictPhaseComplete(code)) {
       advanceAndBroadcast(code);
     } else {
       broadcastGameState(code); // refresh the guessed count

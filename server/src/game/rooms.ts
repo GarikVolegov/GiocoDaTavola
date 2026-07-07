@@ -1313,6 +1313,22 @@ export class RoomStore {
   }
 
   /**
+   * How many connected humans have finished PREDICT (prediction + swing bet +,
+   * in the know round, their guess) and who's still missing something, by
+   * nickname only. Null outside PREDICT.
+   */
+  predictProgress(code: string): { done: number; total: number; missingNicknames: string[] } | null {
+    const room = this.rooms.get(code);
+    return room ? predictions.predictProgress(room) : null;
+  }
+
+  /** Single source of truth for "has everyone finished PREDICT?" (ends it early). */
+  predictPhaseComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? predictions.predictPhaseComplete(room) : false;
+  }
+
+  /**
    * Each bettor's own swing-bet outcome for the just-finished round, for the
    * private `player:swingBetResult` emit at PHASE_RESULTS.
    */
