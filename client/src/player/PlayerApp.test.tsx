@@ -913,6 +913,46 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/hanno votato 2\/3/i)).toBeInTheDocument();
   });
 
+  it('reveals the dilemma author at PHASE_RESULTS', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PHASE_RESULTS',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemmaAuthor: 'Sara',
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/sara/i)).toBeInTheDocument();
+  });
+
+  it('does not reveal an author at PHASE_RESULTS for a deck dilemma', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PHASE_RESULTS',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemmaAuthor: null,
+        leaderId: null,
+      });
+    });
+    expect(screen.queryByText(/indovinate chi l'ha scritto/i)).toBeNull();
+  });
+
   it('asks for confirmation before leaving the room', () => {
     render(<PlayerApp />);
     act(() => {

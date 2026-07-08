@@ -1733,6 +1733,29 @@ describe('rematch()', () => {
   });
 });
 
+describe('currentDilemmaAuthor', () => {
+  it('reveals the nickname only at PHASE_RESULTS, for a player-submitted dilemma', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, undefined, () => 0);
+    const { code } = store.create();
+    const room = store.get(code)!;
+    room.players.set('sara', { id: 'sara', nickname: 'Sara' });
+    room.currentDilemma = { id: 'd1', text: 'Q?', optionA: 'A', optionB: 'B', register: 'vita' };
+    room.dilemmaAuthors.set('d1', 'sara');
+    expect(store.currentDilemmaAuthor(code)).toBeNull(); // not PHASE_RESULTS yet
+    room.phase = 'PHASE_RESULTS';
+    expect(store.currentDilemmaAuthor(code)).toBe('Sara');
+  });
+
+  it('is null for a deck dilemma with no author', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    const room = store.get(code)!;
+    room.phase = 'PHASE_RESULTS';
+    room.currentDilemma = { id: 'd2', text: 'Q?', optionA: 'A', optionB: 'B', register: 'vita' };
+    expect(store.currentDilemmaAuthor(code)).toBeNull();
+  });
+});
+
 describe('RoomStore.setPlayerUser', () => {
   it('tags a player with a clerk user id; false for unknown room/player', () => {
     const store = new RoomStore();

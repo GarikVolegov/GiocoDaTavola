@@ -228,6 +228,11 @@ export default function StatusView({
       ) : phase === 'PHASE_RESULTS' ? (
         <>
           {game?.swing && <ResultsPanel swing={game.swing} />}
+          {game?.dilemmaAuthor && (
+            <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
+              Indovinate chi l'ha scritto… ✍️ <strong>{game.dilemmaAuthor}</strong>!
+            </p>
+          )}
           {predictionResult && (
             <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
               {predictionResult.actual == null

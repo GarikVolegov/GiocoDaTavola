@@ -1658,6 +1658,16 @@ export class RoomStore {
     return room ? voting.publicSplit(room) : null;
   }
 
+  /** The nickname of whoever wrote the current dilemma, revealed only at
+   * PHASE_RESULTS; null otherwise, or if it was a deck (non-authored) dilemma. */
+  currentDilemmaAuthor(code: string): string | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'PHASE_RESULTS' || !room.currentDilemma) return null;
+    const authorId = room.dilemmaAuthors.get(room.currentDilemma.id);
+    if (!authorId) return null;
+    return room.players.get(authorId)?.nickname ?? null;
+  }
+
   /** Nicknames of connected players still missing their vote/confirmation
    * this voting phase; null outside one. Never reveals which choice. */
   missingVoters(code: string): string[] | null {

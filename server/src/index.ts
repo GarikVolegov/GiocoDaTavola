@@ -201,6 +201,9 @@ function gameStatePayload(room: Room) {
     // The swing + per-defender attribution, gated to PHASE_RESULTS (null
     // otherwise). Aggregate counts only — never who voted what.
     swing: rooms.publicSwing(room.code),
+    // The current dilemma's author nickname, revealed only at PHASE_RESULTS
+    // (null otherwise, or for a deck dilemma nobody wrote).
+    dilemmaAuthor: rooms.currentDilemmaAuthor(room.code),
     // The end-of-game awards, gated to FINAL_AWARDS (null otherwise).
     awards: rooms.publicAwards(room.code),
     // 1v1 duel: the room's mode + the duel views, each gated to its own phase.

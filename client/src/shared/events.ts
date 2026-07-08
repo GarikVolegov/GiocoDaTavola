@@ -686,6 +686,8 @@ export interface GameStatePayload {
    * otherwise. Aggregate counts only — never who voted what.
    */
   swing: PublicSwing | null;
+  /** The current dilemma's author nickname, shown only at PHASE_RESULTS; null otherwise. */
+  dilemmaAuthor: string | null;
   /** The end-of-game awards, shown only in FINAL_AWARDS; null otherwise. */
   awards: Award[] | null;
   /** Game mode of the room; 'gruppo' until/unless a duel is started. */
