@@ -488,7 +488,11 @@ export type AwardId =
   | 'voltagabbana'
   | 'sensitivo'
   | 'autore'
-  | 'telepate';
+  | 'telepate'
+  // Jolly pool (2.5): each goes to an otherwise empty-handed player.
+  | 'fulmine'
+  | 'sfinge'
+  | 'partecipante';
 
 /** Payload of the `room:reaction` broadcast: a single allowlisted emoji. */
 export interface RoomReactionPayload {

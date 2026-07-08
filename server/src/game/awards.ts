@@ -54,6 +54,11 @@ export interface PlayerStats {
    * conosci" round. Optional + only set once non-zero.
    */
   knowCorrect?: number;
+  /**
+   * Rounds this player was the first to cast a vote (VOTE_1 or VOTE_2). Feeds
+   * the jolly "Il Fulmine" award. Optional + only set once non-zero.
+   */
+  firstToVoteCount?: number;
 }
 
 /** The fun end-of-game superlatives (persuasion-themed). */
@@ -69,7 +74,12 @@ export type AwardId =
   | 'voltagabbana'
   | 'sensitivo'
   | 'autore'
-  | 'telepate';
+  | 'telepate'
+  // Jolly pool (2.5): each goes to an otherwise empty-handed player, one apiece
+  // — never competed for like the awards above. See computeAwards's jolly pass.
+  | 'fulmine'
+  | 'sfinge'
+  | 'partecipante';
 
 /** An award and who won it. Only awards with a real winner are ever returned. */
 export interface Award {
@@ -150,5 +160,27 @@ export function computeAwards(room: Room): Award[] {
       description: 'Ha indovinato più spesso come avevano votato gli amici.',
       winner: winnerBy((s) => s.knowCorrect ?? 0, (s) => (s.knowCorrect ?? 0) > 0) },
   ];
-  return defs.filter((d): d is Award => d.winner !== null);
+  const main = defs.filter((d): d is Award => d.winner !== null);
+
+  // Jolly pool (2.5, "nessuno a mani vuote"): every player who played at least
+  // one round but won none of the awards above gets exactly one consolation
+  // superlative — never competed for, just a true thing about THEIR own game.
+  const alreadyWon = new Set(main.map((a) => a.winner.id));
+  const jolly: Award[] = [];
+  for (const [id, s] of entries) {
+    if (s.rounds === 0 || alreadyWon.has(id)) continue;
+    const nickname = room.players.get(id)?.nickname ?? '';
+    const winner = { id, nickname };
+    if ((s.firstToVoteCount ?? 0) > 0) {
+      jolly.push({ id: 'fulmine', title: 'Il Fulmine', emoji: '⚡',
+        description: 'Il primo a votare, più spesso di chiunque altro.', winner });
+    } else if (s.changedCount === 0) {
+      jolly.push({ id: 'sfinge', title: 'La Sfinge', emoji: '🗿',
+        description: 'Impassibile: non ha mai cambiato idea.', winner });
+    } else {
+      jolly.push({ id: 'partecipante', title: 'Il Partecipante', emoji: '⭐',
+        description: "C'era, ha votato, ha fatto la sua parte.", winner });
+    }
+  }
+  return [...main, ...jolly];
 }

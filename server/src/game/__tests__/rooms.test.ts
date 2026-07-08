@@ -916,7 +916,8 @@ describe('RoomStore per-player stats (Fase A)', () => {
     playRound(store, code, { 'sock-0': 'A', 'sock-1': 'B', 'sock-2': 'B' }, { 'sock-1': 'A' });
     expect(store.get(code)?.phase).toBe('PHASE_RESULTS');
     const stats = store.get(code)!.stats;
-    expect(stats.get('sock-0')).toEqual({ rounds: 1, changedCount: 0, majorityCount: 1, minorityCount: 0, persuasion: 1, defendedCount: 1 });
+    // sock-0 is the first key in vote1, i.e. the first to cast VOTE_1 this round.
+    expect(stats.get('sock-0')).toEqual({ rounds: 1, changedCount: 0, majorityCount: 1, minorityCount: 0, persuasion: 1, defendedCount: 1, firstToVoteCount: 1 });
     expect(stats.get('sock-1')).toEqual({ rounds: 1, changedCount: 1, majorityCount: 1, minorityCount: 0, persuasion: 0, defendedCount: 1 });
     expect(stats.get('sock-2')).toEqual({ rounds: 1, changedCount: 0, majorityCount: 0, minorityCount: 1, persuasion: 0, defendedCount: 0 });
   });
@@ -950,7 +951,8 @@ describe('RoomStore per-player stats (Fase A)', () => {
     // and correctSwingBets for all three players. Round 1's defaults (to "B",
     // the round-1 leading side at PREDICT time) don't match its actual outcome
     // (A), so they credit nothing there.
-    expect(stats.get('sock-0')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 2, minorityCount: 0, persuasion: 1, defendedCount: 1, correctPredictions: 1, correctSwingBets: 1 });
+    // sock-0 is the first key in vote1 both rounds -> firstToVoteCount: 2.
+    expect(stats.get('sock-0')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 2, minorityCount: 0, persuasion: 1, defendedCount: 1, correctPredictions: 1, correctSwingBets: 1, firstToVoteCount: 2 });
     expect(stats.get('sock-1')).toEqual({ rounds: 2, changedCount: 1, majorityCount: 2, minorityCount: 0, persuasion: 0, defendedCount: 1, correctPredictions: 1, correctSwingBets: 1 });
     expect(stats.get('sock-2')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 1, minorityCount: 1, persuasion: 0, defendedCount: 1, correctPredictions: 1, correctSwingBets: 1 });
   });
@@ -1098,6 +1100,85 @@ describe('RoomStore awards (Fase A)', () => {
     expect(store.get(code)?.phase).toBe('FINAL_AWARDS');
     expect(Array.isArray(store.publicAwards(code))).toBe(true);
     expect(store.publicAwards('ZZZZ')).toBeNull();
+  });
+});
+
+describe('jolly awards (nessuno a mani vuote)', () => {
+  function roomWithFullStats(
+    store: RoomStore,
+    stats: Record<string, {
+      rounds: number; changedCount: number; majorityCount: number; minorityCount: number;
+      persuasion: number; firstToVoteCount?: number;
+    }>,
+  ): string {
+    const { code } = store.create();
+    for (const id of Object.keys(stats)) store.join(code, id, id.toUpperCase());
+    const room = store.get(code)!;
+    room.stats = new Map(Object.entries(stats));
+    return code;
+  }
+
+  it('gives an empty-handed player "Il Fulmine" for voting first the most', () => {
+    const store = new RoomStore();
+    const code = roomWithFullStats(store, {
+      // Both never changed idea, but sock-0 has more rounds so wins Il Roccione
+      // outright — sock-1 has nothing else to show except voting first a lot.
+      'sock-0': { rounds: 3, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 5 },
+      'sock-1': { rounds: 2, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0, firstToVoteCount: 4 },
+    });
+    const awards = store.computeAwards(code);
+    expect(awards.find((a) => a.id === 'roccione')?.winner.id).toBe('sock-0');
+    const fulmine = awards.find((a) => a.id === 'fulmine');
+    expect(fulmine?.winner).toEqual({ id: 'sock-1', nickname: 'SOCK-1' });
+  });
+
+  it('gives an empty-handed player who never changed idea "La Sfinge" (separate from Il Roccione)', () => {
+    const store = new RoomStore();
+    const code = roomWithFullStats(store, {
+      // sock-0 wins Il Roccione (most no-change rounds among eligible players).
+      'sock-0': { rounds: 5, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 3 },
+      // sock-1 ALSO never changed idea, but has fewer rounds — loses Roccione to
+      // sock-0, and has no other stat to win a main award, so gets La Sfinge instead.
+      'sock-1': { rounds: 2, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0 },
+    });
+    const awards = store.computeAwards(code);
+    expect(awards.find((a) => a.id === 'roccione')?.winner.id).toBe('sock-0');
+    expect(awards.find((a) => a.id === 'sfinge')?.winner).toEqual({ id: 'sock-1', nickname: 'SOCK-1' });
+  });
+
+  it('falls back to "Il Partecipante" for a player with no standout stat at all', () => {
+    const store = new RoomStore();
+    const code = roomWithFullStats(store, {
+      'sock-0': { rounds: 5, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 5 }, // persuasore + roccione
+      'sock-1': { rounds: 3, changedCount: 2, majorityCount: 0, minorityCount: 0, persuasion: 0 }, // wins banderuola (most changes)
+      // Changed idea once (so not eligible for La Sfinge), but fewer changes than
+      // sock-1 (so loses Il Banderuola too) — genuinely nothing else to show for it.
+      'sock-2': { rounds: 3, changedCount: 1, majorityCount: 0, minorityCount: 0, persuasion: 0 },
+    });
+    const awards = store.computeAwards(code);
+    expect(awards.find((a) => a.id === 'banderuola')?.winner.id).toBe('sock-1');
+    expect(awards.find((a) => a.id === 'partecipante')?.winner).toEqual({ id: 'sock-2', nickname: 'SOCK-2' });
+  });
+
+  it('does not give any jolly award to a player who never played a round', () => {
+    const store = new RoomStore();
+    const code = roomWithFullStats(store, {
+      'sock-0': { rounds: 3, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 5 },
+      'sock-1': { rounds: 0, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0 },
+    });
+    const awards = store.computeAwards(code);
+    expect(awards.some((a) => a.winner.id === 'sock-1')).toBe(false);
+  });
+
+  it('does not double up: a player who already won a main award gets no jolly on top', () => {
+    const store = new RoomStore();
+    const code = roomWithFullStats(store, {
+      'sock-0': { rounds: 3, changedCount: 1, majorityCount: 0, minorityCount: 0, persuasion: 5, firstToVoteCount: 9 },
+    });
+    const awards = store.computeAwards(code);
+    const sock0AwardIds = awards.filter((a) => a.winner.id === 'sock-0').map((a) => a.id);
+    expect(sock0AwardIds).toContain('persuasore');
+    expect(sock0AwardIds).not.toContain('fulmine'); // already won a main award — no jolly on top
   });
 });
 

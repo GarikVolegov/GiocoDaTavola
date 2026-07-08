@@ -20,12 +20,16 @@ export function recordRoundStats(room: Room): void {
   const second = tally(room.votes);
   const majoritySide: VoteChoice | null =
     second.A > second.B ? 'A' : second.B > second.A ? 'B' : null;
+  // room.votes1 is a Map, which preserves insertion order — its first key is
+  // whoever cast VOTE_1 first this round (the jolly ⚡ "Il Fulmine" award).
+  const firstVoterId = room.votes1.keys().next().value;
   let roundSwitched = 0;
   for (const [id, firstChoice] of room.votes1) {
     const secondChoice = room.votes.get(id);
     if (!secondChoice) continue; // left before the second vote -> skip this round
     const s = ensureStats(room, id);
     s.rounds++;
+    if (id === firstVoterId) s.firstToVoteCount = (s.firstToVoteCount ?? 0) + 1;
     if (secondChoice !== firstChoice) {
       s.changedCount++;
       roundSwitched++;
