@@ -694,6 +694,11 @@ export interface GameStatePayload {
    */
   isDevilRound: boolean;
   /**
+   * This round's silly performance constraint for the defenders, public
+   * during DEFENSE/INTERVENTI; null otherwise, or if this round drew none.
+   */
+  absurdConstraint: string | null;
+  /**
    * The swing + per-defender attribution, shown only in PHASE_RESULTS; null
    * otherwise. Aggregate counts only — never who voted what.
    */

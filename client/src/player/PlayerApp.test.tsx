@@ -246,6 +246,111 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/difendendo.*mare/i)).toBeInTheDocument();
   });
 
+  it('shows the absurd defense constraint to a listener at DEFENSE', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: {
+          kind: 'defense',
+          speaker: { id: 'p2', nickname: 'Bea', side: 'A' },
+          speakerId: 'p2',
+          turn: 1,
+          totalTurns: 2,
+          argument: null,
+          spunti: null,
+          raisedCount: 0,
+          queue: null,
+          minEndsAt: null,
+          canFinish: true,
+          startedAt: null,
+        },
+        absurdConstraint: 'Difendila come un venditore di materassi',
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/vincolo.*venditore di materassi/i)).toBeInTheDocument();
+  });
+
+  it('shows the absurd defense constraint to the speaker at DEFENSE', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: {
+          kind: 'defense',
+          speaker: { id: 'p1', nickname: 'Alice', side: 'A' },
+          speakerId: 'p1',
+          turn: 1,
+          totalTurns: 2,
+          argument: null,
+          spunti: null,
+          raisedCount: 0,
+          queue: null,
+          minEndsAt: null,
+          canFinish: true,
+          startedAt: null,
+        },
+        absurdConstraint: 'Come se fossi un pirata',
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/vincolo.*pirata/i)).toBeInTheDocument();
+  });
+
+  it('shows no absurd constraint banner when the round drew none', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: {
+          kind: 'defense',
+          speaker: { id: 'p2', nickname: 'Bea', side: 'A' },
+          speakerId: 'p2',
+          turn: 1,
+          totalTurns: 2,
+          argument: null,
+          spunti: null,
+          raisedCount: 0,
+          queue: null,
+          minEndsAt: null,
+          canFinish: true,
+          startedAt: null,
+        },
+        absurdConstraint: null,
+        leaderId: null,
+      });
+    });
+    expect(screen.queryByText(/vincolo/i)).toBeNull();
+  });
+
   it('shows the finish affordance when it is your turn at DEFENSE', () => {
     render(<PlayerApp />);
     act(() => {

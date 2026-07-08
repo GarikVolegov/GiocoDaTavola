@@ -371,6 +371,11 @@ export default function HostApp() {
                   🎭 Avvocato del Diavolo — si difende il lato OPPOSTO al proprio voto!
                 </p>
               )}
+              {game.absurdConstraint && (
+                <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--gold)' }}>
+                  🎭 Vincolo: {game.absurdConstraint}
+                </p>
+              )}
               {defense.totalTurns > 1 && (
                 <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
                   Turno {defense.turn}/{defense.totalTurns}

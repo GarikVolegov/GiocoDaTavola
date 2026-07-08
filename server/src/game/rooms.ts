@@ -15,6 +15,7 @@ import * as roundStats from './roundStats';
 import * as botVotes from './botVotes';
 import * as defenseSetup from './defenseSetup';
 import * as dilemmaPlan from './dilemmaPlan';
+import * as absurdConstraints from './absurdConstraints';
 import {
   type GamePhase,
   PHASE_DURATIONS_MS,
@@ -326,6 +327,12 @@ export interface Room {
    * votes; only these chosen identities are ever made public.
    */
   defenders: Defender[];
+  /**
+   * This round's silly performance constraint for the defenders ("Vincoli
+   * assurdi", 2.3) — drawn fresh on entry to DEFENSE (~1/3 of rounds); null the
+   * rest of the time. Purely theatrical: never changes debate mechanics.
+   */
+  absurdConstraint: string | null;
   /** Which defender (0-based) is currently speaking during DEFENSE. */
   defenseTurnIndex: number;
   /**
@@ -850,6 +857,7 @@ export class RoomStore {
       votes1: new Map(),
       confirmedVote2: new Set(),
       defenders: [],
+      absurdConstraint: null,
       defenseTurnIndex: 0,
       defenseArgument: null,
       raisedHands: [],
@@ -929,6 +937,7 @@ export class RoomStore {
     room.votes1 = new Map();
     room.confirmedVote2 = new Set();
     room.defenders = [];
+    room.absurdConstraint = null;
     room.defenseTurnIndex = 0;
     room.defenseArgument = null;
     room.raisedHands = [];
@@ -1311,6 +1320,7 @@ export class RoomStore {
     // the first turn (the per-turn timer was set by expiryFor above).
     if (transition.phase === 'DEFENSE') {
       room.defenders = defenseSetup.selectDefenders(room, this.rng);
+      room.absurdConstraint = absurdConstraints.pickAbsurdConstraint(this.rng);
       room.defenseTurnIndex = 0;
       room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
       room.raisedHands = [];
@@ -1784,6 +1794,13 @@ export class RoomStore {
   publicDevilRound(code: string): boolean {
     const room = this.rooms.get(code);
     return room ? devilAdvocate.publicDevilRound(room) : false;
+  }
+
+  /** This round's absurd defense constraint (2.3), public during DEFENSE/
+   * INTERVENTI; null otherwise, or if this round drew none. */
+  publicAbsurdConstraint(code: string): string | null {
+    const room = this.rooms.get(code);
+    return room ? absurdConstraints.publicAbsurdConstraint(room) : null;
   }
 
   /**

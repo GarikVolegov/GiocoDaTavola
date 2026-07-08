@@ -708,6 +708,7 @@ export default function PlayerApp() {
         defense={game?.defense ?? null}
         dilemma={game?.dilemma}
         isDevilRound={game?.isDevilRound ?? false}
+        absurdConstraint={game?.absurdConstraint ?? null}
         playerId={playerId}
         handRaised={handRaised}
         raiseHandError={raiseHandError}

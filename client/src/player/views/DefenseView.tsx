@@ -23,6 +23,7 @@ interface DefenseViewProps {
   defense: DefenseState | null;
   dilemma: DefenseDilemma | null | undefined;
   isDevilRound: boolean;
+  absurdConstraint: string | null;
   playerId: string | null;
   handRaised: boolean;
   raiseHandError: string | null;
@@ -44,6 +45,7 @@ export default function DefenseView({
   defense: d,
   dilemma,
   isDevilRound,
+  absurdConstraint,
   playerId,
   handRaised,
   raiseHandError,
@@ -127,6 +129,11 @@ export default function DefenseView({
                   {sideOption ? `: ${sideOption}` : ''}
                 </p>
               )}
+              {absurdConstraint && (
+                <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem', color: 'var(--gold)' }}>
+                  🎭 Vincolo: {absurdConstraint}
+                </p>
+              )}
               {d?.spunti && d.spunti.length > 0 && (
                 <div style={{ width: 'min(90vw, 22rem)', textAlign: 'left' }}>
                   <p style={{ fontSize: '0.9rem', fontWeight: 700, opacity: 0.8, margin: '0 0 0.3rem' }}>
@@ -160,6 +167,11 @@ export default function DefenseView({
           {phase === 'DEFENSE' && isDevilRound && (
             <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--gold)' }}>
               🎭 Round Avvocato del Diavolo — difende il contrario!
+            </p>
+          )}
+          {phase === 'DEFENSE' && absurdConstraint && (
+            <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--gold)' }}>
+              🎭 Vincolo: {absurdConstraint}
             </p>
           )}
           <p style={{ fontSize: '1.3rem', margin: 0 }}>

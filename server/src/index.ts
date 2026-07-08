@@ -201,6 +201,9 @@ function gameStatePayload(room: Room) {
     // the side they did NOT vote). Revealed only from DEFENSE on, so it can't
     // skew the first vote/prediction.
     isDevilRound: rooms.publicDevilRound(room.code),
+    // This round's silly performance constraint for the defenders (2.3),
+    // public during DEFENSE/INTERVENTI; null otherwise or if none was drawn.
+    absurdConstraint: rooms.publicAbsurdConstraint(room.code),
     // The swing + per-defender attribution, gated to PHASE_RESULTS (null
     // otherwise). Aggregate counts only — never who voted what.
     swing: rooms.publicSwing(room.code),
