@@ -315,9 +315,14 @@ function leaderCodeFor(socketId: string): string | null {
 // Advance the state machine one step, broadcast it, and arm the next timer.
 // Used by both timer expiry and the leader's force-advance.
 function advanceAndBroadcast(code: string): void {
+  // A pending late-joiner (3.2) may get promoted to giocatore on this very
+  // advance (the round-boundary DILEMMA_REVEAL) — re-broadcast the roster
+  // afterward so their role badge updates everywhere, not just game state.
+  const hadLateJoiners = (rooms.get(code)?.lateJoiners.size ?? 0) > 0;
   const result = rooms.advancePhase(code);
   if (!result.ok) return;
   broadcastGameState(code);
+  if (hadLateJoiners) broadcastLobby(code);
   const snapRoom = rooms.get(code);
   if (snapRoom) persistSnapshot(code, serializeRoom(snapRoom)).catch((e) => console.error('[snapshot] persist failed', e));
   if (rooms.get(code)?.phase === 'FINAL_AWARDS') emitBlindSpots(code);

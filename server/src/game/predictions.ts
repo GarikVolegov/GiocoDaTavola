@@ -28,9 +28,12 @@ export function predictedCount(room: Room): number {
   return room.predictions.size;
 }
 
-/** True once every connected human has predicted (and at least one is present). */
+/** True once every connected human has predicted (and at least one is
+ * present). Excludes a player who late-joined THIS round (3.2). */
 export function allPredicted(room: Room): boolean {
-  const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+  const humans = [...room.players.values()].filter(
+    (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+  );
   if (humans.length === 0) return false;
   return humans.every((p) => room.predictions.has(p.id));
 }
@@ -64,9 +67,12 @@ export function swingBetCount(room: Room): number {
   return room.swingBets.size;
 }
 
-/** True once every connected human has placed a swing bet (mirror of allPredicted). */
+/** True once every connected human has placed a swing bet (mirror of
+ * allPredicted). Excludes a player who late-joined THIS round (3.2). */
 export function allSwingBet(room: Room): boolean {
-  const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+  const humans = [...room.players.values()].filter(
+    (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+  );
   if (humans.length === 0) return false;
   return humans.every((p) => room.swingBets.has(p.id));
 }

@@ -74,9 +74,13 @@ export function publicSplit(room: Room): { A: number; B: number } | null {
   return tally(room.votes);
 }
 
-/** True once every connected player has voted (ends VOTE_1 early). */
+/** True once every connected player has voted (ends VOTE_1 early). A player
+ * who late-joined THIS round (3.2) is excluded — they may not have even
+ * seen the prompt yet, so their absence must never block the round. */
 export function allVoted(room: Room): boolean {
-  const present = [...room.players.values()].filter((p) => p.connected !== false);
+  const present = [...room.players.values()].filter(
+    (p) => p.connected !== false && !room.lateJoiners.has(p.id),
+  );
   if (present.length === 0) return false;
   return present.every((p) => room.votes.has(p.id));
 }
@@ -94,9 +98,12 @@ export function confirmedCount(room: Room): number {
   return room.confirmedVote2.size;
 }
 
-/** True once every connected player has confirmed their second vote (ends VOTE_2 early). */
+/** True once every connected player has confirmed their second vote (ends
+ * VOTE_2 early). Excludes a player who late-joined THIS round (3.2). */
 export function allConfirmed(room: Room): boolean {
-  const present = [...room.players.values()].filter((p) => p.connected !== false);
+  const present = [...room.players.values()].filter(
+    (p) => p.connected !== false && !room.lateJoiners.has(p.id),
+  );
   if (present.length === 0) return false;
   return present.every((p) => room.confirmedVote2.has(p.id));
 }

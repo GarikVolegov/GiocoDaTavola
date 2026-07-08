@@ -104,6 +104,24 @@ function isMood(v: string): v is Mood {
 }
 
 /**
+ * Promote this round's late-joiners (3.2) to 'giocatore' — cap (MAX_GIOCATORI)
+ * permitting — then clear the set regardless, since by the next round they're
+ * no longer "late for this round" either way. Never promotes in duello (a
+ * fixed 2-player mode; a late joiner there is a spectator for good).
+ */
+function promoteLateJoiners(room: Room): void {
+  if (room.mode !== 'duello') {
+    for (const id of room.lateJoiners) {
+      const player = room.players.get(id);
+      if (!player) continue;
+      const giocatoriCount = [...room.players.values()].filter((p) => p.role !== 'pubblico').length;
+      if (giocatoriCount < MAX_GIOCATORI) delete player.role;
+    }
+  }
+  room.lateJoiners.clear();
+}
+
+/**
  * Behaviour-based bot personalities (Fase B). The persona doesn't pick a *side*
  * (the first vote is random) — it governs how the bot changes its mind at VOTE_2:
  *  - roccione: never changes; indeciso: changes often; gregge: drifts to the
@@ -296,6 +314,15 @@ export interface Room {
    * from the just-finished game's plannedDilemmas, consumed and cleared by
    * startGame(). Empty outside a rematch flow. */
   excludeDilemmaIds: Set<string>;
+  /**
+   * Ids of players who joined mid-round, this round (3.2, "late-join di prima
+   * classe"): they're 'pubblico' for the remainder of THIS round and excluded
+   * from its allVoted-style early-advance gates (they may not have even seen
+   * the prompt yet), then promoted to 'giocatore' — cap permitting — and
+   * cleared on entry to the next DILEMMA_REVEAL. Never populated in duello
+   * (fixed 2-player mode; a late joiner there just stays Pubblico forever).
+   */
+  lateJoiners: Set<string>;
   /**
    * The 1-based dilemma index chosen at start to be the surprise "Avvocato del
    * Diavolo" round, where defenders argue the side they did NOT vote. null when
@@ -873,6 +900,7 @@ export class RoomStore {
       dilemmaAuthors: new Map(),
       submittedQueue: [],
       excludeDilemmaIds: new Set(),
+      lateJoiners: new Set(),
       devilRoundIndex: null,
       knowRoundIndex: null,
       knowTargets: new Map(),
@@ -967,6 +995,7 @@ export class RoomStore {
     room.confirmedVote2 = new Set();
     room.defenders = [];
     room.absurdConstraint = null;
+    room.lateJoiners = new Set();
     room.defenseTurnIndex = 0;
     room.defenseArgument = null;
     room.raisedHands = [];
@@ -1280,6 +1309,9 @@ export class RoomStore {
     room.phase = transition.phase;
     room.dilemmaIndex = transition.dilemmaIndex;
     room.phaseExpiresAt = this.expiryFor(transition.phase);
+    // A new round starting is the round boundary (3.2): promote anyone who
+    // late-joined last round, cap permitting.
+    if (transition.phase === 'DILEMMA_REVEAL') promoteLateJoiners(room);
     // Percorso: entering a chapter card sets the upcoming tappa (the dilemma the
     // card precedes is dilemmaIndex+1) and resets the per-tappa recap counters.
     if (transition.phase === 'TAPPA_INTRO') {
@@ -2036,13 +2068,23 @@ export class RoomStore {
 
     if (room.players.size >= MAX_PLAYERS) return { ok: false, error: 'ROOM_FULL' };
 
-    // Beyond MAX_GIOCATORI, new joiners get the 'pubblico' role (3.1): same
-    // QR, same vote/react/bet/speaker-vote, but never picked as a defender.
-    const giocatoriCount = [...room.players.values()].filter((p) => p.role !== 'pubblico').length;
-    const player: Player =
-      giocatoriCount >= MAX_GIOCATORI
-        ? { id: playerId, nickname: name, role: 'pubblico' }
-        : { id: playerId, nickname: name };
+    let player: Player;
+    if (room.phase !== 'LOBBY') {
+      // Late-join di prima classe (3.2): mid-round, ALWAYS Pubblico for now
+      // (regardless of the giocatori cap) — excluded from this round's
+      // allVoted-style gates, then promoted (cap permitting) at the next
+      // DILEMMA_REVEAL. Guard: never promoted in duello (see promoteLateJoiners).
+      player = { id: playerId, nickname: name, role: 'pubblico' };
+      room.lateJoiners.add(playerId);
+    } else {
+      // Beyond MAX_GIOCATORI, new joiners get the 'pubblico' role (3.1): same
+      // QR, same vote/react/bet/speaker-vote, but never picked as a defender.
+      const giocatoriCount = [...room.players.values()].filter((p) => p.role !== 'pubblico').length;
+      player =
+        giocatoriCount >= MAX_GIOCATORI
+          ? { id: playerId, nickname: name, role: 'pubblico' }
+          : { id: playerId, nickname: name };
+    }
     room.players.set(playerId, player);
     return { ok: true, player };
   }

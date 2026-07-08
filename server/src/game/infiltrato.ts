@@ -17,9 +17,12 @@ export function accusedCount(room: Room): number {
   return room.accusations.size;
 }
 
-/** True once every connected human has accused (ends the ACCUSE phase early). */
+/** True once every connected human has accused (ends the ACCUSE phase early).
+ * Excludes a player who late-joined the final round (3.2). */
 export function allAccused(room: Room): boolean {
-  const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+  const humans = [...room.players.values()].filter(
+    (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+  );
   if (humans.length === 0) return false;
   return humans.every((p) => room.accusations.has(p.id));
 }

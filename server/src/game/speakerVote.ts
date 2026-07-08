@@ -24,9 +24,12 @@ export function speakerVotedCount(room: Room): number {
   return room.speakerVotes.size;
 }
 
-/** True once every connected human has cast a best-speaker vote (ends the phase early). */
+/** True once every connected human has cast a best-speaker vote (ends the
+ * phase early). Excludes a player who late-joined THIS round (3.2). */
 export function allSpeakerVoted(room: Room): boolean {
-  const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+  const humans = [...room.players.values()].filter(
+    (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+  );
   if (humans.length === 0) return false;
   return humans.every((p) => room.speakerVotes.has(p.id));
 }

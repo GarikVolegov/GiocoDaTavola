@@ -1814,6 +1814,91 @@ describe('leave() leadership migration', () => {
   });
 });
 
+describe('late-join promotion (3.2)', () => {
+  it('a mid-game joiner is always Pubblico this round, even under the giocatori cap', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`); // well under MAX_GIOCATORI
+    store.startGame(code, 3);
+    const room = store.get(code)!;
+    expect(room.phase).not.toBe('LOBBY');
+    const res = store.join(code, 'late1', 'Late1');
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.player.role).toBe('pubblico');
+    expect(room.lateJoiners.has('late1')).toBe(true);
+  });
+
+  it("a late-joiner's absence never blocks the CURRENT round's allVoted gate", () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3);
+    let g = 0;
+    while (store.get(code)!.phase !== 'VOTE_1' && g++ < 10) store.advancePhase(code);
+    store.join(code, 'late1', 'Late1'); // joins mid-VOTE_1, before anyone has voted
+    for (let i = 0; i < 3; i++) store.vote(code, `sock-${i}`, 'A');
+    expect(store.allVoted(code)).toBe(true); // late1 never voted, but doesn't block
+  });
+
+  it('promotes a late-joiner to giocatore at the next round boundary (under the cap)', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3);
+    let g = 0;
+    while (store.get(code)!.phase !== 'VOTE_1' && g++ < 10) store.advancePhase(code);
+    store.join(code, 'late1', 'Late1');
+    const room = store.get(code)!;
+    expect(room.players.get('late1')!.role).toBe('pubblico');
+    // Walk to the next round's DILEMMA_REVEAL.
+    g = 0;
+    const startIndex = room.dilemmaIndex;
+    while (room.dilemmaIndex === startIndex && g++ < 30) {
+      store.advancePhase(code);
+      if (room.phase === 'VOTE_1' || room.phase === 'VOTE_2') {
+        for (const id of ['sock-0', 'sock-1', 'sock-2']) store.vote(code, id, 'A');
+      }
+    }
+    expect(room.dilemmaIndex).toBeGreaterThan(startIndex);
+    expect(room.players.get('late1')!.role).toBeUndefined(); // promoted
+    expect(room.lateJoiners.size).toBe(0);
+  });
+
+  it('does not promote past MAX_GIOCATORI — stays Pubblico', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < MAX_GIOCATORI; i++) store.join(code, `sock-${i}`, `P${i}`); // already at the cap
+    store.startGame(code, 3);
+    let g = 0;
+    while (store.get(code)!.phase !== 'VOTE_1' && g++ < 10) store.advancePhase(code);
+    store.join(code, 'late1', 'Late1');
+    const room = store.get(code)!;
+    for (const id of [...room.players.keys()].filter((id) => id !== 'late1')) store.vote(code, id, 'A');
+    g = 0;
+    const startIndex = room.dilemmaIndex;
+    while (room.dilemmaIndex === startIndex && g++ < 30) store.advancePhase(code);
+    expect(room.players.get('late1')!.role).toBe('pubblico'); // cap already full, stays Pubblico
+  });
+
+  it('never promotes a late-joiner in duello mode (guard)', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    store.join(code, 'p2', 'Bob');
+    store.startGame(code, 3, 'misto', 'duello');
+    let g = 0;
+    while (store.get(code)!.phase !== 'DUEL_PICK' && g++ < 10) store.advancePhase(code);
+    store.join(code, 'late1', 'Late1');
+    const room = store.get(code)!;
+    expect(room.players.get('late1')!.role).toBe('pubblico');
+    store.vote(code, 'p1', 'A');
+    store.vote(code, 'p2', 'A'); // agree -> straight to DUEL_RESULT
+    g = 0;
+    while (room.dilemmaIndex === 1 && g++ < 10) store.advancePhase(code);
+    expect(room.players.get('late1')!.role).toBe('pubblico'); // never promoted in duello
+  });
+});
+
 describe('startGame — mood + delicate-theme opt-in (2.2)', () => {
   function mixedFixture(id: string, complessita: Complessita, delicato = false): Dilemma {
     return { id, text: `${id}?`, optionA: 'A', optionB: 'B', register: 'vita', complessita, delicato, spuntiA: [], spuntiB: [] };
