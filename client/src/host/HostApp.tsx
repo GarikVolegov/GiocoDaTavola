@@ -10,6 +10,7 @@ import {
   PERSONA_LABELS,
   OBJECTIVE,
   JOIN_ERROR_MESSAGES,
+  SPLIT_REVEAL_WINDOW_S,
   tappaMeta,
   type LobbyUpdatePayload,
   type GameStatePayload,
@@ -140,12 +141,13 @@ export default function HostApp() {
   // BivioBackdrop montato in App.tsx.
   useEffect(() => {
     const root = document.documentElement;
-    const lean = phase === 'SPLIT_REVEAL' && game?.split ? leanFromSplit(game.split) : 50;
+    const inSuspense = remaining != null && remaining > SPLIT_REVEAL_WINDOW_S;
+    const lean = phase === 'SPLIT_REVEAL' && game?.split && !inSuspense ? leanFromSplit(game.split) : 50;
     root.style.setProperty('--bivio-lean', String(lean));
     return () => {
       root.style.setProperty('--bivio-lean', '50');
     };
-  }, [phase, game?.split]);
+  }, [phase, game?.split, remaining]);
 
   // No code yet: ask for one (the leader's phone shows it after creating a room).
   if (!code) {
@@ -312,7 +314,17 @@ export default function HostApp() {
           </p>
         )}
 
-        {phase === 'SPLIT_REVEAL' && split && <SplitBar split={split} />}
+        {phase === 'SPLIT_REVEAL' &&
+          (remaining != null && remaining > SPLIT_REVEAL_WINDOW_S ? (
+            <div
+              aria-label="Si scopre il gruppo tra…"
+              style={{ fontSize: 'clamp(6rem, 20vw, 12rem)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+            >
+              {remaining - SPLIT_REVEAL_WINDOW_S}
+            </div>
+          ) : (
+            split && <SplitBar split={split} />
+          ))}
 
         {phase === 'PREDICT' && (
           game.knowPairs ? (

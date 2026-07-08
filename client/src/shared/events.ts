@@ -961,6 +961,15 @@ export const VOTE_ERROR_MESSAGES: Record<VoteError, string> = {
   INVALID_CHOICE: 'Scelta non valida',
 };
 
+/**
+ * How many seconds of SPLIT_REVEAL, at the END of its countdown, are the
+ * actual reveal window — the seconds before that (server total minus this)
+ * are a "3-2-1" suspense beat with the split withheld. Must mirror the
+ * server's PHASE_DURATIONS_MS.SPLIT_REVEAL (currently 9s = 3s suspense + 6s
+ * reveal, this constant being that 6s).
+ */
+export const SPLIT_REVEAL_WINDOW_S = 6;
+
 /** User-facing (Italian) short label for each phase, shown on the host. */
 export const PHASE_LABELS: Record<GamePhase, string> = {
   LOBBY: 'In attesa',

@@ -83,7 +83,10 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   // Self-paced votes: no timer — advance once every present player has acted
   // (early-advance in index.ts), with the leader's "Salta ▶" as the only override.
   VOTE_1: null,
-  SPLIT_REVEAL: 6_000,
+  // The first 3s are a client-rendered "3-2-1" suspense beat (no split shown
+  // yet); the split itself is revealed for the remaining 6s. See
+  // SPLIT_REVEAL_SUSPENSE_MS below — client and server must agree on the split.
+  SPLIT_REVEAL: 9_000,
   PREDICT: null,
   DEFENSE: DEFENSE_MAX_MS,
   INTERVENTI: INTERVENTI_MAX_MS,

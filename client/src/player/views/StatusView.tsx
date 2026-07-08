@@ -3,6 +3,7 @@ import { useAuth, Show, SignInButton } from '@clerk/react';
 import {
   PHASE_LABELS,
   OBJECTIVE,
+  SPLIT_REVEAL_WINDOW_S,
   tappaMeta,
   type GameStatePayload,
   type BlindSpot,
@@ -218,13 +219,22 @@ export default function StatusView({
           </p>
         </>
       ) : phase === 'SPLIT_REVEAL' ? (
-        <>
-          {game?.split && <SplitBar split={game.split} />}
-          {game?.dilemma && <DilemmaCard dilemma={game.dilemma} />}
-          <p style={{ fontSize: '0.95rem', opacity: 0.7, margin: 0 }}>
-            Ecco come si è diviso il gruppo — ora si difende
-          </p>
-        </>
+        remaining != null && remaining > SPLIT_REVEAL_WINDOW_S ? (
+          <div
+            aria-label="Si scopre il gruppo tra…"
+            style={{ fontSize: 'clamp(4rem, 20vw, 8rem)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+          >
+            {remaining - SPLIT_REVEAL_WINDOW_S}
+          </div>
+        ) : (
+          <>
+            {game?.split && <SplitBar split={game.split} />}
+            {game?.dilemma && <DilemmaCard dilemma={game.dilemma} />}
+            <p style={{ fontSize: '0.95rem', opacity: 0.7, margin: 0 }}>
+              Ecco come si è diviso il gruppo — ora si difende
+            </p>
+          </>
+        )
       ) : phase === 'PHASE_RESULTS' ? (
         <>
           {game?.swing && <ResultsPanel swing={game.swing} />}

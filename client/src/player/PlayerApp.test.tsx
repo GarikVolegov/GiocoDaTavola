@@ -840,7 +840,29 @@ describe('PlayerApp', () => {
     expect(vibrateSpy).not.toHaveBeenCalled();
   });
 
-  it('cues the next step at SPLIT_REVEAL (status view)', () => {
+  it('shows a 3-2-1 suspense countdown in the first seconds of SPLIT_REVEAL, before the split', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'SPLIT_REVEAL',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: Date.now() + 9_000, // just entered: 3s of suspense left
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        split: { A: 2, B: 1 },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.queryByText(/ora si difende/i)).toBeNull();
+  });
+
+  it('cues the next step at SPLIT_REVEAL once the suspense countdown ends (status view)', () => {
     render(<PlayerApp />);
     act(() => {
       serverEmit('player:joined', {
