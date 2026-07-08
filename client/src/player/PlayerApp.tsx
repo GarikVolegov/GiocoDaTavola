@@ -18,6 +18,7 @@ import {
   type GameMode,
   type SessionFormat,
   type ContentRegister,
+  type Mood,
   type PlayerJoinedPayload,
   type PlayerJoinErrorPayload,
   type LobbyUpdatePayload,
@@ -171,6 +172,8 @@ export default function PlayerApp() {
   // Leader-only lobby config (mirrors the old HostApp setup).
   const [format, setFormat] = useState<SessionFormat>('classica');
   const [register, setRegister] = useState<ContentRegister>('misto');
+  const [mood, setMood] = useState<Mood>('mista');
+  const [delicatoOptIn, setDelicatoOptIn] = useState(false);
   const [gameMode, setGameMode] = useState<GameMode>('gruppo');
   const [infiltratoOn, setInfiltratoOn] = useState(false);
   const [squadreOn, setSquadreOn] = useState(false);
@@ -587,6 +590,8 @@ export default function PlayerApp() {
       mode: gameMode,
       infiltrato: gameMode === 'gruppo' && infiltratoOn,
       squadre: gameMode === 'gruppo' && squadreOn,
+      mood,
+      delicatoOptIn,
     });
   };
   const castAccuse = (accusedId: string) => {
@@ -933,6 +938,10 @@ export default function PlayerApp() {
             setGameMode={setGameMode}
             register={register}
             setRegister={setRegister}
+            mood={mood}
+            setMood={setMood}
+            delicatoOptIn={delicatoOptIn}
+            setDelicatoOptIn={setDelicatoOptIn}
             format={format}
             setFormat={setFormat}
             startTappa={startTappa}

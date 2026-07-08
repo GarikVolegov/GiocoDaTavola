@@ -10,6 +10,8 @@ import {
   DURATE,
   DURATA_LABELS,
   STORY_GENRE_LABELS,
+  MOODS,
+  MOOD_LABELS,
   estimatePercorsoDilemmi,
   MIN_PLAYERS_TO_START,
   MIN_INFILTRATO_HUMANS,
@@ -20,6 +22,7 @@ import {
   type Durata,
   type TappaCounts,
   type StoriaCatalogItem,
+  type Mood,
 } from '../../shared/events';
 import { Card, Pill, Button, Alert } from '../../shared/ui';
 
@@ -33,6 +36,10 @@ interface LeaderSetupProps {
   setGameMode: Dispatch<SetStateAction<GameMode>>;
   register: ContentRegister;
   setRegister: Dispatch<SetStateAction<ContentRegister>>;
+  mood: Mood;
+  setMood: Dispatch<SetStateAction<Mood>>;
+  delicatoOptIn: boolean;
+  setDelicatoOptIn: Dispatch<SetStateAction<boolean>>;
   format: SessionFormat;
   setFormat: Dispatch<SetStateAction<SessionFormat>>;
   startTappa: number;
@@ -72,6 +79,10 @@ export default function LeaderSetup({
   setGameMode,
   register,
   setRegister,
+  mood,
+  setMood,
+  delicatoOptIn,
+  setDelicatoOptIn,
   format,
   setFormat,
   startTappa,
@@ -179,6 +190,25 @@ export default function LeaderSetup({
                     <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
                       {FORMAT_LABELS[f].round} round · {FORMAT_LABELS[f].durata}
                     </span>
+                  </span>
+                </Pill>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ width: '100%' }}>
+            <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Mood della serata</p>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Mood della serata">
+              {MOODS.map((m) => (
+                <Pill
+                  key={m}
+                  selected={mood === m}
+                  onClick={() => setMood(m)}
+                  aria-label={`${MOOD_LABELS[m].nome}, ${MOOD_LABELS[m].descr}`}
+                >
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
+                    <span style={{ fontWeight: 700 }}>{MOOD_LABELS[m].nome}</span>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{MOOD_LABELS[m].descr}</span>
                   </span>
                 </Pill>
               ))}
@@ -294,6 +324,21 @@ export default function LeaderSetup({
                     </Pill>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {isClassica && (
+              <div style={{ width: '100%' }}>
+                <Pill
+                  selected={delicatoOptIn}
+                  onClick={() => setDelicatoOptIn((v) => !v)}
+                  aria-label="Includi temi delicati (eutanasia, lutto)"
+                >
+                  ⚠️ Temi delicati {delicatoOptIn ? 'ON' : 'OFF'}
+                </Pill>
+                <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
+                  Di norma escludiamo i dilemmi più pesanti (eutanasia, lutto) — attiva se il gruppo se la sente.
+                </p>
               </div>
             )}
 

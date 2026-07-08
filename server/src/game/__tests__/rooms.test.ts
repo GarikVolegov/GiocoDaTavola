@@ -21,7 +21,7 @@ import {
   type GamePhase,
   type VoteChoice,
 } from '../rooms';
-import { Deck, type Dilemma, type ContentRegister } from '../deck';
+import { Deck, type Dilemma, type ContentRegister, type Complessita } from '../deck';
 
 // helper: add n players to an existing room
 function addPlayers(store: RoomStore, code: string, n: number) {
@@ -1780,6 +1780,64 @@ describe('leave() leadership migration', () => {
     store.get(code)!.players.get('p2')!.connected = false; // Bob is the only one left, and offline
     store.leave(code, 'p1');
     expect(store.get(code)!.leaderId).toBe('p2'); // better than null — they get control back on reconnect
+  });
+});
+
+describe('startGame — mood + delicate-theme opt-in (2.2)', () => {
+  function mixedFixture(id: string, complessita: Complessita, delicato = false): Dilemma {
+    return { id, text: `${id}?`, optionA: 'A', optionB: 'B', register: 'vita', complessita, delicato, spuntiA: [], spuntiB: [] };
+  }
+  const MIXED: Dilemma[] = [
+    mixedFixture('s1', 'sorbetto'),
+    mixedFixture('a1', 'alto'),
+    mixedFixture('m1', 'max'),
+    mixedFixture('p1', 'power'),
+    mixedFixture('pd1', 'power', true),
+  ];
+  const mixedDeck = (_r: ContentRegister) => new Deck(MIXED, () => 0);
+
+  it('rejects an invalid mood', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, mixedDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `p${i}`, `P${i}`);
+    const result = store.startGame(code, 3, 'misto', 'gruppo', false, false, undefined, undefined, 'boh');
+    expect(result).toEqual({ ok: false, error: 'INVALID_MOOD' });
+  });
+
+  it("'mista' (default) excludes only the delicate power dilemma", () => {
+    const store = new RoomStore(generateRoomCode, () => 0, mixedDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `p${i}`, `P${i}`);
+    store.startGame(code, 5); // only 4 cards eligible (pd1 excluded) -> draws all 4, stops there
+    const ids = store.get(code)!.plannedDilemmas.map((d) => d.id).sort();
+    expect(ids).toEqual(['a1', 'm1', 'p1', 's1']);
+  });
+
+  it("'leggera' excludes every 'power' dilemma, delicate or not", () => {
+    const store = new RoomStore(generateRoomCode, () => 0, mixedDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `p${i}`, `P${i}`);
+    store.startGame(code, 3, 'misto', 'gruppo', false, false, undefined, undefined, 'leggera');
+    const ids = store.get(code)!.plannedDilemmas.map((d) => d.id).sort();
+    expect(ids).toEqual(['a1', 'm1', 's1']);
+  });
+
+  it("'profonda' excludes the sorbetto warm-up tier", () => {
+    const store = new RoomStore(generateRoomCode, () => 0, mixedDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `p${i}`, `P${i}`);
+    store.startGame(code, 3, 'misto', 'gruppo', false, false, undefined, undefined, 'profonda');
+    const ids = store.get(code)!.plannedDilemmas.map((d) => d.id).sort();
+    expect(ids).toEqual(['a1', 'm1', 'p1']);
+  });
+
+  it('delicatoOptIn makes the delicate power dilemma eligible again', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, mixedDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `p${i}`, `P${i}`);
+    store.startGame(code, 5, 'misto', 'gruppo', false, false, undefined, undefined, 'mista', true);
+    const ids = store.get(code)!.plannedDilemmas.map((d) => d.id).sort();
+    expect(ids).toEqual(['a1', 'm1', 'p1', 'pd1', 's1']);
   });
 });
 

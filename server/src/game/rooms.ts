@@ -1,7 +1,7 @@
 // In-memory store of game rooms. The server is authoritative; rooms live here
 // only for the lifetime of the process (no DB).
 
-import { Deck, dilemmasForRegister, loadDilemmas, type Dilemma, type ContentRegister, type Tappa } from './deck';
+import { Deck, dilemmasForRegister, loadDilemmas, filterByMood, type Dilemma, type ContentRegister, type Tappa, type Mood } from './deck';
 import * as knowRound from './knowRound';
 import * as infiltrato from './infiltrato';
 import * as predictions from './predictions';
@@ -88,6 +88,12 @@ export type DilemmaCount = (typeof DILEMMA_COUNT_OPTIONS)[number];
 
 /** Content registers the host can pick (mirror of deck.ts ContentRegister). */
 export const CONTENT_REGISTERS = ['vita', 'business', 'carriera', 'misto'] as const;
+
+/** The evening's mood the leader can pick (2.2, mirror of deck.ts Mood). */
+export const MOODS = ['leggera', 'mista', 'profonda'] as const;
+function isMood(v: string): v is Mood {
+  return (MOODS as readonly string[]).includes(v);
+}
 
 /**
  * Behaviour-based bot personalities (Fase B). The persona doesn't pick a *side*
@@ -439,6 +445,7 @@ export type StartGameError =
   | 'WRONG_PLAYER_COUNT'
   | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
+  | 'INVALID_MOOD'
   | 'INVALID_PERCORSO'
   | 'INVALID_STORIA'
   | 'INFILTRATO_NEEDS_PLAYERS'
@@ -974,6 +981,8 @@ export class RoomStore {
     squadre: boolean = false,
     percorso?: { startTappa: number; durata: string },
     storia?: { storyId: string },
+    mood: string = 'mista',
+    delicatoOptIn: boolean = false,
   ): StartGameResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
@@ -1012,6 +1021,7 @@ export class RoomStore {
     } else {
       if (!isDilemmaCount(dilemmaCount)) return { ok: false, error: 'INVALID_DILEMMA_COUNT' };
       if (!isContentRegister(register)) return { ok: false, error: 'INVALID_REGISTER' };
+      if (!isMood(mood)) return { ok: false, error: 'INVALID_MOOD' };
     }
     if (!isGameMode(mode)) return { ok: false, error: 'INVALID_REGISTER' };
     const humans = [...room.players.values()].filter((p) => !p.isBot);
@@ -1112,9 +1122,15 @@ export class RoomStore {
       // doesn't keep excluding a game from two rematches ago.
       const excludeIds = room.excludeDilemmaIds;
       room.excludeDilemmaIds = new Set();
-      if (excludeIds.size > 0) {
-        room.deck = new Deck(room.deck.cards.filter((d) => !excludeIds.has(d.id)));
-      }
+      // Mood (2.2) narrows the pool by complexity tier; the delicate-theme
+      // opt-in additionally excludes flagged 'power' dilemmas unless the
+      // leader explicitly asked for them. Validated above via isMood.
+      const cards = room.deck.cards;
+      const eligible = filterByMood(cards, mood as Mood, delicatoOptIn).filter((d) => !excludeIds.has(d.id));
+      // Only rebuild when something was actually excluded — an unfiltered
+      // rebuild would replace the deck's own injected rng with the default
+      // Math.random, silently breaking draw-order determinism in tests.
+      if (eligible.length < cards.length) room.deck = new Deck(eligible);
       // Precompute the ordered sequence: submitted dilemmas first, then the deck,
       // finally escalating by complexity (alto → max → power) over the game.
       room.plannedDilemmas = dilemmaPlan.buildClassicPlan(room.deck, room.submittedDilemmas, dilemmaCount, this.rng);

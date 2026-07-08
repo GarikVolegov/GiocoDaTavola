@@ -1316,7 +1316,8 @@
       "Finché c’è vita, può cambiare tutto",
       "È una porta che non si richiude",
       "Il mio compito è restare, non lasciare andare"
-    ]
+    ],
+    "delicato": true
   },
   {
     "id": "h21",
@@ -3653,7 +3654,8 @@
     "spuntiB": [
       "Finché c’è vita c’è tempo coi miei",
       "Anche giorni confusi sono giorni con loro"
-    ]
+    ],
+    "delicato": true
   },
   {
     "id": "r51",
@@ -3670,7 +3672,8 @@
     "spuntiB": [
       "Confessare così è solo egoismo",
       "Li lascerei con una ferita eterna"
-    ]
+    ],
+    "delicato": true
   },
   {
     "id": "r52",
@@ -4621,7 +4624,8 @@
       "Le scelte servono a chi deve continuare a vivere",
       "I morti non soffrono, i vivi sì",
       "L’amore per lui non può ferire chi resta"
-    ]
+    ],
+    "delicato": true
   },
   {
     "id": "q43",

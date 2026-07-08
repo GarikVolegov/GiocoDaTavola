@@ -38,6 +38,12 @@ export interface Dilemma {
   tappa?: Tappa;
   /** Debate-complexity tier (alto < max < power). Present on every curated dilemma. */
   complessita?: Complessita;
+  /**
+   * Flags an especially heavy theme (euthanasia, grief, ...) among the 'power'
+   * dilemmas. Excluded from the classic draw by default; the leader must
+   * opt in (2.2's "tema delicato" toggle) to make it eligible.
+   */
+  delicato?: boolean;
   /** 2–3 talking points for someone defending side A (optionA). */
   spuntiA: string[];
   /** 2–3 talking points for someone defending side B (optionB). */
@@ -48,6 +54,25 @@ export interface Dilemma {
 export function dilemmasForRegister(all: Dilemma[], register: ContentRegister): Dilemma[] {
   if (register === 'misto') return all;
   return all.filter((d) => d.register === register);
+}
+
+/**
+ * The evening's mood (2.2's setup selector): 'leggera' keeps things sorbetto +
+ * alto (no existential 'power' stakes); 'mista' (default) is the full mix;
+ * 'profonda' skips the sorbetto warm-up tier and leans into max/power.
+ */
+export type Mood = 'leggera' | 'mista' | 'profonda';
+
+/**
+ * Filter a dilemma pool by mood, then by the delicate-theme opt-in (excluding
+ * `delicato` dilemmas unless the leader explicitly opted in). Applied before
+ * drawing, so the pacing pass (dilemmaPlan.ts) only ever sees eligible cards.
+ */
+export function filterByMood(pool: Dilemma[], mood: Mood, delicatoOptIn: boolean): Dilemma[] {
+  const withoutDelicate = delicatoOptIn ? pool : pool.filter((d) => !d.delicato);
+  if (mood === 'leggera') return withoutDelicate.filter((d) => (d.complessita ?? 'alto') !== 'power');
+  if (mood === 'profonda') return withoutDelicate.filter((d) => (d.complessita ?? 'alto') !== 'sorbetto');
+  return withoutDelicate;
 }
 
 /**

@@ -1433,6 +1433,40 @@ describe('PlayerApp', () => {
     expect(screen.getByRole('button', { name: /avvia partita/i })).toBeInTheDocument();
   });
 
+  it('lets the leader pick a mood + delicate-theme opt-in and sends both when starting', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+          { id: 'p3', nickname: 'Carlo' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'LOBBY',
+        dilemmaCount: 0,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        leaderId: 'p1',
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /leggera/i }));
+    fireEvent.click(screen.getByText(/altre opzioni/i));
+    fireEvent.click(screen.getByRole('button', { name: /temi delicati/i }));
+    fireEvent.click(screen.getByRole('button', { name: /avvia partita/i }));
+    expect(emitSpy).toHaveBeenCalledWith(
+      'leader:startGame',
+      expect.objectContaining({ mood: 'leggera', delicatoOptIn: true }),
+    );
+  });
+
   it('requires a second tap of "Salta" during a secret-vote phase (VOTE_1)', () => {
     const emitSpy = vi.spyOn(fakeSocket, 'emit');
     render(<PlayerApp />);

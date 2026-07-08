@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Deck, loadDilemmas, dilemmasForRegister, dilemmasForTappa, type Dilemma } from '../deck';
+import { Deck, loadDilemmas, dilemmasForRegister, dilemmasForTappa, filterByMood, type Dilemma } from '../deck';
 
 // A small fixed deck for exercising draw behavior without depending on the
 // real data file.
@@ -223,6 +223,41 @@ describe('classificazione complessità (alto < max < power)', () => {
   it('le tappe profonde sono più complesse: tappa 4 è sempre power, tappa 3 mai alto', () => {
     expect(all.filter((d) => d.tappa === 4).every((d) => d.complessita === 'power')).toBe(true);
     expect(all.filter((d) => d.tappa === 3).every((d) => d.complessita !== 'alto')).toBe(true);
+  });
+
+  it('almeno un dilemma power è marcato "delicato" (tema pesante, opt-in)', () => {
+    expect(all.some((d) => d.complessita === 'power' && d.delicato === true)).toBe(true);
+  });
+});
+
+describe('filterByMood', () => {
+  const pool: Dilemma[] = [
+    { id: 's1', text: 's1', optionA: 'A', optionB: 'B', register: 'vita', complessita: 'sorbetto', spuntiA: [], spuntiB: [] },
+    { id: 'a1', text: 'a1', optionA: 'A', optionB: 'B', register: 'vita', complessita: 'alto', spuntiA: [], spuntiB: [] },
+    { id: 'm1', text: 'm1', optionA: 'A', optionB: 'B', register: 'vita', complessita: 'max', spuntiA: [], spuntiB: [] },
+    { id: 'p1', text: 'p1', optionA: 'A', optionB: 'B', register: 'vita', complessita: 'power', spuntiA: [], spuntiB: [] },
+    { id: 'pd1', text: 'pd1', optionA: 'A', optionB: 'B', register: 'vita', complessita: 'power', delicato: true, spuntiA: [], spuntiB: [] },
+  ];
+
+  it("'mista' keeps everything except delicate content by default", () => {
+    expect(filterByMood(pool, 'mista', false).map((d) => d.id)).toEqual(['s1', 'a1', 'm1', 'p1']);
+  });
+
+  it("'mista' with delicatoOptIn includes the delicate dilemma too", () => {
+    expect(filterByMood(pool, 'mista', true).map((d) => d.id)).toEqual(['s1', 'a1', 'm1', 'p1', 'pd1']);
+  });
+
+  it("'leggera' excludes every 'power' dilemma, delicate or not", () => {
+    expect(filterByMood(pool, 'leggera', true).map((d) => d.id)).toEqual(['s1', 'a1', 'm1']);
+  });
+
+  it("'profonda' excludes the sorbetto warm-up tier", () => {
+    expect(filterByMood(pool, 'profonda', false).map((d) => d.id)).toEqual(['a1', 'm1', 'p1']);
+  });
+
+  it('delicate content is always excluded unless explicitly opted in, in any mood', () => {
+    expect(filterByMood(pool, 'profonda', false).some((d) => d.delicato)).toBe(false);
+    expect(filterByMood(pool, 'profonda', true).some((d) => d.delicato)).toBe(true);
   });
 });
 

@@ -238,6 +238,17 @@ export const MODE_LABELS: Record<GameMode, { nome: string; descr: string }> = {
   duello: { nome: '1v1 Duello', descr: '2 giocatori' },
 };
 
+/** The evening's mood (2.2, mirror of the server's deck.ts `Mood`). */
+export const MOODS = ['leggera', 'mista', 'profonda'] as const;
+export type Mood = (typeof MOODS)[number];
+
+/** Setup-screen labels for each mood. */
+export const MOOD_LABELS: Record<Mood, { nome: string; descr: string }> = {
+  leggera: { nome: '😂 Leggera', descr: 'niente temi estremi' },
+  mista: { nome: '🎭 Mista', descr: 'un po’ di tutto' },
+  profonda: { nome: '🌊 Profonda', descr: 'si va a fondo' },
+};
+
 /** The game's objective, stated to players (persuasion framing). */
 export const OBJECTIVE =
   'Convinci gli altri a passare dalla tua parte… e resta pronto a cambiare idea tu.';
