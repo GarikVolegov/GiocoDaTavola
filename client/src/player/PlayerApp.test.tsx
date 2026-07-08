@@ -47,6 +47,7 @@ vi.mock('@clerk/react', () => ({
 }));
 
 import PlayerApp from './PlayerApp';
+import { WRONG_PREDICTION_TITLES, WRONG_SWING_BET_TITLES, WRONG_KNOW_TITLES } from '../shared/ironicTitles';
 
 describe('PlayerApp', () => {
   beforeEach(() => {
@@ -1242,6 +1243,101 @@ describe('PlayerApp', () => {
       });
     });
     expect(screen.queryByText(/il ribaltone/i)).toBeNull();
+  });
+
+  it('gives a wrong prediction an ironic title instead of a flat X', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      // A separate act() lets the "new dilemmaIndex -> clear predictionResult"
+      // effect settle BEFORE the private result event below, mirroring the
+      // real server (the private emit only fires once results are already in).
+      serverEmit('game:state', {
+        phase: 'PHASE_RESULTS',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        leaderId: null,
+      });
+    });
+    act(() => {
+      serverEmit('player:predictionResult', { correct: false, predicted: 'A', actual: 'B' });
+    });
+    const matched = WRONG_PREDICTION_TITLES.some((t) => screen.queryByText(t) != null);
+    expect(matched).toBe(true);
+    expect(screen.queryByText('❌ Stavolta non ci hai preso.')).toBeNull();
+  });
+
+  it('gives a wrong swing bet an ironic title instead of a flat loss message', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PHASE_RESULTS',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        leaderId: null,
+      });
+    });
+    act(() => {
+      serverEmit('player:swingBetResult', { correct: false, bet: 'ribalta', flipped: false });
+    });
+    const matched = WRONG_SWING_BET_TITLES.some((t) => screen.queryByText(t) != null);
+    expect(matched).toBe(true);
+  });
+
+  it('gives a wrong "quanto mi conosci" guess an ironic title', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PHASE_RESULTS',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        leaderId: null,
+      });
+    });
+    act(() => {
+      serverEmit('player:knowGuessResult', { correct: false, guess: 'A', actual: 'B', targetId: 'p2' });
+    });
+    const matched = WRONG_KNOW_TITLES.some((t) => screen.queryByText(t) != null);
+    expect(matched).toBe(true);
+  });
+
+  it('keeps the plain success message for a correct prediction', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PHASE_RESULTS',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        leaderId: null,
+      });
+    });
+    act(() => {
+      serverEmit('player:predictionResult', { correct: true, predicted: 'A', actual: 'A' });
+    });
+    expect(screen.getByText('✅ Pronostico azzeccato!')).toBeInTheDocument();
   });
 
   it('asks for confirmation before leaving the room', () => {

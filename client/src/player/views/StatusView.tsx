@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useAuth, Show, SignInButton } from '@clerk/react';
 import {
   PHASE_LABELS,
@@ -14,6 +14,7 @@ import {
 } from '../../shared/events';
 import { Card, Button, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel } from '../../shared/ui';
 import { NORTHSTAR_URL } from '../../shared/northstar';
+import { pickIronicTitle, WRONG_PREDICTION_TITLES, WRONG_SWING_BET_TITLES, WRONG_KNOW_TITLES } from '../../shared/ironicTitles';
 import { wrap } from './layout';
 
 interface StatusViewProps {
@@ -53,6 +54,12 @@ export default function StatusView({
 }: StatusViewProps) {
   // useAuth keeps the <Show when="signed-out"> gate working inside this view.
   useAuth();
+  // A wrong guess gets a funny title instead of a flat X (2.4) — memoized on
+  // the result's own identity so it doesn't re-roll on every re-render (the
+  // countdown ticks every 250ms) and only changes for a genuinely new result.
+  const wrongPredictionTitle = useMemo(() => pickIronicTitle(WRONG_PREDICTION_TITLES), [predictionResult]);
+  const wrongSwingBetTitle = useMemo(() => pickIronicTitle(WRONG_SWING_BET_TITLES), [swingBetResult]);
+  const wrongKnowTitle = useMemo(() => pickIronicTitle(WRONG_KNOW_TITLES), [knowResult]);
   // Leader-paced narrative beats (storia): the leader advances; others wait. The
   // host screen is the narrator, so the phone only needs this small control.
   const narratorAdvance = (label: string) =>
@@ -249,19 +256,19 @@ export default function StatusView({
                 ? '🔮 Pareggio: nessun pronostico vince.'
                 : predictionResult.correct
                   ? '✅ Pronostico azzeccato!'
-                  : '❌ Stavolta non ci hai preso.'}
+                  : wrongPredictionTitle}
             </p>
           )}
           {swingBetResult && (
             <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
               {swingBetResult.correct
                 ? `🎰 Ribaltone ${swingBetResult.flipped ? 'sì' : 'no'}: scommessa vinta!`
-                : '🎰 Scommessa sul ribaltone persa.'}
+                : wrongSwingBetTitle}
             </p>
           )}
           {knowResult && (
             <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-              {knowResult.correct ? '🔮 Conosci bene il tuo amico!' : '🔮 Stavolta non l’hai indovinato.'}
+              {knowResult.correct ? '🔮 Conosci bene il tuo amico!' : wrongKnowTitle}
             </p>
           )}
         </>
