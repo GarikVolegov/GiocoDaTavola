@@ -717,6 +717,50 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/tra poco si vota/i)).toBeInTheDocument();
   });
 
+  it('buzzes when the phase timer is in its last 5 seconds', () => {
+    const vibrateSpy = vi.fn();
+    Object.defineProperty(navigator, 'vibrate', { value: vibrateSpy, configurable: true });
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'SPLIT_REVEAL',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: Date.now() + 5_000,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        leaderId: null,
+      });
+    });
+    expect(vibrateSpy).toHaveBeenCalled();
+  });
+
+  it('does not buzz for the countdown when there is more than 5s left', () => {
+    const vibrateSpy = vi.fn();
+    Object.defineProperty(navigator, 'vibrate', { value: vibrateSpy, configurable: true });
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'SPLIT_REVEAL',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: Date.now() + 30_000,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        leaderId: null,
+      });
+    });
+    expect(vibrateSpy).not.toHaveBeenCalled();
+  });
+
   it('cues the next step at SPLIT_REVEAL (status view)', () => {
     render(<PlayerApp />);
     act(() => {

@@ -340,6 +340,11 @@ export default function PlayerApp() {
 
   const phase = game?.phase ?? 'LOBBY';
   const remaining = useCountdown(game?.phaseExpiresAt ?? null);
+  // The last 5s of ANY phase timer buzz every phone once per second — mirrors
+  // the host's audio timerWarn cue, which already ticks in the same window.
+  useEffect(() => {
+    if (remaining != null && remaining >= 1 && remaining <= 5) buzz(20);
+  }, [remaining]);
   // Self-paced turn (DEFENSE/INTERVENTI): the floor countdown gates "Ho finito".
   const minRemaining = useCountdown(game?.defense?.minEndsAt ?? null);
   const canFinishNow = game?.defense?.minEndsAt == null || (minRemaining ?? 0) <= 0;
