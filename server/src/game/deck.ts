@@ -17,14 +17,15 @@ export type Tappa = 1 | 2 | 3 | 4;
 
 /**
  * Cross-cutting debate-complexity tier (a universal difficulty ladder, present on
- * every dilemma — classic and percorso). Ascending: 'alto' (real, accessible
- * stakes) < 'max' (heavy personal/relational stakes) < 'power' (existential /
- * moral / taboo). The deck has no banal entries: the floor is 'alto'.
+ * every dilemma — classic and percorso). Ascending: 'sorbetto' (light/absurd,
+ * low-stakes, high-friction fun — the "permesso di ridere" warm-up tier) <
+ * 'alto' (real, accessible stakes) < 'max' (heavy personal/relational stakes) <
+ * 'power' (existential / moral / taboo).
  */
-export type Complessita = 'alto' | 'max' | 'power';
+export type Complessita = 'sorbetto' | 'alto' | 'max' | 'power';
 
 /** Ascending rank of a complexity tier (for ordering an escalation). */
-export const COMPLESSITA_RANK: Record<Complessita, number> = { alto: 0, max: 1, power: 2 };
+export const COMPLESSITA_RANK: Record<Complessita, number> = { sorbetto: -1, alto: 0, max: 1, power: 2 };
 
 export interface Dilemma {
   id: string;

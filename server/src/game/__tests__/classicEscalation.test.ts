@@ -25,21 +25,22 @@ const makeStore = () => new RoomStore(generateRoomCode, () => 0, makeDeck, () =>
 const rank = (d: Dilemma) => COMPLESSITA_RANK[d.complessita ?? 'alto'];
 
 describe('Classic: escalation di complessità (alto → max → power)', () => {
-  it('ordina la sequenza per complessità crescente', () => {
+  // 2.1's pacing pass (round 1 leggero, mai due max/power consecutivi, power
+  // mai primo né ultimo) deliberately relocates 'power' away from the edges,
+  // which can break STRICT ascending order — so these checks assert the
+  // pacing invariants instead of `rank(i) >= rank(i-1)` for every step.
+  it('non apre né chiude la partita con un dilemma "power"', () => {
     const store = makeStore();
     const { code } = store.create();
     for (let i = 0; i < 4; i++) store.join(code, `s${i}`, `P${i}`);
     store.startGame(code, 7); // classica "maratona"
     const plan = store.get(code)!.plannedDilemmas;
     expect(plan.length).toBe(7);
-    for (let i = 1; i < plan.length; i++) {
-      expect(rank(plan[i])).toBeGreaterThanOrEqual(rank(plan[i - 1]));
-    }
-    expect(plan[0].complessita).toBe('alto');
-    expect(plan.at(-1)!.complessita).toBe('power');
+    expect(plan[0].complessita).not.toBe('power');
+    expect(plan.at(-1)!.complessita).not.toBe('power');
   });
 
-  it('i dilemmi escono in ordine di complessità non decrescente durante la partita', () => {
+  it('non apre né chiude la partita con "power" durante il gioco reale', () => {
     const store = makeStore();
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `s${i}`, `P${i}`);
@@ -52,7 +53,8 @@ describe('Classic: escalation di complessità (alto → max → power)', () => {
       if (room.phase === 'DILEMMA_REVEAL' && room.currentDilemma) seen.push(rank(room.currentDilemma));
     }
     expect(seen.length).toBe(5);
-    for (let i = 1; i < seen.length; i++) expect(seen[i]).toBeGreaterThanOrEqual(seen[i - 1]);
+    expect(seen[0]).not.toBe(COMPLESSITA_RANK.power);
+    expect(seen.at(-1)).not.toBe(COMPLESSITA_RANK.power);
   });
 
   it('i dilemmi scritti dai giocatori aprono la partita (warm-up “alto”)', () => {

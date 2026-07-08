@@ -210,14 +210,14 @@ describe('contenuti Percorso (tappe)', () => {
 describe('classificazione complessità (alto < max < power)', () => {
   const all = loadDilemmas();
 
-  it('ogni dilemma ha una complessità valida (pavimento alto, niente banali)', () => {
+  it('ogni dilemma ha una complessità valida (incl. il tier "sorbetto" leggero)', () => {
     for (const d of all) {
-      expect(['alto', 'max', 'power']).toContain(d.complessita);
+      expect(['sorbetto', 'alto', 'max', 'power']).toContain(d.complessita);
     }
   });
 
-  it('il deck copre tutti e tre i livelli di complessità', () => {
-    expect(new Set(all.map((d) => d.complessita))).toEqual(new Set(['alto', 'max', 'power']));
+  it('il deck copre tutti e quattro i livelli di complessità', () => {
+    expect(new Set(all.map((d) => d.complessita))).toEqual(new Set(['sorbetto', 'alto', 'max', 'power']));
   });
 
   it('le tappe profonde sono più complesse: tappa 4 è sempre power, tappa 3 mai alto', () => {

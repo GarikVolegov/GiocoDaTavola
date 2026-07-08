@@ -376,11 +376,12 @@ export interface InfiltratoResult {
 }
 
 /** Public dilemma shown on the shared screen: the prompt + its two options. */
-/** Debate-complexity tier (mirror server deck.ts): alto < max < power. */
-export type Complessita = 'alto' | 'max' | 'power';
+/** Debate-complexity tier (mirror server deck.ts): sorbetto < alto < max < power. */
+export type Complessita = 'sorbetto' | 'alto' | 'max' | 'power';
 
 /** Host/phone badge labels for each complexity tier. */
 export const COMPLESSITA_LABELS: Record<Complessita, string> = {
+  sorbetto: '🍧 Sorbetto',
   alto: '◆ Alto',
   max: '◆◆ Max',
   power: '◆◆◆ Power',

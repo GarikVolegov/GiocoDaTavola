@@ -5864,5 +5864,437 @@
       "La cultura vale più di un campione",
       "Quello che permetti, lo insegni"
     ]
+  },
+  {
+    "id": "sb01",
+    "text": "L'ananas sulla pizza: sì o no?",
+    "optionA": "Sì, il dolce-salato è geniale",
+    "optionB": "No, è un crimine contro l'umanità",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Il contrasto di sapori è un classico in tutta la cucina asiatica",
+      "Se non l'hai mai provata non puoi giudicare",
+      "È solo pizza, rilassati"
+    ],
+    "spuntiB": [
+      "La pizza ha delle regole sacre",
+      "Il caldo trasforma l'ananas in una spugna acquosa",
+      "Esistono già i macedonia, non serve reinventare la pizza"
+    ]
+  },
+  {
+    "id": "sb02",
+    "text": "Un resuscitato torna in vita dopo 5 anni. Deve pagare gli arretrati di Netflix?",
+    "optionA": "Sì, l'abbonamento non si è mai disdetto",
+    "optionB": "No, la morte è causa di forza maggiore",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Nessuno ha disdetto l'abbonamento, quindi tecnicamente è ancora attivo",
+      "Netflix non fa sconti nemmeno alla morte",
+      "Se torni a usare l'account, torni a pagarlo"
+    ],
+    "spuntiB": [
+      "Non puoi fatturare a qualcuno che non firma contratti da morto",
+      "La forza maggiore esiste apposta per questi casi",
+      "Sarebbe più giusto un rimborso per il disservizio"
+    ]
+  },
+  {
+    "id": "sb03",
+    "text": "Alla riunione di famiglia, chi ha diritto all'ultimo pezzo di torta?",
+    "optionA": "Chi arriva prima se lo prende",
+    "optionB": "Si divide sempre, punto",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "La legge della giungla vale anche a tavola",
+      "Chi tarda, paga",
+      "È un incentivo a essere puntuali"
+    ],
+    "spuntiB": [
+      "Siamo una famiglia, non un ring",
+      "Dividere in parti uguali evita drammi inutili",
+      "Un pezzo piccolo per tutti è meglio di un pezzo grande per uno solo"
+    ]
+  },
+  {
+    "id": "sb04",
+    "text": "Il gatto di casa si crede il capo. Bisogna assecondarlo o resistere?",
+    "optionA": "Si asseconda, i gatti vincono sempre",
+    "optionB": "Si resiste, in casa comandano gli umani",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Chi ha mai vinto contro un gatto?",
+      "La pace in casa vale più dell'orgoglio",
+      "Ha le unghie, tu no"
+    ],
+    "spuntiB": [
+      "Se cede oggi il divano, domani cede il letto",
+      "Gli umani pagano l'affitto, non i gatti",
+      "Un minimo di disciplina serve anche ai felini"
+    ]
+  },
+  {
+    "id": "sb05",
+    "text": "Ordini la pizza: ananas escluso, ma il gruppo la vuole. Chi vince?",
+    "optionA": "Vince la maggioranza",
+    "optionB": "Chi paga sceglie",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Si mangia in gruppo, si decide in gruppo",
+      "Puoi sempre togliere i pezzi che non vuoi",
+      "La democrazia vale anche sulla pizza"
+    ],
+    "spuntiB": [
+      "Chi tira fuori il portafoglio ha l'ultima parola",
+      "Se non ti piace, ordini la tua",
+      "Non è democrazia se non paghi le tasse"
+    ]
+  },
+  {
+    "id": "sb06",
+    "text": "Il vicino canta stonato sotto la doccia ogni mattina. Che fai?",
+    "optionA": "Ti unisci in coro dalla tua doccia",
+    "optionB": "Gli lasci un biglietto anonimo",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Se non puoi batterli, unisciti a loro",
+      "La felicità altrui non si giudica",
+      "Potrebbe diventare una tradizione di quartiere"
+    ],
+    "spuntiB": [
+      "Il diritto al silenzio esiste",
+      "Un biglietto gentile risolve senza drammi",
+      "Non tutti vogliono un concerto gratis alle 7 del mattino"
+    ]
+  },
+  {
+    "id": "sb07",
+    "text": "Al ristorante trovi un capello nel piatto. Lo dici o mangi lo stesso guardando altrove?",
+    "optionA": "Lo dici, hai pagato per mangiare bene",
+    "optionB": "Guardi altrove, non vuoi fare scenate",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Il ristorante deve saperlo per migliorare",
+      "Hai tutto il diritto di lamentarti se hai pagato",
+      "Meglio un attimo di imbarazzo che un boccone sbagliato"
+    ],
+    "spuntiB": [
+      "A volte è meglio non sapere",
+      "Fare storie rovina la serata a tutti",
+      "Capita ovunque, anche a casa"
+    ]
+  },
+  {
+    "id": "sb08",
+    "text": "Un supereroe minore ruba la scena a quello principale in ogni film. Va cacciato dal franchise?",
+    "optionA": "Sì, ognuno al suo posto",
+    "optionB": "No, se il pubblico lo ama tienitelo",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "La gerarchia degli eroi va rispettata",
+      "Troppa scena tolta rovina l'arco narrativo del protagonista",
+      "Ognuno ha il suo film, si accontenti"
+    ],
+    "spuntiB": [
+      "Se funziona con il pubblico, perché cambiarlo",
+      "I personaggi migliori spesso nascono come comprimari",
+      "Il box office non mente"
+    ]
+  },
+  {
+    "id": "sb09",
+    "text": "Il calzino spaiato: lo tieni per anni sperando nel gemello o lo butti subito?",
+    "optionA": "Lo tieni, un giorno spunterà",
+    "optionB": "Lo butti, il cassetto ha bisogno di ordine",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "I calzini spariti a volte tornano",
+      "Buttarlo troppo presto porta sfortuna",
+      "Uno spaiato può sempre servire per pulire"
+    ],
+    "spuntiB": [
+      "Il cassetto pieno di solitari è un disastro logistico",
+      "Se non è tornato in un anno, non torna più",
+      "Il minimalismo inizia dai piccoli gesti"
+    ]
+  },
+  {
+    "id": "sb10",
+    "text": "Un elicottero atterra sulla pista da bowling. Chi ha la precedenza: il pilota o chi stava per fare strike?",
+    "optionA": "Il pilota, un elicottero non aspetta",
+    "optionB": "Chi stava per fare strike, il momento è sacro",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Un'emergenza aerea batte qualsiasi gioco",
+      "Meglio non stare tra un elicottero e dove deve andare",
+      "La sicurezza viene prima del punteggio"
+    ],
+    "spuntiB": [
+      "Uno strike perfetto capita una volta ogni tanto",
+      "Se non era un'emergenza vera, aspetti il turno",
+      "Il rispetto per il gioco altrui è sacro quanto il resto"
+    ]
+  },
+  {
+    "id": "sb11",
+    "text": "Metti il ketchup sulla pasta: gusto personale o reato culinario?",
+    "optionA": "Gusto personale, ognuno mangia come vuole",
+    "optionB": "Reato culinario, esistono dei limiti",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Nel piatto tuo comandi tu",
+      "Molte tradizioni nascono da abbinamenti strani",
+      "Nessuno ha il monopolio del gusto giusto"
+    ],
+    "spuntiB": [
+      "Alcune combinazioni offendono secoli di cucina",
+      "Ci sono salse fatte apposta per la pasta",
+      "Non tutto ciò che è possibile è consigliabile"
+    ]
+  },
+  {
+    "id": "sb12",
+    "text": "L'ascensore si ferma un attimo prima del tuo piano. Aspetti la corsa successiva o fai le scale con dignità?",
+    "optionA": "Aspetti, hai tutto il tempo del mondo",
+    "optionB": "Scale, con la faccia di chi lo fa apposta",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Perché sudare quando l'ascensore torna in trenta secondi",
+      "La pazienza è una virtù anche in un palazzo",
+      "Non hai fretta, quindi perché stressarti"
+    ],
+    "spuntiB": [
+      "Fa anche bene alle gambe",
+      "È più veloce di aspettare due piani di andirivieni",
+      "Nessuno saprà mai che non era un piano"
+    ]
+  },
+  {
+    "id": "sb13",
+    "text": "Il gruppo WhatsApp della classe di 10 anni fa si è riattivato per errore. Rispondi o fai finta di niente?",
+    "optionA": "Rispondi, potrebbe essere divertente",
+    "optionB": "Fai finta di niente, alcune cose vanno lasciate nel passato",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Potrebbe essere l'occasione per ritrovare vecchi amici",
+      "Un po' di nostalgia non fa mai male",
+      "Se non rispondi nessun altro lo farà"
+    ],
+    "spuntiB": [
+      "Certi gruppi sono meglio silenziati per sempre",
+      "Rispondere apre la porta a mesi di notifiche inutili",
+      "Il passato ha un motivo per essere passato"
+    ]
+  },
+  {
+    "id": "sb14",
+    "text": "Al cinema c'è chi commenta il film ad alta voce vicino a te. Zittisci o ti unisci al commento?",
+    "optionA": "Zittisci con uno sguardo di ghiaccio",
+    "optionB": "Ti unisci, tanto il film non era un capolavoro",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Il silenzio in sala è un patto sociale",
+      "Hai pagato il biglietto per sentire il film, non i vicini",
+      "Uno sguardo giusto vale più di mille parole"
+    ],
+    "spuntiB": [
+      "Se il film è brutto, meglio riderci su insieme",
+      "A volte i commenti sono più divertenti della trama",
+      "Ti fai nuovi amici in sala"
+    ]
+  },
+  {
+    "id": "sb15",
+    "text": "Un piccione ti fissa fisso mentre mangi un panino al parco. Condividi o difendi il tuo pranzo?",
+    "optionA": "Condividi, un pezzettino non fa male",
+    "optionB": "Difendi, hai comprato tu quel panino",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Un piccione affamato merita compassione",
+      "Basta una briciola per farlo felice",
+      "La generosità torna sempre indietro, anche dai piccioni"
+    ],
+    "spuntiB": [
+      "Se cedi a uno, arrivano tutti i suoi amici",
+      "Hai fatto la fila e pagato per quel pranzo",
+      "I piccioni al parco mangiano già abbastanza"
+    ]
+  },
+  {
+    "id": "sb16",
+    "text": "Trovi 5 euro per terra al centro commerciale. Li tieni o li dai al primo negozio come oggetto smarrito?",
+    "optionA": "Li tieni, sono 5 euro mica un portafoglio",
+    "optionB": "Li dai al negozio, potrebbero essere di qualcuno vicino",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Con una cifra così piccola nessuno tornerà a cercarla",
+      "Il karma non si offende per 5 euro",
+      "Consegnarli creerebbe solo confusione al negozio"
+    ],
+    "spuntiB": [
+      "L'onestà non ha soglia minima",
+      "Magari erano gli ultimi spiccioli di qualcuno",
+      "Fa sempre piacere ritrovare anche una piccola somma"
+    ]
+  },
+  {
+    "id": "sb17",
+    "text": "Il tuo migliore amico ha sempre ragione secondo lui. Lo asseconi per stare in pace o lo contraddici sempre?",
+    "optionA": "Lo asseconi, la pace vale più della ragione",
+    "optionB": "Lo contraddici, un amico vero dice la verità",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Non tutte le battaglie vanno combattute",
+      "A volte è meglio scegliere l'amicizia della ragione",
+      "Alcune discussioni non portano da nessuna parte"
+    ],
+    "spuntiB": [
+      "Un amico che dice sempre sì non è un vero amico",
+      "La verità, anche scomoda, aiuta a crescere",
+      "Le migliori amicizie sopravvivono ai disaccordi"
+    ]
+  },
+  {
+    "id": "sb18",
+    "text": "Un robot da cucina prende vita e si offende se non lo usi abbastanza. Lo usi di più o lo doni?",
+    "optionA": "Lo usi di più, poverino, non è colpa sua",
+    "optionB": "Lo doni, non puoi vivere sotto pressione da un elettrodomestico",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Un po' di empatia anche per gli oggetti non guasta",
+      "Magari scopri ricette che non avresti mai provato",
+      "Meglio tenerselo buono, non si sa mai"
+    ],
+    "spuntiB": [
+      "La cucina non deve diventare un obbligo emotivo",
+      "Chi lo usa davvero se ne prenderà cura meglio",
+      "Non hai bisogno di sensi di colpa da un frullatore"
+    ]
+  },
+  {
+    "id": "sb19",
+    "text": "Ti offrono di essere il controllore ufficiale del volume della TV in salotto. Accetti l'incarico o rifiuti il potere?",
+    "optionA": "Accetti, un po' di potere non fa mai male",
+    "optionB": "Rifiuti, meglio restare fuori dai conflitti familiari",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Finalmente qualcuno deciderà il volume giusto",
+      "È un servizio alla comunità di casa",
+      "Chi controlla il telecomando controlla la pace domestica"
+    ],
+    "spuntiB": [
+      "Ogni potere porta responsabilità e lamentele",
+      "Meglio non mettersi in mezzo alle guerre del volume",
+      "Chi decide, si becca sempre le critiche di tutti"
+    ]
+  },
+  {
+    "id": "sb20",
+    "text": "Il gruppo deve scegliere il karaoke: canzone epica per tutti o assolo personale?",
+    "optionA": "Canzone epica per tutti, l'unione fa la festa",
+    "optionB": "Assolo personale, ognuno ha il suo momento di gloria",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Cantare insieme crea ricordi più belli",
+      "Nessuno resta imbarazzato da solo sul palco",
+      "Un coro stonato insieme è più divertente di un solista intonato"
+    ],
+    "spuntiB": [
+      "Ognuno merita il suo momento sotto le luci",
+      "Un assolo lascia il segno più di un coro confuso",
+      "Il karaoke è anche questione di coraggio personale"
+    ]
+  },
+  {
+    "id": "sb21",
+    "text": "Scopri che il tuo gatto ha un profilo social più seguito del tuo. Lo gestisci tu o lasci fare a lui (con il tuo aiuto)?",
+    "optionA": "Lo gestisci tu, meriti un po' di credito",
+    "optionB": "Lasci fare a lui, il pubblico ama l'autenticità felina",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Sei tu che scatti le foto e scrivi le didascalie",
+      "Il successo va condiviso con chi lavora dietro le quinte",
+      "Un po' di riconoscimento umano non guasta"
+    ],
+    "spuntiB": [
+      "Il pubblico segue la sua personalità, non la tua",
+      "Toccare la formula vincente potrebbe rovinare tutto",
+      "A volte è meglio lasciare che il talento parli da sé"
+    ]
+  },
+  {
+    "id": "sb22",
+    "text": "Un amico ti chiede di aiutarlo a spostare casa un sabato mattina presto. Vai o inventi una scusa plausibile?",
+    "optionA": "Vai, gli amici si aiutano anche di sabato presto",
+    "optionB": "Inventi una scusa, il sabato mattina è sacro",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Un giorno potresti essere tu ad aver bisogno di aiuto",
+      "Poche ore di fatica valgono un'amicizia solida",
+      "C'è sempre la pizza offerta a fine trasloco"
+    ],
+    "spuntiB": [
+      "Il riposo del weekend è un diritto sacrosanto",
+      "Ci sono i traslocatori professionisti apposta",
+      "Un'amicizia vera capisce anche un no sincero"
+    ]
+  },
+  {
+    "id": "sb23",
+    "text": "La sveglia del vicino suona per 20 minuti senza che nessuno la spenga. Bussi alla porta o metti le cuffie?",
+    "optionA": "Bussi, magari sta male o non sente",
+    "optionB": "Cuffie, non sono affari tuoi",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Potrebbe davvero essere in difficoltà",
+      "Un vicino attento è un vicino prezioso",
+      "Meglio un controllo in più che un rimpianto"
+    ],
+    "spuntiB": [
+      "Non conosci nemmeno il suo nome, non esagerare",
+      "Probabilmente ha solo il sonno pesante",
+      "Ognuno gestisce la propria sveglia come vuole"
+    ]
+  },
+  {
+    "id": "sb24",
+    "text": "Ti ritrovi con lo stesso vestito di un altro invitato alla festa. Cambi subito o lo indossi con orgoglio?",
+    "optionA": "Cambi, la serata non deve avere un tema a caso",
+    "optionB": "Indossi con orgoglio, il buon gusto va celebrato in due",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Un vestito uguale ruba la scena a entrambi",
+      "Meglio distinguersi che sembrare una uniforme",
+      "Cambiare è un gesto elegante verso l'altra persona"
+    ],
+    "spuntiB": [
+      "Vuol dire solo che avete ottimo gusto",
+      "Potrebbe diventare la foto più divertente della serata",
+      "Non vale la pena stressarsi per un abbinamento casuale"
+    ]
   }
 ]
