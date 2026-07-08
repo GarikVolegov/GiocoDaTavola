@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, lazy, Suspense, type FormEvent, type React
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import { useElapsed } from '../shared/useElapsed';
+import { useTransient } from '../shared/useTransient';
 import {
   SocketEvents,
   JOIN_ERROR_MESSAGES,
@@ -350,6 +351,9 @@ export default function PlayerApp() {
   const canFinishNow = game?.defense?.minEndsAt == null || (minRemaining ?? 0) <= 0;
   // The speaker's elapsed time, counting UP from the turn start.
   const speakerElapsed = useElapsed(game?.defense?.startedAt ?? null);
+  // The just-finished speaker's applause tally, shown briefly at the start of
+  // the next turn (the server never clears it — the client treats it as a toast).
+  const lastTurnApplause = useTransient(game?.lastTurnApplause ?? null, 3_000);
   // Self-paced turn (DUEL_ARGUE): the floor countdown gates "Ho finito".
   const duelMinRemaining = useCountdown(game?.duelTurn?.minEndsAt ?? null);
   const duelCanFinishNow = game?.duelTurn?.minEndsAt == null || (duelMinRemaining ?? 0) <= 0;
@@ -702,6 +706,7 @@ export default function PlayerApp() {
         minRemaining={minRemaining}
         remaining={remaining}
         speakerElapsed={speakerElapsed}
+        lastTurnApplause={lastTurnApplause}
         onFinish={sendFinish}
         onToggleHand={toggleHand}
         onReact={sendReaction}

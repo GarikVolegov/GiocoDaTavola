@@ -13,12 +13,17 @@ import { botDefenseArgument } from './botDefense';
 import * as devilAdvocate from './devilAdvocate';
 import * as defenseTurns from './defenseTurns';
 
-/** Set the turn's start + min/max timers based on whether the speaker is a bot. */
+/** Set the turn's start + min/max timers based on whether the speaker is a bot.
+ * Also resets the live per-emoji applause tally for the new turn — the caller
+ * is responsible for snapshotting the PREVIOUS turn's tally (if any) into
+ * `lastTurnApplause` before calling this, since by now the speaker has
+ * already changed. */
 export function armTurn(room: Room, now: number): void {
   const interventi = room.phase === 'INTERVENTI';
   const speakerId = defenseTurns.currentSpeakerId(room);
   const speaker = speakerId ? room.players.get(speakerId) : undefined;
   room.turnStartedAt = now;
+  room.turnReactionTally = {};
   if (speaker && !speaker.isBot && speaker.connected !== false) {
     room.turnMinEndsAt = now + (interventi ? INTERVENTO_MIN_MS : DEFENSE_MIN_MS);
     room.phaseExpiresAt = now + (interventi ? INTERVENTI_MAX_MS : DEFENSE_MAX_MS);

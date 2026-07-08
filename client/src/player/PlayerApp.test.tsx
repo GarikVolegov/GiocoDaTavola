@@ -739,6 +739,43 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/coda piena/i)).toBeInTheDocument();
   });
 
+  it('shows the applausometro for the just-finished speaker at the start of the next DEFENSE turn', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: {
+          kind: 'defense',
+          speaker: { id: 'p3', nickname: 'Carlo', side: 'B' },
+          speakerId: 'p3',
+          turn: 2,
+          totalTurns: 2,
+          argument: null,
+          spunti: null,
+          raisedCount: 0,
+          queue: null,
+          minEndsAt: null,
+          canFinish: true,
+          startedAt: null,
+        },
+        lastTurnApplause: { speakerId: 'p2', nickname: 'Bea', tally: { '👏': 8, '🔥': 5 } },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/bea/i)).toBeInTheDocument();
+    expect(screen.getByText(/👏.*8/)).toBeInTheDocument();
+    expect(screen.getByText(/🔥.*5/)).toBeInTheDocument();
+  });
+
   it('cues the next step at DILEMMA_REVEAL (status view)', () => {
     render(<PlayerApp />);
     act(() => {

@@ -194,6 +194,9 @@ function gameStatePayload(room: Room) {
     // Who is defending + turn progress, gated to DEFENSE (null otherwise). Only
     // the chosen defenders' identities/side are public; no other votes leak.
     defense: rooms.publicDefense(room.code),
+    // The just-finished speaker's applause tally ("applausometro"); null
+    // before any turn has ended this round, or if it drew no reactions.
+    lastTurnApplause: rooms.lastTurnApplause(room.code),
     // Whether this is the surprise "Avvocato del Diavolo" round (defenders argue
     // the side they did NOT vote). Revealed only from DEFENSE on, so it can't
     // skew the first vote/prediction.

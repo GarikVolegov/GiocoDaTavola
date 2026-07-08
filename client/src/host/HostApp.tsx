@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import { useElapsed } from '../shared/useElapsed';
+import { useTransient } from '../shared/useTransient';
 import { formatMSS } from '../shared/time';
 import {
   SocketEvents,
@@ -125,6 +126,9 @@ export default function HostApp() {
   // of down from the safety cap.
   const elapsed = useElapsed(game?.defense?.startedAt ?? null);
   const speaking = phase === 'DEFENSE' || phase === 'INTERVENTI';
+  // The just-finished speaker's applause tally, shown briefly at the start of
+  // the next turn (the server never clears it — the client treats it as a toast).
+  const lastTurnApplause = useTransient(game?.lastTurnApplause ?? null, 3_000);
 
   // NB: this screen (the old "TV" mirror) is intentionally SILENT. All audio — the
   // musichetta, the event SFX and the Storie narrator voice — now plays on the LEADER's
@@ -332,6 +336,15 @@ export default function HostApp() {
         {phase === 'SPEAKER_VOTE' && (
           <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
             Votate dal telefono il più convincente · {game.speakerVotedCount}/{players.length}
+          </p>
+        )}
+
+        {(phase === 'DEFENSE' || phase === 'INTERVENTI') && lastTurnApplause && (
+          <p style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0, opacity: 0.9 }}>
+            {lastTurnApplause.nickname}:{' '}
+            {Object.entries(lastTurnApplause.tally)
+              .map(([emoji, count]) => `${emoji}×${count}`)
+              .join(' ')}
           </p>
         )}
 

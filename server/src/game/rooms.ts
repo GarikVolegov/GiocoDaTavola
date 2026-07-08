@@ -377,6 +377,18 @@ export interface Room {
    */
   lastReactionAt: Map<string, number>;
   /**
+   * Emoji -> count for the CURRENT speaker's turn only (DEFENSE/INTERVENTI/
+   * DUEL_ARGUE), reset when a turn starts (armTurn). Live/in-progress —
+   * `lastTurnApplause` is the frozen snapshot for the turn that just ended.
+   */
+  turnReactionTally: Partial<Record<Reaction, number>>;
+  /**
+   * The just-finished speaker's applause tally ("applausometro"), captured the
+   * moment their turn ends; null before the first turn ends or if it drew no
+   * reactions. Shown for a few seconds before the next turn's UI takes over.
+   */
+  lastTurnApplause: { speakerId: string; nickname: string; tally: Partial<Record<Reaction, number>> } | null;
+  /**
    * Secret predictions for the current round, keyed by player id: which side each
    * player thinks will hold the majority AFTER the defenses (PREDICT phase). Like
    * votes they never leave the server as identities — only the aggregate count is
@@ -848,6 +860,8 @@ export class RoomStore {
       duelScore: new Map(),
       duelAgreements: 0,
       lastReactionAt: new Map(),
+      turnReactionTally: {},
+      lastTurnApplause: null,
       predictions: new Map(),
       swingBets: new Map(),
       speakerVotes: new Map(),
@@ -923,6 +937,8 @@ export class RoomStore {
     room.duelScore = new Map();
     room.duelAgreements = 0;
     room.lastReactionAt = new Map();
+    room.turnReactionTally = {};
+    room.lastTurnApplause = null;
     room.predictions = new Map();
     room.swingBets = new Map();
     room.speakerVotes = new Map();
@@ -1134,12 +1150,18 @@ export class RoomStore {
 
     // A finished INTERVENTI mini-turn: walk the frozen queue, then resume the
     // defenders (next defender or fall through to VOTE_2). Per-defender interventi.
+    let applauseSnapshotted = false;
     if (room.phase === 'INTERVENTI') {
       if (room.interventiIndex < room.interventiQueue.length - 1) {
+        defenseTurns.snapshotApplause(room);
         room.interventiIndex++;
         defenseSetup.armTurn(room, this.now());
         return { ok: true, room };
       }
+      // Snapshot the last intervenor's applause BEFORE clearing the queue —
+      // currentSpeakerId reads it to know who was just speaking.
+      defenseTurns.snapshotApplause(room);
+      applauseSnapshotted = true;
       room.interventiQueue = [];
       room.interventiIndex = 0;
       if (room.defenseTurnIndex < room.defenders.length - 1) {
@@ -1158,6 +1180,7 @@ export class RoomStore {
     // interventi first; else advance to the next defender; else fall through to
     // VOTE_2 via the normal transition below.
     if (room.phase === 'DEFENSE' && room.raisedHands.length > 0) {
+      defenseTurns.snapshotApplause(room);
       room.phase = 'INTERVENTI';
       room.interventiQueue = [...room.raisedHands];
       room.interventiIndex = 0;
@@ -1166,11 +1189,18 @@ export class RoomStore {
       return { ok: true, room };
     }
     if (room.phase === 'DEFENSE' && room.defenseTurnIndex < room.defenders.length - 1) {
+      defenseTurns.snapshotApplause(room);
       room.defenseTurnIndex++;
       room.raisedHands = [];
       room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
       defenseSetup.armTurn(room, this.now());
       return { ok: true, room };
+    }
+    // The last defender's turn ended with no raised hands (falls through to
+    // VOTE_2 below) — snapshot it, unless the INTERVENTI branch above already
+    // did (that snapshot belongs to the last intervenor, not this defender).
+    if (room.phase === 'DEFENSE' && !applauseSnapshotted) {
+      defenseTurns.snapshotApplause(room);
     }
 
     // Percorso threads the same per-dilemma sequence through chapter cards/recaps;
@@ -1666,6 +1696,13 @@ export class RoomStore {
     const authorId = room.dilemmaAuthors.get(room.currentDilemma.id);
     if (!authorId) return null;
     return room.players.get(authorId)?.nickname ?? null;
+  }
+
+  /** The just-finished speaker's applause tally ("applausometro"); null before
+   * any turn has ended this round, or if it drew no reactions. Ungated by
+   * phase — still worth showing into the very start of the next turn. */
+  lastTurnApplause(code: string): Room['lastTurnApplause'] {
+    return this.rooms.get(code)?.lastTurnApplause ?? null;
   }
 
   /** Nicknames of connected players still missing their vote/confirmation

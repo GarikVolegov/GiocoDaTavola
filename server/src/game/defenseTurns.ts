@@ -14,6 +14,26 @@ export function currentSpeakerId(room: Room): string | null {
   return null;
 }
 
+/**
+ * Freeze the CURRENT speaker's live applause tally into `lastTurnApplause`
+ * ("applausometro") before their turn ends — call this BEFORE advancing the
+ * turn index / phase (armTurn resets the live tally for the next speaker).
+ * Null (not written) if nobody was speaking or the turn drew no reactions.
+ */
+export function snapshotApplause(room: Room): void {
+  const speakerId = currentSpeakerId(room);
+  const speaker = speakerId ? room.players.get(speakerId) : undefined;
+  if (!speaker || Object.keys(room.turnReactionTally).length === 0) {
+    room.lastTurnApplause = null;
+    return;
+  }
+  room.lastTurnApplause = {
+    speakerId: speaker.id,
+    nickname: speaker.nickname,
+    tally: { ...room.turnReactionTally },
+  };
+}
+
 /** Max simultaneous raised hands during a defender's turn — keeps the
  * post-defense INTERVENTI mini-round bounded no matter how big the room is. */
 export const INTERVENTI_QUEUE_MAX = 3;

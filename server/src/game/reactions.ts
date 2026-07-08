@@ -34,5 +34,6 @@ export function react(room: Room, playerId: string, emoji: string, now: number):
     const s = ensureStats(room, speakerId);
     s.reactionsReceived = (s.reactionsReceived ?? 0) + 1;
   }
+  room.turnReactionTally[emoji] = (room.turnReactionTally[emoji] ?? 0) + 1;
   return { ok: true, emoji };
 }

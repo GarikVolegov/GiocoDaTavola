@@ -12,6 +12,12 @@ interface DefenseDilemma {
   optionB: string;
 }
 
+interface Applause {
+  speakerId: string;
+  nickname: string;
+  tally: Partial<Record<Reaction, number>>;
+}
+
 interface DefenseViewProps {
   phase: 'DEFENSE' | 'INTERVENTI';
   defense: DefenseState | null;
@@ -24,6 +30,7 @@ interface DefenseViewProps {
   minRemaining: number | null;
   remaining: number | null;
   speakerElapsed: number | null;
+  lastTurnApplause: Applause | null;
   onFinish: () => void;
   onToggleHand: () => void;
   onReact: (emoji: Reaction) => void;
@@ -44,6 +51,7 @@ export default function DefenseView({
   minRemaining,
   remaining,
   speakerElapsed,
+  lastTurnApplause,
   onFinish,
   onToggleHand,
   onReact,
@@ -78,6 +86,14 @@ export default function DefenseView({
   return (
     <main style={wrap}>
       <ReactionSwarm />
+      {lastTurnApplause && (
+        <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, opacity: 0.9 }}>
+          {lastTurnApplause.nickname}:{' '}
+          {Object.entries(lastTurnApplause.tally)
+            .map(([emoji, count]) => `${emoji}×${count}`)
+            .join(' ')}
+        </p>
+      )}
       <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
 
       {myTurn ? (

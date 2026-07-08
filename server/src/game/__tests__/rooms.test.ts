@@ -1849,6 +1849,39 @@ describe('RoomStore live reactions (engagement)', () => {
     expect(store.get(code)?.stats.get('sock-0')?.reactionsReceived).toBe(2);
   });
 
+  it('tallies reactions per emoji for the CURRENT turn and snapshots them when the turn ends', () => {
+    let now = 1_000;
+    const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']); // sock-0 defends A, sock-1 defends B (2 defenders)
+    const room = store.get(code)!;
+    expect(room.lastTurnApplause).toBeNull(); // nothing yet, turn just started
+
+    store.react(code, 'sock-1', '👏'); // sock-1 is NOT speaking yet — reacts to sock-0
+    now += REACTION_MIN_INTERVAL_MS;
+    store.react(code, 'sock-2', '👏');
+    now += REACTION_MIN_INTERVAL_MS;
+    store.react(code, 'sock-2', '🔥');
+    expect(room.turnReactionTally).toEqual({ '👏': 2, '🔥': 1 });
+
+    // Force-advance to the next defender's turn — the snapshot should capture
+    // the FIRST defender's tally, and the live tally resets for the second.
+    now += REACTION_MIN_INTERVAL_MS;
+    store.advancePhase(code);
+    expect(room.lastTurnApplause).toEqual({
+      speakerId: 'sock-0',
+      nickname: 'P0',
+      tally: { '👏': 2, '🔥': 1 },
+    });
+    expect(room.turnReactionTally).toEqual({});
+  });
+
+  it('is null when the finished turn drew no reactions at all', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = defenseRoom(store, ['A', 'B', 'B']);
+    store.advancePhase(code);
+    expect(store.get(code)!.lastTurnApplause).toBeNull();
+  });
+
   it('allows reactions during a duel argue turn', () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
     const { code } = store.create();

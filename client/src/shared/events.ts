@@ -677,6 +677,11 @@ export interface GameStatePayload {
    */
   defense: DefenseState | null;
   /**
+   * The just-finished speaker's applause tally ("applausometro"); null before
+   * any turn has ended this round, or if it drew no reactions.
+   */
+  lastTurnApplause: { speakerId: string; nickname: string; tally: Partial<Record<Reaction, number>> } | null;
+  /**
    * True in the surprise "Avvocato del Diavolo" round (defenders argue the side
    * they did NOT vote). Revealed only from DEFENSE on; false otherwise.
    */
