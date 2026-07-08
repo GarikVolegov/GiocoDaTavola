@@ -347,7 +347,7 @@ export default function HostApp() {
 
         {phase === 'SPEAKER_VOTE' && (
           <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
-            Votate dal telefono il più convincente · {game.speakerVotedCount}/{players.length}
+            Votate dal telefono chi vi ha strappato l'applauso · {game.speakerVotedCount}/{players.length}
           </p>
         )}
 

@@ -154,7 +154,7 @@ describe('PlayerApp', () => {
         leaderId: null,
       });
     });
-    expect(screen.getByText('Chi è stato più convincente?')).toBeInTheDocument();
+    expect(screen.getByText(/chi ti ha strappato l'applauso/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Bea/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Carlo/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Alice/ })).toBeNull();
@@ -970,6 +970,52 @@ describe('PlayerApp', () => {
       });
     });
     expect(screen.getByText(/hanno votato 2\/3/i)).toBeInTheDocument();
+  });
+
+  it('asks "chi ti ha strappato l\'applauso" instead of a verdict at SPEAKER_VOTE', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'SPEAKER_VOTE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        speakerCandidates: [
+          { id: 'p2', side: 'A', nickname: 'Bea' },
+          { id: 'p3', side: 'B', nickname: 'Carlo' },
+        ],
+        speakerVotedCount: 0,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/chi ti ha strappato l'applauso/i)).toBeInTheDocument();
+  });
+
+  it('auto-submits the speaker vote when only one target is possible (no forced tap)', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'SPEAKER_VOTE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        speakerCandidates: [{ id: 'p2', side: 'A', nickname: 'Bea' }],
+        speakerVotedCount: 0,
+        leaderId: null,
+      });
+    });
+    expect(emitSpy).toHaveBeenCalledWith('player:voteSpeaker', { defenderId: 'p2' });
   });
 
   it('reveals the dilemma author at PHASE_RESULTS', () => {

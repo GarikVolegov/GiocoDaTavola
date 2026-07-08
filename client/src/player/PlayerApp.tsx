@@ -475,6 +475,15 @@ export default function PlayerApp() {
     getSocket().emit(SocketEvents.PlayerVoteSpeaker, { defenderId });
   };
 
+  // With exactly one valid target (e.g. only 2 defenders total, so a defending
+  // voter has just the other one left to pick from), auto-submit instead of
+  // forcing a pointless tap on a list-of-one.
+  useEffect(() => {
+    if (phase !== 'SPEAKER_VOTE' || speakerVote != null) return;
+    const candidates = (game?.speakerCandidates ?? []).filter((d) => d.id !== playerId);
+    if (candidates.length === 1) castSpeakerVote(candidates[0].id);
+  }, [phase, game?.speakerCandidates, playerId, speakerVote]);
+
   // Live reaction during a defense/duel turn. Throttled client-side to mirror the
   // server's per-player rate limit (avoids spamming rejected emits).
   const lastReactRef = useRef(0);

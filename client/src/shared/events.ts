@@ -984,7 +984,7 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   DEFENSE: 'Le difese',
   INTERVENTI: 'Interventi',
   VOTE_2: 'Secondo voto',
-  SPEAKER_VOTE: 'Miglior oratore',
+  SPEAKER_VOTE: "Chi ti ha strappato l'applauso",
   PHASE_RESULTS: 'Risultati',
   TAPPA_INTRO: 'Nuova tappa',
   TAPPA_RECAP: 'Fine tappa',

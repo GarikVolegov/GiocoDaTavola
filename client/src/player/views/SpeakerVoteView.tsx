@@ -26,10 +26,7 @@ export default function SpeakerVoteView({
 }: SpeakerVoteViewProps) {
   return (
     <main style={wrap}>
-      <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.SPEAKER_VOTE}</h1>
-      <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
-        Chi è stato più convincente?
-      </p>
+      <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.SPEAKER_VOTE}?</h1>
       {remaining != null && (
         <div
           aria-label="Tempo rimanente"
