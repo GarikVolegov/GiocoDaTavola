@@ -48,6 +48,7 @@ export const INTERVENTI_QUEUE_MAX = 3;
 export function raiseHand(room: Room, playerId: string): RaiseHandResult {
   if (room.phase !== 'DEFENSE') return { ok: false, error: 'NOT_RAISE_PHASE' };
   if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
+  if (room.players.get(playerId)?.role === 'pubblico') return { ok: false, error: 'PUBBLICO_NEVER_DEFENDS' };
   if (currentSpeakerId(room) === playerId) return { ok: false, error: 'IS_SPEAKER' };
   const i = room.raisedHands.indexOf(playerId);
   if (i >= 0) {

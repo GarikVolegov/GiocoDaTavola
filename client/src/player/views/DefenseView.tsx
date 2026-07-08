@@ -24,6 +24,8 @@ interface DefenseViewProps {
   dilemma: DefenseDilemma | null | undefined;
   isDevilRound: boolean;
   absurdConstraint: string | null;
+  /** 3.1: Pubblico never intervenes — the raise-hand affordance is hidden for them. */
+  isPubblico: boolean;
   playerId: string | null;
   handRaised: boolean;
   raiseHandError: string | null;
@@ -46,6 +48,7 @@ export default function DefenseView({
   dilemma,
   isDevilRound,
   absurdConstraint,
+  isPubblico,
   playerId,
   handRaised,
   raiseHandError,
@@ -196,7 +199,7 @@ export default function DefenseView({
             </>
           )}
 
-          {phase === 'DEFENSE' && d?.speakerId != null && (
+          {phase === 'DEFENSE' && d?.speakerId != null && !isPubblico && (
             <button
               type="button"
               onClick={onToggleHand}
@@ -215,7 +218,7 @@ export default function DefenseView({
               {handRaised ? '✋ Abbassa la mano' : '✋ Alza la mano'}
             </button>
           )}
-          {phase === 'DEFENSE' && d?.speakerId != null && (
+          {phase === 'DEFENSE' && d?.speakerId != null && !isPubblico && (
             <p style={{ fontSize: '0.9rem', opacity: 0.7, margin: 0 }}>
               {raiseHandError
                 ? raiseHandError

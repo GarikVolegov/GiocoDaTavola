@@ -73,8 +73,16 @@ export type { BlindSpot, BlindSpotId } from './blindspots';
 const CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const CODE_LENGTH = 4;
 
-/** Max players allowed in a single room (in-person party game). */
-export const MAX_PLAYERS = 8;
+/**
+ * Max "giocatori" (the debating core: votes + can be picked as a defender).
+ * Beyond this, new joiners get the 'pubblico' role (3.1) — same QR, same
+ * vote/react/bet/speaker-vote, but never selected to defend. Keeps the
+ * on-stage cast small while the room itself scales much further.
+ */
+export const MAX_GIOCATORI = 8;
+
+/** Max players allowed in a single room overall (giocatori + pubblico). */
+export const MAX_PLAYERS = 24;
 
 /** Max nickname length — truncated (not rejected) for a forgiving UX. */
 export const NICKNAME_MAX = 24;
@@ -133,7 +141,13 @@ function isGameMode(v: string): v is GameMode {
   return v === 'gruppo' || v === 'duello';
 }
 
-
+/**
+ * A player's participation role (3.1). 'pubblico' still votes, swing-bets,
+ * reacts, and votes the best speaker — everything a 'giocatore' does EXCEPT
+ * ever being picked as a defender or raising a hand to intervene. Absent
+ * (the common case, ≤ MAX_GIOCATORI in the room) means 'giocatore'.
+ */
+export type PlayerRole = 'giocatore' | 'pubblico';
 
 export interface Player {
   /** Stable, public per-player id (NOT the socket id and NOT the reconnect
@@ -158,6 +172,8 @@ export interface Player {
    * Absent = anonymous (the default). Used only to attribute saved awards.
    */
   clerkUserId?: string;
+  /** 'pubblico' when this player joined past MAX_GIOCATORI; absent = 'giocatore'. */
+  role?: PlayerRole;
 }
 
 /**
@@ -577,7 +593,13 @@ export type ReactResult =
   | { ok: true; emoji: Reaction }
   | { ok: false; error: ReactError };
 
-export type RaiseHandError = 'ROOM_NOT_FOUND' | 'NOT_RAISE_PHASE' | 'NOT_IN_ROOM' | 'IS_SPEAKER' | 'QUEUE_FULL';
+export type RaiseHandError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_RAISE_PHASE'
+  | 'NOT_IN_ROOM'
+  | 'IS_SPEAKER'
+  | 'QUEUE_FULL'
+  | 'PUBBLICO_NEVER_DEFENDS';
 export type RaiseHandResult =
   | { ok: true; room: Room; raised: boolean }
   | { ok: false; error: RaiseHandError };
@@ -2014,7 +2036,13 @@ export class RoomStore {
 
     if (room.players.size >= MAX_PLAYERS) return { ok: false, error: 'ROOM_FULL' };
 
-    const player: Player = { id: playerId, nickname: name };
+    // Beyond MAX_GIOCATORI, new joiners get the 'pubblico' role (3.1): same
+    // QR, same vote/react/bet/speaker-vote, but never picked as a defender.
+    const giocatoriCount = [...room.players.values()].filter((p) => p.role !== 'pubblico').length;
+    const player: Player =
+      giocatoriCount >= MAX_GIOCATORI
+        ? { id: playerId, nickname: name, role: 'pubblico' }
+        : { id: playerId, nickname: name };
     room.players.set(playerId, player);
     return { ok: true, player };
   }

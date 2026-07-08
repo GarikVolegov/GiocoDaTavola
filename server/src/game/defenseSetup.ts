@@ -46,7 +46,8 @@ export function selectDefenders(room: Room, rng: () => number): Defender[] {
     const voters = [...room.votes.entries()]
       .filter(([, choice]) => choice === side)
       .map(([id]) => id)
-      .filter((id) => room.players.get(id)?.connected !== false);
+      .filter((id) => room.players.get(id)?.connected !== false)
+      .filter((id) => room.players.get(id)?.role !== 'pubblico'); // 3.1: never on stage
     if (voters.length === 0) continue; // side with no votes -> no defender
     const min = Math.min(...voters.map((id) => room.defenseCounts.get(id) ?? 0));
     const candidates = voters.filter((id) => (room.defenseCounts.get(id) ?? 0) === min);

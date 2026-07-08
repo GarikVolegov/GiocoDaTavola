@@ -301,6 +301,9 @@ export interface PlayerJoinPayload {
   token?: string;
 }
 
+/** A player's participation role (3.1, mirror of the server's PlayerRole). */
+export type PlayerRole = 'giocatore' | 'pubblico';
+
 /** Public, non-secret player info safe to show on host + all phones. */
 export interface PublicPlayer {
   id: string;
@@ -311,6 +314,8 @@ export interface PublicPlayer {
   persona?: BotPersona;
   /** Connection state: absent/true = present; false = temporarily away (grace period). */
   connected?: boolean;
+  /** 'pubblico' when this player joined past the giocatori cap; absent = 'giocatore'. */
+  role?: PlayerRole;
 }
 
 export interface RemoveBotPayload {
@@ -882,7 +887,13 @@ export const SUBMIT_DILEMMA_ERROR_MESSAGES: Record<SubmitDilemmaError, string> =
   LIMIT_REACHED: 'Hai già aggiunto il massimo dei dilemmi',
 };
 
-export type RaiseHandError = 'ROOM_NOT_FOUND' | 'NOT_RAISE_PHASE' | 'NOT_IN_ROOM' | 'IS_SPEAKER' | 'QUEUE_FULL';
+export type RaiseHandError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_RAISE_PHASE'
+  | 'NOT_IN_ROOM'
+  | 'IS_SPEAKER'
+  | 'QUEUE_FULL'
+  | 'PUBBLICO_NEVER_DEFENDS';
 
 export interface PlayerRaiseHandErrorPayload {
   error: RaiseHandError;
@@ -897,6 +908,7 @@ export const RAISE_HAND_ERROR_MESSAGES: Record<RaiseHandError, string> = {
   NOT_IN_ROOM: 'Non sei in questa stanza',
   IS_SPEAKER: 'Stai già parlando tu',
   QUEUE_FULL: 'Coda piena — reagisci! 👏',
+  PUBBLICO_NEVER_DEFENDS: 'Il Pubblico segue, non interviene 🎟️',
 };
 
 /** A guesser→target pair, shown publicly during the "Quanto mi conosci" round. */

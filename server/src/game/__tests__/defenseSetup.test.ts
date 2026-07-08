@@ -56,6 +56,32 @@ describe('defenseSetup.selectDefenders', () => {
     expect(defenders).toHaveLength(1);
     expect(defenders[0].id).toBe('a1');
   });
+
+  it('never selects a Pubblico voter as a defender, even though their vote counts (3.1)', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, undefined, () => 0);
+    const { code } = store.create();
+    store.join(code, 'a1', 'A1');
+    const room = store.get(code)!;
+    room.players.set('pub1', { id: 'pub1', nickname: 'Pub1', role: 'pubblico' });
+    room.votes.set('a1', 'A');
+    room.votes.set('pub1', 'A'); // Pubblico's vote counts toward the tally...
+    const defenders = selectDefenders(room, () => 0);
+    expect(defenders).toHaveLength(1);
+    expect(defenders[0].id).toBe('a1'); // ...but they're never the one picked to speak
+  });
+
+  it('skips a side whose only voters are all Pubblico', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, undefined, () => 0);
+    const { code } = store.create();
+    store.join(code, 'a1', 'A1');
+    const room = store.get(code)!;
+    room.players.set('pub1', { id: 'pub1', nickname: 'Pub1', role: 'pubblico' });
+    room.votes.set('a1', 'A');
+    room.votes.set('pub1', 'B'); // only a Pubblico member voted B
+    const defenders = selectDefenders(room, () => 0);
+    expect(defenders).toHaveLength(1);
+    expect(defenders[0].id).toBe('a1');
+  });
 });
 
 describe('defenseSetup.armTurn', () => {

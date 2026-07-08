@@ -7,6 +7,7 @@ import {
   isVotingPhase,
   PHASE_DURATIONS_MS,
   MAX_PLAYERS,
+  MAX_GIOCATORI,
   NICKNAME_MAX,
   MIN_PLAYERS_TO_START,
   DILEMMA_COUNT_OPTIONS,
@@ -166,6 +167,36 @@ describe('RoomStore players (lobby)', () => {
     expect(store.listPlayers(code)).toHaveLength(MAX_PLAYERS);
     expect(store.join(code, 'sock-extra', 'TooMany')).toEqual({ ok: false, error: 'ROOM_FULL' });
     expect(store.listPlayers(code)).toHaveLength(MAX_PLAYERS);
+  });
+
+  it(`assigns 'pubblico' to the ${MAX_GIOCATORI + 1}th joiner onward, up to ${MAX_PLAYERS} total`, () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    for (let i = 0; i < MAX_GIOCATORI; i++) {
+      const res = store.join(code, `g${i}`, `G${i}`);
+      expect(res.ok).toBe(true);
+      if (res.ok) expect(res.player.role).toBeUndefined(); // absent = giocatore
+    }
+    for (let i = MAX_GIOCATORI; i < MAX_PLAYERS; i++) {
+      const res = store.join(code, `p${i}`, `P${i}`);
+      expect(res.ok).toBe(true);
+      if (res.ok) expect(res.player.role).toBe('pubblico');
+    }
+    expect(store.listPlayers(code)).toHaveLength(MAX_PLAYERS);
+    expect(store.join(code, 'overflow', 'Overflow')).toEqual({ ok: false, error: 'ROOM_FULL' });
+  });
+
+  it('a re-join keeps the existing role unchanged', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    for (let i = 0; i < MAX_GIOCATORI; i++) store.join(code, `g${i}`, `G${i}`);
+    store.join(code, 'pub1', 'Pub1');
+    const rejoin = store.join(code, 'pub1', 'Pub1 renamed');
+    expect(rejoin.ok).toBe(true);
+    if (rejoin.ok) {
+      expect(rejoin.player.role).toBe('pubblico');
+      expect(rejoin.player.nickname).toBe('Pub1 renamed');
+    }
   });
 
   it('re-joining with the same player id does not duplicate and updates the nickname', () => {
@@ -2649,6 +2680,15 @@ describe('raiseHand', () => {
     expect(store.raiseHand(code, speaker)).toEqual({ ok: false, error: 'IS_SPEAKER' });
     while (store.get(code)!.phase === 'DEFENSE' || store.get(code)!.phase === 'INTERVENTI') store.advancePhase(code);
     expect(store.raiseHand(code, speaker)).toEqual({ ok: false, error: 'NOT_RAISE_PHASE' });
+  });
+
+  it('rejects a Pubblico member raising their hand (never intervenes) (3.1)', () => {
+    const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
+    const code = room4(store);
+    const room = store.get(code)!;
+    room.players.set('pub1', { id: 'pub1', nickname: 'Pub1', role: 'pubblico' });
+    expect(store.raiseHand(code, 'pub1')).toEqual({ ok: false, error: 'PUBBLICO_NEVER_DEFENDS' });
+    expect(room.raisedHands).not.toContain('pub1');
   });
 });
 

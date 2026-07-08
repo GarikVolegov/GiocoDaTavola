@@ -720,6 +720,9 @@ export default function HostApp() {
                 {p.isBot && p.persona && (
                   <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{PERSONA_LABELS[p.persona]}</span>
                 )}
+                {p.role === 'pubblico' && (
+                  <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>🎟️</span>
+                )}
                 {p.connected === false && (
                   <span style={{ fontSize: '0.75rem', opacity: 0.8 }} aria-label="assente">📵</span>
                 )}

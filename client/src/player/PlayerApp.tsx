@@ -713,6 +713,7 @@ export default function PlayerApp() {
         defense={game?.defense ?? null}
         dilemma={game?.dilemma}
         isDevilRound={game?.isDevilRound ?? false}
+        isPubblico={players.find((p) => p.id === playerId)?.role === 'pubblico'}
         absurdConstraint={game?.absurdConstraint ?? null}
         playerId={playerId}
         handRaised={handRaised}
@@ -871,6 +872,9 @@ export default function PlayerApp() {
                 <span>{p.isBot ? '🤖 ' : ''}{p.nickname}</span>
                 {p.isBot && p.persona && (
                   <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{PERSONA_LABELS[p.persona]}</span>
+                )}
+                {p.role === 'pubblico' && (
+                  <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>🎟️ Pubblico</span>
                 )}
                 {absent && <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>· assente 📵</span>}
                 {isLeader && p.isBot && (

@@ -595,6 +595,24 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/aggiungi un dilemma/i)).toBeInTheDocument();
   });
 
+  it('badges a Pubblico player in the lobby roster (3.1)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea', role: 'pubblico' },
+        ],
+      });
+    });
+    expect(screen.getByText(/🎟️/)).toBeInTheDocument();
+  });
+
   it('shows group voting progress on the phone at VOTE_1', () => {
     render(<PlayerApp />);
     act(() => {
@@ -781,6 +799,31 @@ describe('PlayerApp', () => {
       });
     });
     expect(screen.getByText(/per intervenire dopo/i)).toBeInTheDocument();
+  });
+
+  it('hides the raise-hand affordance for a Pubblico member at DEFENSE (3.1)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [{ id: 'p1', nickname: 'Alice', role: 'pubblico' }],
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: { speakerId: 'p2', speaker: { id: 'p2', nickname: 'Bea', side: 'A' } },
+        leaderId: null,
+      });
+    });
+    expect(screen.queryByRole('button', { name: /alza la mano/i })).toBeNull();
+    expect(screen.queryByText(/per intervenire dopo/i)).toBeNull();
   });
 
   it('confirms to a spectator that their hand is raised (DEFENSE)', () => {
