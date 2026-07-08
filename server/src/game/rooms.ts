@@ -269,6 +269,10 @@ export interface Room {
   dilemmaAuthors: Map<string, string>;
   /** The shuffled player-submitted dilemmas still to play, drawn (in order) BEFORE the deck. Built at `startGame`. */
   submittedQueue: Dilemma[];
+  /** Dilemma ids to exclude from the NEXT deck build — populated by rematch()
+   * from the just-finished game's plannedDilemmas, consumed and cleared by
+   * startGame(). Empty outside a rematch flow. */
+  excludeDilemmaIds: Set<string>;
   /**
    * The 1-based dilemma index chosen at start to be the surprise "Avvocato del
    * Diavolo" round, where defenders argue the side they did NOT vote. null when
@@ -425,6 +429,9 @@ export type StartGameError =
 export type StartGameResult =
   | { ok: true; room: Room }
   | { ok: false; error: StartGameError };
+
+export type RematchError = 'ROOM_NOT_FOUND' | 'NOT_FINISHED';
+export type RematchResult = { ok: true; room: Room } | { ok: false; error: RematchError };
 
 /** Minimum humans required to enable "L'Infiltrato" (enough to hide + accuse). */
 export const MIN_INFILTRATO_HUMANS = 4;
@@ -813,6 +820,7 @@ export class RoomStore {
       submittedDilemmas: [],
       dilemmaAuthors: new Map(),
       submittedQueue: [],
+      excludeDilemmaIds: new Set(),
       devilRoundIndex: null,
       knowRoundIndex: null,
       knowTargets: new Map(),
@@ -847,6 +855,79 @@ export class RoomStore {
     };
     this.rooms.set(code, room);
     return room;
+  }
+
+  /**
+   * Return a finished room (FINAL_AWARDS/FINAL_DUEL) to LOBBY with the same
+   * code/leader/roster, remembering this game's dilemmas so the next
+   * startGame's deck excludes them. Resets every round-scoped field `create()`
+   * initializes except code/createdAt/leaderId/players (those must survive).
+   */
+  rematch(code: string): RematchResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.phase !== 'FINAL_AWARDS' && room.phase !== 'FINAL_DUEL') {
+      return { ok: false, error: 'NOT_FINISHED' };
+    }
+    for (const d of room.plannedDilemmas) room.excludeDilemmaIds.add(d.id);
+    room.phase = 'LOBBY';
+    room.dilemmaCount = null;
+    room.register = null;
+    room.format = 'classic';
+    room.startTappa = null;
+    room.durata = null;
+    room.plannedDilemmas = [];
+    room.plannedTappe = [];
+    room.currentTappa = null;
+    room.tappaDilemmas = 0;
+    room.tappaSwings = 0;
+    room.story = null;
+    room.storyId = null;
+    room.plannedScenes = [];
+    room.plannedActs = [];
+    room.storyDecisions = [];
+    room.currentSceneNarration = null;
+    room.currentSceneConsequence = null;
+    room.currentDecision = null;
+    room.currentEpilogo = null;
+    room.currentAct = null;
+    room.dilemmaIndex = 0;
+    room.phaseExpiresAt = null;
+    room.deck = null;
+    room.currentDilemma = null;
+    room.submittedDilemmas = [];
+    room.dilemmaAuthors = new Map();
+    room.submittedQueue = [];
+    room.devilRoundIndex = null;
+    room.knowRoundIndex = null;
+    room.knowTargets = new Map();
+    room.knowGuesses = new Map();
+    room.infiltratorId = null;
+    room.infiltratorFlips = 0;
+    room.accusations = new Map();
+    room.infiltratoResult = null;
+    room.teams = new Map();
+    room.votes = new Map();
+    room.votes1 = new Map();
+    room.confirmedVote2 = new Set();
+    room.defenders = [];
+    room.defenseTurnIndex = 0;
+    room.defenseArgument = null;
+    room.raisedHands = [];
+    room.interventiQueue = [];
+    room.interventiIndex = 0;
+    room.turnMinEndsAt = null;
+    room.turnStartedAt = null;
+    room.stats = new Map();
+    room.duelTurnIndex = 0;
+    room.duelScore = new Map();
+    room.duelAgreements = 0;
+    room.lastReactionAt = new Map();
+    room.predictions = new Map();
+    room.swingBets = new Map();
+    room.speakerVotes = new Map();
+    room.defenseCounts = new Map();
+    return { ok: true, room };
   }
 
   /**
@@ -997,6 +1078,14 @@ export class RoomStore {
       // Validated above in this same (classic) branch via isContentRegister.
       room.register = register as ContentRegister;
       room.deck = this.makeDeck(register as ContentRegister);
+      // A rematch remembers the just-finished game's dilemmas so they don't
+      // repeat here; consumed once (cleared immediately) so a THIRD game
+      // doesn't keep excluding a game from two rematches ago.
+      const excludeIds = room.excludeDilemmaIds;
+      room.excludeDilemmaIds = new Set();
+      if (excludeIds.size > 0) {
+        room.deck = new Deck(room.deck.cards.filter((d) => !excludeIds.has(d.id)));
+      }
       // Precompute the ordered sequence: submitted dilemmas first, then the deck,
       // finally escalating by complexity (alto → max → power) over the game.
       room.plannedDilemmas = dilemmaPlan.buildClassicPlan(room.deck, room.submittedDilemmas, dilemmaCount, this.rng);

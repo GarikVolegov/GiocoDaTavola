@@ -20,6 +20,8 @@ export const SocketEvents = {
   LeaderStartError: 'leader:startError',
   /** Leader force-advances the state machine, skipping the current countdown. */
   LeaderAdvancePhase: 'leader:advancePhase',
+  /** Leader returns a finished room to LOBBY for a rematch (same roster/code). */
+  LeaderRematch: 'leader:rematch',
   /** Leader adds a server-driven bot to fill a seat. */
   LeaderAddBot: 'leader:addBot',
   /** Leader removes a bot by id. */

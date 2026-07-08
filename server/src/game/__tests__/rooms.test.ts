@@ -1677,6 +1677,62 @@ describe('leave() leadership migration', () => {
   });
 });
 
+describe('rematch()', () => {
+  it('rejects from anywhere except FINAL_AWARDS/FINAL_DUEL', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    expect(store.rematch(code)).toEqual({ ok: false, error: 'NOT_FINISHED' });
+  });
+
+  it('rejects an unknown room', () => {
+    const store = new RoomStore();
+    expect(store.rematch('ZZZZ')).toEqual({ ok: false, error: 'ROOM_NOT_FOUND' });
+  });
+
+  it("returns to LOBBY keeping the same roster + leader + code, and excludes this game's dilemmas from the next deck", () => {
+    const fixture: Dilemma[] = Array.from({ length: 4 }, (_, i) => ({
+      id: `d${i + 1}`,
+      text: `Dilemma ${i + 1}?`,
+      optionA: `A${i + 1}`,
+      optionB: `B${i + 1}`,
+      register: 'vita' as const,
+    }));
+    const smallFixtureDeck = (_r: ContentRegister) => new Deck(fixture, () => 0);
+    const store = new RoomStore(generateRoomCode, () => 0, smallFixtureDeck, () => 0);
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    store.join(code, 'p2', 'Bob');
+    store.join(code, 'p3', 'Cid');
+    store.setLeader(code, 'p1');
+    store.startGame(code, 3);
+    // Walk the whole game to FINAL_AWARDS (3 rounds), voting the same each time.
+    let guard = 0;
+    while (store.get(code)!.phase !== 'FINAL_AWARDS' && guard++ < 60) {
+      store.advancePhase(code);
+      if (store.get(code)!.phase === 'VOTE_1' || store.get(code)!.phase === 'VOTE_2') {
+        for (const id of ['p1', 'p2', 'p3']) store.vote(code, id, 'A');
+      }
+    }
+    expect(store.get(code)!.phase).toBe('FINAL_AWARDS');
+    const playedIds = store.get(code)!.plannedDilemmas.map((d) => d.id);
+    expect(playedIds).toEqual(['d1', 'd2', 'd3']); // rng=()=>0 walks the fixture in order
+
+    const result = store.rematch(code);
+    expect(result.ok).toBe(true);
+    const room = store.get(code)!;
+    expect(room.phase).toBe('LOBBY');
+    expect(room.code).toBe(code);
+    expect(room.leaderId).toBe('p1');
+    expect([...room.players.keys()].sort()).toEqual(['p1', 'p2', 'p3']);
+
+    // Start a second game with the SAME fixture deck (4 dilemmas, 3 already
+    // played) — the deck must skip d1-d3 and draw only the untouched d4.
+    store.startGame(code, 3);
+    expect(store.get(code)!.plannedDilemmas.map((d) => d.id)).toEqual(['d4']);
+  });
+});
+
 describe('RoomStore.setPlayerUser', () => {
   it('tags a player with a clerk user id; false for unknown room/player', () => {
     const store = new RoomStore();

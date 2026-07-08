@@ -595,6 +595,17 @@ io.on('connection', (socket) => {
     advanceAndBroadcast(code);
   });
 
+  // The leader returns a finished room to LOBBY for a rematch: same roster,
+  // code, and leader; the next game's deck skips this game's dilemmas.
+  socket.on('leader:rematch', () => {
+    const code = leaderCodeFor(socket.id);
+    if (!code) return;
+    const result = rooms.rematch(code);
+    if (!result.ok) return;
+    broadcastLobby(code);
+    broadcastGameState(code);
+  });
+
   // The leader adds a bot to fill a seat (enables solo play). Bots have no
   // socket; the server drives their votes. Broadcast the updated roster.
   socket.on('leader:addBot', () => {

@@ -584,6 +584,7 @@ export default function PlayerApp() {
   const addBot = () => getSocket().emit(SocketEvents.LeaderAddBot);
   const removeBot = (id: string) => getSocket().emit(SocketEvents.LeaderRemoveBot, { id });
   const advance = () => getSocket().emit(SocketEvents.LeaderAdvancePhase);
+  const rematch = () => getSocket().emit(SocketEvents.LeaderRematch);
 
   const submitDilemma = () => {
     buzz(15);
@@ -784,6 +785,7 @@ export default function PlayerApp() {
           playerId={playerId}
           isLeader={isLeader}
           onAdvance={advance}
+          onRematch={rematch}
           infiltratoRole={infiltratoRole}
           predictionResult={predictionResult}
           swingBetResult={swingBetResult}

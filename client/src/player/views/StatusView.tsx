@@ -22,6 +22,7 @@ interface StatusViewProps {
   playerId: string | null;
   isLeader: boolean;
   onAdvance: () => void;
+  onRematch: () => void;
   infiltratoRole: PlayerInfiltratoRolePayload | null;
   predictionResult: PlayerPredictionResultPayload | null;
   swingBetResult: PlayerSwingBetResultPayload | null;
@@ -41,6 +42,7 @@ export default function StatusView({
   playerId,
   isLeader,
   onAdvance,
+  onRematch,
   infiltratoRole,
   predictionResult,
   swingBetResult,
@@ -310,6 +312,11 @@ export default function StatusView({
               Scopri NorthStar →
             </a>
           </Card>
+          {isLeader && (
+            <Button variant="primary" onClick={onRematch} style={{ marginTop: '0.25rem' }}>
+              Giocate ancora ▶
+            </Button>
+          )}
           {blindSpot && (
             <Card
               glow="accent"
@@ -335,9 +342,16 @@ export default function StatusView({
           </Show>
         </>
       ) : phase === 'FINAL_DUEL' ? (
-        <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
-          Guarda il risultato sullo schermo!
-        </p>
+        <>
+          <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
+            Guarda il risultato sullo schermo!
+          </p>
+          {isLeader && (
+            <Button variant="primary" onClick={onRematch} style={{ marginTop: '0.25rem' }}>
+              Giocate ancora ▶
+            </Button>
+          )}
+        </>
       ) : (
         <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
           Guarda lo schermo condiviso.

@@ -433,6 +433,48 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/guarda il risultato sullo schermo/i)).toBeInTheDocument();
   });
 
+  it('shows "Giocate ancora" to the leader at FINAL_AWARDS and emits leader:rematch', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'FINAL_AWARDS',
+        dilemmaCount: 3,
+        dilemmaIndex: 3,
+        phaseExpiresAt: null,
+        awards: [],
+        leaderId: 'p1',
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /giocate ancora/i }));
+    expect(emitSpy).toHaveBeenCalledWith('leader:rematch');
+  });
+
+  it('does not show "Giocate ancora" to a non-leader at FINAL_AWARDS', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'FINAL_AWARDS',
+        dilemmaCount: 3,
+        dilemmaIndex: 3,
+        phaseExpiresAt: null,
+        awards: [],
+        leaderId: 'p2',
+      });
+    });
+    expect(screen.queryByRole('button', { name: /giocate ancora/i })).toBeNull();
+  });
+
   it('shows the lobby with the add-dilemma card after joining (no game state yet)', () => {
     render(<PlayerApp />);
     act(() => {
