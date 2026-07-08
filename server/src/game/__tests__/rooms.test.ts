@@ -1007,6 +1007,31 @@ describe('RoomStore public swing (Fase A)', () => {
     expect(swing?.attribution).toEqual([
       { defender: { id: 'sock-0', nickname: 'P0', side: 'A' }, votes: 1 },
     ]);
+    // B led first (2-1), A leads second (2-1) — the lead itself flipped.
+    expect(swing?.leadFlipped).toBe(true);
+  });
+
+  it('reports leadFlipped: false when a vote switches but the leading side does not change', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 5; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3);
+    let g = 0;
+    while (store.get(code)?.phase !== 'VOTE_1' && g++ < 10) store.advancePhase(code);
+    // A leads 3-2 first...
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'A');
+    store.vote(code, 'sock-2', 'A');
+    store.vote(code, 'sock-3', 'B');
+    store.vote(code, 'sock-4', 'B');
+    g = 0;
+    while (store.get(code)?.phase !== 'VOTE_2' && g++ < 10) store.advancePhase(code);
+    store.vote(code, 'sock-3', 'A'); // B -> A: A leads 4-1, still A leading
+    g = 0;
+    while (store.get(code)?.phase !== 'PHASE_RESULTS' && g++ < 5) store.advancePhase(code);
+    const swing = store.publicSwing(code);
+    expect(swing?.switched).toBe(1);
+    expect(swing?.leadFlipped).toBe(false);
   });
 });
 

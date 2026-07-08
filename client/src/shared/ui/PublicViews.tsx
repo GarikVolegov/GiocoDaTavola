@@ -1,7 +1,7 @@
 // Pure presentation components for the game's PUBLIC phases — the views that
 // look the same on every phone and on the optional TV (/host). Props-typed from
 // events.ts; they carry only aggregate, non-secret data (never who voted what).
-import { COMPLESSITA_LABELS, type PublicDilemma, type VoteSplit, type PublicSwing, type Award } from '../events';
+import { COMPLESSITA_LABELS, type PublicDilemma, type VoteSplit, type PublicSwing, type DefenseImpact, type Award } from '../events';
 import { Card, CardGrid } from './index';
 import Celebration from './Celebration';
 
@@ -54,9 +54,21 @@ export function SplitBar({ split }: { split: VoteSplit }) {
   );
 }
 
+/**
+ * Which defender to credit for a genuine "ribaltone" — the lead itself
+ * flipping, or 2+ voters switching side — and null when neither happened (a
+ * single switch that didn't change the leader is a swing, not a ribaltone).
+ */
+export function ribaltoneHero(swing: PublicSwing): DefenseImpact | null {
+  if (!swing.leadFlipped && swing.switched < 2) return null;
+  if (swing.attribution.length === 0) return null;
+  return swing.attribution.reduce((best, imp) => (imp.votes > best.votes ? imp : best));
+}
+
 /** The persuasion swing + per-defender attribution (PHASE_RESULTS). Aggregate
  * counts only — never who voted what. */
 export function ResultsPanel({ swing }: { swing: PublicSwing }) {
+  const hero = ribaltoneHero(swing);
   return (
     <section
       aria-label="Risultati della persuasione"
@@ -64,6 +76,11 @@ export function ResultsPanel({ swing }: { swing: PublicSwing }) {
     >
       {/* A swing (someone actually changed their mind) is the round's emotional peak. */}
       {swing.switched > 0 && <Celebration />}
+      {hero && (
+        <p style={{ fontSize: 'clamp(1.8rem, 6vw, 3rem)', fontWeight: 800, margin: 0, color: 'var(--gold)' }}>
+          🌀 IL RIBALTONE DI {hero.defender.nickname.toUpperCase()}!
+        </p>
+      )}
       <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
         {swing.switched === 0
           ? 'Nessuno ha cambiato idea 🪨'

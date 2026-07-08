@@ -1012,6 +1012,87 @@ describe('PlayerApp', () => {
     expect(screen.queryByText(/indovinate chi l'ha scritto/i)).toBeNull();
   });
 
+  it('names the ribaltone hero at PHASE_RESULTS when the lead flips', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PHASE_RESULTS',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        swing: {
+          first: { A: 1, B: 2 },
+          second: { A: 2, B: 1 },
+          switched: 1,
+          netSwing: { A: 1, B: -1 },
+          leadFlipped: true,
+          attribution: [{ defender: { id: 'p2', nickname: 'Marco', side: 'A' }, votes: 1 }],
+        },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/il ribaltone di marco/i)).toBeInTheDocument();
+  });
+
+  it('names the ribaltone hero at PHASE_RESULTS when 2+ voters switch, even without a lead flip', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PHASE_RESULTS',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        swing: {
+          first: { A: 3, B: 2 },
+          second: { A: 5, B: 0 },
+          switched: 2,
+          netSwing: { A: 2, B: -2 },
+          leadFlipped: false,
+          attribution: [{ defender: { id: 'p2', nickname: 'Giulia', side: 'A' }, votes: 2 }],
+        },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/il ribaltone di giulia/i)).toBeInTheDocument();
+  });
+
+  it('does not name a ribaltone hero for a single switch that does not flip the lead', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PHASE_RESULTS',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        swing: {
+          first: { A: 3, B: 2 },
+          second: { A: 4, B: 1 },
+          switched: 1,
+          netSwing: { A: 1, B: -1 },
+          leadFlipped: false,
+          attribution: [{ defender: { id: 'p2', nickname: 'Luca', side: 'A' }, votes: 1 }],
+        },
+        leaderId: null,
+      });
+    });
+    expect(screen.queryByText(/il ribaltone/i)).toBeNull();
+  });
+
   it('asks for confirmation before leaving the room', () => {
     render(<PlayerApp />);
     act(() => {

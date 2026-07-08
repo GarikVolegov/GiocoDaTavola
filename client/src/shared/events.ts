@@ -470,6 +470,9 @@ export interface DefenseImpact {
 /** Public results view (PHASE_RESULTS): the swing + per-defender attribution. */
 export interface PublicSwing extends SwingResult {
   attribution: DefenseImpact[];
+  /** True when the leading side itself changed (the stronger of the two
+   * "ribaltone" triggers, the other being switched >= 2). */
+  leadFlipped: boolean;
 }
 
 /** The fun end-of-game superlatives (mirror of the server's `AwardId`). */

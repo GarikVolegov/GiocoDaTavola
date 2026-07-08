@@ -5,6 +5,7 @@
 import type { Room, VoteResult, VoteTally, SwingResult, PublicSwing, DefenseImpact } from './rooms';
 import { tally, isVoteChoice } from './voteCount';
 import { isVotingPhase, isSplitRevealed } from './phases';
+import { leadFlipped } from './predictions';
 
 export type ConfirmVoteResult =
   | { ok: true; room: Room }
@@ -64,7 +65,7 @@ export function publicSwing(room: Room): PublicSwing | null {
     const gained = swing.netSwing[d.side];
     if (gained > 0) attribution.push({ defender: d, votes: gained });
   }
-  return { ...swing, attribution };
+  return { ...swing, attribution, leadFlipped: leadFlipped(room) };
 }
 
 /** The aggregate A/B split, only when the phase reveals it (SPLIT_REVEAL); else null. */

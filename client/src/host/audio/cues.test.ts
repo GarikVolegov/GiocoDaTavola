@@ -26,6 +26,18 @@ describe('sfxForTransition', () => {
     expect(sfxForTransition('INTERVENTI', 'PHASE_RESULTS', game({ swing: null }))).toBe('reveal');
   });
 
+  it('plays the swing sting for a single switch that flips the lead (a real ribaltone)', () => {
+    expect(
+      sfxForTransition('INTERVENTI', 'PHASE_RESULTS', game({ swing: { switched: 1, leadFlipped: true } })),
+    ).toBe('swing');
+  });
+
+  it('plays only a reveal for a single switch that does not flip the lead (not a ribaltone)', () => {
+    expect(
+      sfxForTransition('INTERVENTI', 'PHASE_RESULTS', game({ swing: { switched: 1, leadFlipped: false } })),
+    ).toBe('reveal');
+  });
+
   it('plays a win fanfare when a duel round convinced someone', () => {
     expect(
       sfxForTransition('DUEL_ARGUE', 'DUEL_RESULT', game({ duelResult: { convinced: [{}] } })),

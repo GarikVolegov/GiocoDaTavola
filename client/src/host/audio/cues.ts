@@ -8,7 +8,7 @@ export type SfxName = 'reveal' | 'swing' | 'win' | 'awards' | 'timerWarn' | 'han
 
 /** The slice of game state cue decisions need; `GameStatePayload` satisfies it structurally. */
 export interface CueGame {
-  swing: { switched: number } | null;
+  swing: { switched: number; leadFlipped?: boolean } | null;
   duelResult: { convinced: readonly unknown[] } | null;
 }
 
@@ -26,7 +26,10 @@ export function sfxForTransition(
     case 'DILEMMA_REVEAL':
       return 'reveal';
     case 'PHASE_RESULTS':
-      return game.swing && game.swing.switched > 0 ? 'swing' : 'reveal';
+      // 'swing' is the dramatic "ribaltone" sting — reserved for a genuine
+      // ribaltone (the lead itself flipped, or 2+ voters switched), not any
+      // single switch that left the majority unchanged.
+      return game.swing && (game.swing.switched >= 2 || game.swing.leadFlipped) ? 'swing' : 'reveal';
     case 'DUEL_RESULT':
       return game.duelResult && game.duelResult.convinced.length > 0 ? 'win' : 'reveal';
     case 'FINAL_AWARDS':

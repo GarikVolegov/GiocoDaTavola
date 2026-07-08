@@ -698,6 +698,10 @@ export interface DefenseImpact {
  */
 export interface PublicSwing extends SwingResult {
   attribution: DefenseImpact[];
+  /** True when the leading side itself changed (a tie counts as its own
+   * "side", so A→tie or tie→A both flip) — the stronger of the two
+   * "ribaltone" triggers (the other being switched >= 2). */
+  leadFlipped: boolean;
 }
 
 /**
