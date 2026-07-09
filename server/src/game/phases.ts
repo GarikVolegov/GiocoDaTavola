@@ -27,6 +27,14 @@ export type GamePhase =
   | 'VOTE_2'
   | 'SPEAKER_VOTE'
   | 'PHASE_RESULTS'
+  // "La Mente del Gruppo" (4.1): a short, all-active breather dropped between
+  // dilemmas (every 2nd, classic format only) — no defense/spotlight, just a
+  // parallel commit->reveal. GROUP_MIND is self-paced (everyone answers +
+  // predicts the group's majority); GROUP_MIND_REVEAL is a brief fixed-timer
+  // aggregate reveal. Inserted by rooms.ts's advancePhase, not the pure
+  // per-mode sequences below (mirrors how ACCUSE is inserted for the group loop).
+  | 'GROUP_MIND'
+  | 'GROUP_MIND_REVEAL'
   // "Percorso" mode: the chapter card shown entering a new tappa, and the
   // end-of-tappa recap/pause (handled by nextPercorsoPhase, not nextPhase).
   | 'TAPPA_INTRO'
@@ -109,6 +117,10 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   VOTE_2: null,
   SPEAKER_VOTE: null,
   PHASE_RESULTS: 8_000,
+  // GROUP_MIND is self-paced (ends once everyone has answered + predicted, or
+  // the leader skips); GROUP_MIND_REVEAL is a short fixed beat, like PHASE_RESULTS.
+  GROUP_MIND: null,
+  GROUP_MIND_REVEAL: 8_000,
   // Percorso: the chapter card auto-advances; the end-of-tappa recap has no timer
   // so it doubles as a break — the host resumes with "Continua ▶" when ready.
   TAPPA_INTRO: 8_000,

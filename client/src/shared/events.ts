@@ -68,6 +68,14 @@ export const SocketEvents = {
   PlayerSwingBetError: 'player:swingBetError',
   /** Server privately tells a bettor whether they were right (at PHASE_RESULTS). */
   PlayerSwingBetResult: 'player:swingBetResult',
+  /** Player answers + predicts the group's majority in one go (GROUP_MIND, 4.1). */
+  PlayerGroupMind: 'player:groupMind',
+  /** Server confirms the player's own answer + guess back to them only. */
+  PlayerGroupMindSubmitted: 'player:groupMindSubmitted',
+  /** Server rejects the submission (wrong phase, not in room, bad choice). */
+  PlayerGroupMindError: 'player:groupMindError',
+  /** Server privately tells a player whether their majority guess was right (at GROUP_MIND_REVEAL). */
+  PlayerGroupMindResult: 'player:groupMindResult',
   /** Player writes their own dilemma in the LOBBY (max 2/player). */
   PlayerSubmitDilemma: 'player:submitDilemma',
   /** Server confirms the player's submission back to them only (with their count). */
@@ -276,6 +284,9 @@ export type GamePhase =
   | 'VOTE_2'
   | 'SPEAKER_VOTE'
   | 'PHASE_RESULTS'
+  // "La Mente del Gruppo" breather round (4.1, mirror server phases.ts).
+  | 'GROUP_MIND'
+  | 'GROUP_MIND_REVEAL'
   // "Percorso" mode chapter framing (mirror server phases.ts).
   | 'TAPPA_INTRO'
   | 'TAPPA_RECAP'
@@ -736,6 +747,20 @@ export interface GameStatePayload {
   duelResult: DuelResult | null;
   /** Duel: end summary, shown only in FINAL_DUEL; null otherwise. */
   duelSummary: DuelSummary | null;
+  /** "La Mente del Gruppo" (4.1): the current question; null outside GROUP_MIND/GROUP_MIND_REVEAL. */
+  groupMindQuestion: GroupMindQuestion | null;
+  /** Who's still missing their answer+guess this round; null outside GROUP_MIND. */
+  groupMindProgress: { done: number; total: number; missingNicknames: string[] } | null;
+  /** The aggregate A/B split + correct-guesser count, shown only in GROUP_MIND_REVEAL; null otherwise. */
+  groupMindTally: { A: number; B: number; correctGuessers: number } | null;
+}
+
+/** "La Mente del Gruppo" (4.1): a short A/B question everyone answers + predicts. */
+export interface GroupMindQuestion {
+  id: string;
+  prompt: string;
+  optionA: string;
+  optionB: string;
 }
 
 /** Which side a player secretly votes for. */
@@ -819,6 +844,26 @@ export interface PlayerPredictionResultPayload {
 }
 
 export type PredictError = 'ROOM_NOT_FOUND' | 'NOT_PREDICT_PHASE' | 'NOT_IN_ROOM' | 'INVALID_CHOICE';
+
+export interface PlayerGroupMindPayload {
+  answer: VoteChoice;
+  guess: VoteChoice;
+}
+
+export interface PlayerGroupMindSubmittedPayload {
+  answer: VoteChoice;
+  guess: VoteChoice;
+}
+
+/** Private per-player outcome at GROUP_MIND_REVEAL (mirror of the server's `GroupMindOutcome`). */
+export interface PlayerGroupMindResultPayload {
+  guess: VoteChoice;
+  /** The room's majority answer, or null on a tie. */
+  actual: VoteChoice | null;
+  correct: boolean;
+}
+
+export type GroupMindError = 'ROOM_NOT_FOUND' | 'NOT_GROUP_MIND_PHASE' | 'NOT_IN_ROOM' | 'INVALID_CHOICE';
 
 export interface PlayerPredictErrorPayload {
   error: PredictError;
@@ -1019,6 +1064,8 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   VOTE_2: 'Secondo voto',
   SPEAKER_VOTE: "Chi ti ha strappato l'applauso",
   PHASE_RESULTS: 'Risultati',
+  GROUP_MIND: 'La mente del gruppo',
+  GROUP_MIND_REVEAL: 'Chi legge il gruppo',
   TAPPA_INTRO: 'Nuova tappa',
   TAPPA_RECAP: 'Fine tappa',
   STORY_INTRO: 'La storia',

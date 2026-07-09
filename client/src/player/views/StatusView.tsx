@@ -11,6 +11,7 @@ import {
   type PlayerPredictionResultPayload,
   type PlayerSwingBetResultPayload,
   type PlayerKnowGuessResultPayload,
+  type PlayerGroupMindResultPayload,
 } from '../../shared/events';
 import { Card, Button, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel } from '../../shared/ui';
 import { NORTHSTAR_URL } from '../../shared/northstar';
@@ -29,6 +30,7 @@ interface StatusViewProps {
   predictionResult: PlayerPredictionResultPayload | null;
   swingBetResult: PlayerSwingBetResultPayload | null;
   knowResult: PlayerKnowGuessResultPayload | null;
+  groupMindResult: PlayerGroupMindResultPayload | null;
   blindSpot: BlindSpot | null;
   skipButton: ReactNode;
 }
@@ -49,6 +51,7 @@ export default function StatusView({
   predictionResult,
   swingBetResult,
   knowResult,
+  groupMindResult,
   blindSpot,
   skipButton,
 }: StatusViewProps) {
@@ -60,6 +63,7 @@ export default function StatusView({
   const wrongPredictionTitle = useMemo(() => pickIronicTitle(WRONG_PREDICTION_TITLES), [predictionResult]);
   const wrongSwingBetTitle = useMemo(() => pickIronicTitle(WRONG_SWING_BET_TITLES), [swingBetResult]);
   const wrongKnowTitle = useMemo(() => pickIronicTitle(WRONG_KNOW_TITLES), [knowResult]);
+  const wrongGroupMindTitle = useMemo(() => pickIronicTitle(WRONG_KNOW_TITLES), [groupMindResult]);
   // Leader-paced narrative beats (storia): the leader advances; others wait. The
   // host screen is the narrator, so the phone only needs this small control.
   const narratorAdvance = (label: string) =>
@@ -269,6 +273,33 @@ export default function StatusView({
           {knowResult && (
             <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
               {knowResult.correct ? '🔮 Conosci bene il tuo amico!' : wrongKnowTitle}
+            </p>
+          )}
+        </>
+      ) : phase === 'GROUP_MIND_REVEAL' ? (
+        <>
+          {game?.groupMindQuestion && game?.groupMindTally && (
+            <Card
+              glow="accent"
+              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
+            >
+              <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{game.groupMindQuestion.prompt}</p>
+              <SplitBar split={game.groupMindTally} />
+              <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>
+                {game.groupMindTally.A} · {game.groupMindQuestion.optionA} — {game.groupMindQuestion.optionB} · {game.groupMindTally.B}
+              </p>
+              <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>
+                🔮 {game.groupMindTally.correctGuessers} {game.groupMindTally.correctGuessers === 1 ? 'ha letto' : 'hanno letto'} bene il gruppo
+              </p>
+            </Card>
+          )}
+          {groupMindResult && (
+            <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+              {groupMindResult.actual == null
+                ? '🔮 Pareggio: nessuna ipotesi vince.'
+                : groupMindResult.correct
+                  ? '✅ Hai letto bene il gruppo!'
+                  : wrongGroupMindTitle}
             </p>
           )}
         </>

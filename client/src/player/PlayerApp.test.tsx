@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, act, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, act, cleanup, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 // A fake shared socket the test can drive: the component registers handlers via
@@ -1171,6 +1171,62 @@ describe('PlayerApp', () => {
     expect(screen.queryByText(/hai scommesso/i)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /REGGE/ }));
     expect(screen.getByText(/hai scommesso/i)).toBeInTheDocument();
+  });
+
+  it('submits both parts together at GROUP_MIND (4.1), only once both are chosen', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'GROUP_MIND',
+        dilemmaCount: 5,
+        dilemmaIndex: 2,
+        phaseExpiresAt: null,
+        groupMindQuestion: { id: 'gm01', prompt: 'Cosa sceglie la maggioranza?', optionA: 'Mare', optionB: 'Montagna' },
+        groupMindProgress: { done: 0, total: 2, missingNicknames: ['Bea'] },
+        leaderId: null,
+      });
+    });
+    const answerGroup = screen.getByRole('group', { name: 'La tua risposta' });
+    const guessGroup = screen.getByRole('group', { name: 'La tua previsione sulla maggioranza' });
+    fireEvent.click(within(answerGroup).getByRole('button', { name: /Mare/ }));
+    expect(emitSpy).not.toHaveBeenCalledWith('player:groupMind', expect.anything()); // only one part chosen so far
+    fireEvent.click(within(guessGroup).getByRole('button', { name: /Montagna/ }));
+    expect(emitSpy).toHaveBeenCalledWith('player:groupMind', { answer: 'A', guess: 'B' });
+  });
+
+  it('reveals the tally + a private correct/wrong result at GROUP_MIND_REVEAL', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'GROUP_MIND_REVEAL',
+        dilemmaCount: 5,
+        dilemmaIndex: 2,
+        phaseExpiresAt: null,
+        groupMindQuestion: { id: 'gm01', prompt: 'Cosa sceglie la maggioranza?', optionA: 'Mare', optionB: 'Montagna' },
+        groupMindTally: { A: 2, B: 1, correctGuessers: 2 },
+        leaderId: null,
+      });
+    });
+    act(() => {
+      // Separate act(): the dilemmaIndex-keyed reset effect runs in the same
+      // batch as the initial game:state (dilemmaIndex undefined -> 2) and would
+      // otherwise clobber this private result if emitted alongside it.
+      serverEmit('player:groupMindResult', { correct: true, guess: 'A', actual: 'A' });
+    });
+    expect(screen.getByText(/cosa sceglie la maggioranza/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 hanno letto bene il gruppo/i)).toBeInTheDocument();
+    expect(screen.getByText(/hai letto bene il gruppo/i)).toBeInTheDocument();
   });
 
   it('shows group speaker-vote progress at SPEAKER_VOTE', () => {

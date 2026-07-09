@@ -179,6 +179,12 @@ function gameStatePayload(room: Room) {
     // know round, null otherwise) + how many have guessed. Guesses stay secret.
     knowPairs: rooms.publicKnowPairs(room.code),
     knowGuessedCount: room.knowGuesses.size,
+    // "La Mente del Gruppo" (4.1): the current question (GROUP_MIND/GROUP_MIND_REVEAL,
+    // null otherwise), who's still missing their submission, and — gated to the
+    // reveal — the aggregate split + correct-guesser count. Own answers stay secret.
+    groupMindQuestion: room.groupMindQuestion,
+    groupMindProgress: rooms.groupMindProgress(room.code),
+    groupMindTally: rooms.publicGroupMindTally(room.code),
     // "L'Infiltrato": how many have accused (ACCUSE) + the FINAL_AWARDS reveal.
     accusedCount: room.accusations.size,
     infiltratoResult: rooms.publicInfiltratoResult(room.code),
@@ -349,6 +355,14 @@ function advanceAndBroadcast(code: string): void {
           correct: r.correct, guess: r.guess, actual: r.actual, targetId: r.targetId,
         });
       }
+    }
+  }
+  if (room && room.phase === 'GROUP_MIND_REVEAL') {
+    // Privately tell each player whether their majority guess was right
+    // (mirrors the PHASE_RESULTS prediction-result pattern above).
+    for (const r of rooms.groupMindResults(code)) {
+      const sid = playerSocket.get(r.playerId);
+      if (sid) io.to(sid).emit('player:groupMindResult', { correct: r.correct, guess: r.guess, actual: r.actual });
     }
   }
   if (room && room.phase === 'FINAL_AWARDS') {
@@ -807,6 +821,30 @@ io.on('connection', (socket) => {
     } else {
       if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code); // refresh the swing-bet count for the host
+    }
+  });
+
+  // A player answers + predicts the group's majority in one submission during
+  // GROUP_MIND ("La Mente del Gruppo", 4.1). Like PREDICT, ends early once every
+  // present human has submitted; the per-choice answers stay secret.
+  socket.on('player:groupMind', (payload: { answer?: string; guess?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.groupMindSubmit(code, playerId, String(payload?.answer ?? ''), String(payload?.guess ?? ''));
+    if (!result.ok) {
+      socket.emit('player:groupMindError', { error: result.error });
+      return;
+    }
+    socket.emit('player:groupMindSubmitted', {
+      answer: result.room.groupMindAnswers.get(playerId),
+      guess: result.room.groupMindGuesses.get(playerId),
+    });
+    if (rooms.groupMindPhaseComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
+      broadcastGameState(code); // refresh the missing-submitters list for the host
     }
   });
 

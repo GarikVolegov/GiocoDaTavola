@@ -3,6 +3,8 @@
 
 import { Deck, dilemmasForRegister, loadDilemmas, filterByMood, type Dilemma, type ContentRegister, type Tappa, type Mood } from './deck';
 import * as knowRound from './knowRound';
+import * as groupMind from './groupMind';
+import type { GroupMindQuestion, GroupMindOutcome } from './groupMind';
 import * as infiltrato from './infiltrato';
 import * as predictions from './predictions';
 import * as speakerVote from './speakerVote';
@@ -19,6 +21,7 @@ import * as absurdConstraints from './absurdConstraints';
 import { countGiocatori, rulesForGiocatoriCount } from './ruleset';
 import {
   type GamePhase,
+  type PhaseTransition,
   PHASE_DURATIONS_MS,
   SOFT_TIMEOUT_THRESHOLD,
   SOFT_TIMEOUT_MS,
@@ -343,6 +346,14 @@ export interface Room {
   knowTargets: Map<string, string>;
   /** Quanto mi conosci: guesser id -> their secret guess of the target's first vote. */
   knowGuesses: Map<string, VoteChoice>;
+  /** "La Mente del Gruppo" (4.1): the current breather round's question; null outside GROUP_MIND/GROUP_MIND_REVEAL. */
+  groupMindQuestion: GroupMindQuestion | null;
+  /** Ids of group-mind questions already asked this game (no repeats). */
+  usedGroupMindIds: Set<string>;
+  /** Each player's own secret answer to the current group-mind question. */
+  groupMindAnswers: Map<string, VoteChoice>;
+  /** Each player's secret guess of the room's majority answer. */
+  groupMindGuesses: Map<string, VoteChoice>;
   /** "L'Infiltrato": the secret infiltrator's player id, or null when not enabled. */
   infiltratorId: string | null;
   /** Rounds the infiltrator overturned the group (minority → majority). */
@@ -916,6 +927,10 @@ export class RoomStore {
       knowRoundIndex: null,
       knowTargets: new Map(),
       knowGuesses: new Map(),
+      groupMindQuestion: null,
+      usedGroupMindIds: new Set(),
+      groupMindAnswers: new Map(),
+      groupMindGuesses: new Map(),
       infiltratorId: null,
       infiltratorFlips: 0,
       accusations: new Map(),
@@ -997,6 +1012,10 @@ export class RoomStore {
     room.knowRoundIndex = null;
     room.knowTargets = new Map();
     room.knowGuesses = new Map();
+    room.groupMindQuestion = null;
+    room.usedGroupMindIds = new Set();
+    room.groupMindAnswers = new Map();
+    room.groupMindGuesses = new Map();
     room.infiltratorId = null;
     room.infiltratorFlips = 0;
     room.accusations = new Map();
@@ -1298,18 +1317,30 @@ export class RoomStore {
     }
 
     // Percorso threads the same per-dilemma sequence through chapter cards/recaps;
-    // storia wraps each bivio in narrative cards; classic uses the flat loop. All
-    // three share the detours below.
-    const step = (phase: GamePhase, idx: number) =>
-      room.format === 'percorso'
+    // storia wraps each bivio in narrative cards; classic uses the flat loop, with
+    // a "La Mente del Gruppo" breather (4.1) detouring in every 2nd dilemma —
+    // handled here (not inside the pure nextPhase) so its existing unit tests
+    // stay untouched, mirroring how ACCUSE is inserted below rather than in the
+    // pure sequence functions.
+    const step = (phase: GamePhase, idx: number): PhaseTransition => {
+      if (room.format === 'classic') {
+        if (phase === 'PHASE_RESULTS' && groupMind.isGroupMindCheckpoint(idx, room.dilemmaCount ?? 0)) {
+          return { phase: 'GROUP_MIND', dilemmaIndex: idx };
+        }
+        if (phase === 'GROUP_MIND') return { phase: 'GROUP_MIND_REVEAL', dilemmaIndex: idx };
+        if (phase === 'GROUP_MIND_REVEAL') return nextPhase('PHASE_RESULTS', idx, room.dilemmaCount ?? 0);
+      }
+      return room.format === 'percorso'
         ? nextPercorsoPhase(phase, idx, room.plannedTappe)
         : room.format === 'storia'
           ? nextStoriaPhase(phase, idx, room.dilemmaCount ?? 0)
           : nextPhase(phase, idx, room.dilemmaCount ?? 0);
-    // Backfill anyone still missing a PREDICT action so a forced advance
-    // (soft-timeout or leader skip) doesn't just silently drop their result.
-    // A no-op once everyone has already acted (the normal early-advance path).
+    };
+    // Backfill anyone still missing a PREDICT/GROUP_MIND action so a forced
+    // advance (soft-timeout or leader skip) doesn't just silently drop their
+    // result. A no-op once everyone has already acted (the normal early-advance path).
     if (room.phase === 'PREDICT') predictions.applyPredictDefaults(room);
+    if (room.phase === 'GROUP_MIND') groupMind.applyGroupMindDefaults(room);
     let transition = step(room.phase, room.dilemmaIndex);
     // The peer "best speaker" vote needs at least two defenders to choose between;
     // with 0 or 1 it's degenerate, so skip straight to the results.
@@ -1395,10 +1426,20 @@ export class RoomStore {
       room.interventiQueue = [];
       room.interventiIndex = 0;
       room.turnMinEndsAt = null;
+      room.groupMindQuestion = null;
     }
     // Entering PREDICT in the "Quanto mi conosci" round assigns the guessing ring.
     if (transition.phase === 'PREDICT' && knowRound.isKnowRound(room)) {
       knowRound.assignKnowTargets(room);
+    }
+    // Entering GROUP_MIND (4.1): draw a fresh question, reset this round's
+    // answers/guesses, and have bots answer immediately so they never block it.
+    if (transition.phase === 'GROUP_MIND') {
+      room.groupMindQuestion = groupMind.pickGroupMindQuestion(room.usedGroupMindIds, this.rng);
+      if (room.groupMindQuestion) room.usedGroupMindIds.add(room.groupMindQuestion.id);
+      room.groupMindAnswers = new Map();
+      room.groupMindGuesses = new Map();
+      groupMind.castBotGroupMind(room, this.rng);
     }
     // Entering DEFENSE picks the defenders from this round's votes and starts at
     // the first turn (the per-turn timer was set by expiryFor above).
@@ -1476,6 +1517,10 @@ export class RoomStore {
       const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
       total = humans.length;
       acted = humans.filter((p) => room.speakerVotes.has(p.id)).length;
+    } else if (room.phase === 'GROUP_MIND') {
+      const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+      total = humans.length;
+      acted = humans.filter((p) => room.groupMindAnswers.has(p.id) && room.groupMindGuesses.has(p.id)).length;
     } else {
       return false;
     }
@@ -1609,6 +1654,40 @@ export class RoomStore {
   swingBetResults(code: string): SwingBetOutcome[] {
     const room = this.rooms.get(code);
     return room ? predictions.swingBetResults(room) : [];
+  }
+
+  /**
+   * Record (or change) a player's own answer + majority prediction during
+   * GROUP_MIND ("La Mente del Gruppo", 4.1), in one combined submission.
+   */
+  groupMindSubmit(code: string, playerId: string, answer: string, guess: string): groupMind.GroupMindSubmitResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    return groupMind.submitGroupMind(room, playerId, answer, guess);
+  }
+
+  /** Single source of truth for "has everyone finished GROUP_MIND?" (ends it early). */
+  groupMindPhaseComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? groupMind.groupMindPhaseComplete(room) : false;
+  }
+
+  /** How many connected humans have finished GROUP_MIND and who's still missing it, by nickname. Null outside GROUP_MIND. */
+  groupMindProgress(code: string): { done: number; total: number; missingNicknames: string[] } | null {
+    const room = this.rooms.get(code);
+    return room ? groupMind.groupMindProgress(room) : null;
+  }
+
+  /** The aggregate A/B split + correct-guesser count, gated to GROUP_MIND_REVEAL (null otherwise). */
+  publicGroupMindTally(code: string): { A: number; B: number; correctGuessers: number } | null {
+    const room = this.rooms.get(code);
+    return room ? groupMind.publicGroupMindTally(room) : null;
+  }
+
+  /** Each guesser's own outcome for the just-finished group-mind round, for the private `player:groupMindResult` emit. */
+  groupMindResults(code: string): GroupMindOutcome[] {
+    const room = this.rooms.get(code);
+    return room ? groupMind.groupMindResults(room) : [];
   }
 
   /** A fresh shuffled copy of `arr` using the injectable rng (Fisher–Yates). */

@@ -351,6 +351,30 @@ export default function HostApp() {
           </p>
         )}
 
+        {phase === 'GROUP_MIND' && game.groupMindQuestion && (
+          <>
+            <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
+              {game.groupMindQuestion.prompt}
+            </p>
+            <p style={{ fontSize: '1.1rem', margin: 0, opacity: 0.85 }}>
+              Rispondete dal telefono e indovinate la maggioranza ·{' '}
+              {game.groupMindProgress ? `${game.groupMindProgress.done}/${game.groupMindProgress.total}` : ''}
+            </p>
+          </>
+        )}
+
+        {phase === 'GROUP_MIND_REVEAL' && game.groupMindQuestion && game.groupMindTally && (
+          <>
+            <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
+              {game.groupMindQuestion.prompt}
+            </p>
+            <SplitBar split={game.groupMindTally} />
+            <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--gold)' }}>
+              🔮 {game.groupMindTally.correctGuessers} {game.groupMindTally.correctGuessers === 1 ? 'ha letto' : 'hanno letto'} bene il gruppo
+            </p>
+          </>
+        )}
+
         {(phase === 'DEFENSE' || phase === 'INTERVENTI') && lastTurnApplause && (
           <p style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0, opacity: 0.9 }}>
             {lastTurnApplause.nickname}:{' '}

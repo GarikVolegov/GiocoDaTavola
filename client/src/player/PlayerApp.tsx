@@ -41,6 +41,8 @@ import {
   type PlayerSubmitDilemmaErrorPayload,
   type PlayerKnowGuessedPayload,
   type PlayerKnowGuessResultPayload,
+  type PlayerGroupMindSubmittedPayload,
+  type PlayerGroupMindResultPayload,
   type PlayerInfiltratoRolePayload,
   type PlayerAccusedPayload,
   type MyProfile,
@@ -59,6 +61,7 @@ import SpeakerVoteView from './views/SpeakerVoteView';
 import AccuseView from './views/AccuseView';
 import DefenseView from './views/DefenseView';
 import PredictView from './views/PredictView';
+import GroupMindView from './views/GroupMindView';
 import DuelArgueView from './views/DuelArgueView';
 import StatusView from './views/StatusView';
 import LeaveGameMenu from './LeaveGameMenu';
@@ -151,6 +154,9 @@ export default function PlayerApp() {
   const [swingBetResult, setSwingBetResult] = useState<PlayerSwingBetResultPayload | null>(null);
   const [knowGuess, setKnowGuess] = useState<VoteChoice | null>(null);
   const [knowResult, setKnowResult] = useState<PlayerKnowGuessResultPayload | null>(null);
+  const [groupMindAnswer, setGroupMindAnswer] = useState<VoteChoice | null>(null);
+  const [groupMindGuess, setGroupMindGuess] = useState<VoteChoice | null>(null);
+  const [groupMindResult, setGroupMindResult] = useState<PlayerGroupMindResultPayload | null>(null);
   const [infiltratoRole, setInfiltratoRole] = useState<PlayerInfiltratoRolePayload | null>(null);
   const [myAccusation, setMyAccusation] = useState<string | null>(null);
   const [speakerVote, setSpeakerVote] = useState<string | null>(null);
@@ -245,6 +251,11 @@ export default function PlayerApp() {
     const onSwingBetResult = (payload: PlayerSwingBetResultPayload) => setSwingBetResult(payload);
     const onKnowGuessed = ({ choice }: PlayerKnowGuessedPayload) => setKnowGuess(choice);
     const onKnowGuessResult = (payload: PlayerKnowGuessResultPayload) => setKnowResult(payload);
+    const onGroupMindSubmitted = ({ answer, guess }: PlayerGroupMindSubmittedPayload) => {
+      setGroupMindAnswer(answer);
+      setGroupMindGuess(guess);
+    };
+    const onGroupMindResult = (payload: PlayerGroupMindResultPayload) => setGroupMindResult(payload);
     const onInfiltratoRole = (payload: PlayerInfiltratoRolePayload) => setInfiltratoRole(payload);
     const onAccused = ({ accusedId }: PlayerAccusedPayload) => setMyAccusation(accusedId);
     const onSpeakerVoted = ({ defenderId }: PlayerSpeakerVotedPayload) => setSpeakerVote(defenderId);
@@ -269,6 +280,8 @@ export default function PlayerApp() {
     socket.on(SocketEvents.PlayerSwingBetResult, onSwingBetResult);
     socket.on(SocketEvents.PlayerKnowGuessed, onKnowGuessed);
     socket.on(SocketEvents.PlayerKnowGuessResult, onKnowGuessResult);
+    socket.on(SocketEvents.PlayerGroupMindSubmitted, onGroupMindSubmitted);
+    socket.on(SocketEvents.PlayerGroupMindResult, onGroupMindResult);
     socket.on(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
     socket.on(SocketEvents.PlayerAccused, onAccused);
     socket.on(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
@@ -319,6 +332,8 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerSwingBetResult, onSwingBetResult);
       socket.off(SocketEvents.PlayerKnowGuessed, onKnowGuessed);
       socket.off(SocketEvents.PlayerKnowGuessResult, onKnowGuessResult);
+      socket.off(SocketEvents.PlayerGroupMindSubmitted, onGroupMindSubmitted);
+      socket.off(SocketEvents.PlayerGroupMindResult, onGroupMindResult);
       socket.off(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
       socket.off(SocketEvents.PlayerAccused, onAccused);
       socket.off(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
@@ -374,6 +389,9 @@ export default function PlayerApp() {
     setKnowGuess(null);
     setKnowResult(null);
     setSpeakerVote(null);
+    setGroupMindAnswer(null);
+    setGroupMindGuess(null);
+    setGroupMindResult(null);
   }, [game?.dilemmaIndex]);
 
   // When the phone's user is logged in, send the Clerk token so the server can
@@ -471,6 +489,21 @@ export default function PlayerApp() {
     setPredicted(choice); // optimistic; confirmed via player:predicted
     buzz(25);
     getSocket().emit(SocketEvents.PlayerPredict, { choice });
+  };
+
+  // GROUP_MIND (4.1) submits both parts together in one call; each tap updates
+  // its own local state and — once the OTHER part is already chosen — re-emits
+  // the combined submission (so either tap order, and later changes, both work).
+  const castGroupMindAnswer = (choice: VoteChoice) => {
+    setGroupMindAnswer(choice); // optimistic; confirmed via player:groupMindSubmitted
+    buzz(25);
+    if (groupMindGuess) getSocket().emit(SocketEvents.PlayerGroupMind, { answer: choice, guess: groupMindGuess });
+  };
+
+  const castGroupMindGuess = (choice: VoteChoice) => {
+    setGroupMindGuess(choice);
+    buzz(25);
+    if (groupMindAnswer) getSocket().emit(SocketEvents.PlayerGroupMind, { answer: groupMindAnswer, guess: choice });
   };
 
   const castSpeakerVote = (defenderId: string) => {
@@ -648,7 +681,8 @@ export default function PlayerApp() {
     p === 'PREDICT' ||
     p === 'SPEAKER_VOTE' ||
     p === 'DUEL_PICK' ||
-    p === 'DUEL_REPICK';
+    p === 'DUEL_REPICK' ||
+    p === 'GROUP_MIND';
 
   // The leader's "skip the rest of this phase" button — only shown to the leader
   // during a phase that has a countdown. Rendered in each in-game branch.
@@ -789,6 +823,20 @@ export default function PlayerApp() {
     );
   }
 
+  if (joinedCode && phase === 'GROUP_MIND') {
+    return withLeaveMenu(
+      <GroupMindView
+        question={game?.groupMindQuestion ?? null}
+        remaining={remaining}
+        answer={groupMindAnswer}
+        guess={groupMindGuess}
+        onAnswer={castGroupMindAnswer}
+        onGuess={castGroupMindGuess}
+        progress={game?.groupMindProgress ?? null}
+      />
+    );
+  }
+
   if (joinedCode && phase === 'ACCUSE') {
     const candidates = players.filter((p) => p.id !== playerId);
     return withLeaveMenu(
@@ -817,6 +865,7 @@ export default function PlayerApp() {
           predictionResult={predictionResult}
           swingBetResult={swingBetResult}
           knowResult={knowResult}
+          groupMindResult={groupMindResult}
           blindSpot={blindSpot}
           skipButton={skipButton}
         />
