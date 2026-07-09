@@ -1,6 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
 import {
-  GAME_MODES,
   MODE_LABELS,
   CONTENT_REGISTERS,
   REGISTER_LABELS,
@@ -56,6 +55,9 @@ interface LeaderSetupProps {
   storyId: string;
   setStoryId: Dispatch<SetStateAction<string>>;
   storieCatalog: StoriaCatalogItem[];
+  /** How many player-written dilemmas the group has added so far (LOBBY) —
+   * only Classica/Duello actually play them; Percorso/Storia discard them. */
+  submittedCount: number;
   infiltratoOn: boolean;
   setInfiltratoOn: Dispatch<SetStateAction<boolean>>;
   squadreOn: boolean;
@@ -103,6 +105,7 @@ export default function LeaderSetup({
   storyId,
   setStoryId,
   storieCatalog,
+  submittedCount,
   infiltratoOn,
   setInfiltratoOn,
   squadreOn,
@@ -116,9 +119,18 @@ export default function LeaderSetup({
   startError,
 }: LeaderSetupProps) {
   const isClassica = tipoPartita === 'classica';
+  const isDuello = isClassica && gameMode === 'duello';
   const isPercorso = tipoPartita === 'percorso';
   const isStoria = tipoPartita === 'storia';
   const showSpecial = isPercorso || (isClassica && gameMode === 'gruppo');
+  // 4.4: which discards the group's own written dilemmas (only Classica/Duello play them).
+  const discardsSubmitted = (isPercorso || isStoria) && submittedCount > 0;
+  // 4.4: the Storie pill's subtitle reflects the REAL genres on offer, not a
+  // hardcoded "sci-fi" claim — every story is sci-fi-*framed*, but the actual
+  // flavors (survival, dystopia, mystery, drama) vary story to story.
+  const storieGenres = [...new Set(storieCatalog.map((s) => s.genre))];
+  const storieSubtitle =
+    storieGenres.length > 0 ? storieGenres.map((g) => STORY_GENRE_LABELS[g]).join(' · ') : 'bivi da dibattere';
   return (
     <Card
       glow="accent"
@@ -129,10 +141,30 @@ export default function LeaderSetup({
       <div style={{ width: '100%' }}>
         <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Tipo di partita</p>
         <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Tipo di partita">
-          <Pill selected={isClassica} onClick={() => setTipoPartita('classica')} aria-label="Classica: 3, 5 o 7 dilemmi">
+          <Pill
+            selected={isClassica && gameMode === 'gruppo'}
+            onClick={() => {
+              setTipoPartita('classica');
+              setGameMode('gruppo');
+            }}
+            aria-label="Gruppo: 3, 5 o 7 dilemmi, 3-8 persone"
+          >
             <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-              <span style={{ fontWeight: 700 }}>Classica</span>
+              <span style={{ fontWeight: 700 }}>{MODE_LABELS.gruppo.nome}</span>
               <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>3 · 5 · 7 dilemmi</span>
+            </span>
+          </Pill>
+          <Pill
+            selected={isDuello}
+            onClick={() => {
+              setTipoPartita('classica');
+              setGameMode('duello');
+            }}
+            aria-label="1v1 Duello, 2 giocatori"
+          >
+            <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
+              <span style={{ fontWeight: 700 }}>{MODE_LABELS.duello.nome}</span>
+              <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{MODE_LABELS.duello.descr}</span>
             </span>
           </Pill>
           <Pill
@@ -155,48 +187,40 @@ export default function LeaderSetup({
               setGameMode('gruppo');
               if (!storyId && storieCatalog[0]) setStoryId(storieCatalog[0].id);
             }}
-            aria-label="Storie: racconti sci-fi con bivi da dibattere"
+            aria-label={`Storie: ${storieSubtitle}, con bivi da dibattere`}
           >
             <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
               <span style={{ fontWeight: 700 }}>📖 Storie</span>
-              <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>racconti sci-fi · bivi</span>
+              <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{storieSubtitle}</span>
             </span>
           </Pill>
         </div>
+        {discardsSubmitted && (
+          <p style={{ opacity: 0.75, margin: '0.5rem 0 0', fontSize: '0.8rem', textAlign: 'center', color: 'var(--gold)' }}>
+            ⚠️ {isPercorso ? 'Percorso' : 'Storie'} non usa i {submittedCount} dilemmi scritti dal gruppo — restano per un'altra partita.
+          </p>
+        )}
       </div>
 
       {isClassica && (
         <>
           <div style={{ width: '100%' }}>
-            <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità</p>
-            <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Modalità">
-              {GAME_MODES.map((m) => (
+            <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Mood della serata</p>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Mood della serata">
+              {MOODS.map((m) => (
                 <Pill
                   key={m}
-                  selected={gameMode === m}
-                  onClick={() => setGameMode(m)}
-                  aria-label={`${MODE_LABELS[m].nome}, ${MODE_LABELS[m].descr}`}
+                  selected={mood === m}
+                  onClick={() => setMood(m)}
+                  aria-label={`${MOOD_LABELS[m].nome}, ${MOOD_LABELS[m].descr}`}
                 >
                   <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                    <span style={{ fontWeight: 700 }}>{MODE_LABELS[m].nome}</span>
-                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{MODE_LABELS[m].descr}</span>
+                    <span style={{ fontWeight: 700 }}>{MOOD_LABELS[m].nome}</span>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{MOOD_LABELS[m].descr}</span>
                   </span>
                 </Pill>
               ))}
             </div>
-            {humanCount === 2 && gameMode === 'gruppo' && (
-              <p style={{ opacity: 0.8, margin: '0.5rem 0 0', fontSize: '0.85rem', textAlign: 'center' }}>
-                Siete in 2: provate il{' '}
-                <button
-                  type="button"
-                  onClick={() => setGameMode('duello')}
-                  style={{ background: 'none', border: 'none', padding: 0, color: 'var(--gold)', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
-                >
-                  Duello
-                </button>
-                ?
-              </p>
-            )}
           </div>
 
           <div style={{ width: '100%' }}>
@@ -214,25 +238,6 @@ export default function LeaderSetup({
                     <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
                       {FORMAT_LABELS[f].round} round · {FORMAT_LABELS[f].durata}
                     </span>
-                  </span>
-                </Pill>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ width: '100%' }}>
-            <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Mood della serata</p>
-            <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Mood della serata">
-              {MOODS.map((m) => (
-                <Pill
-                  key={m}
-                  selected={mood === m}
-                  onClick={() => setMood(m)}
-                  aria-label={`${MOOD_LABELS[m].nome}, ${MOOD_LABELS[m].descr}`}
-                >
-                  <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                    <span style={{ fontWeight: 700 }}>{MOOD_LABELS[m].nome}</span>
-                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{MOOD_LABELS[m].descr}</span>
                   </span>
                 </Pill>
               ))}

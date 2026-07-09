@@ -1084,6 +1084,7 @@ export default function PlayerApp() {
             storyId={storyId}
             setStoryId={setStoryId}
             storieCatalog={game?.storieCatalog ?? []}
+            submittedCount={game?.submittedCount ?? 0}
             infiltratoOn={infiltratoOn}
             setInfiltratoOn={setInfiltratoOn}
             squadreOn={squadreOn}

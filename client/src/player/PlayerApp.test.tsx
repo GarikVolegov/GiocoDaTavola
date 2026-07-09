@@ -1864,7 +1864,8 @@ describe('PlayerApp', () => {
     );
   });
 
-  it('hints "Siete in 2: Duello?" when exactly 2 humans are in the lobby (3.4)', () => {
+  it('offers Duello as a first-level "Tipo di partita" pill, no 2-human hint needed (4.4)', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
     render(<PlayerApp />);
     act(() => {
       serverEmit('player:joined', {
@@ -1886,9 +1887,71 @@ describe('PlayerApp', () => {
         leaderId: 'p1',
       });
     });
-    expect(screen.getByText(/siete in 2/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Duello' })); // exact: the hint's inline link, not the mode pill
-    expect(screen.queryByText(/siete in 2/i)).toBeNull(); // switched to duello, hint no longer applies
+    const tipoGroup = screen.getByRole('group', { name: 'Tipo di partita' });
+    fireEvent.click(within(tipoGroup).getByRole('button', { name: /1v1 duello/i }));
+    fireEvent.click(screen.getByRole('button', { name: /avvia partita/i }));
+    expect(emitSpy).toHaveBeenCalledWith('leader:startGame', expect.objectContaining({ mode: 'duello' }));
+  });
+
+  it('warns that Percorso/Storie discard the group\'s written dilemmas (4.4)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+          { id: 'p3', nickname: 'Carlo' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'LOBBY',
+        dilemmaCount: 0,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        leaderId: 'p1',
+        submittedCount: 2,
+      });
+    });
+    expect(screen.queryByText(/non usa i 2 dilemmi/i)).toBeNull(); // Gruppo plays them: no warning
+    const tipoGroup = screen.getByRole('group', { name: 'Tipo di partita' });
+    fireEvent.click(within(tipoGroup).getByRole('button', { name: /percorso/i }));
+    expect(screen.getByText(/percorso non usa i 2 dilemmi/i)).toBeInTheDocument();
+  });
+
+  it('shows the real story genres on the Storie pill, not a generic placeholder (4.4)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+          { id: 'p3', nickname: 'Carlo' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'LOBBY',
+        dilemmaCount: 0,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        leaderId: 'p1',
+        storieCatalog: [
+          { id: 's1', title: 'Storia A', genre: 'giallo', emoji: '🕵️', hook: 'h', durataStimaMin: 30, scene: 4 },
+          { id: 's2', title: 'Storia B', genre: 'dramma', emoji: '🎭', hook: 'h', durataStimaMin: 30, scene: 4 },
+        ],
+      });
+    });
+    expect(screen.getByText('Mistero · Dramma umano')).toBeInTheDocument();
+    expect(screen.queryByText(/racconti sci-fi/i)).toBeNull();
   });
 
   it('offers the "2 umani + 2 bot" preset with exactly 2 humans and adds two bots', () => {
