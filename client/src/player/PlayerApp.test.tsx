@@ -520,7 +520,7 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/mare o montagna/i)).toBeInTheDocument();
   });
 
-  it('points to the shared screen at FINAL_DUEL (status view)', () => {
+  it('shows the duel summary phone-first at FINAL_DUEL (3.4), not just "guarda lo schermo"', () => {
     render(<PlayerApp />);
     act(() => {
       serverEmit('player:joined', {
@@ -533,10 +533,93 @@ describe('PlayerApp', () => {
         dilemmaCount: 3,
         dilemmaIndex: 0,
         phaseExpiresAt: null,
+        duelSummary: {
+          scores: [
+            { id: 'p1', nickname: 'Alice', persuasions: 2 },
+            { id: 'p2', nickname: 'Bea', persuasions: 1 },
+          ],
+          agreements: 1,
+        },
         leaderId: null,
       });
     });
-    expect(screen.getByText(/guarda il risultato sullo schermo/i)).toBeInTheDocument();
+    expect(screen.getByText(/alice/i)).toBeInTheDocument();
+    expect(screen.getByText(/bea/i)).toBeInTheDocument();
+    expect(screen.queryByText(/guarda il risultato sullo schermo/i)).toBeNull();
+  });
+
+  it('shows both picks and whether they agreed at DUEL_REVEAL (3.4)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DUEL_REVEAL',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        duelReveal: {
+          picks: [
+            { id: 'p1', nickname: 'Alice', choice: 'A' },
+            { id: 'p2', nickname: 'Bea', choice: 'B' },
+          ],
+          agreed: false,
+        },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/alice/i)).toBeInTheDocument();
+    expect(screen.getByText(/bea/i)).toBeInTheDocument();
+    expect(screen.getByText(/non siete d'accordo/i)).toBeInTheDocument();
+  });
+
+  it('shows who convinced whom at DUEL_RESULT when they disagreed (3.4)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DUEL_RESULT',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        duelResult: {
+          agreed: false,
+          convinced: [
+            { persuader: { id: 'p1', nickname: 'Alice' }, convinced: { id: 'p2', nickname: 'Bea' } },
+          ],
+        },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/alice/i)).toBeInTheDocument();
+    expect(screen.getByText(/bea/i)).toBeInTheDocument();
+  });
+
+  it('shows agreement at DUEL_RESULT when they agreed', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DUEL_RESULT',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        duelResult: { agreed: true, convinced: [] },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/siete d'accordo/i)).toBeInTheDocument();
   });
 
   it('shows "Giocate ancora" to the leader at FINAL_AWARDS and emits leader:rematch', () => {
@@ -1541,6 +1624,61 @@ describe('PlayerApp', () => {
       'leader:startGame',
       expect.objectContaining({ serataLunga: true }),
     );
+  });
+
+  it('hints "Siete in 2: Duello?" when exactly 2 humans are in the lobby (3.4)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'LOBBY',
+        dilemmaCount: 0,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        leaderId: 'p1',
+      });
+    });
+    expect(screen.getByText(/siete in 2/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Duello' })); // exact: the hint's inline link, not the mode pill
+    expect(screen.queryByText(/siete in 2/i)).toBeNull(); // switched to duello, hint no longer applies
+  });
+
+  it('offers the "2 umani + 2 bot" preset with exactly 2 humans and adds two bots', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'LOBBY',
+        dilemmaCount: 0,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        leaderId: 'p1',
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /preset: 2 umani \+ 2 bot/i }));
+    const addBotCalls = emitSpy.mock.calls.filter(([event]) => event === 'leader:addBot');
+    expect(addBotCalls).toHaveLength(2);
   });
 
   it('requires a second tap of "Salta" during a secret-vote phase (VOTE_1)', () => {

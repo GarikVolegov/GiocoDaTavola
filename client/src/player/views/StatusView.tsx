@@ -363,11 +363,43 @@ export default function StatusView({
             </SignInButton>
           </Show>
         </>
-      ) : phase === 'FINAL_DUEL' ? (
+      ) : phase === 'DUEL_REVEAL' ? (
         <>
           <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
-            Guarda il risultato sullo schermo!
+            {game?.duelReveal?.agreed ? "Siete d'accordo! 🤝" : "Non siete d'accordo — si discute"}
           </p>
+          {game?.duelReveal?.picks.map((p) => (
+            <p key={p.id} style={{ fontSize: '1.05rem', margin: 0 }}>
+              <strong>{p.nickname}</strong>: {p.choice}
+            </p>
+          ))}
+        </>
+      ) : phase === 'DUEL_RESULT' ? (
+        <>
+          {game?.duelResult?.agreed ? (
+            <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>Siete d'accordo! 🤝</p>
+          ) : (
+            game?.duelResult?.convinced.map((c) => (
+              <p key={c.convinced.id} style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+                <strong>{c.persuader.nickname}</strong> ha convinto <strong>{c.convinced.nickname}</strong>! 🎯
+              </p>
+            ))
+          )}
+        </>
+      ) : phase === 'FINAL_DUEL' ? (
+        <>
+          {game?.duelSummary && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+              {game.duelSummary.scores.map((s) => (
+                <p key={s.id} style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+                  <strong>{s.nickname}</strong>: {s.persuasions} {s.persuasions === 1 ? 'persuasione' : 'persuasioni'}
+                </p>
+              ))}
+              <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0 }}>
+                D'accordo su {game.duelSummary.agreements} {game.duelSummary.agreements === 1 ? 'dilemma' : 'dilemmi'}
+              </p>
+            </div>
+          )}
           {isLeader && (
             <Button variant="primary" onClick={onRematch} style={{ marginTop: '0.25rem' }}>
               Giocate ancora ▶

@@ -177,6 +177,19 @@ export default function LeaderSetup({
                 </Pill>
               ))}
             </div>
+            {humanCount === 2 && gameMode === 'gruppo' && (
+              <p style={{ opacity: 0.8, margin: '0.5rem 0 0', fontSize: '0.85rem', textAlign: 'center' }}>
+                Siete in 2: provate il{' '}
+                <button
+                  type="button"
+                  onClick={() => setGameMode('duello')}
+                  style={{ background: 'none', border: 'none', padding: 0, color: 'var(--gold)', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Duello
+                </button>
+                ?
+              </p>
+            )}
           </div>
 
           <div style={{ width: '100%' }}>
@@ -398,6 +411,19 @@ export default function LeaderSetup({
       <Button variant="ghost" onClick={onAddBot} disabled={!canAddBot}>
         + Aggiungi bot 🤖
       </Button>
+
+      {isClassica && gameMode === 'gruppo' && humanCount === 2 && (
+        <Button
+          variant="ghost"
+          onClick={() => {
+            onAddBot();
+            onAddBot();
+          }}
+          disabled={!canAddBot}
+        >
+          🤖🤖 Preset: 2 umani + 2 bot
+        </Button>
+      )}
 
       <Button variant="primary" size="lg" onClick={onStart} disabled={!canStart}>
         Avvia partita
