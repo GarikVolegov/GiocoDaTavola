@@ -1681,6 +1681,48 @@ describe('PlayerApp', () => {
     expect(addBotCalls).toHaveLength(2);
   });
 
+  it('lets the leader add a bot mid-game at PHASE_RESULTS via the ⋮ menu (3.5)', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PHASE_RESULTS',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        leaderId: 'p1',
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Menu della partita' }));
+    fireEvent.click(screen.getByRole('button', { name: /aggiungi bot/i }));
+    expect(emitSpy).toHaveBeenCalledWith('leader:addBot');
+  });
+
+  it('does not offer "aggiungi bot" in the ⋮ menu to a non-leader at PHASE_RESULTS', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PHASE_RESULTS',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        leaderId: 'p2',
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Menu della partita' }));
+    expect(screen.queryByRole('button', { name: /aggiungi bot/i })).toBeNull();
+  });
+
   it('requires a second tap of "Salta" during a secret-vote phase (VOTE_1)', () => {
     const emitSpy = vi.spyOn(fakeSocket, 'emit');
     render(<PlayerApp />);

@@ -4,7 +4,16 @@ import { useState, type CSSProperties } from 'react';
 // fixed top-right that opens a sheet, behind a two-tap confirm. Three deliberate
 // actions (open menu → tap exit → confirm) so a stray tap never drops a player out.
 // The actual leave is the parent's job (`onLeave`); this only gates it behind intent.
-export default function LeaveGameMenu({ onLeave }: { onLeave: () => void }) {
+// The leader ALSO gets a one-tap "aggiungi bot" here at a round boundary (3.5, to
+// reintegrate a drop-out) — low-risk and reversible, so no confirm step needed.
+export default function LeaveGameMenu({
+  onLeave,
+  onAddBot,
+}: {
+  onLeave: () => void;
+  /** Present only when the leader may add a bot right now (a round boundary). */
+  onAddBot?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
@@ -31,6 +40,18 @@ export default function LeaveGameMenu({ onLeave }: { onLeave: () => void }) {
           {/* tap-outside backdrop: closes the sheet without leaving */}
           <div aria-hidden="true" onClick={close} style={backdropStyle} />
           <div role="menu" style={sheetStyle}>
+            {onAddBot && (
+              <button
+                type="button"
+                onClick={() => {
+                  onAddBot();
+                  close();
+                }}
+                style={cancelStyle}
+              >
+                🤖 Aggiungi bot
+              </button>
+            )}
             {confirming ? (
               <button
                 type="button"

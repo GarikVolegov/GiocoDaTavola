@@ -1247,7 +1247,7 @@ describe('RoomStore bots (Fase B)', () => {
     expect(store.listPlayers(code)).toEqual([{ id: 'sock-0', nickname: 'H0' }]);
   });
 
-  it('rejects adding a bot when full or already started', () => {
+  it('rejects adding a bot when full or mid-round (not at a round boundary)', () => {
     const store = new RoomStore();
     const { code } = store.create();
     for (let i = 0; i < MAX_PLAYERS; i++) store.join(code, `s${i}`, `H${i}`);
@@ -1255,8 +1255,28 @@ describe('RoomStore bots (Fase B)', () => {
 
     const store2 = new RoomStore();
     const c2 = lobbyWith(store2, 3, 0);
-    store2.startGame(c2, 3);
-    expect(store2.addBot(c2)).toEqual({ ok: false, error: 'ALREADY_STARTED' });
+    store2.startGame(c2, 3); // PHASE_INTRO — not a round boundary
+    expect(store2.addBot(c2)).toEqual({ ok: false, error: 'NOT_ROUND_BOUNDARY' });
+  });
+
+  it('allows adding a bot mid-game at a round boundary (PHASE_RESULTS) to reintegrate a drop-out (3.5)', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const c = lobbyWith(store, 3, 0);
+    store.startGame(c, 3);
+    let g = 0;
+    while (store.get(c)!.phase !== 'PHASE_RESULTS' && g++ < 10) {
+      store.advancePhase(c);
+      if (store.get(c)!.phase === 'VOTE_1' || store.get(c)!.phase === 'VOTE_2') {
+        for (let i = 0; i < 3; i++) store.vote(c, `sock-${i}`, 'A');
+      }
+    }
+    expect(store.get(c)!.phase).toBe('PHASE_RESULTS');
+    const res = store.addBot(c);
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.player.isBot).toBe(true);
+      expect(res.player.role).toBeUndefined(); // a full giocatore, not Pubblico
+    }
   });
 
   it('starts a solo game: 1 human + 2 bots', () => {

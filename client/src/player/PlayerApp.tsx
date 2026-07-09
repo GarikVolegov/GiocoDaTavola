@@ -677,10 +677,12 @@ export default function PlayerApp() {
 
   // Every in-game screen gets the discreet ⋮ exit (hidden, two-tap confirm). The
   // lobby keeps its own visible "Esci dalla stanza" link, so it's not wrapped here.
+  // At PHASE_RESULTS (a round boundary) the leader also gets a one-tap "aggiungi
+  // bot" here, to reintegrate a drop-out mid-game (3.5).
   const withLeaveMenu = (node: ReactNode) => (
     <>
       {node}
-      <LeaveGameMenu onLeave={leaveRoom} />
+      <LeaveGameMenu onLeave={leaveRoom} onAddBot={isLeader && phase === 'PHASE_RESULTS' ? addBot : undefined} />
     </>
   );
 

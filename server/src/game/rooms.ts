@@ -595,7 +595,7 @@ export interface InfiltratoResult {
   votesAgainst: number;
 }
 
-export type AddBotError = 'ROOM_NOT_FOUND' | 'ROOM_FULL' | 'ALREADY_STARTED';
+export type AddBotError = 'ROOM_NOT_FOUND' | 'ROOM_FULL' | 'NOT_ROUND_BOUNDARY';
 
 export type AddBotResult =
   | { ok: true; player: Player }
@@ -2133,15 +2133,20 @@ export class RoomStore {
   }
 
   /**
-   * Add a server-driven bot to a room's lobby (Fase B). Bots count toward the
-   * roster (and MAX_PLAYERS) but have no socket; the server casts their votes.
-   * Only allowed in the LOBBY. A persona may be forced (tests); otherwise it
-   * round-robins through BOT_PERSONAS for variety.
+   * Add a server-driven bot to a room's roster (Fase B). Bots count toward
+   * the roster (and MAX_PLAYERS) but have no socket; the server casts their
+   * votes. Allowed in the LOBBY, or mid-game at a round boundary (3.5,
+   * PHASE_RESULTS — nothing is actively in progress there) so the leader can
+   * reintegrate a drop-out without waiting for the whole game to end. A
+   * persona may be forced (tests); otherwise it round-robins through
+   * BOT_PERSONAS for variety.
    */
   addBot(code: string, persona?: BotPersona): AddBotResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'LOBBY') return { ok: false, error: 'ALREADY_STARTED' };
+    if (room.phase !== 'LOBBY' && room.phase !== 'PHASE_RESULTS') {
+      return { ok: false, error: 'NOT_ROUND_BOUNDARY' };
+    }
     if (room.players.size >= MAX_PLAYERS) return { ok: false, error: 'ROOM_FULL' };
     const seq = room.botSeq++;
     const player: Player = {
