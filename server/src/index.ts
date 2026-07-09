@@ -198,6 +198,10 @@ function gameStatePayload(room: Room) {
     // "L'Infiltrato": how many have accused (ACCUSE) + the FINAL_AWARDS reveal.
     accusedCount: room.accusations.size,
     infiltratoResult: rooms.publicInfiltratoResult(room.code),
+    // "L'Infiltrato col merito" (4.5): whether the once-per-round sabotage tool
+    // has already been used this round — public (doesn't reveal WHO used it,
+    // nobody else has this ability), drives the infiltrator's own button state.
+    infiltratoToolUsed: room.infiltratoToolUsedThisRound,
     // "Squadre": team assignments + running scores; null when teams are off.
     teams: rooms.publicTeams(room.code),
     // The defenders to vote between, gated to SPEAKER_VOTE (null otherwise), plus
@@ -945,6 +949,21 @@ io.on('connection', (socket) => {
       if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code); // refresh the guessed count
     }
+  });
+
+  // The infiltrator seeds a decoy spunto into the current speaker's suggestions
+  // (4.5), once per round, only while someone is speaking. Not gated to "the
+  // opposing side" — the store only checks phase/identity/once-per-round.
+  socket.on('player:infiltratoTool', () => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.useInfiltratoTool(code, playerId);
+    if (!result.ok) {
+      socket.emit('player:infiltratoToolError', { error: result.error });
+      return;
+    }
+    broadcastGameState(code); // refresh the public spunti + toolUsed flag for everyone
   });
 
   // A player accuses who they think the infiltrator is (ACCUSE phase). The store

@@ -27,6 +27,11 @@ interface DefenseViewProps {
   twist: Twist | null;
   /** 3.1: Pubblico never intervenes — the raise-hand affordance is hidden for them. */
   isPubblico: boolean;
+  /** 4.5: only this phone sees the sabotage button — nobody else knows who the infiltrator is. */
+  isInfiltrator: boolean;
+  infiltratoToolUsed: boolean;
+  infiltratoToolError: string | null;
+  onUseInfiltratoTool: () => void;
   playerId: string | null;
   handRaised: boolean;
   raiseHandError: string | null;
@@ -51,6 +56,10 @@ export default function DefenseView({
   absurdConstraint,
   twist,
   isPubblico,
+  isInfiltrator,
+  infiltratoToolUsed,
+  infiltratoToolError,
+  onUseInfiltratoTool,
   playerId,
   handRaised,
   raiseHandError,
@@ -243,6 +252,36 @@ export default function DefenseView({
             <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0 }}>
               Sei in coda: {myQueuePos + 1}º
             </p>
+          )}
+
+          {phase === 'DEFENSE' && isInfiltrator && d?.speakerId != null && (
+            <>
+              <button
+                type="button"
+                onClick={onUseInfiltratoTool}
+                disabled={infiltratoToolUsed}
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  padding: '0.6rem 1.1rem',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '2px solid var(--gold)',
+                  background: infiltratoToolUsed ? 'transparent' : 'var(--gold-soft)',
+                  color: 'inherit',
+                  cursor: infiltratoToolUsed ? 'default' : 'pointer',
+                  opacity: infiltratoToolUsed ? 0.5 : 1,
+                }}
+              >
+                🕵️ Semina un dubbio
+              </button>
+              <p style={{ fontSize: '0.85rem', opacity: 0.7, margin: 0 }}>
+                {infiltratoToolError
+                  ? infiltratoToolError
+                  : infiltratoToolUsed
+                    ? 'Dubbio seminato per questo round.'
+                    : 'Aggiunge un consiglio-esca ai suoi spunti — una volta per round.'}
+              </p>
+            </>
           )}
 
           <ReactionBar onReact={onReact} />

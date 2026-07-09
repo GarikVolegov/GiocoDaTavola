@@ -22,6 +22,9 @@ export function armTurn(room: Room, now: number): void {
   const defenseMax = room.currentTwist?.id === 'difesa-lampo' ? TWIST_DEFENSE_LAMPO_MS : room.defenseMaxMs;
   room.turnStartedAt = now;
   room.turnReactionTally = {};
+  // Each new turn is a fresh sabotage opportunity (4.5) — the decoy from the
+  // PREVIOUS speaker's turn doesn't carry over.
+  room.infiltratoDecoySpunto = null;
   if (speaker && !speaker.isBot && speaker.connected !== false) {
     room.turnMinEndsAt = now + (interventi ? INTERVENTO_MIN_MS : DEFENSE_MIN_MS);
     room.phaseExpiresAt = now + (interventi ? INTERVENTI_MAX_MS : defenseMax);

@@ -104,6 +104,10 @@ export const SocketEvents = {
   PlayerKnowGuessResult: 'player:knowGuessResult',
   /** Server privately tells a player they are the infiltrator (at game start). */
   PlayerInfiltratoRole: 'player:infiltratoRole',
+  /** The infiltrator seeds a decoy spunto into the current speaker's suggestions (4.5). */
+  PlayerInfiltratoTool: 'player:infiltratoTool',
+  /** Server rejects the tool use (not the infiltrator, wrong phase, already used, nobody speaking). */
+  PlayerInfiltratoToolError: 'player:infiltratoToolError',
   /** Player accuses who they think the infiltrator is (ACCUSE phase). */
   PlayerAccuse: 'player:accuse',
   /** Server confirms the player's current accusation back to them only. */
@@ -436,6 +440,8 @@ export interface InfiltratoResult {
   caught: boolean;
   won: boolean;
   votesAgainst: number;
+  /** How many rounds the infiltrator used their sabotage tool (4.5, "il replay delle sue mosse"). */
+  toolUses: number;
 }
 
 /** Public dilemma shown on the shared screen: the prompt + its two options. */
@@ -728,6 +734,9 @@ export interface GameStatePayload {
   accusedCount: number;
   /** "L'Infiltrato": the reveal at FINAL_AWARDS (who, won/caught); null otherwise. */
   infiltratoResult: InfiltratoResult | null;
+  /** "L'Infiltrato col merito" (4.5): whether the once-per-round sabotage tool
+   * has already been used this round — public, doesn't reveal who. */
+  infiltratoToolUsed: boolean;
   /** "Squadre": team assignments + running scores; null when teams are off. */
   teams: TeamState | null;
   /**
@@ -1087,6 +1096,27 @@ export interface PlayerKnowGuessErrorPayload {
 export interface PlayerInfiltratoRolePayload {
   mission: string;
 }
+
+export type InfiltratoToolError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_INFILTRATOR'
+  | 'NOT_DEFENSE_PHASE'
+  | 'ALREADY_USED_THIS_ROUND'
+  | 'NO_ONE_SPEAKING';
+
+export interface PlayerInfiltratoToolErrorPayload {
+  error: InfiltratoToolError;
+}
+
+/** User-facing (Italian) messages for infiltrato-tool errors. Mostly defensive
+ * fallbacks — the button is only shown when the phase/turn already make sense. */
+export const INFILTRATO_TOOL_ERROR_MESSAGES: Record<InfiltratoToolError, string> = {
+  ROOM_NOT_FOUND: 'Stanza non trovata',
+  NOT_INFILTRATOR: 'Non sei tu la spia',
+  NOT_DEFENSE_PHASE: 'Non è il momento di agire',
+  ALREADY_USED_THIS_ROUND: 'Hai già agito in questo round',
+  NO_ONE_SPEAKING: 'Nessuno sta parlando ora',
+};
 
 export interface PlayerAccusePayload {
   accusedId: string;

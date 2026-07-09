@@ -116,12 +116,15 @@ export function publicDefense(room: Room, now: number): DefenseState | null {
 
   const totalTurns = room.defenders.length;
   const speaker = room.defenders[room.defenseTurnIndex] ?? null;
-  const spunti =
+  const baseSpunti =
     speaker && room.currentDilemma
       ? speaker.side === 'A'
         ? room.currentDilemma.spuntiA
         : room.currentDilemma.spuntiB
       : null;
+  // "L'Infiltrato col merito" (4.5): a decoy spunto, indistinguishable from
+  // the real ones, mixed in when the infiltrator just used their tool.
+  const spunti = baseSpunti && room.infiltratoDecoySpunto ? [...baseSpunti, room.infiltratoDecoySpunto] : baseSpunti;
   return {
     kind: 'defense',
     speaker,

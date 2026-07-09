@@ -424,6 +424,107 @@ describe('PlayerApp', () => {
     expect(screen.queryByRole('button', { name: /alza la mano/i })).toBeNull();
   });
 
+  it('lets the infiltrator seed a decoy spunto during DEFENSE (4.5)', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('player:infiltratoRole', { mission: 'Fai ribaltare il gruppo.' });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: {
+          kind: 'defense',
+          speaker: { id: 'p2', nickname: 'Bea', side: 'A' },
+          speakerId: 'p2',
+          turn: 1,
+          totalTurns: 2,
+          argument: null,
+          spunti: null,
+          raisedCount: 0,
+          queue: null,
+          minEndsAt: null,
+          canFinish: true,
+          startedAt: null,
+        },
+        infiltratoToolUsed: false,
+        leaderId: null,
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /semina un dubbio/i }));
+    expect(emitSpy).toHaveBeenCalledWith('player:infiltratoTool');
+  });
+
+  it('never shows the sabotage button to a non-infiltrator', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: {
+          kind: 'defense',
+          speaker: { id: 'p2', nickname: 'Bea', side: 'A' },
+          speakerId: 'p2',
+          turn: 1,
+          totalTurns: 2,
+          argument: null,
+          spunti: null,
+          raisedCount: 0,
+          queue: null,
+          minEndsAt: null,
+          canFinish: true,
+          startedAt: null,
+        },
+        infiltratoToolUsed: false,
+        leaderId: null,
+      });
+    });
+    expect(screen.queryByRole('button', { name: /semina un dubbio/i })).toBeNull();
+  });
+
+  it('shows the tool-use "replay" count in the Infiltrato reveal at FINAL_AWARDS (4.5)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'FINAL_AWARDS',
+        dilemmaCount: 3,
+        dilemmaIndex: 3,
+        phaseExpiresAt: null,
+        infiltratoResult: {
+          infiltratorId: 'p2',
+          infiltratorNickname: 'Bea',
+          flips: 1,
+          caught: false,
+          won: true,
+          votesAgainst: 0,
+          toolUses: 2,
+        },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/seminato dubbi in 2 round/i)).toBeInTheDocument();
+  });
+
   it('shows the finish affordance when it is your turn at DEFENSE', () => {
     render(<PlayerApp />);
     act(() => {

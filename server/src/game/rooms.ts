@@ -370,8 +370,17 @@ export interface Room {
   writeVotes: Map<string, string>;
   /** "L'Infiltrato": the secret infiltrator's player id, or null when not enabled. */
   infiltratorId: string | null;
-  /** Rounds the infiltrator overturned the group (minority → majority). */
+  /** Rounds the infiltrator overturned the group AND actively used their tool
+   * that round (4.5, "col merito" — a passive lucky flip earns nothing). */
   infiltratorFlips: number;
+  /** Whether the infiltrator has used their once-per-round sabotage tool this
+   * round (4.5); resets on DILEMMA_REVEAL. */
+  infiltratoToolUsedThisRound: boolean;
+  /** The decoy spunto seeded into the CURRENT speaker's spunti this turn, if
+   * the infiltrator just used their tool; null otherwise. Cleared each turn. */
+  infiltratoDecoySpunto: string | null;
+  /** How many rounds the infiltrator used their tool this game (the FINAL_AWARDS "replay"). */
+  infiltratoToolUses: number;
   /** End-game accusation votes: accuser id -> accused id (ACCUSE phase). */
   accusations: Map<string, string>;
   /** Resolved infiltrator outcome, computed on entry to FINAL_AWARDS; null otherwise. */
@@ -630,6 +639,8 @@ export interface InfiltratoResult {
   won: boolean;
   /** How many accusation votes the infiltrator received. */
   votesAgainst: number;
+  /** How many rounds the infiltrator used their sabotage tool (4.5, "il replay delle sue mosse"). */
+  toolUses: number;
 }
 
 export type AddBotError = 'ROOM_NOT_FOUND' | 'ROOM_FULL' | 'NOT_ROUND_BOUNDARY';
@@ -962,6 +973,9 @@ export class RoomStore {
       writeVotes: new Map(),
       infiltratorId: null,
       infiltratorFlips: 0,
+      infiltratoToolUsedThisRound: false,
+      infiltratoDecoySpunto: null,
+      infiltratoToolUses: 0,
       accusations: new Map(),
       infiltratoResult: null,
       teams: new Map(),
@@ -1055,6 +1069,9 @@ export class RoomStore {
     room.writeVotes = new Map();
     room.infiltratorId = null;
     room.infiltratorFlips = 0;
+    room.infiltratoToolUsedThisRound = false;
+    room.infiltratoDecoySpunto = null;
+    room.infiltratoToolUses = 0;
     room.accusations = new Map();
     room.infiltratoResult = null;
     room.teams = new Map();
@@ -1175,6 +1192,9 @@ export class RoomStore {
     // Assign a secret infiltrator (a random human) when enabled; reset the role state.
     room.infiltratorId = useInfiltrato ? humans[Math.floor(this.rng() * humans.length)].id : null;
     room.infiltratorFlips = 0;
+    room.infiltratoToolUsedThisRound = false;
+    room.infiltratoDecoySpunto = null;
+    room.infiltratoToolUses = 0;
     room.accusations = new Map();
     room.infiltratoResult = null;
     // Split players into two teams (alternating by join order) when enabled.
@@ -1486,6 +1506,8 @@ export class RoomStore {
       room.groupMindQuestion = null;
       room.writePrompt = null;
       room.currentTwist = null;
+      room.infiltratoToolUsedThisRound = false;
+      room.infiltratoDecoySpunto = null;
     }
     // Entering PREDICT in the "Quanto mi conosci" round assigns the guessing ring.
     if (transition.phase === 'PREDICT' && knowRound.isKnowRound(room)) {
@@ -1922,6 +1944,16 @@ export class RoomStore {
   publicInfiltratoResult(code: string): InfiltratoResult | null {
     const room = this.rooms.get(code);
     return room ? infiltrato.publicInfiltratoResult(room) : null;
+  }
+
+  /**
+   * The infiltrator seeds a decoy spunto into the current speaker's
+   * suggestions (4.5), once per round, only while someone is speaking.
+   */
+  useInfiltratoTool(code: string, playerId: string): infiltrato.InfiltratoToolResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    return infiltrato.useInfiltratoTool(room, playerId, this.rng, defenseTurns.currentSpeakerId(room));
   }
 
   /**

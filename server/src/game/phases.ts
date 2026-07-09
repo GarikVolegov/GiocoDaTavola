@@ -146,7 +146,9 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   SCENE_INTRO: null,
   SCENE_CONSEQUENCE: null,
   STORY_EPILOGUE: null,
-  ACCUSE: 30_000,
+  // "Il processo" (4.5): a proper trial, not a snap guess — 75s to discuss out
+  // loud before voting who the infiltrator is (was 30s).
+  ACCUSE: 75_000,
   FINAL_AWARDS: null,
   DUEL_PICK: 20_000,
   DUEL_REVEAL: 5_000,

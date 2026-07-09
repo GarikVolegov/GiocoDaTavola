@@ -316,7 +316,7 @@ export default function StatusView({
                   <Card
                     key={a.id}
                     glow={i === 0 && a.votes > 0 ? 'accent' : undefined}
-                    style={{ padding: 'var(--space-3)', textAlign: 'left' }}
+                    style={{ padding: 'var(--space-3)', textAlign: 'center' }}
                   >
                     <p style={{ margin: 0, fontSize: '1rem' }}>
                       {i === 0 && a.votes > 0 && '🏆 '}
@@ -363,6 +363,9 @@ export default function StatusView({
                   : game.infiltratoResult.caught
                     ? 'Smascherato dal gruppo! 🎉'
                     : 'Non è riuscito nella missione.'}
+              </p>
+              <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.75 }}>
+                🕵️ Il replay: ha seminato dubbi in {game.infiltratoResult.toolUses} round.
               </p>
             </Card>
           )}

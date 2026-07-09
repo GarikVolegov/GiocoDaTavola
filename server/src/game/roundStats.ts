@@ -60,9 +60,10 @@ export function recordRoundStats(room: Room): void {
   // Credit each swing bettor who correctly called whether the lead would change
   // ('ribalta' when it flipped, 'regge' when it held).
   const flipped = leadFlipped(room);
-  // "L'Infiltrato" mission: a round where the leading side flipped (the underdog
-  // overturned the favourite) scores for the infiltrator.
-  if (room.infiltratorId && flipped) room.infiltratorFlips++;
+  // "L'Infiltrato col merito" (4.5): a round where the leading side flipped
+  // scores for the infiltrator ONLY if they actively used their sabotage tool
+  // this round — a passive lucky flip they had no hand in earns nothing.
+  if (room.infiltratorId && flipped && room.infiltratoToolUsedThisRound) room.infiltratorFlips++;
   for (const [id, bet] of room.swingBets) {
     if ((bet === 'ribalta') === flipped) {
       const s = ensureStats(room, id);

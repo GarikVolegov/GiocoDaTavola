@@ -47,10 +47,12 @@ import {
   type PlayerWriteSubmittedPayload,
   type PlayerWriteVotedPayload,
   type PlayerInfiltratoRolePayload,
+  type PlayerInfiltratoToolErrorPayload,
   type PlayerAccusedPayload,
   type MyProfile,
   type RaiseHandError,
   RAISE_HAND_ERROR_MESSAGES,
+  INFILTRATO_TOOL_ERROR_MESSAGES,
 } from '../shared/events';
 import { Card, JoinQr, Button, Field, TextInput, Alert } from '../shared/ui';
 import { useHostAudio } from '../host/audio/useHostAudio';
@@ -166,6 +168,7 @@ export default function PlayerApp() {
   const [writeSubmitted, setWriteSubmitted] = useState<string | null>(null);
   const [writeVotedForId, setWriteVotedForId] = useState<string | null>(null);
   const [infiltratoRole, setInfiltratoRole] = useState<PlayerInfiltratoRolePayload | null>(null);
+  const [infiltratoToolError, setInfiltratoToolError] = useState<string | null>(null);
   const [myAccusation, setMyAccusation] = useState<string | null>(null);
   const [speakerVote, setSpeakerVote] = useState<string | null>(null);
   const [handRaised, setHandRaised] = useState(false);
@@ -268,6 +271,8 @@ export default function PlayerApp() {
     const onWriteSubmitted = ({ text }: PlayerWriteSubmittedPayload) => setWriteSubmitted(text);
     const onWriteVoted = ({ votedForId }: PlayerWriteVotedPayload) => setWriteVotedForId(votedForId);
     const onInfiltratoRole = (payload: PlayerInfiltratoRolePayload) => setInfiltratoRole(payload);
+    const onInfiltratoToolError = ({ error }: PlayerInfiltratoToolErrorPayload) =>
+      setInfiltratoToolError(INFILTRATO_TOOL_ERROR_MESSAGES[error] ?? 'Non puoi agire ora');
     const onAccused = ({ accusedId }: PlayerAccusedPayload) => setMyAccusation(accusedId);
     const onSpeakerVoted = ({ defenderId }: PlayerSpeakerVotedPayload) => setSpeakerVote(defenderId);
     const onHandRaised = ({ raised }: { raised: boolean }) => {
@@ -296,6 +301,7 @@ export default function PlayerApp() {
     socket.on(SocketEvents.PlayerWriteSubmitted, onWriteSubmitted);
     socket.on(SocketEvents.PlayerWriteVoted, onWriteVoted);
     socket.on(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
+    socket.on(SocketEvents.PlayerInfiltratoToolError, onInfiltratoToolError);
     socket.on(SocketEvents.PlayerAccused, onAccused);
     socket.on(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
     socket.on(SocketEvents.PlayerSubmitDilemmaError, onSubmitDilemmaError);
@@ -350,6 +356,7 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerWriteSubmitted, onWriteSubmitted);
       socket.off(SocketEvents.PlayerWriteVoted, onWriteVoted);
       socket.off(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
+      socket.off(SocketEvents.PlayerInfiltratoToolError, onInfiltratoToolError);
       socket.off(SocketEvents.PlayerAccused, onAccused);
       socket.off(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
       socket.off(SocketEvents.PlayerSubmitDilemmaError, onSubmitDilemmaError);
@@ -410,6 +417,7 @@ export default function PlayerApp() {
     setWriteText('');
     setWriteSubmitted(null);
     setWriteVotedForId(null);
+    setInfiltratoToolError(null);
   }, [game?.dilemmaIndex]);
 
   // When the phone's user is logged in, send the Clerk token so the server can
@@ -572,6 +580,13 @@ export default function PlayerApp() {
   const sendFinish = () => {
     buzz(25);
     getSocket().emit(SocketEvents.PlayerFinishTurn);
+  };
+
+  // "L'Infiltrato col merito" (4.5): seed a decoy spunto into the current
+  // speaker's suggestions, once per round.
+  const useInfiltratoTool = () => {
+    buzz(25);
+    getSocket().emit(SocketEvents.PlayerInfiltratoTool);
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -791,6 +806,10 @@ export default function PlayerApp() {
         isPubblico={players.find((p) => p.id === playerId)?.role === 'pubblico'}
         absurdConstraint={game?.absurdConstraint ?? null}
         twist={game?.twist ?? null}
+        isInfiltrator={infiltratoRole != null}
+        infiltratoToolUsed={game?.infiltratoToolUsed ?? false}
+        infiltratoToolError={infiltratoToolError}
+        onUseInfiltratoTool={useInfiltratoTool}
         playerId={playerId}
         handRaised={handRaised}
         raiseHandError={raiseHandError}
