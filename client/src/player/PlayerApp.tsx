@@ -174,6 +174,7 @@ export default function PlayerApp() {
   const [register, setRegister] = useState<ContentRegister>('misto');
   const [mood, setMood] = useState<Mood>('mista');
   const [delicatoOptIn, setDelicatoOptIn] = useState(false);
+  const [serataLunga, setSerataLunga] = useState(false);
   const [gameMode, setGameMode] = useState<GameMode>('gruppo');
   const [infiltratoOn, setInfiltratoOn] = useState(false);
   const [squadreOn, setSquadreOn] = useState(false);
@@ -568,6 +569,7 @@ export default function PlayerApp() {
         format: 'storia',
         storyId,
         mode: 'gruppo',
+        serataLunga,
       });
       return;
     }
@@ -581,6 +583,7 @@ export default function PlayerApp() {
         mode: 'gruppo',
         infiltrato: infiltratoOn,
         squadre: squadreOn,
+        serataLunga,
       });
       return;
     }
@@ -592,6 +595,7 @@ export default function PlayerApp() {
       squadre: gameMode === 'gruppo' && squadreOn,
       mood,
       delicatoOptIn,
+      serataLunga,
     });
   };
   const castAccuse = (accusedId: string) => {
@@ -946,6 +950,8 @@ export default function PlayerApp() {
             setMood={setMood}
             delicatoOptIn={delicatoOptIn}
             setDelicatoOptIn={setDelicatoOptIn}
+            serataLunga={serataLunga}
+            setSerataLunga={setSerataLunga}
             format={format}
             setFormat={setFormat}
             startTappa={startTappa}

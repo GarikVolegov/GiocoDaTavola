@@ -22,6 +22,8 @@ import {
   SOFT_TIMEOUT_THRESHOLD,
   SOFT_TIMEOUT_MS,
   DUEL_TURN_MIN_MS,
+  DEFENSE_MAX_MS_NORMALE,
+  DEFENSE_MAX_MS_LUNGA,
   nextPhase,
   nextDuelPhase,
   nextPercorsoPhase,
@@ -382,6 +384,12 @@ export interface Room {
    * rest of the time. Purely theatrical: never changes debate mechanics.
    */
   absurdConstraint: string | null;
+  /**
+   * DEFENSE's per-turn safety cap in ms (3.3), chosen at startGame — normally
+   * DEFENSE_MAX_MS_NORMALE (90s); DEFENSE_MAX_MS_LUNGA (180s) when the leader
+   * opts into "serata lunga". Read by armTurn instead of a fixed constant.
+   */
+  defenseMaxMs: number;
   /** Which defender (0-based) is currently speaking during DEFENSE. */
   defenseTurnIndex: number;
   /**
@@ -915,6 +923,7 @@ export class RoomStore {
       confirmedVote2: new Set(),
       defenders: [],
       absurdConstraint: null,
+      defenseMaxMs: DEFENSE_MAX_MS_NORMALE,
       defenseTurnIndex: 0,
       defenseArgument: null,
       raisedHands: [],
@@ -1034,6 +1043,7 @@ export class RoomStore {
     storia?: { storyId: string },
     mood: string = 'mista',
     delicatoOptIn: boolean = false,
+    serataLunga: boolean = false,
   ): StartGameResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
@@ -1113,6 +1123,7 @@ export class RoomStore {
     }
 
     room.mode = mode;
+    room.defenseMaxMs = serataLunga ? DEFENSE_MAX_MS_LUNGA : DEFENSE_MAX_MS_NORMALE;
     room.dilemmaIndex = 0;
     room.phase = 'PHASE_INTRO';
     room.phaseExpiresAt = this.expiryFor('PHASE_INTRO');

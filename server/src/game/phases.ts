@@ -53,7 +53,21 @@ export type GamePhase =
  */
 export const DEFENSE_MIN_MS = 30_000;
 export const INTERVENTO_MIN_MS = 15_000;
-export const DEFENSE_MAX_MS = 180_000;
+/**
+ * DEFENSE's per-turn safety cap (3.3): 90s by default so a round's "stage
+ * budget" stays roughly constant regardless of group size; the leader may
+ * opt into "serata lunga" (DEFENSE_MAX_MS_LUNGA) for a slower, deeper night.
+ * Room-configurable — see Room.defenseMaxMs; this is only the default.
+ */
+export const DEFENSE_MAX_MS_NORMALE = 90_000;
+export const DEFENSE_MAX_MS_LUNGA = 180_000;
+
+/**
+ * At or above this many giocatori, DEFENSE picks TWO defenders per side
+ * ("a coppie", 3.3) instead of one — more of the room gets stage time as the
+ * group scales up, still bounded (never more than a small constant).
+ */
+export const DEFENSE_COPPIE_THRESHOLD = 7;
 export const INTERVENTI_MAX_MS = 90_000;
 export const TURN_BOT_MS = 20_000;
 
@@ -88,7 +102,10 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   // SPLIT_REVEAL_SUSPENSE_MS below — client and server must agree on the split.
   SPLIT_REVEAL: 9_000,
   PREDICT: null,
-  DEFENSE: DEFENSE_MAX_MS,
+  // Room-specific (Room.defenseMaxMs) as soon as armTurn runs on entry to
+  // DEFENSE; this is only the transient value between the phase transition
+  // and that call, never actually observed.
+  DEFENSE: DEFENSE_MAX_MS_NORMALE,
   INTERVENTI: INTERVENTI_MAX_MS,
   VOTE_2: null,
   SPEAKER_VOTE: null,

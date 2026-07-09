@@ -40,6 +40,8 @@ interface LeaderSetupProps {
   setMood: Dispatch<SetStateAction<Mood>>;
   delicatoOptIn: boolean;
   setDelicatoOptIn: Dispatch<SetStateAction<boolean>>;
+  serataLunga: boolean;
+  setSerataLunga: Dispatch<SetStateAction<boolean>>;
   format: SessionFormat;
   setFormat: Dispatch<SetStateAction<SessionFormat>>;
   startTappa: number;
@@ -83,6 +85,8 @@ export default function LeaderSetup({
   setMood,
   delicatoOptIn,
   setDelicatoOptIn,
+  serataLunga,
+  setSerataLunga,
   format,
   setFormat,
   startTappa,
@@ -341,6 +345,19 @@ export default function LeaderSetup({
                 </p>
               </div>
             )}
+
+            <div style={{ width: '100%' }}>
+              <Pill
+                selected={serataLunga}
+                onClick={() => setSerataLunga((v) => !v)}
+                aria-label="Serata lunga: 180s per difesa invece di 90s"
+              >
+                🕰️ Serata lunga {serataLunga ? 'ON' : 'OFF'}
+              </Pill>
+              <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
+                {serataLunga ? '180s per difesa — più tempo per approfondire.' : '90s per difesa (default).'}
+              </p>
+            </div>
 
             {showSpecial && (
               <div style={{ width: '100%' }}>

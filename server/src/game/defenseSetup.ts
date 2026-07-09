@@ -5,9 +5,9 @@ import type { Room, Defender, VoteChoice } from './rooms';
 import {
   DEFENSE_MIN_MS,
   INTERVENTO_MIN_MS,
-  DEFENSE_MAX_MS,
   INTERVENTI_MAX_MS,
   TURN_BOT_MS,
+  DEFENSE_COPPIE_THRESHOLD,
 } from './phases';
 import { botDefenseArgument } from './botDefense';
 import * as devilAdvocate from './devilAdvocate';
@@ -26,7 +26,7 @@ export function armTurn(room: Room, now: number): void {
   room.turnReactionTally = {};
   if (speaker && !speaker.isBot && speaker.connected !== false) {
     room.turnMinEndsAt = now + (interventi ? INTERVENTO_MIN_MS : DEFENSE_MIN_MS);
-    room.phaseExpiresAt = now + (interventi ? INTERVENTI_MAX_MS : DEFENSE_MAX_MS);
+    room.phaseExpiresAt = now + (interventi ? INTERVENTI_MAX_MS : room.defenseMaxMs);
   } else {
     room.turnMinEndsAt = null;
     room.phaseExpiresAt = now + TURN_BOT_MS;
@@ -34,34 +34,42 @@ export function armTurn(room: Room, now: number): void {
 }
 
 /**
- * Auto-select one defender per side from that side's secret voters (side A before
- * B). A side with 0 votes is skipped. Among a side's voters the least-used defender
- * is chosen (fairness), ties broken by the injected rng. In the devil round each
- * defender argues the OPPOSITE side.
+ * Auto-select one defender per side from that side's secret voters (side A
+ * before B), or TWO per side ("a coppie", 3.3) once the room has
+ * DEFENSE_COPPIE_THRESHOLD+ giocatori — more of a larger group gets stage
+ * time, still bounded. A side with 0 votes is skipped. Among a side's voters
+ * the least-used defender is chosen (fairness, no repeats within the side),
+ * ties broken by the injected rng. In the devil round each defender argues
+ * the OPPOSITE side.
  */
 export function selectDefenders(room: Room, rng: () => number): Defender[] {
   const devil = devilAdvocate.isDevilRound(room);
+  const giocatoriCount = [...room.players.values()].filter((p) => p.role !== 'pubblico').length;
+  const perSide = giocatoriCount >= DEFENSE_COPPIE_THRESHOLD ? 2 : 1;
   const defenders: Defender[] = [];
   for (const side of ['A', 'B'] as const) {
-    const voters = [...room.votes.entries()]
+    const pool = [...room.votes.entries()]
       .filter(([, choice]) => choice === side)
       .map(([id]) => id)
       .filter((id) => room.players.get(id)?.connected !== false)
       .filter((id) => room.players.get(id)?.role !== 'pubblico'); // 3.1: never on stage
-    if (voters.length === 0) continue; // side with no votes -> no defender
-    const min = Math.min(...voters.map((id) => room.defenseCounts.get(id) ?? 0));
-    const candidates = voters.filter((id) => (room.defenseCounts.get(id) ?? 0) === min);
-    const chosen = candidates[Math.floor(rng() * candidates.length)];
-    const player = room.players.get(chosen);
-    if (!player) continue;
-    room.defenseCounts.set(chosen, (room.defenseCounts.get(chosen) ?? 0) + 1);
-    if (devil) {
-      // "Avvocato del Diavolo": argue the OPPOSITE side. Everything downstream keys
-      // off `side` = the side being argued, so no other code needs to know.
-      const argued: VoteChoice = side === 'A' ? 'B' : 'A';
-      defenders.push({ id: player.id, nickname: player.nickname, side: argued, devil: true });
-    } else {
-      defenders.push({ id: player.id, nickname: player.nickname, side });
+    if (pool.length === 0) continue; // side with no votes -> no defender
+    for (let i = 0; i < perSide && pool.length > 0; i++) {
+      const min = Math.min(...pool.map((id) => room.defenseCounts.get(id) ?? 0));
+      const candidates = pool.filter((id) => (room.defenseCounts.get(id) ?? 0) === min);
+      const chosen = candidates[Math.floor(rng() * candidates.length)];
+      pool.splice(pool.indexOf(chosen), 1); // never pick the same person twice for this side
+      const player = room.players.get(chosen);
+      if (!player) continue;
+      room.defenseCounts.set(chosen, (room.defenseCounts.get(chosen) ?? 0) + 1);
+      if (devil) {
+        // "Avvocato del Diavolo": argue the OPPOSITE side. Everything downstream keys
+        // off `side` = the side being argued, so no other code needs to know.
+        const argued: VoteChoice = side === 'A' ? 'B' : 'A';
+        defenders.push({ id: player.id, nickname: player.nickname, side: argued, devil: true });
+      } else {
+        defenders.push({ id: player.id, nickname: player.nickname, side });
+      }
     }
   }
   return defenders;

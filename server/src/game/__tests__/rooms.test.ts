@@ -15,7 +15,8 @@ import {
   REACTION_MIN_INTERVAL_MS,
   DEFENSE_MIN_MS,
   INTERVENTO_MIN_MS,
-  DEFENSE_MAX_MS,
+  DEFENSE_MAX_MS_NORMALE,
+  DEFENSE_MAX_MS_LUNGA,
   INTERVENTI_MAX_MS,
   TURN_BOT_MS,
   isInterventiPhase,
@@ -1814,6 +1815,42 @@ describe('leave() leadership migration', () => {
   });
 });
 
+describe("DEFENSE budget: serataLunga option (3.3)", () => {
+  it('defaults to the 90s cap when serataLunga is not requested', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3);
+    expect(store.get(code)!.defenseMaxMs).toBe(DEFENSE_MAX_MS_NORMALE);
+  });
+
+  it('uses the 180s cap when the leader opts into serataLunga', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3, 'misto', 'gruppo', false, false, undefined, undefined, 'mista', false, true);
+    expect(store.get(code)!.defenseMaxMs).toBe(DEFENSE_MAX_MS_LUNGA);
+  });
+
+  it("a human speaker's turn is armed with the room's chosen cap, not a fixed constant", () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3, 'misto', 'gruppo', false, false, undefined, undefined, 'mista', false, true); // serataLunga
+    let g = 0;
+    while (store.get(code)!.phase !== 'VOTE_1' && g++ < 10) store.advancePhase(code);
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'B');
+    store.vote(code, 'sock-2', 'B');
+    store.advancePhase(code); // SPLIT_REVEAL
+    store.advancePhase(code); // PREDICT
+    store.advancePhase(code); // DEFENSE
+    const room = store.get(code)!;
+    expect(room.phase).toBe('DEFENSE');
+    expect(room.phaseExpiresAt).toBe(room.turnStartedAt! + DEFENSE_MAX_MS_LUNGA);
+  });
+});
+
 describe('late-join promotion (3.2)', () => {
   it('a mid-game joiner is always Pubblico this round, even under the giocatori cap', () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
@@ -2701,11 +2738,11 @@ describe('RoomStore defense — equa rotazione difensori', () => {
 
 describe('INTERVENTI phase constants + room fields', () => {
   it('exposes the floor/cap/bot durations', () => {
-    expect([DEFENSE_MIN_MS, INTERVENTO_MIN_MS, DEFENSE_MAX_MS, INTERVENTI_MAX_MS, TURN_BOT_MS])
-      .toEqual([30_000, 15_000, 180_000, 90_000, 20_000]);
+    expect([DEFENSE_MIN_MS, INTERVENTO_MIN_MS, DEFENSE_MAX_MS_NORMALE, DEFENSE_MAX_MS_LUNGA, INTERVENTI_MAX_MS, TURN_BOT_MS])
+      .toEqual([30_000, 15_000, 90_000, 180_000, 90_000, 20_000]);
   });
-  it('DEFENSE cap is the 3-minute safety net', () => {
-    expect(PHASE_DURATIONS_MS.DEFENSE).toBe(180_000);
+  it("DEFENSE's static fallback matches the default (normale) cap — armTurn overrides with room.defenseMaxMs on entry", () => {
+    expect(PHASE_DURATIONS_MS.DEFENSE).toBe(90_000);
     expect(PHASE_DURATIONS_MS.INTERVENTI).toBe(90_000);
   });
   it('isInterventiPhase only matches INTERVENTI', () => {
@@ -2724,14 +2761,14 @@ describe('INTERVENTI phase constants + room fields', () => {
 });
 
 describe('armTurn on DEFENSE entry', () => {
-  it('a human defender gets the 30s floor and 180s cap', () => {
+  it('a human defender gets the 30s floor and the 90s default cap (3.3)', () => {
     const now = 1_000;
     const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
     const code = defenseRoom(store, ['A', 'B', 'B']);
     const room = store.get(code)!;
     expect(room.phase).toBe('DEFENSE');
     expect(room.turnMinEndsAt).toBe(now + 30_000);
-    expect(room.phaseExpiresAt).toBe(now + 180_000);
+    expect(room.phaseExpiresAt).toBe(now + DEFENSE_MAX_MS_NORMALE);
   });
 
   it('records the turn start (turnStartedAt) and exposes it as defense.startedAt', () => {
