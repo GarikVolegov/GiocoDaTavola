@@ -5,6 +5,7 @@ import type { Room, Defender, VoteChoice } from './rooms';
 import { DEFENSE_MIN_MS, INTERVENTO_MIN_MS, INTERVENTI_MAX_MS, TURN_BOT_MS } from './phases';
 import { countGiocatori, rulesForGiocatoriCount } from './ruleset';
 import { botDefenseArgument } from './botDefense';
+import { TWIST_DEFENSE_LAMPO_MS } from './twists';
 import * as devilAdvocate from './devilAdvocate';
 import * as defenseTurns from './defenseTurns';
 
@@ -12,16 +13,18 @@ import * as defenseTurns from './defenseTurns';
  * Also resets the live per-emoji applause tally for the new turn — the caller
  * is responsible for snapshotting the PREVIOUS turn's tally (if any) into
  * `lastTurnApplause` before calling this, since by now the speaker has
- * already changed. */
+ * already changed. The "difesa-lampo" twist (4.3) forces a hard 30s cap in
+ * place of the room's normal budget, for this round only. */
 export function armTurn(room: Room, now: number): void {
   const interventi = room.phase === 'INTERVENTI';
   const speakerId = defenseTurns.currentSpeakerId(room);
   const speaker = speakerId ? room.players.get(speakerId) : undefined;
+  const defenseMax = room.currentTwist?.id === 'difesa-lampo' ? TWIST_DEFENSE_LAMPO_MS : room.defenseMaxMs;
   room.turnStartedAt = now;
   room.turnReactionTally = {};
   if (speaker && !speaker.isBot && speaker.connected !== false) {
     room.turnMinEndsAt = now + (interventi ? INTERVENTO_MIN_MS : DEFENSE_MIN_MS);
-    room.phaseExpiresAt = now + (interventi ? INTERVENTI_MAX_MS : room.defenseMaxMs);
+    room.phaseExpiresAt = now + (interventi ? INTERVENTI_MAX_MS : defenseMax);
   } else {
     room.turnMinEndsAt = null;
     room.phaseExpiresAt = now + TURN_BOT_MS;
@@ -39,7 +42,11 @@ export function armTurn(room: Room, now: number): void {
  */
 export function selectDefenders(room: Room, rng: () => number): Defender[] {
   const devil = devilAdvocate.isDevilRound(room);
-  const perSide = rulesForGiocatoriCount(countGiocatori(room.players.values())).defendersPerSide;
+  // The "doppio-difensore" twist (4.3) forces pairs regardless of group size.
+  const perSide =
+    room.currentTwist?.id === 'doppio-difensore'
+      ? 2
+      : rulesForGiocatoriCount(countGiocatori(room.players.values())).defendersPerSide;
   const defenders: Defender[] = [];
   for (const side of ['A', 'B'] as const) {
     const pool = [...room.votes.entries()]

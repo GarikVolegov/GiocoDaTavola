@@ -269,6 +269,26 @@ export const MOOD_LABELS: Record<Mood, { nome: string; descr: string }> = {
   profonda: { nome: '🌊 Profonda', descr: 'si va a fondo' },
 };
 
+/** The leader's "caos" dial (4.3): how often a dilemma round draws a surprise
+ * mechanical twist at DEFENSE. Mirror of the server's twists.ts `Caos`. */
+export const CAOS_LEVELS = ['assente', 'basso', 'alto'] as const;
+export type Caos = (typeof CAOS_LEVELS)[number];
+
+/** Setup-screen labels for each caos level. */
+export const CAOS_LABELS: Record<Caos, { nome: string; descr: string }> = {
+  assente: { nome: '😌 Assente', descr: 'partita classica' },
+  basso: { nome: '🎲 Basso', descr: 'qualche sorpresa' },
+  alto: { nome: '🌪️ Alto', descr: 'twist quasi ogni round' },
+};
+
+/** A surprise mechanical twist drawn for a dilemma round (4.3), mirror of the
+ * server's twists.ts `Twist`. */
+export interface Twist {
+  id: 'difesa-lampo' | 'interventi-vietati' | 'doppio-difensore';
+  label: string;
+  description: string;
+}
+
 /** The game's objective, stated to players (persuasion framing). */
 export const OBJECTIVE =
   'Convinci gli altri a passare dalla tua parte… e resta pronto a cambiare idea tu.';
@@ -743,6 +763,13 @@ export interface GameStatePayload {
    */
   absurdConstraint: string | null;
   /**
+   * This round's surprise mechanical twist (4.3), public during DEFENSE/
+   * INTERVENTI; null otherwise, or if this round drew none.
+   */
+  twist: Twist | null;
+  /** The room's caos dial (4.3), chosen at start. */
+  caos: Caos;
+  /**
    * The swing + per-defender attribution, shown only in PHASE_RESULTS; null
    * otherwise. Aggregate counts only — never who voted what.
    */
@@ -1005,7 +1032,8 @@ export type RaiseHandError =
   | 'NOT_IN_ROOM'
   | 'IS_SPEAKER'
   | 'QUEUE_FULL'
-  | 'PUBBLICO_NEVER_DEFENDS';
+  | 'PUBBLICO_NEVER_DEFENDS'
+  | 'INTERVENTI_DISABLED_THIS_ROUND';
 
 export interface PlayerRaiseHandErrorPayload {
   error: RaiseHandError;
@@ -1021,6 +1049,7 @@ export const RAISE_HAND_ERROR_MESSAGES: Record<RaiseHandError, string> = {
   IS_SPEAKER: 'Stai già parlando tu',
   QUEUE_FULL: 'Coda piena — reagisci! 👏',
   PUBBLICO_NEVER_DEFENDS: 'Il Pubblico segue, non interviene 🎟️',
+  INTERVENTI_DISABLED_THIS_ROUND: 'Niente interventi in questo round 🤐',
 };
 
 /** A guesser→target pair, shown publicly during the "Quanto mi conosci" round. */

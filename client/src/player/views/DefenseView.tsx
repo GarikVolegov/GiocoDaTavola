@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { PHASE_LABELS, type DefenseState, type Reaction } from '../../shared/events';
+import { PHASE_LABELS, type DefenseState, type Reaction, type Twist } from '../../shared/events';
 import { formatMSS } from '../../shared/time';
 import ReactionSwarm from '../../shared/ReactionSwarm';
 import ReactionBar from './ReactionBar';
@@ -24,6 +24,7 @@ interface DefenseViewProps {
   dilemma: DefenseDilemma | null | undefined;
   isDevilRound: boolean;
   absurdConstraint: string | null;
+  twist: Twist | null;
   /** 3.1: Pubblico never intervenes — the raise-hand affordance is hidden for them. */
   isPubblico: boolean;
   playerId: string | null;
@@ -48,6 +49,7 @@ export default function DefenseView({
   dilemma,
   isDevilRound,
   absurdConstraint,
+  twist,
   isPubblico,
   playerId,
   handRaised,
@@ -137,12 +139,17 @@ export default function DefenseView({
                   🎭 Vincolo: {absurdConstraint}
                 </p>
               )}
+              {twist && (
+                <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem', color: 'var(--gold)' }}>
+                  {twist.label}: {twist.description}
+                </p>
+              )}
               {d?.spunti && d.spunti.length > 0 && (
-                <div style={{ width: 'min(90vw, 22rem)', textAlign: 'left' }}>
+                <div style={{ width: 'min(90vw, 22rem)', textAlign: 'center' }}>
                   <p style={{ fontSize: '0.9rem', fontWeight: 700, opacity: 0.8, margin: '0 0 0.3rem' }}>
                     Spunti per te:
                   </p>
-                  <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
                     {d.spunti.map((s, i) => (
                       <li key={`${i}-${s}`} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{s}</li>
                     ))}
@@ -177,6 +184,11 @@ export default function DefenseView({
               🎭 Vincolo: {absurdConstraint}
             </p>
           )}
+          {phase === 'DEFENSE' && twist && (
+            <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--gold)' }}>
+              {twist.label}: {twist.description}
+            </p>
+          )}
           <p style={{ fontSize: '1.3rem', margin: 0 }}>
             {phase === 'INTERVENTI' ? (
               <>Interviene <strong>{d?.intervenor?.nickname ?? '…'}</strong> 🙋</>
@@ -199,7 +211,7 @@ export default function DefenseView({
             </>
           )}
 
-          {phase === 'DEFENSE' && d?.speakerId != null && !isPubblico && (
+          {phase === 'DEFENSE' && d?.speakerId != null && !isPubblico && twist?.id !== 'interventi-vietati' && (
             <button
               type="button"
               onClick={onToggleHand}
@@ -218,7 +230,7 @@ export default function DefenseView({
               {handRaised ? '✋ Abbassa la mano' : '✋ Alza la mano'}
             </button>
           )}
-          {phase === 'DEFENSE' && d?.speakerId != null && !isPubblico && (
+          {phase === 'DEFENSE' && d?.speakerId != null && !isPubblico && twist?.id !== 'interventi-vietati' && (
             <p style={{ fontSize: '0.9rem', opacity: 0.7, margin: 0 }}>
               {raiseHandError
                 ? raiseHandError

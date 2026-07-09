@@ -12,6 +12,8 @@ import {
   STORY_GENRE_LABELS,
   MOODS,
   MOOD_LABELS,
+  CAOS_LEVELS,
+  CAOS_LABELS,
   estimatePercorsoDilemmi,
   MIN_PLAYERS_TO_START,
   MIN_INFILTRATO_HUMANS,
@@ -23,6 +25,7 @@ import {
   type TappaCounts,
   type StoriaCatalogItem,
   type Mood,
+  type Caos,
 } from '../../shared/events';
 import { Card, Pill, Button, Alert } from '../../shared/ui';
 
@@ -38,6 +41,8 @@ interface LeaderSetupProps {
   setRegister: Dispatch<SetStateAction<ContentRegister>>;
   mood: Mood;
   setMood: Dispatch<SetStateAction<Mood>>;
+  caos: Caos;
+  setCaos: Dispatch<SetStateAction<Caos>>;
   delicatoOptIn: boolean;
   setDelicatoOptIn: Dispatch<SetStateAction<boolean>>;
   serataLunga: boolean;
@@ -83,6 +88,8 @@ export default function LeaderSetup({
   setRegister,
   mood,
   setMood,
+  caos,
+  setCaos,
   delicatoOptIn,
   setDelicatoOptIn,
   serataLunga,
@@ -231,6 +238,25 @@ export default function LeaderSetup({
               ))}
             </div>
           </div>
+
+          <div style={{ width: '100%' }}>
+            <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Caos (twist a sorpresa)</p>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Caos">
+              {CAOS_LEVELS.map((c) => (
+                <Pill
+                  key={c}
+                  selected={caos === c}
+                  onClick={() => setCaos(c)}
+                  aria-label={`${CAOS_LABELS[c].nome}, ${CAOS_LABELS[c].descr}`}
+                >
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
+                    <span style={{ fontWeight: 700 }}>{CAOS_LABELS[c].nome}</span>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{CAOS_LABELS[c].descr}</span>
+                  </span>
+                </Pill>
+              ))}
+            </div>
+          </div>
         </>
       )}
 
@@ -297,9 +323,9 @@ export default function LeaderSetup({
                   selected={storyId === s.id}
                   onClick={() => setStoryId(s.id)}
                   aria-label={`${s.title}: ${s.hook}`}
-                  style={{ width: '100%', justifyContent: 'flex-start', textAlign: 'left' }}
+                  style={{ width: '100%', justifyContent: 'center', textAlign: 'center' }}
                 >
-                  <span style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', lineHeight: 1.15 }}>
+                  <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem', lineHeight: 1.15 }}>
                     <span style={{ fontWeight: 700 }}>{s.emoji} {s.title}</span>
                     <span style={{ fontSize: '0.78rem', opacity: 0.8 }}>{s.hook}</span>
                     <span style={{ fontSize: '0.72rem', opacity: 0.6 }}>

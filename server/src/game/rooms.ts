@@ -7,6 +7,8 @@ import * as groupMind from './groupMind';
 import type { GroupMindQuestion, GroupMindOutcome } from './groupMind';
 import * as writeRound from './writeRound';
 import type { WritePrompt, PublicWrittenAnswer, WriteRevealAnswer } from './writeRound';
+import * as twists from './twists';
+import type { Twist, Caos } from './twists';
 import * as infiltrato from './infiltrato';
 import * as predictions from './predictions';
 import * as speakerVote from './speakerVote';
@@ -410,6 +412,15 @@ export interface Room {
    * rest of the time. Purely theatrical: never changes debate mechanics.
    */
   absurdConstraint: string | null;
+  /** The leader's "caos" dial (4.3): how often a dilemma round draws a surprise
+   * mechanical twist. Chosen at startGame, defaults to 'basso'. */
+  caos: Caos;
+  /** The 1-based dilemma rounds (classic/percorso, gruppo mode) that draw a
+   * twist at DEFENSE, precomputed at startGame from the caos dial. */
+  twistRoundIndices: Set<number>;
+  /** This round's surprise mechanical twist ("difesa lampo", …) — drawn fresh
+   * on entry to DEFENSE when this round was planned for one; null otherwise. */
+  currentTwist: Twist | null;
   /**
    * DEFENSE's per-turn safety cap in ms (3.3), chosen at startGame — normally
    * DEFENSE_MAX_MS_NORMALE (90s); DEFENSE_MAX_MS_LUNGA (180s) when the leader
@@ -660,7 +671,8 @@ export type RaiseHandError =
   | 'NOT_IN_ROOM'
   | 'IS_SPEAKER'
   | 'QUEUE_FULL'
-  | 'PUBBLICO_NEVER_DEFENDS';
+  | 'PUBBLICO_NEVER_DEFENDS'
+  | 'INTERVENTI_DISABLED_THIS_ROUND';
 export type RaiseHandResult =
   | { ok: true; room: Room; raised: boolean }
   | { ok: false; error: RaiseHandError };
@@ -958,6 +970,9 @@ export class RoomStore {
       confirmedVote2: new Set(),
       defenders: [],
       absurdConstraint: null,
+      caos: 'assente',
+      twistRoundIndices: new Set(),
+      currentTwist: null,
       defenseMaxMs: DEFENSE_MAX_MS_NORMALE,
       defenseTurnIndex: 0,
       defenseArgument: null,
@@ -1048,6 +1063,9 @@ export class RoomStore {
     room.confirmedVote2 = new Set();
     room.defenders = [];
     room.absurdConstraint = null;
+    room.caos = 'assente';
+    room.twistRoundIndices = new Set();
+    room.currentTwist = null;
     room.lateJoiners = new Set();
     room.defenseTurnIndex = 0;
     room.defenseArgument = null;
@@ -1088,6 +1106,7 @@ export class RoomStore {
     mood: string = 'mista',
     delicatoOptIn: boolean = false,
     serataLunga: boolean = false,
+    caos: string = 'assente',
   ): StartGameResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
@@ -1250,6 +1269,11 @@ export class RoomStore {
     room.devilRoundIndex = allowTwists ? devilAdvocate.pickDevilRound(totalRounds, this.rng) : null;
     // …and (longer games only) a "Quanto mi conosci" round, distinct from the devil one.
     room.knowRoundIndex = allowTwists ? knowRound.pickKnowRound(totalRounds, room.devilRoundIndex, this.rng) : null;
+    // …and, per the leader's "caos" dial (4.3), a subset of rounds that draw a
+    // surprise mechanical twist at DEFENSE (difesa lampo, niente interventi, …).
+    room.caos = twists.isCaos(caos) ? caos : 'assente';
+    room.twistRoundIndices = allowTwists ? twists.planTwistRounds(totalRounds, room.caos, this.rng) : new Set();
+    room.currentTwist = null;
     room.stats = new Map();
     room.defenseCounts = new Map();
     room.duelScore = new Map();
@@ -1461,6 +1485,7 @@ export class RoomStore {
       room.turnMinEndsAt = null;
       room.groupMindQuestion = null;
       room.writePrompt = null;
+      room.currentTwist = null;
     }
     // Entering PREDICT in the "Quanto mi conosci" round assigns the guessing ring.
     if (transition.phase === 'PREDICT' && knowRound.isKnowRound(room)) {
@@ -1492,8 +1517,11 @@ export class RoomStore {
       writeRound.castBotWriteVote(room, this.rng);
     }
     // Entering DEFENSE picks the defenders from this round's votes and starts at
-    // the first turn (the per-turn timer was set by expiryFor above).
+    // the first turn (the per-turn timer was set by expiryFor above). The
+    // surprise twist (4.3), if this round was planned for one, is drawn first —
+    // selectDefenders/armTurn below both read room.currentTwist.
     if (transition.phase === 'DEFENSE') {
+      room.currentTwist = twists.isTwistRound(room) ? twists.pickTwist(this.rng) : null;
       room.defenders = defenseSetup.selectDefenders(room, this.rng);
       room.absurdConstraint = absurdConstraints.pickAbsurdConstraint(this.rng);
       room.defenseTurnIndex = 0;
@@ -2074,6 +2102,13 @@ export class RoomStore {
   publicAbsurdConstraint(code: string): string | null {
     const room = this.rooms.get(code);
     return room ? absurdConstraints.publicAbsurdConstraint(room) : null;
+  }
+
+  /** This round's surprise mechanical twist (4.3), public during DEFENSE/
+   * INTERVENTI; null otherwise, or if this round drew none. */
+  publicTwist(code: string): Twist | null {
+    const room = this.rooms.get(code);
+    return room ? twists.publicTwist(room) : null;
   }
 
   /**

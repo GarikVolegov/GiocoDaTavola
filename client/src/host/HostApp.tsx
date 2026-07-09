@@ -404,7 +404,7 @@ export default function HostApp() {
             {[...game.writeReveal]
               .sort((a, b) => b.votes - a.votes)
               .map((a, i) => (
-                <Card key={a.id} glow={i === 0 && a.votes > 0 ? 'accent' : undefined} style={{ padding: 'var(--space-4)', textAlign: 'left' }}>
+                <Card key={a.id} glow={i === 0 && a.votes > 0 ? 'accent' : undefined} style={{ padding: 'var(--space-4)', textAlign: 'center' }}>
                   <p style={{ margin: 0, fontSize: '1.1rem' }}>
                     {i === 0 && a.votes > 0 && '🏆 '}
                     {a.text}
@@ -440,6 +440,11 @@ export default function HostApp() {
               {game.absurdConstraint && (
                 <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--gold)' }}>
                   🎭 Vincolo: {game.absurdConstraint}
+                </p>
+              )}
+              {game.twist && (
+                <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--gold)' }}>
+                  {game.twist.label}: {game.twist.description}
                 </p>
               )}
               {defense.totalTurns > 1 && (

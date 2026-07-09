@@ -19,6 +19,7 @@ import {
   type SessionFormat,
   type ContentRegister,
   type Mood,
+  type Caos,
   type PlayerJoinedPayload,
   type PlayerJoinErrorPayload,
   type LobbyUpdatePayload,
@@ -186,6 +187,7 @@ export default function PlayerApp() {
   const [format, setFormat] = useState<SessionFormat>('classica');
   const [register, setRegister] = useState<ContentRegister>('misto');
   const [mood, setMood] = useState<Mood>('mista');
+  const [caos, setCaos] = useState<Caos>('assente');
   const [delicatoOptIn, setDelicatoOptIn] = useState(false);
   const [serataLunga, setSerataLunga] = useState(false);
   const [gameMode, setGameMode] = useState<GameMode>('gruppo');
@@ -646,6 +648,7 @@ export default function PlayerApp() {
         infiltrato: infiltratoOn,
         squadre: squadreOn,
         serataLunga,
+        caos,
       });
       return;
     }
@@ -658,6 +661,7 @@ export default function PlayerApp() {
       mood,
       delicatoOptIn,
       serataLunga,
+      caos,
     });
   };
   const castAccuse = (accusedId: string) => {
@@ -786,6 +790,7 @@ export default function PlayerApp() {
         isDevilRound={game?.isDevilRound ?? false}
         isPubblico={players.find((p) => p.id === playerId)?.role === 'pubblico'}
         absurdConstraint={game?.absurdConstraint ?? null}
+        twist={game?.twist ?? null}
         playerId={playerId}
         handRaised={handRaised}
         raiseHandError={raiseHandError}
@@ -1064,6 +1069,8 @@ export default function PlayerApp() {
             setRegister={setRegister}
             mood={mood}
             setMood={setMood}
+            caos={caos}
+            setCaos={setCaos}
             delicatoOptIn={delicatoOptIn}
             setDelicatoOptIn={setDelicatoOptIn}
             serataLunga={serataLunga}

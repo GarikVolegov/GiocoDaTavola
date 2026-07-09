@@ -220,6 +220,11 @@ function gameStatePayload(room: Room) {
     // This round's silly performance constraint for the defenders (2.3),
     // public during DEFENSE/INTERVENTI; null otherwise or if none was drawn.
     absurdConstraint: rooms.publicAbsurdConstraint(room.code),
+    // This round's surprise mechanical twist (4.3: difesa lampo, niente
+    // interventi, doppio difensore, …), public during DEFENSE/INTERVENTI;
+    // null otherwise or if none was drawn. The leader's caos dial, for the host.
+    twist: rooms.publicTwist(room.code),
+    caos: room.caos,
     // The swing + per-defender attribution, gated to PHASE_RESULTS (null
     // otherwise). Aggregate counts only — never who voted what.
     swing: rooms.publicSwing(room.code),
@@ -582,7 +587,7 @@ io.on('connection', (socket) => {
 
   // The leader starts the game for their room, choosing the dilemma count.
   // Gated: only the socket whose player is the room leader may start.
-  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string; storyId?: string; mood?: string; delicatoOptIn?: boolean; serataLunga?: boolean }) => {
+  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string; storyId?: string; mood?: string; delicatoOptIn?: boolean; serataLunga?: boolean; caos?: string }) => {
     const code = leaderCodeFor(socket.id);
     if (!code) {
       socket.emit('leader:startError', { error: 'ROOM_NOT_FOUND' });
@@ -610,6 +615,7 @@ io.on('connection', (socket) => {
       String(payload?.mood ?? 'mista'),
       Boolean(payload?.delicatoOptIn),
       Boolean(payload?.serataLunga),
+      String(payload?.caos ?? 'assente'),
     );
     if (!result.ok) {
       socket.emit('leader:startError', { error: result.error });

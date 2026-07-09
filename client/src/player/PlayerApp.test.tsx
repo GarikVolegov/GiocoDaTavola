@@ -352,6 +352,78 @@ describe('PlayerApp', () => {
     expect(screen.queryByText(/vincolo/i)).toBeNull();
   });
 
+  it('shows the surprise twist banner at DEFENSE when this round drew one (4.3)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: {
+          kind: 'defense',
+          speaker: { id: 'p2', nickname: 'Bea', side: 'A' },
+          speakerId: 'p2',
+          turn: 1,
+          totalTurns: 2,
+          argument: null,
+          spunti: null,
+          raisedCount: 0,
+          queue: null,
+          minEndsAt: null,
+          canFinish: true,
+          startedAt: null,
+        },
+        twist: { id: 'difesa-lampo', label: '⚡ Difesa lampo', description: 'Difesa in 30 secondi netti!' },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/difesa lampo/i)).toBeInTheDocument();
+    expect(screen.getByText(/30 secondi netti/i)).toBeInTheDocument();
+  });
+
+  it('hides the raise-hand affordance during an "interventi-vietati" twist round (4.3)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        defense: {
+          kind: 'defense',
+          speaker: { id: 'p2', nickname: 'Bea', side: 'A' },
+          speakerId: 'p2',
+          turn: 1,
+          totalTurns: 2,
+          argument: null,
+          spunti: null,
+          raisedCount: 0,
+          queue: null,
+          minEndsAt: null,
+          canFinish: true,
+          startedAt: null,
+        },
+        twist: { id: 'interventi-vietati', label: '🤐 Niente interventi', description: 'Questo round si difende senza interruzioni.' },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/niente interventi/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /alza la mano/i })).toBeNull();
+  });
+
   it('shows the finish affordance when it is your turn at DEFENSE', () => {
     render(<PlayerApp />);
     act(() => {
@@ -1757,6 +1829,38 @@ describe('PlayerApp', () => {
     expect(emitSpy).toHaveBeenCalledWith(
       'leader:startGame',
       expect.objectContaining({ serataLunga: true }),
+    );
+  });
+
+  it('lets the leader pick a caos level (4.3) and sends it when starting', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+          { id: 'p3', nickname: 'Carlo' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'LOBBY',
+        dilemmaCount: 0,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        leaderId: 'p1',
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /alto.*twist quasi ogni round/i }));
+    fireEvent.click(screen.getByRole('button', { name: /avvia partita/i }));
+    expect(emitSpy).toHaveBeenCalledWith(
+      'leader:startGame',
+      expect.objectContaining({ caos: 'alto' }),
     );
   });
 

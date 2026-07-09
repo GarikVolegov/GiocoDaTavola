@@ -49,6 +49,8 @@ export function raiseHand(room: Room, playerId: string): RaiseHandResult {
   if (room.phase !== 'DEFENSE') return { ok: false, error: 'NOT_RAISE_PHASE' };
   if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
   if (room.players.get(playerId)?.role === 'pubblico') return { ok: false, error: 'PUBBLICO_NEVER_DEFENDS' };
+  // "interventi-vietati" twist (4.3): this round defends straight through, no interruptions.
+  if (room.currentTwist?.id === 'interventi-vietati') return { ok: false, error: 'INTERVENTI_DISABLED_THIS_ROUND' };
   if (currentSpeakerId(room) === playerId) return { ok: false, error: 'IS_SPEAKER' };
   const i = room.raisedHands.indexOf(playerId);
   if (i >= 0) {
