@@ -16,6 +16,7 @@ import * as botVotes from './botVotes';
 import * as defenseSetup from './defenseSetup';
 import * as dilemmaPlan from './dilemmaPlan';
 import * as absurdConstraints from './absurdConstraints';
+import { countGiocatori, rulesForGiocatoriCount } from './ruleset';
 import {
   type GamePhase,
   PHASE_DURATIONS_MS,
@@ -80,8 +81,9 @@ const CODE_LENGTH = 4;
  * Beyond this, new joiners get the 'pubblico' role (3.1) — same QR, same
  * vote/react/bet/speaker-vote, but never selected to defend. Keeps the
  * on-stage cast small while the room itself scales much further.
+ * Canonical home is ruleset.ts (3.6); re-exported here for backward compat.
  */
-export const MAX_GIOCATORI = 8;
+export { MAX_GIOCATORI } from './ruleset';
 
 /** Max players allowed in a single room overall (giocatori + pubblico). */
 export const MAX_PLAYERS = 24;
@@ -116,8 +118,9 @@ function promoteLateJoiners(room: Room): void {
     for (const id of room.lateJoiners) {
       const player = room.players.get(id);
       if (!player) continue;
-      const giocatoriCount = [...room.players.values()].filter((p) => p.role !== 'pubblico').length;
-      if (giocatoriCount < MAX_GIOCATORI) delete player.role;
+      if (!rulesForGiocatoriCount(countGiocatori(room.players.values())).isPubblicoCapped) {
+        delete player.role;
+      }
     }
   }
   room.lateJoiners.clear();
@@ -2090,11 +2093,9 @@ export class RoomStore {
     } else {
       // Beyond MAX_GIOCATORI, new joiners get the 'pubblico' role (3.1): same
       // QR, same vote/react/bet/speaker-vote, but never picked as a defender.
-      const giocatoriCount = [...room.players.values()].filter((p) => p.role !== 'pubblico').length;
-      player =
-        giocatoriCount >= MAX_GIOCATORI
-          ? { id: playerId, nickname: name, role: 'pubblico' }
-          : { id: playerId, nickname: name };
+      player = rulesForGiocatoriCount(countGiocatori(room.players.values())).isPubblicoCapped
+        ? { id: playerId, nickname: name, role: 'pubblico' }
+        : { id: playerId, nickname: name };
     }
     room.players.set(playerId, player);
     return { ok: true, player };

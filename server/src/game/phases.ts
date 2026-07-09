@@ -3,6 +3,11 @@
 // from rooms.ts so the (stateless, heavily-tested) state machine lives on its
 // own; RoomStore imports from here and re-exports for backward compatibility.
 
+// DEFENSE_COPPIE_THRESHOLD's canonical home is ruleset.ts (3.6, the N-dependent
+// rules module) — re-exported here since it's conceptually a phase-timing knob
+// and defenseSetup.ts already imports its phase constants from this file.
+export { DEFENSE_COPPIE_THRESHOLD } from './ruleset';
+
 /**
  * Phases of a game. The state machine runs:
  *   LOBBY -> PHASE_INTRO -> DILEMMA_REVEAL -> VOTE_1 -> SPLIT_REVEAL ->
@@ -62,12 +67,6 @@ export const INTERVENTO_MIN_MS = 15_000;
 export const DEFENSE_MAX_MS_NORMALE = 90_000;
 export const DEFENSE_MAX_MS_LUNGA = 180_000;
 
-/**
- * At or above this many giocatori, DEFENSE picks TWO defenders per side
- * ("a coppie", 3.3) instead of one — more of the room gets stage time as the
- * group scales up, still bounded (never more than a small constant).
- */
-export const DEFENSE_COPPIE_THRESHOLD = 7;
 export const INTERVENTI_MAX_MS = 90_000;
 export const TURN_BOT_MS = 20_000;
 

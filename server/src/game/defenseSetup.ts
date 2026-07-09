@@ -2,13 +2,8 @@
 // turn timer, and the bot defender's templated argument. Operates on a Room with
 // injected rng/now. Type-only import from rooms.ts keeps it cycle-free.
 import type { Room, Defender, VoteChoice } from './rooms';
-import {
-  DEFENSE_MIN_MS,
-  INTERVENTO_MIN_MS,
-  INTERVENTI_MAX_MS,
-  TURN_BOT_MS,
-  DEFENSE_COPPIE_THRESHOLD,
-} from './phases';
+import { DEFENSE_MIN_MS, INTERVENTO_MIN_MS, INTERVENTI_MAX_MS, TURN_BOT_MS } from './phases';
+import { countGiocatori, rulesForGiocatoriCount } from './ruleset';
 import { botDefenseArgument } from './botDefense';
 import * as devilAdvocate from './devilAdvocate';
 import * as defenseTurns from './defenseTurns';
@@ -44,8 +39,7 @@ export function armTurn(room: Room, now: number): void {
  */
 export function selectDefenders(room: Room, rng: () => number): Defender[] {
   const devil = devilAdvocate.isDevilRound(room);
-  const giocatoriCount = [...room.players.values()].filter((p) => p.role !== 'pubblico').length;
-  const perSide = giocatoriCount >= DEFENSE_COPPIE_THRESHOLD ? 2 : 1;
+  const perSide = rulesForGiocatoriCount(countGiocatori(room.players.values())).defendersPerSide;
   const defenders: Defender[] = [];
   for (const side of ['A', 'B'] as const) {
     const pool = [...room.votes.entries()]
