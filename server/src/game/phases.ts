@@ -35,6 +35,16 @@ export type GamePhase =
   // per-mode sequences below (mirrors how ACCUSE is inserted for the group loop).
   | 'GROUP_MIND'
   | 'GROUP_MIND_REVEAL'
+  // "In Altre Parole" (4.2): the write+vote breather — alternates with
+  // GROUP_MIND at the same 2-dilemma checkpoints (classic format only).
+  // Everyone writes a short answer to the same prompt (WRITE, self-paced);
+  // then votes anonymously for their favorite among the others' answers
+  // (WRITE_VOTE, self-paced); WRITE_REVEAL shows each answer with its author
+  // + vote count. Inserted the same way as GROUP_MIND, not in the pure
+  // per-mode sequences below.
+  | 'WRITE'
+  | 'WRITE_VOTE'
+  | 'WRITE_REVEAL'
   // "Percorso" mode: the chapter card shown entering a new tappa, and the
   // end-of-tappa recap/pause (handled by nextPercorsoPhase, not nextPhase).
   | 'TAPPA_INTRO'
@@ -121,6 +131,11 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   // the leader skips); GROUP_MIND_REVEAL is a short fixed beat, like PHASE_RESULTS.
   GROUP_MIND: null,
   GROUP_MIND_REVEAL: 8_000,
+  // WRITE/WRITE_VOTE are self-paced (end once everyone's done, or the leader
+  // skips, with the usual soft-timeout backstop); WRITE_REVEAL is a fixed beat.
+  WRITE: null,
+  WRITE_VOTE: null,
+  WRITE_REVEAL: 10_000,
   // Percorso: the chapter card auto-advances; the end-of-tappa recap has no timer
   // so it doubles as a break — the host resumes with "Continua ▶" when ready.
   TAPPA_INTRO: 8_000,

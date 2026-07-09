@@ -375,6 +375,48 @@ export default function HostApp() {
           </>
         )}
 
+        {phase === 'WRITE' && game.writePrompt && (
+          <>
+            <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
+              {game.writePrompt.text}
+            </p>
+            <p style={{ fontSize: '1.1rem', margin: 0, opacity: 0.85 }}>
+              Scrivete dal telefono ·{' '}
+              {game.writeProgress ? `${game.writeProgress.done}/${game.writeProgress.total}` : ''}
+            </p>
+          </>
+        )}
+
+        {phase === 'WRITE_VOTE' && game.writePrompt && (
+          <>
+            <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
+              {game.writePrompt.text}
+            </p>
+            <p style={{ fontSize: '1.1rem', margin: 0, opacity: 0.85 }}>
+              Votate la vostra preferita dal telefono ·{' '}
+              {game.writeVoteProgress ? `${game.writeVoteProgress.done}/${game.writeVoteProgress.total}` : ''}
+            </p>
+          </>
+        )}
+
+        {phase === 'WRITE_REVEAL' && game.writeReveal && game.writeReveal.length > 0 && (
+          <CardGrid>
+            {[...game.writeReveal]
+              .sort((a, b) => b.votes - a.votes)
+              .map((a, i) => (
+                <Card key={a.id} glow={i === 0 && a.votes > 0 ? 'accent' : undefined} style={{ padding: 'var(--space-4)', textAlign: 'left' }}>
+                  <p style={{ margin: 0, fontSize: '1.1rem' }}>
+                    {i === 0 && a.votes > 0 && '🏆 '}
+                    {a.text}
+                  </p>
+                  <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
+                    {a.authorNickname} · {a.votes} {a.votes === 1 ? 'voto' : 'voti'}
+                  </p>
+                </Card>
+              ))}
+          </CardGrid>
+        )}
+
         {(phase === 'DEFENSE' || phase === 'INTERVENTI') && lastTurnApplause && (
           <p style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0, opacity: 0.9 }}>
             {lastTurnApplause.nickname}:{' '}
@@ -436,7 +478,7 @@ export default function HostApp() {
                 </p>
               )}
               {defense.spunti && defense.spunti.length > 0 && (
-                <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+                <ul style={{ margin: '0.5rem 0 0', padding: 0, listStyle: 'none', textAlign: 'center', display: 'inline-flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
                   {defense.spunti.map((s, i) => (
                     <li key={`${i}-${s}`} style={{ fontSize: '1.1rem', opacity: 0.85 }}>{s}</li>
                   ))}
@@ -459,7 +501,7 @@ export default function HostApp() {
               Interviene <span style={{ color: 'var(--gold)' }}>{defense.intervenor?.nickname ?? '…'}</span> 🙋
             </p>
             {defense.queue && defense.queue.length > 0 && (
-              <ol style={{ margin: 0, paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+              <ol style={{ margin: 0, padding: 0, listStylePosition: 'inside', textAlign: 'center', display: 'inline-flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
                 {defense.queue.map((q) => (
                   <li
                     key={q.id}

@@ -185,6 +185,16 @@ function gameStatePayload(room: Room) {
     groupMindQuestion: room.groupMindQuestion,
     groupMindProgress: rooms.groupMindProgress(room.code),
     groupMindTally: rooms.publicGroupMindTally(room.code),
+    // "In Altre Parole" (4.2): the current prompt (WRITE/WRITE_VOTE/WRITE_REVEAL,
+    // null otherwise), who's still missing their answer/vote, the anonymized
+    // answer list (gated to WRITE_VOTE — own text stays known only to the
+    // author who wrote it), and the authored reveal (gated to WRITE_REVEAL).
+    // Individual ballots never leave the server — aggregate vote counts only.
+    writePrompt: room.writePrompt,
+    writeProgress: rooms.writeProgress(room.code),
+    writtenAnswers: rooms.publicWrittenAnswers(room.code),
+    writeVoteProgress: rooms.writeVoteProgress(room.code),
+    writeReveal: rooms.writeRevealResults(room.code),
     // "L'Infiltrato": how many have accused (ACCUSE) + the FINAL_AWARDS reveal.
     accusedCount: room.accusations.size,
     infiltratoResult: rooms.publicInfiltratoResult(room.code),
@@ -845,6 +855,48 @@ io.on('connection', (socket) => {
     } else {
       if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code); // refresh the missing-submitters list for the host
+    }
+  });
+
+  // A player submits (or changes) their own written answer during WRITE
+  // ("In Altre Parole", 4.2). Ends early once every present human has written;
+  // the answers stay attributed-but-hidden until the anonymized WRITE_VOTE list.
+  socket.on('player:write', (payload: { text?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.submitWrite(code, playerId, String(payload?.text ?? ''));
+    if (!result.ok) {
+      socket.emit('player:writeError', { error: result.error });
+      return;
+    }
+    socket.emit('player:writeSubmitted', { text: result.room.writeAnswers.get(playerId) });
+    if (rooms.writePhaseComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
+      broadcastGameState(code); // refresh the missing-writers list for the host
+    }
+  });
+
+  // A player votes for their favorite OTHER answer during WRITE_VOTE. Ends early
+  // once every present human (with a valid target) has voted; only the aggregate
+  // vote counts are ever revealed (at WRITE_REVEAL) — never who voted for what.
+  socket.on('player:writeVote', (payload: { votedForId?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.writeVote(code, playerId, String(payload?.votedForId ?? ''));
+    if (!result.ok) {
+      socket.emit('player:writeVoteError', { error: result.error });
+      return;
+    }
+    socket.emit('player:writeVoted', { votedForId: result.room.writeVotes.get(playerId) });
+    if (rooms.writeVotePhaseComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
+      broadcastGameState(code); // refresh the missing-voters list for the host
     }
   });
 

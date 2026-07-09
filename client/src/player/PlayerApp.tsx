@@ -43,6 +43,8 @@ import {
   type PlayerKnowGuessResultPayload,
   type PlayerGroupMindSubmittedPayload,
   type PlayerGroupMindResultPayload,
+  type PlayerWriteSubmittedPayload,
+  type PlayerWriteVotedPayload,
   type PlayerInfiltratoRolePayload,
   type PlayerAccusedPayload,
   type MyProfile,
@@ -62,6 +64,8 @@ import AccuseView from './views/AccuseView';
 import DefenseView from './views/DefenseView';
 import PredictView from './views/PredictView';
 import GroupMindView from './views/GroupMindView';
+import WriteView from './views/WriteView';
+import WriteVoteView from './views/WriteVoteView';
 import DuelArgueView from './views/DuelArgueView';
 import StatusView from './views/StatusView';
 import LeaveGameMenu from './LeaveGameMenu';
@@ -157,6 +161,9 @@ export default function PlayerApp() {
   const [groupMindAnswer, setGroupMindAnswer] = useState<VoteChoice | null>(null);
   const [groupMindGuess, setGroupMindGuess] = useState<VoteChoice | null>(null);
   const [groupMindResult, setGroupMindResult] = useState<PlayerGroupMindResultPayload | null>(null);
+  const [writeText, setWriteText] = useState('');
+  const [writeSubmitted, setWriteSubmitted] = useState<string | null>(null);
+  const [writeVotedForId, setWriteVotedForId] = useState<string | null>(null);
   const [infiltratoRole, setInfiltratoRole] = useState<PlayerInfiltratoRolePayload | null>(null);
   const [myAccusation, setMyAccusation] = useState<string | null>(null);
   const [speakerVote, setSpeakerVote] = useState<string | null>(null);
@@ -256,6 +263,8 @@ export default function PlayerApp() {
       setGroupMindGuess(guess);
     };
     const onGroupMindResult = (payload: PlayerGroupMindResultPayload) => setGroupMindResult(payload);
+    const onWriteSubmitted = ({ text }: PlayerWriteSubmittedPayload) => setWriteSubmitted(text);
+    const onWriteVoted = ({ votedForId }: PlayerWriteVotedPayload) => setWriteVotedForId(votedForId);
     const onInfiltratoRole = (payload: PlayerInfiltratoRolePayload) => setInfiltratoRole(payload);
     const onAccused = ({ accusedId }: PlayerAccusedPayload) => setMyAccusation(accusedId);
     const onSpeakerVoted = ({ defenderId }: PlayerSpeakerVotedPayload) => setSpeakerVote(defenderId);
@@ -282,6 +291,8 @@ export default function PlayerApp() {
     socket.on(SocketEvents.PlayerKnowGuessResult, onKnowGuessResult);
     socket.on(SocketEvents.PlayerGroupMindSubmitted, onGroupMindSubmitted);
     socket.on(SocketEvents.PlayerGroupMindResult, onGroupMindResult);
+    socket.on(SocketEvents.PlayerWriteSubmitted, onWriteSubmitted);
+    socket.on(SocketEvents.PlayerWriteVoted, onWriteVoted);
     socket.on(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
     socket.on(SocketEvents.PlayerAccused, onAccused);
     socket.on(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
@@ -334,6 +345,8 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerKnowGuessResult, onKnowGuessResult);
       socket.off(SocketEvents.PlayerGroupMindSubmitted, onGroupMindSubmitted);
       socket.off(SocketEvents.PlayerGroupMindResult, onGroupMindResult);
+      socket.off(SocketEvents.PlayerWriteSubmitted, onWriteSubmitted);
+      socket.off(SocketEvents.PlayerWriteVoted, onWriteVoted);
       socket.off(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
       socket.off(SocketEvents.PlayerAccused, onAccused);
       socket.off(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
@@ -392,6 +405,9 @@ export default function PlayerApp() {
     setGroupMindAnswer(null);
     setGroupMindGuess(null);
     setGroupMindResult(null);
+    setWriteText('');
+    setWriteSubmitted(null);
+    setWriteVotedForId(null);
   }, [game?.dilemmaIndex]);
 
   // When the phone's user is logged in, send the Clerk token so the server can
@@ -504,6 +520,19 @@ export default function PlayerApp() {
     setGroupMindGuess(choice);
     buzz(25);
     if (groupMindAnswer) getSocket().emit(SocketEvents.PlayerGroupMind, { answer: groupMindAnswer, guess: choice });
+  };
+
+  const submitWrite = () => {
+    const text = writeText.trim();
+    if (!text) return;
+    buzz(25);
+    getSocket().emit(SocketEvents.PlayerWrite, { text });
+  };
+
+  const castWriteVote = (votedForId: string) => {
+    setWriteVotedForId(votedForId); // optimistic; confirmed via player:writeVoted
+    buzz(25);
+    getSocket().emit(SocketEvents.PlayerWriteVote, { votedForId });
   };
 
   const castSpeakerVote = (defenderId: string) => {
@@ -682,7 +711,9 @@ export default function PlayerApp() {
     p === 'SPEAKER_VOTE' ||
     p === 'DUEL_PICK' ||
     p === 'DUEL_REPICK' ||
-    p === 'GROUP_MIND';
+    p === 'GROUP_MIND' ||
+    p === 'WRITE' ||
+    p === 'WRITE_VOTE';
 
   // The leader's "skip the rest of this phase" button — only shown to the leader
   // during a phase that has a countdown. Rendered in each in-game branch.
@@ -833,6 +864,39 @@ export default function PlayerApp() {
         onAnswer={castGroupMindAnswer}
         onGuess={castGroupMindGuess}
         progress={game?.groupMindProgress ?? null}
+        skipButton={skipButton}
+      />
+    );
+  }
+
+  if (joinedCode && phase === 'WRITE') {
+    return withLeaveMenu(
+      <WriteView
+        prompt={game?.writePrompt ?? null}
+        remaining={remaining}
+        text={writeText}
+        submitted={writeSubmitted}
+        onTextChange={setWriteText}
+        onSubmit={submitWrite}
+        progress={game?.writeProgress ?? null}
+        skipButton={skipButton}
+      />
+    );
+  }
+
+  if (joinedCode && phase === 'WRITE_VOTE') {
+    // The server broadcasts the full anonymized list; hide our own entry so we
+    // can never vote for ourselves (the standard party-game UX).
+    const otherAnswers = (game?.writtenAnswers ?? []).filter((a) => a.id !== playerId);
+    return withLeaveMenu(
+      <WriteVoteView
+        prompt={game?.writePrompt ?? null}
+        remaining={remaining}
+        answers={otherAnswers}
+        votedForId={writeVotedForId}
+        onVote={castWriteVote}
+        progress={game?.writeVoteProgress ?? null}
+        skipButton={skipButton}
       />
     );
   }
@@ -916,6 +980,7 @@ export default function PlayerApp() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: 'var(--space-2)',
                   padding: '0.5rem 0.9rem',
                   borderRadius: 'var(--radius-md)',
@@ -962,11 +1027,11 @@ export default function PlayerApp() {
             display: 'flex',
             flexDirection: 'column',
             gap: 'var(--space-2)',
-            textAlign: 'left',
+            textAlign: 'center',
           }}
         >
           <h3 style={{ margin: 0, fontSize: '1.05rem' }}>Come funziona</h3>
-          <ol style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+          <ol style={{ margin: 0, padding: 0, listStylePosition: 'inside', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
             {HOW_TO_PLAY.map((step) => (
               <li key={step} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{step}</li>
             ))}

@@ -5,6 +5,8 @@ import { Deck, dilemmasForRegister, loadDilemmas, filterByMood, type Dilemma, ty
 import * as knowRound from './knowRound';
 import * as groupMind from './groupMind';
 import type { GroupMindQuestion, GroupMindOutcome } from './groupMind';
+import * as writeRound from './writeRound';
+import type { WritePrompt, PublicWrittenAnswer, WriteRevealAnswer } from './writeRound';
 import * as infiltrato from './infiltrato';
 import * as predictions from './predictions';
 import * as speakerVote from './speakerVote';
@@ -354,6 +356,16 @@ export interface Room {
   groupMindAnswers: Map<string, VoteChoice>;
   /** Each player's secret guess of the room's majority answer. */
   groupMindGuesses: Map<string, VoteChoice>;
+  /** "In Altre Parole" (4.2): the current breather round's prompt; null outside WRITE/WRITE_VOTE/WRITE_REVEAL. */
+  writePrompt: WritePrompt | null;
+  /** Ids of write prompts already asked this game (no repeats). */
+  usedWritePromptIds: Set<string>;
+  /** Each player's own written answer this round, keyed by player id. */
+  writeAnswers: Map<string, string>;
+  /** This round's frozen shuffled voting order (player ids), set on WRITE_VOTE entry. */
+  writeOrder: string[];
+  /** Each voter's secret pick of their favorite OTHER answer (voter id -> the answer's author id). */
+  writeVotes: Map<string, string>;
   /** "L'Infiltrato": the secret infiltrator's player id, or null when not enabled. */
   infiltratorId: string | null;
   /** Rounds the infiltrator overturned the group (minority → majority). */
@@ -931,6 +943,11 @@ export class RoomStore {
       usedGroupMindIds: new Set(),
       groupMindAnswers: new Map(),
       groupMindGuesses: new Map(),
+      writePrompt: null,
+      usedWritePromptIds: new Set(),
+      writeAnswers: new Map(),
+      writeOrder: [],
+      writeVotes: new Map(),
       infiltratorId: null,
       infiltratorFlips: 0,
       accusations: new Map(),
@@ -1016,6 +1033,11 @@ export class RoomStore {
     room.usedGroupMindIds = new Set();
     room.groupMindAnswers = new Map();
     room.groupMindGuesses = new Map();
+    room.writePrompt = null;
+    room.usedWritePromptIds = new Set();
+    room.writeAnswers = new Map();
+    room.writeOrder = [];
+    room.writeVotes = new Map();
     room.infiltratorId = null;
     room.infiltratorFlips = 0;
     room.accusations = new Map();
@@ -1318,17 +1340,27 @@ export class RoomStore {
 
     // Percorso threads the same per-dilemma sequence through chapter cards/recaps;
     // storia wraps each bivio in narrative cards; classic uses the flat loop, with
-    // a "La Mente del Gruppo" breather (4.1) detouring in every 2nd dilemma —
-    // handled here (not inside the pure nextPhase) so its existing unit tests
-    // stay untouched, mirroring how ACCUSE is inserted below rather than in the
+    // an all-active breather round detouring in every 2nd dilemma (4.1/4.2) —
+    // alternating "La Mente del Gruppo" and "In Altre Parole" so the SAME
+    // checkpoint cadence doesn't double the number of inserted rounds. Handled
+    // here (not inside the pure nextPhase) so its existing unit tests stay
+    // untouched, mirroring how ACCUSE is inserted below rather than in the
     // pure sequence functions.
     const step = (phase: GamePhase, idx: number): PhaseTransition => {
       if (room.format === 'classic') {
         if (phase === 'PHASE_RESULTS' && groupMind.isGroupMindCheckpoint(idx, room.dilemmaCount ?? 0)) {
-          return { phase: 'GROUP_MIND', dilemmaIndex: idx };
+          // Checkpoints land at idx=2,4,6,…; occurrence = idx/2 = 1,2,3,…
+          // Odd occurrences -> La Mente del Gruppo, even -> In Altre Parole.
+          const occurrence = idx / 2;
+          return occurrence % 2 === 1
+            ? { phase: 'GROUP_MIND', dilemmaIndex: idx }
+            : { phase: 'WRITE', dilemmaIndex: idx };
         }
         if (phase === 'GROUP_MIND') return { phase: 'GROUP_MIND_REVEAL', dilemmaIndex: idx };
         if (phase === 'GROUP_MIND_REVEAL') return nextPhase('PHASE_RESULTS', idx, room.dilemmaCount ?? 0);
+        if (phase === 'WRITE') return { phase: 'WRITE_VOTE', dilemmaIndex: idx };
+        if (phase === 'WRITE_VOTE') return { phase: 'WRITE_REVEAL', dilemmaIndex: idx };
+        if (phase === 'WRITE_REVEAL') return nextPhase('PHASE_RESULTS', idx, room.dilemmaCount ?? 0);
       }
       return room.format === 'percorso'
         ? nextPercorsoPhase(phase, idx, room.plannedTappe)
@@ -1341,6 +1373,7 @@ export class RoomStore {
     // result. A no-op once everyone has already acted (the normal early-advance path).
     if (room.phase === 'PREDICT') predictions.applyPredictDefaults(room);
     if (room.phase === 'GROUP_MIND') groupMind.applyGroupMindDefaults(room);
+    if (room.phase === 'WRITE') writeRound.applyWriteDefaults(room);
     let transition = step(room.phase, room.dilemmaIndex);
     // The peer "best speaker" vote needs at least two defenders to choose between;
     // with 0 or 1 it's degenerate, so skip straight to the results.
@@ -1427,6 +1460,7 @@ export class RoomStore {
       room.interventiIndex = 0;
       room.turnMinEndsAt = null;
       room.groupMindQuestion = null;
+      room.writePrompt = null;
     }
     // Entering PREDICT in the "Quanto mi conosci" round assigns the guessing ring.
     if (transition.phase === 'PREDICT' && knowRound.isKnowRound(room)) {
@@ -1440,6 +1474,22 @@ export class RoomStore {
       room.groupMindAnswers = new Map();
       room.groupMindGuesses = new Map();
       groupMind.castBotGroupMind(room, this.rng);
+    }
+    // Entering WRITE (4.2): draw a fresh prompt, reset this round's answers,
+    // and have bots write immediately so they never block it.
+    if (transition.phase === 'WRITE') {
+      room.writePrompt = writeRound.pickWritePrompt(room.usedWritePromptIds, this.rng);
+      if (room.writePrompt) room.usedWritePromptIds.add(room.writePrompt.id);
+      room.writeAnswers = new Map();
+      room.writeOrder = [];
+      room.writeVotes = new Map();
+      writeRound.castBotWrite(room, this.rng);
+    }
+    // Entering WRITE_VOTE: freeze the anonymized shuffled order, then bots vote.
+    if (transition.phase === 'WRITE_VOTE') {
+      writeRound.freezeWriteOrder(room, this.rng);
+      room.writeVotes = new Map();
+      writeRound.castBotWriteVote(room, this.rng);
     }
     // Entering DEFENSE picks the defenders from this round's votes and starts at
     // the first turn (the per-turn timer was set by expiryFor above).
@@ -1521,6 +1571,16 @@ export class RoomStore {
       const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
       total = humans.length;
       acted = humans.filter((p) => room.groupMindAnswers.has(p.id) && room.groupMindGuesses.has(p.id)).length;
+    } else if (room.phase === 'WRITE') {
+      const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+      total = humans.length;
+      acted = humans.filter((p) => room.writeAnswers.has(p.id)).length;
+    } else if (room.phase === 'WRITE_VOTE') {
+      const humans = [...room.players.values()].filter(
+        (p) => !p.isBot && p.connected !== false && room.writeOrder.filter((id) => id !== p.id).length > 0,
+      );
+      total = humans.length;
+      acted = humans.filter((p) => room.writeVotes.has(p.id)).length;
     } else {
       return false;
     }
@@ -1688,6 +1748,56 @@ export class RoomStore {
   groupMindResults(code: string): GroupMindOutcome[] {
     const room = this.rooms.get(code);
     return room ? groupMind.groupMindResults(room) : [];
+  }
+
+  /** Record (or change) a player's own written answer during WRITE ("In Altre Parole", 4.2). */
+  submitWrite(code: string, playerId: string, text: string): writeRound.WriteSubmitResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    return writeRound.submitWrite(room, playerId, text);
+  }
+
+  /** Single source of truth for "has everyone finished WRITE?" (ends it early). */
+  writePhaseComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? writeRound.writePhaseComplete(room) : false;
+  }
+
+  /** How many connected humans have written and who's still missing it, by nickname. Null outside WRITE. */
+  writeProgress(code: string): { done: number; total: number; missingNicknames: string[] } | null {
+    const room = this.rooms.get(code);
+    return room ? writeRound.writeProgress(room) : null;
+  }
+
+  /** The anonymized answer list (same for everyone), gated to WRITE_VOTE. */
+  publicWrittenAnswers(code: string): PublicWrittenAnswer[] | null {
+    const room = this.rooms.get(code);
+    return room ? writeRound.publicWrittenAnswers(room) : null;
+  }
+
+  /** Record (or change) a player's secret vote for their favorite OTHER answer during WRITE_VOTE. */
+  writeVote(code: string, voterId: string, votedForId: string): writeRound.WriteVoteResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    return writeRound.writeVote(room, voterId, votedForId);
+  }
+
+  /** Single source of truth for "has everyone finished WRITE_VOTE?" (ends it early). */
+  writeVotePhaseComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? writeRound.writeVotePhaseComplete(room) : false;
+  }
+
+  /** How many connected humans have voted and who's still missing it, by nickname. Null outside WRITE_VOTE. */
+  writeVoteProgress(code: string): { done: number; total: number; missingNicknames: string[] } | null {
+    const room = this.rooms.get(code);
+    return room ? writeRound.writeVoteProgress(room) : null;
+  }
+
+  /** Each answer with its author + vote count, gated to WRITE_REVEAL. */
+  writeRevealResults(code: string): WriteRevealAnswer[] | null {
+    const room = this.rooms.get(code);
+    return room ? writeRound.writeRevealResults(room) : null;
   }
 
   /** A fresh shuffled copy of `arr` using the injectable rng (Fisher–Yates). */

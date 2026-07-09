@@ -136,7 +136,7 @@ export default function StatusView({
             <p style={{ fontSize: '2.6rem', margin: 0 }}>{game.storia.emoji}</p>
             <p style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0 }}>{game.storia.title}</p>
             <p style={{ fontSize: '0.9rem', opacity: 0.85, margin: 0 }}>con {game.storia.protagonist}</p>
-            <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'left' }}>
+            <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'center' }}>
               {game.storia.premessa}
             </p>
             {narratorAdvance('Comincia ▶')}
@@ -157,7 +157,7 @@ export default function StatusView({
               Scena {game.storia.sceneIndex + 1} di {game.storia.totalScenes}
             </p>
             {game.storia.sceneNarration && (
-              <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'left' }}>
+              <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'center' }}>
                 {game.storia.sceneNarration}
               </p>
             )}
@@ -176,7 +176,7 @@ export default function StatusView({
               </p>
             )}
             {game.storia.consequence && (
-              <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'left' }}>
+              <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'center' }}>
                 {game.storia.consequence}
               </p>
             )}
@@ -192,7 +192,7 @@ export default function StatusView({
             <p style={{ fontSize: '2.2rem', margin: 0 }}>🌅</p>
             <p style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>Epilogo</p>
             {game.storia.epilogo && (
-              <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'left' }}>
+              <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'center' }}>
                 {game.storia.epilogo}
               </p>
             )}
@@ -303,6 +303,33 @@ export default function StatusView({
             </p>
           )}
         </>
+      ) : phase === 'WRITE_REVEAL' ? (
+        <>
+          {game?.writePrompt && (
+            <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>{game.writePrompt.text}</p>
+          )}
+          {game?.writeReveal && game.writeReveal.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', width: 'min(90vw, 24rem)' }}>
+              {[...game.writeReveal]
+                .sort((a, b) => b.votes - a.votes)
+                .map((a, i) => (
+                  <Card
+                    key={a.id}
+                    glow={i === 0 && a.votes > 0 ? 'accent' : undefined}
+                    style={{ padding: 'var(--space-3)', textAlign: 'left' }}
+                  >
+                    <p style={{ margin: 0, fontSize: '1rem' }}>
+                      {i === 0 && a.votes > 0 && '🏆 '}
+                      {a.text}
+                    </p>
+                    <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.7 }}>
+                      {a.authorNickname} · {a.votes} {a.votes === 1 ? 'voto' : 'voti'}
+                    </p>
+                  </Card>
+                ))}
+            </div>
+          )}
+        </>
       ) : phase === 'FINAL_AWARDS' ? (
         <>
           {game?.teams && (
@@ -373,7 +400,7 @@ export default function StatusView({
           {blindSpot && (
             <Card
               glow="accent"
-              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'left' }}
+              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
             >
               <h3 style={{ margin: 0, fontSize: '1.05rem' }}>🔭 Il tuo punto cieco</h3>
               <p style={{ margin: 0, fontWeight: 700 }}>{blindSpot.title}</p>

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { PHASE_LABELS, type GroupMindQuestion, type VoteChoice } from '../../shared/events';
 import { VoteOption } from '../../shared/ui';
 import { wrap, formatWaitingList } from './layout';
@@ -10,6 +11,7 @@ interface GroupMindViewProps {
   onAnswer: (choice: VoteChoice) => void;
   onGuess: (choice: VoteChoice) => void;
   progress: { done: number; total: number; missingNicknames: string[] } | null;
+  skipButton: ReactNode;
 }
 
 // The phone's GROUP_MIND screen ("La Mente del Gruppo", 4.1): everyone answers
@@ -24,6 +26,7 @@ export default function GroupMindView({
   onAnswer,
   onGuess,
   progress,
+  skipButton,
 }: GroupMindViewProps) {
   return (
     <main style={wrap}>
@@ -53,6 +56,7 @@ export default function GroupMindView({
             label={question ? (letter === 'A' ? question.optionA : question.optionB) : letter}
             selected={answer === letter}
             onClick={() => onAnswer(letter)}
+            centered
           />
         ))}
       </div>
@@ -70,6 +74,7 @@ export default function GroupMindView({
             label={question ? (letter === 'A' ? question.optionA : question.optionB) : letter}
             selected={guess === letter}
             onClick={() => onGuess(letter)}
+            centered
           />
         ))}
       </div>
@@ -85,6 +90,7 @@ export default function GroupMindView({
             ? `Hanno risposto ${progress.done}/${progress.total}`
             : null}
       </p>
+      {skipButton}
     </main>
   );
 }

@@ -76,6 +76,18 @@ export const SocketEvents = {
   PlayerGroupMindError: 'player:groupMindError',
   /** Server privately tells a player whether their majority guess was right (at GROUP_MIND_REVEAL). */
   PlayerGroupMindResult: 'player:groupMindResult',
+  /** Player submits their own written answer to the round's prompt (WRITE, 4.2). */
+  PlayerWrite: 'player:write',
+  /** Server confirms the player's current answer back to them only. */
+  PlayerWriteSubmitted: 'player:writeSubmitted',
+  /** Server rejects the answer (wrong phase, not in room, empty/too long). */
+  PlayerWriteError: 'player:writeError',
+  /** Player votes for their favorite OTHER written answer (WRITE_VOTE, 4.2). */
+  PlayerWriteVote: 'player:writeVote',
+  /** Server confirms the player's current vote back to them only. */
+  PlayerWriteVoted: 'player:writeVoted',
+  /** Server rejects the vote (wrong phase, not in room, self-vote, unknown target). */
+  PlayerWriteVoteError: 'player:writeVoteError',
   /** Player writes their own dilemma in the LOBBY (max 2/player). */
   PlayerSubmitDilemma: 'player:submitDilemma',
   /** Server confirms the player's submission back to them only (with their count). */
@@ -287,6 +299,10 @@ export type GamePhase =
   // "La Mente del Gruppo" breather round (4.1, mirror server phases.ts).
   | 'GROUP_MIND'
   | 'GROUP_MIND_REVEAL'
+  // "In Altre Parole" write+vote breather round (4.2, mirror server phases.ts).
+  | 'WRITE'
+  | 'WRITE_VOTE'
+  | 'WRITE_REVEAL'
   // "Percorso" mode chapter framing (mirror server phases.ts).
   | 'TAPPA_INTRO'
   | 'TAPPA_RECAP'
@@ -753,6 +769,16 @@ export interface GameStatePayload {
   groupMindProgress: { done: number; total: number; missingNicknames: string[] } | null;
   /** The aggregate A/B split + correct-guesser count, shown only in GROUP_MIND_REVEAL; null otherwise. */
   groupMindTally: { A: number; B: number; correctGuessers: number } | null;
+  /** "In Altre Parole" (4.2): the current prompt; null outside WRITE/WRITE_VOTE/WRITE_REVEAL. */
+  writePrompt: WritePrompt | null;
+  /** Who's still missing their written answer this round; null outside WRITE. */
+  writeProgress: { done: number; total: number; missingNicknames: string[] } | null;
+  /** The anonymized answer list (own entry included — filter it out client-side), shown only in WRITE_VOTE; null otherwise. */
+  writtenAnswers: PublicWrittenAnswer[] | null;
+  /** Who's still missing their vote this round; null outside WRITE_VOTE. */
+  writeVoteProgress: { done: number; total: number; missingNicknames: string[] } | null;
+  /** Each answer with its author + vote count, shown only in WRITE_REVEAL; null otherwise. */
+  writeReveal: WriteRevealAnswer[] | null;
 }
 
 /** "La Mente del Gruppo" (4.1): a short A/B question everyone answers + predicts. */
@@ -864,6 +890,47 @@ export interface PlayerGroupMindResultPayload {
 }
 
 export type GroupMindError = 'ROOM_NOT_FOUND' | 'NOT_GROUP_MIND_PHASE' | 'NOT_IN_ROOM' | 'INVALID_CHOICE';
+
+/** "In Altre Parole" (4.2): a short free-text prompt everyone answers. */
+export interface WritePrompt {
+  id: string;
+  text: string;
+}
+
+/** One anonymized written answer in the round's frozen shuffled order. `id` is
+ * the author's player id — filter out your own to avoid voting for yourself. */
+export interface PublicWrittenAnswer {
+  id: string;
+  text: string;
+}
+
+/** One answer with its author + vote count, revealed only at WRITE_REVEAL. */
+export interface WriteRevealAnswer {
+  id: string;
+  text: string;
+  authorNickname: string;
+  votes: number;
+}
+
+export interface PlayerWritePayload {
+  text: string;
+}
+
+export interface PlayerWriteSubmittedPayload {
+  text: string;
+}
+
+export type WriteError = 'ROOM_NOT_FOUND' | 'NOT_WRITE_PHASE' | 'NOT_IN_ROOM' | 'EMPTY' | 'TOO_LONG';
+
+export interface PlayerWriteVotePayload {
+  votedForId: string;
+}
+
+export interface PlayerWriteVotedPayload {
+  votedForId: string;
+}
+
+export type WriteVoteError = 'ROOM_NOT_FOUND' | 'NOT_WRITE_VOTE_PHASE' | 'NOT_IN_ROOM' | 'SELF_VOTE' | 'INVALID_TARGET';
 
 export interface PlayerPredictErrorPayload {
   error: PredictError;
@@ -1066,6 +1133,9 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   PHASE_RESULTS: 'Risultati',
   GROUP_MIND: 'La mente del gruppo',
   GROUP_MIND_REVEAL: 'Chi legge il gruppo',
+  WRITE: 'In altre parole',
+  WRITE_VOTE: 'Votate la risposta migliore',
+  WRITE_REVEAL: 'Chi ha scritto cosa',
   TAPPA_INTRO: 'Nuova tappa',
   TAPPA_RECAP: 'Fine tappa',
   STORY_INTRO: 'La storia',

@@ -1229,6 +1229,84 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/hai letto bene il gruppo/i)).toBeInTheDocument();
   });
 
+  it('submits a written answer at WRITE (4.2)', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'WRITE',
+        dilemmaCount: 5,
+        dilemmaIndex: 4,
+        phaseExpiresAt: null,
+        writePrompt: { id: 'wp01', text: 'La tua filosofia di vita in uno slogan da maglietta.' },
+        writeProgress: { done: 0, total: 2, missingNicknames: ['Bea'] },
+        leaderId: null,
+      });
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: 'La tua risposta' }), { target: { value: 'Vivi e lascia vivere' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Invia' }));
+    expect(emitSpy).toHaveBeenCalledWith('player:write', { text: 'Vivi e lascia vivere' });
+  });
+
+  it('votes for an answer at WRITE_VOTE, excluding its own entry (4.2)', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'WRITE_VOTE',
+        dilemmaCount: 5,
+        dilemmaIndex: 4,
+        phaseExpiresAt: null,
+        writePrompt: { id: 'wp01', text: 'La tua filosofia di vita in uno slogan da maglietta.' },
+        writtenAnswers: [
+          { id: 'p1', text: 'La mia risposta' },
+          { id: 'p2', text: 'La risposta di Bea' },
+        ],
+        writeVoteProgress: { done: 0, total: 2, missingNicknames: ['Bea'] },
+        leaderId: null,
+      });
+    });
+    expect(screen.queryByText('La mia risposta')).toBeNull(); // own entry filtered out
+    fireEvent.click(screen.getByRole('button', { name: 'La risposta di Bea' }));
+    expect(emitSpy).toHaveBeenCalledWith('player:writeVote', { votedForId: 'p2' });
+  });
+
+  it('reveals each answer with its author + vote count at WRITE_REVEAL', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'WRITE_REVEAL',
+        dilemmaCount: 5,
+        dilemmaIndex: 4,
+        phaseExpiresAt: null,
+        writePrompt: { id: 'wp01', text: 'La tua filosofia di vita in uno slogan da maglietta.' },
+        writeReveal: [
+          { id: 'p1', text: 'La mia risposta', authorNickname: 'Alice', votes: 1 },
+          { id: 'p2', text: 'La risposta di Bea', authorNickname: 'Bea', votes: 2 },
+        ],
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/la risposta di bea/i)).toBeInTheDocument();
+    expect(screen.getByText(/Bea · 2 voti/i)).toBeInTheDocument();
+    expect(screen.getByText(/Alice · 1 voto/i)).toBeInTheDocument();
+  });
+
   it('shows group speaker-vote progress at SPEAKER_VOTE', () => {
     render(<PlayerApp />);
     act(() => {
