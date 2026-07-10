@@ -81,6 +81,12 @@ describe('computePodium — la classifica finale', () => {
     const room = roomWithStats({ a: baseStats({ rounds: 2, oratorVotes: 1 }) });
     expect(computePodium(room)[0]).toEqual({ player: { id: 'a', nickname: 'P0' }, points: 4, rank: 1 });
   });
+
+  it('esclude chi ha lasciato la partita (stats orfane senza player)', () => {
+    const room = roomWithStats({ a: baseStats(), b: baseStats({ rounds: 5 }) });
+    room.players.delete('b');
+    expect(computePodium(room).map((e) => e.player.id)).toEqual(['a']);
+  });
 });
 
 describe('publicPodium — gate FINAL_AWARDS', () => {

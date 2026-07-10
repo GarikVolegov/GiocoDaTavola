@@ -30,17 +30,19 @@ export function podiumPoints(s: PlayerStats): number {
 }
 
 /**
- * The full final ranking, best first: everyone who played at least one round,
- * competition-ranked (ties share a rank: 1, 1, 3). Ties keep join order (the
- * stats map's insertion order — sort is stable). Ungated — RoomStore.publicPodium
- * applies the FINAL_AWARDS gate.
+ * The full final ranking, best first: everyone STILL IN the room who played at
+ * least one round (a leaver's orphan stats never rank), competition-ranked
+ * (ties share a rank: 1, 1, 3). Ties keep join order (the stats map's insertion
+ * order — sort is stable). Ungated — RoomStore.publicPodium applies the
+ * FINAL_AWARDS gate.
  */
 export function computePodium(room: Room): PodiumEntry[] {
   const ranked: PodiumEntry[] = [];
   for (const [id, s] of room.stats.entries()) {
     if (s.rounds === 0) continue;
-    const nickname = room.players.get(id)?.nickname ?? '';
-    ranked.push({ player: { id, nickname }, points: podiumPoints(s), rank: 0 });
+    const player = room.players.get(id);
+    if (!player) continue;
+    ranked.push({ player: { id, nickname: player.nickname }, points: podiumPoints(s), rank: 0 });
   }
   ranked.sort((a, b) => b.points - a.points);
   ranked.forEach((e, i) => {
