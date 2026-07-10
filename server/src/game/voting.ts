@@ -17,8 +17,8 @@ export function vote(room: Room, playerId: string, choice: string): VoteResult {
   if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
   if (!isVoteChoice(choice)) return { ok: false, error: 'INVALID_CHOICE' };
   room.votes.set(playerId, choice);
-  // Casting/changing during VOTE_2 is itself a confirmation.
-  if (room.phase === 'VOTE_2') room.confirmedVote2.add(playerId);
+  // Casting/changing during VOTE_2 (or the duo re-pick) is itself a confirmation.
+  if (room.phase === 'VOTE_2' || room.phase === 'DUO_REPICK') room.confirmedVote2.add(playerId);
   return { ok: true, room };
 }
 
@@ -85,9 +85,12 @@ export function allVoted(room: Room): boolean {
   return present.every((p) => room.votes.has(p.id));
 }
 
-/** Mark a player's (pre-filled) second vote as explicitly confirmed. VOTE_2 only. */
+/** Mark a player's (pre-filled) second vote as explicitly confirmed.
+ * VOTE_2 and the duo re-pick (which reuses the same confirm machinery). */
 export function confirmVote(room: Room, playerId: string): ConfirmVoteResult {
-  if (room.phase !== 'VOTE_2') return { ok: false, error: 'NOT_VOTE2_PHASE' };
+  if (room.phase !== 'VOTE_2' && room.phase !== 'DUO_REPICK') {
+    return { ok: false, error: 'NOT_VOTE2_PHASE' };
+  }
   if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
   room.confirmedVote2.add(playerId);
   return { ok: true, room };
@@ -118,7 +121,8 @@ export function allConfirmed(room: Room): boolean {
 export function missingVoters(room: Room): string[] | null {
   if (!isVotingPhase(room.phase)) return null;
   const present = [...room.players.values()].filter((p) => p.connected !== false);
-  const isConfirmPhase = room.phase === 'VOTE_2' || room.phase === 'DUEL_REPICK';
+  const isConfirmPhase =
+    room.phase === 'VOTE_2' || room.phase === 'DUEL_REPICK' || room.phase === 'DUO_REPICK';
   return present
     .filter((p) => (isConfirmPhase ? !room.confirmedVote2.has(p.id) : !room.votes.has(p.id)))
     .map((p) => p.nickname);

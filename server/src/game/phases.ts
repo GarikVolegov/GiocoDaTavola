@@ -200,7 +200,12 @@ export function isVotingPhase(phase: GamePhase): boolean {
     phase === 'VOTE_1' ||
     phase === 'VOTE_2' ||
     phase === 'DUEL_PICK' ||
-    phase === 'DUEL_REPICK'
+    phase === 'DUEL_REPICK' ||
+    // Percorso in 2: the Atto II true pick, the Atto III pick and re-pick.
+    // (DUO_PICK_PREDICT rides its own player:duoSync path instead.)
+    phase === 'DUO_SIDE_PICK' ||
+    phase === 'DUO_PICK' ||
+    phase === 'DUO_REPICK'
   );
 }
 

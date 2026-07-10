@@ -3,7 +3,6 @@ import {
   RoomStore,
   generateRoomCode,
   nextPhase,
-  nextDuelPhase,
   isVotingPhase,
   PHASE_DURATIONS_MS,
   MAX_PLAYERS,
@@ -69,13 +68,47 @@ function nextDefense(store: RoomStore, code: string, sides: VoteChoice[]) {
   while (store.get(code)?.phase !== 'DEFENSE' && g++ < 50) store.advancePhase(code);
 }
 
-// helper: spin up a 2-human duel and advance to the first DUEL_PICK.
-function startDuel(store: RoomStore, code: string) {
+// helper: spin up a 2-human Percorso in 2 (acts [1,1,2,3]) at PHASE_INTRO.
+function startDuo(store: RoomStore, code: string) {
   store.create();
   store.join(code, 'p1', 'Ann');
   store.join(code, 'p2', 'Bob');
   store.startGame(code, 3, 'misto', 'duello'); // PHASE_INTRO
-  store.advancePhase(code); // -> DUEL_PICK (idx 1, dilemma drawn)
+}
+
+// helper: play one Atto I dilemma from DUO_PICK_PREDICT through its reveal,
+// landing on the next round's pick phase (or the act-boundary intro card).
+function playSintonia(store: RoomStore, code: string, pickAnn: VoteChoice = 'A', pickBob: VoteChoice = 'B') {
+  store.duoSync(code, 'p1', pickAnn, 'A');
+  store.duoSync(code, 'p2', pickBob, 'A');
+  store.advancePhase(code); // -> DUO_SYNC_REVEAL
+  store.advancePhase(code); // -> next pick phase / DUO_ACT_INTRO
+}
+
+// helper: play the whole Atto II dilemma from DUO_SIDE_PICK (different picks so
+// the fairness counter stays put), landing on the act-3 DUO_ACT_INTRO card.
+function playInvertite(store: RoomStore, code: string) {
+  store.vote(code, 'p1', 'A');
+  store.vote(code, 'p2', 'B');
+  store.advancePhase(code); // -> DUO_ARGUE (turn 1)
+  store.advancePhase(code); // turn 2
+  store.advancePhase(code); // -> DUO_WAVER
+  store.duoWaver(code, 'p1', 0);
+  store.duoWaver(code, 'p2', 0);
+  store.advancePhase(code); // -> DUO_ROUND_RESULT
+  store.advancePhase(code); // -> DUO_ACT_INTRO (act 3)
+}
+
+// helper: walk a duo room from PHASE_INTRO to the Atto III DUO_PICK.
+function walkToDuoPick(store: RoomStore, code: string) {
+  store.advancePhase(code); // -> DUO_ACT_INTRO (act 1)
+  store.advancePhase(code); // -> DUO_PICK_PREDICT (idx 1)
+  playSintonia(store, code);
+  playSintonia(store, code); // lands on DUO_ACT_INTRO (act 2)
+  store.advancePhase(code); // -> DUO_SIDE_PICK (idx 3)
+  playInvertite(store, code); // lands on DUO_ACT_INTRO (act 3)
+  store.advancePhase(code); // -> DUO_PICK (idx 4)
+  expect(store.get(code)!.phase).toBe('DUO_PICK');
 }
 
 describe('generateRoomCode', () => {
@@ -1491,22 +1524,27 @@ describe('startGame con registro', () => {
   });
 });
 
-describe('RoomStore duel mode', () => {
+describe('RoomStore duo mode (Percorso in 2)', () => {
   it('create() defaults mode to gruppo', () => {
     const store = new RoomStore(() => 'AAAA');
     expect(store.create().mode).toBe('gruppo');
   });
 
-  it('startGame duello requires exactly 2 human players', () => {
-    const store = new RoomStore(() => 'BBBB');
+  it('startGame duello requires exactly 2 human players and plans the acts', () => {
+    const store = new RoomStore(() => 'BBBB', () => 1000, makeFixtureDeck, () => 0);
     store.create();
     store.join('BBBB', 'p1', 'Ann');
     expect(store.startGame('BBBB', 3, 'misto', 'duello')).toEqual({ ok: false, error: 'WRONG_PLAYER_COUNT' });
     store.join('BBBB', 'p2', 'Bob');
     const ok = store.startGame('BBBB', 3, 'misto', 'duello');
     expect(ok.ok).toBe(true);
-    expect(store.get('BBBB')!.mode).toBe('duello');
-    expect(store.get('BBBB')!.phase).toBe('PHASE_INTRO');
+    const room = store.get('BBBB')!;
+    expect(room.mode).toBe('duello');
+    expect(room.phase).toBe('PHASE_INTRO');
+    // The 3/5/7 wire value maps to the duo act plan: assaggio -> 4 dilemmas.
+    expect(room.duoPlannedActs).toEqual([1, 1, 2, 3]);
+    expect(room.dilemmaCount).toBe(4);
+    expect(room.plannedDilemmas).toHaveLength(4);
   });
 
   it('startGame duello rejects 3 players', () => {
@@ -1515,141 +1553,231 @@ describe('RoomStore duel mode', () => {
     for (const id of ['a', 'b', 'c']) store.join('CCCC', id, id);
     expect(store.startGame('CCCC', 3, 'misto', 'duello')).toEqual({ ok: false, error: 'WRONG_PLAYER_COUNT' });
   });
+
+  it('trims the act plan when the deck cannot fill the duo total', () => {
+    // classica (5) wants 7 dilemmas but the fixture deck only has 6.
+    const store = new RoomStore(() => 'TRIM', () => 1000, makeFixtureDeck, () => 0);
+    store.create();
+    store.join('TRIM', 'p1', 'Ann');
+    store.join('TRIM', 'p2', 'Bob');
+    expect(store.startGame('TRIM', 5, 'misto', 'duello').ok).toBe(true);
+    const room = store.get('TRIM')!;
+    expect(room.plannedDilemmas).toHaveLength(6);
+    expect(room.duoPlannedActs).toEqual([1, 1, 1, 2, 2, 3]);
+    expect(room.dilemmaCount).toBe(6);
+  });
+
+  it('plays player-submitted dilemmas (regression: silently dropped before)', () => {
+    const store = new RoomStore(() => 'SBMT', () => 1000, makeFixtureDeck, () => 0);
+    store.create();
+    store.join('SBMT', 'p1', 'Ann');
+    store.join('SBMT', 'p2', 'Bob');
+    store.submitDilemma('SBMT', 'p1', 'Il nostro dilemma?', 'Sì', 'No');
+    expect(store.startGame('SBMT', 3, 'misto', 'duello').ok).toBe(true);
+    const room = store.get('SBMT')!;
+    // The submitted dilemma is IN the played plan (before: deck.draw() bypassed it)...
+    expect(room.plannedDilemmas.some((d) => d.text === 'Il nostro dilemma?')).toBe(true);
+    // ...and each round consumes the plan in order.
+    store.advancePhase('SBMT'); // DUO_ACT_INTRO
+    store.advancePhase('SBMT'); // DUO_PICK_PREDICT idx 1
+    expect(room.currentDilemma?.id).toBe(room.plannedDilemmas[0].id);
+  });
 });
 
-describe('nextDuelPhase', () => {
-  it('walks the duel sequence (differ path)', () => {
-    expect(nextDuelPhase('PHASE_INTRO', 0, 3, false)).toEqual({ phase: 'DUEL_PICK', dilemmaIndex: 1 });
-    expect(nextDuelPhase('DUEL_PICK', 1, 3, false)).toEqual({ phase: 'DUEL_REVEAL', dilemmaIndex: 1 });
-    expect(nextDuelPhase('DUEL_REVEAL', 1, 3, false)).toEqual({ phase: 'DUEL_ARGUE', dilemmaIndex: 1 });
-    expect(nextDuelPhase('DUEL_ARGUE', 1, 3, false)).toEqual({ phase: 'DUEL_REPICK', dilemmaIndex: 1 });
-    expect(nextDuelPhase('DUEL_REPICK', 1, 3, false)).toEqual({ phase: 'DUEL_RESULT', dilemmaIndex: 1 });
-  });
-
-  it('skips argue/repick when agreed', () => {
-    expect(nextDuelPhase('DUEL_REVEAL', 1, 3, true)).toEqual({ phase: 'DUEL_RESULT', dilemmaIndex: 1 });
-  });
-
-  it('loops then ends at FINAL_DUEL', () => {
-    expect(nextDuelPhase('DUEL_RESULT', 1, 3, false)).toEqual({ phase: 'DUEL_PICK', dilemmaIndex: 2 });
-    expect(nextDuelPhase('DUEL_RESULT', 3, 3, false)).toEqual({ phase: 'FINAL_DUEL', dilemmaIndex: 3 });
-  });
-});
-
-describe('duel round (advancePhase)', () => {
-  it('differ -> argue (2 turns) -> repick flip credits the persuader', () => {
+describe('duo round (advancePhase)', () => {
+  it('Atto I: pick+predict -> sync reveal feeds sintonia and "ti conosco"', () => {
     const store = new RoomStore(() => 'DDDD', () => 1000, makeFixtureDeck, () => 0);
-    startDuel(store, 'DDDD');
-    expect(store.get('DDDD')!.phase).toBe('DUEL_PICK');
-    store.vote('DDDD', 'p1', 'A');
-    store.vote('DDDD', 'p2', 'B');
-    store.advancePhase('DDDD'); // -> DUEL_REVEAL
-    expect(store.get('DDDD')!.phase).toBe('DUEL_REVEAL');
-    store.advancePhase('DDDD'); // differ -> DUEL_ARGUE turn 0
-    expect(store.get('DDDD')!.phase).toBe('DUEL_ARGUE');
-    expect(store.get('DDDD')!.duelTurnIndex).toBe(0);
-    store.advancePhase('DDDD'); // DUEL_ARGUE turn 1
-    expect(store.get('DDDD')!.phase).toBe('DUEL_ARGUE');
-    expect(store.get('DDDD')!.duelTurnIndex).toBe(1);
-    store.advancePhase('DDDD'); // -> DUEL_REPICK (votes1 snapshot)
-    expect(store.get('DDDD')!.phase).toBe('DUEL_REPICK');
-    store.vote('DDDD', 'p1', 'B'); // p1 flips -> Bob (p2) convinced p1
-    store.advancePhase('DDDD'); // -> DUEL_RESULT (record)
-    expect(store.get('DDDD')!.phase).toBe('DUEL_RESULT');
-    expect(store.get('DDDD')!.duelScore.get('p2')).toBe(1);
-    expect(store.get('DDDD')!.duelScore.get('p1') ?? 0).toBe(0);
+    startDuo(store, 'DDDD');
+    store.advancePhase('DDDD'); // -> DUO_ACT_INTRO
+    expect(store.get('DDDD')!.phase).toBe('DUO_ACT_INTRO');
+    store.advancePhase('DDDD'); // -> DUO_PICK_PREDICT (idx 1, planned dilemma drawn)
+    const room = store.get('DDDD')!;
+    expect(room.phase).toBe('DUO_PICK_PREDICT');
+    expect(room.dilemmaIndex).toBe(1);
+    expect(room.currentDilemma?.id).toBe(room.plannedDilemmas[0].id);
+    // Ann picks A and predicts Bob=B (right); Bob picks B and predicts Ann=B (wrong).
+    expect(store.duoSync('DDDD', 'p1', 'A', 'B')).toBe(true);
+    expect(store.duoSyncComplete('DDDD')).toBe(false);
+    expect(store.duoSync('DDDD', 'p2', 'B', 'B')).toBe(true);
+    expect(store.duoSyncComplete('DDDD')).toBe(true);
+    store.advancePhase('DDDD'); // -> DUO_SYNC_REVEAL (recordSyncRound)
+    expect(room.phase).toBe('DUO_SYNC_REVEAL');
+    const reveal = store.publicDuoSyncReveal('DDDD')!;
+    expect(reveal.agreed).toBe(false);
+    expect(reveal.predictions.find((p) => p.id === 'p1')?.correct).toBe(true);
+    expect(room.duoTruePicks).toBe(1);
+    expect(room.duoScore.get('p1')?.tiConosco).toBe(1);
+    store.advancePhase('DDDD'); // -> DUO_PICK_PREDICT (idx 2, fresh round)
+    expect(room.phase).toBe('DUO_PICK_PREDICT');
+    expect(room.dilemmaIndex).toBe(2);
+    expect(room.currentDilemma?.id).toBe(room.plannedDilemmas[1].id);
+    expect(room.votes.size).toBe(0);
+    expect(room.duoPredictions.size).toBe(0);
   });
 
-  it('agree -> skip argue/repick, agreements incremented', () => {
+  it('Atto II: assigned sides, two timed turns, secret waver, points', () => {
     const store = new RoomStore(() => 'EEEE', () => 1000, makeFixtureDeck, () => 0);
-    startDuel(store, 'EEEE');
+    startDuo(store, 'EEEE');
+    store.advancePhase('EEEE'); // ACT_INTRO
+    store.advancePhase('EEEE'); // PICK_PREDICT 1
+    playSintonia(store, 'EEEE');
+    playSintonia(store, 'EEEE'); // -> DUO_ACT_INTRO (act 2)
+    const room = store.get('EEEE')!;
+    expect(room.phase).toBe('DUO_ACT_INTRO');
+    store.advancePhase('EEEE'); // -> DUO_SIDE_PICK (idx 3)
+    expect(room.phase).toBe('DUO_SIDE_PICK');
+    // Both pick the same side: the fairness alternation flips the first player.
     store.vote('EEEE', 'p1', 'A');
-    store.vote('EEEE', 'p2', 'A'); // agree
-    store.advancePhase('EEEE'); // -> DUEL_REVEAL
-    store.advancePhase('EEEE'); // agreed -> DUEL_RESULT
-    expect(store.get('EEEE')!.phase).toBe('DUEL_RESULT');
-    expect(store.get('EEEE')!.duelAgreements).toBe(1);
+    store.vote('EEEE', 'p2', 'A');
+    store.advancePhase('EEEE'); // -> DUO_ARGUE (sides assigned, turn armed)
+    expect(room.phase).toBe('DUO_ARGUE');
+    expect(room.duoAdvocacy).toBe(false);
+    expect(room.duoAssignedSides.get('p1')).toBe('B');
+    expect(room.duoAssignedSides.get('p2')).toBe('A');
+    expect(room.duoSpeakers).toEqual(['p1', 'p2']);
+    expect(room.turnMinEndsAt).toBe(1000 + 15_000);
+    const turn = store.publicDuoTurn('EEEE')!;
+    expect(turn.speaker?.id).toBe('p1');
+    expect(turn.speaker?.side).toBe('B');
+    expect(turn.speaker?.inverted).toBe(true);
+    expect(turn.canFinish).toBe(false);
+    store.advancePhase('EEEE'); // second turn
+    expect(room.phase).toBe('DUO_ARGUE');
+    expect(room.duoTurnIndex).toBe(1);
+    store.advancePhase('EEEE'); // -> DUO_WAVER
+    expect(room.phase).toBe('DUO_WAVER');
+    expect(room.turnMinEndsAt).toBeNull();
+    expect(store.duoWaver('EEEE', 'p1', 2)).toBe(true);
+    expect(store.duoWaverComplete('EEEE')).toBe(false);
+    expect(store.duoWaver('EEEE', 'p2', 1)).toBe(true);
+    expect(store.duoWaverComplete('EEEE')).toBe(true);
+    store.advancePhase('EEEE'); // -> DUO_ROUND_RESULT (recordRoundOutcome)
+    expect(room.phase).toBe('DUO_ROUND_RESULT');
+    expect(room.duoScore.get('p2')?.vacillare).toBe(2); // Ann's 🤯 rated Bob's arringa
+    expect(room.duoScore.get('p1')?.vacillare).toBe(1);
+    const result = store.publicDuoRoundResult('EEEE')!;
+    expect(result.act).toBe(2);
+    expect(result.vacillare.find((v) => v.id === 'p2')?.received).toBe(2);
+    store.advancePhase('EEEE'); // -> DUO_ACT_INTRO (act 3)
+    expect(room.phase).toBe('DUO_ACT_INTRO');
   });
-});
 
-describe('duel public readers', () => {
-  it('vote() accepts picks in DUEL_PICK and DUEL_REPICK', () => {
-    expect(isVotingPhase('DUEL_PICK')).toBe(true);
-    expect(isVotingPhase('DUEL_REPICK')).toBe(true);
-  });
-
-  it('publicDuelReveal exposes both picks only in DUEL_REVEAL; turn in DUEL_ARGUE', () => {
+  it('Atto III disagree: own sides, repick flip pays +2 persuasione, portrait ends', () => {
     const store = new RoomStore(() => 'FFFF', () => 1000, makeFixtureDeck, () => 0);
-    startDuel(store, 'FFFF');
+    startDuo(store, 'FFFF');
+    walkToDuoPick(store, 'FFFF');
+    const room = store.get('FFFF')!;
+    expect(room.dilemmaIndex).toBe(4);
     store.vote('FFFF', 'p1', 'A');
     store.vote('FFFF', 'p2', 'B');
-    expect(store.publicDuelReveal('FFFF')).toBeNull(); // still DUEL_PICK
-    store.advancePhase('FFFF'); // DUEL_REVEAL
-    const rev = store.publicDuelReveal('FFFF')!;
-    expect(rev.agreed).toBe(false);
-    expect(rev.picks).toHaveLength(2);
-    store.advancePhase('FFFF'); // DUEL_ARGUE
-    expect(store.publicDuelReveal('FFFF')).toBeNull();
-    const turn = store.publicDuelTurn('FFFF')!;
-    expect(turn.totalTurns).toBe(2);
-    expect(turn.speaker?.side).toBe('A'); // first player picked A
+    store.advancePhase('FFFF'); // -> DUO_REVEAL (sintonia counters)
+    expect(room.phase).toBe('DUO_REVEAL');
+    expect(room.duoTruePicks).toBe(3); // 2 sintonia rounds + this one
+    store.advancePhase('FFFF'); // -> DUO_ARGUE on OWN sides
+    expect(room.phase).toBe('DUO_ARGUE');
+    expect(room.duoAdvocacy).toBe(false);
+    expect(room.duoAssignedSides.size).toBe(0);
+    expect(store.publicDuoTurn('FFFF')!.speaker?.side).toBe('A'); // own pick
+    expect(store.publicDuoTurn('FFFF')!.speaker?.inverted).toBe(false);
+    store.advancePhase('FFFF'); // turn 2
+    store.advancePhase('FFFF'); // -> DUO_REPICK (votes1 snapshot, confirms cleared)
+    expect(room.phase).toBe('DUO_REPICK');
+    expect(room.votes1.get('p1')).toBe('A');
+    expect(room.confirmedVote2.size).toBe(0);
+    store.vote('FFFF', 'p1', 'B'); // casting during DUO_REPICK confirms it
+    expect(store.duoRepickComplete('FFFF')).toBe(false);
+    store.confirmVote('FFFF', 'p2'); // Bob keeps his side, just confirms
+    expect(store.duoRepickComplete('FFFF')).toBe(true);
+    store.advancePhase('FFFF'); // -> DUO_ROUND_RESULT
+    expect(room.phase).toBe('DUO_ROUND_RESULT');
+    expect(room.duoScore.get('p2')?.persuasione).toBe(2); // p1 flipped to B
+    store.advancePhase('FFFF'); // last round -> DUO_PORTRAIT
+    expect(room.phase).toBe('DUO_PORTRAIT');
+    const portrait = store.publicDuoPortrait('FFFF')!;
+    expect(portrait.scores).toHaveLength(2);
+    expect(portrait.titoli.filter((t) => t.playerId === 'p1')).toHaveLength(2);
+    // Rematch works from the portrait and clears the duo counters.
+    const rematch = store.rematch('FFFF');
+    expect(rematch.ok).toBe(true);
+    expect(room.phase).toBe('LOBBY');
+    expect(room.duoScore.size).toBe(0);
+    expect(room.duoTruePicks).toBe(0);
   });
 
-  it('publicDuelResult lists who convinced whom only in DUEL_RESULT', () => {
-    const store = new RoomStore(() => 'HHHH', () => 1000, makeFixtureDeck, () => 0);
-    startDuel(store, 'HHHH');
-    store.vote('HHHH', 'p1', 'A');
-    store.vote('HHHH', 'p2', 'B');
-    store.advancePhase('HHHH'); // REVEAL
-    store.advancePhase('HHHH'); // ARGUE t0
-    store.advancePhase('HHHH'); // ARGUE t1
-    store.advancePhase('HHHH'); // REPICK
-    store.vote('HHHH', 'p1', 'B'); // p1 flips
-    store.advancePhase('HHHH'); // RESULT
-    const res = store.publicDuelResult('HHHH')!;
-    expect(res.agreed).toBe(false);
-    expect(res.convinced).toHaveLength(1);
-    expect(res.convinced[0].persuader.id).toBe('p2');
-    expect(res.convinced[0].convinced.id).toBe('p1');
-  });
-
-  it('publicDuelSummary only at FINAL_DUEL', () => {
+  it('Atto III agree: devil-advocate twist, a flip pays +2 ribaltone', () => {
     const store = new RoomStore(() => 'GGGG', () => 1000, makeFixtureDeck, () => 0);
-    startDuel(store, 'GGGG');
-    expect(store.publicDuelSummary('GGGG')).toBeNull();
+    startDuo(store, 'GGGG');
+    walkToDuoPick(store, 'GGGG');
+    const room = store.get('GGGG')!;
+    store.vote('GGGG', 'p1', 'A');
+    store.vote('GGGG', 'p2', 'A'); // agreement -> the twist
+    store.advancePhase('GGGG'); // -> DUO_REVEAL
+    store.advancePhase('GGGG'); // -> DUO_ARGUE, solo advocate turn
+    expect(room.phase).toBe('DUO_ARGUE');
+    expect(room.duoAdvocacy).toBe(true);
+    expect(room.duoSpeakers).toEqual(['p1']); // fairness untouched so far -> first player
+    expect(room.duoAssignedSides.get('p1')).toBe('B');
+    expect(store.publicDuoTurn('GGGG')!.speaker?.advocate).toBe(true);
+    store.advancePhase('GGGG'); // single turn -> DUO_REPICK (listener only)
+    expect(room.phase).toBe('DUO_REPICK');
+    store.vote('GGGG', 'p2', 'B'); // the listener flips (casting confirms)
+    expect(store.duoRepickComplete('GGGG')).toBe(true); // the advocate is excluded
+    store.advancePhase('GGGG'); // flip -> straight to DUO_ROUND_RESULT
+    expect(room.phase).toBe('DUO_ROUND_RESULT');
+    expect(room.duoScore.get('p1')?.ribaltone).toBe(2);
+    expect(room.duoMoments.some((m) => m.title.includes('Ribaltone'))).toBe(true);
+  });
+
+  it('Atto III agree without flip: the listener rates the advocate (DUO_WAVER)', () => {
+    const store = new RoomStore(() => 'HHHH', () => 1000, makeFixtureDeck, () => 0);
+    startDuo(store, 'HHHH');
+    walkToDuoPick(store, 'HHHH');
+    const room = store.get('HHHH')!;
+    store.vote('HHHH', 'p1', 'A');
+    store.vote('HHHH', 'p2', 'A');
+    store.advancePhase('HHHH'); // DUO_REVEAL
+    store.advancePhase('HHHH'); // DUO_ARGUE (advocate p1)
+    store.advancePhase('HHHH'); // DUO_REPICK
+    store.confirmVote('HHHH', 'p2'); // the listener keeps their side
+    store.advancePhase('HHHH'); // no flip -> DUO_WAVER (0/1 rating)
+    expect(room.phase).toBe('DUO_WAVER');
+    expect(store.duoWaver('HHHH', 'p2', 2)).toBe(false); // capped at 1 in the twist
+    expect(store.duoWaver('HHHH', 'p1', 1)).toBe(false); // the advocate cannot rate
+    expect(store.duoWaver('HHHH', 'p2', 1)).toBe(true);
+    store.advancePhase('HHHH'); // -> DUO_ROUND_RESULT
+    expect(room.duoScore.get('p1')?.vacillare).toBe(1);
+    expect(room.duoScore.get('p1')?.ribaltone ?? 0).toBe(0);
   });
 });
 
-describe('DUEL_ARGUE "Ho finito"', () => {
-  it('lets the current arguer finish once the floor has passed, rejects before', () => {
-    const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
-    const { code } = store.create();
-    store.join(code, 'p1', 'Ann');
-    store.join(code, 'p2', 'Bob');
-    store.startGame(code, 3, 'misto', 'duello');
-    store.advancePhase(code); // DUEL_PICK
-    store.vote(code, 'p1', 'A');
-    store.vote(code, 'p2', 'B');
-    store.advancePhase(code); // DUEL_REVEAL (disagree)
-    store.advancePhase(code); // DUEL_ARGUE, p1's turn
-    expect(store.get(code)!.phase).toBe('DUEL_ARGUE');
-    expect(store.finishTurn(code, 'p1')).toEqual({
-      ok: false,
-      error: 'TOO_EARLY',
-    });
+describe('duo voting gates', () => {
+  it('vote() accepts picks in DUO_SIDE_PICK, DUO_PICK and DUO_REPICK', () => {
+    expect(isVotingPhase('DUO_SIDE_PICK')).toBe(true);
+    expect(isVotingPhase('DUO_PICK')).toBe(true);
+    expect(isVotingPhase('DUO_REPICK')).toBe(true);
+    expect(isVotingPhase('DUO_PICK_PREDICT')).toBe(false); // rides player:duoSync instead
   });
+});
 
-  it('rejects a finish from the player who is not currently arguing', () => {
-    const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
-    const { code } = store.create();
-    store.join(code, 'p1', 'Ann');
-    store.join(code, 'p2', 'Bob');
-    store.startGame(code, 3, 'misto', 'duello');
-    store.advancePhase(code);
+describe('DUO_ARGUE "Ho finito"', () => {
+  function toArgue(store: RoomStore, code: string) {
+    startDuo(store, code);
+    store.advancePhase(code); // ACT_INTRO
+    store.advancePhase(code); // PICK_PREDICT 1
+    playSintonia(store, code);
+    playSintonia(store, code); // ACT_INTRO (act 2)
+    store.advancePhase(code); // DUO_SIDE_PICK
     store.vote(code, 'p1', 'A');
     store.vote(code, 'p2', 'B');
-    store.advancePhase(code);
-    store.advancePhase(code); // DUEL_ARGUE, p1's turn
+    store.advancePhase(code); // DUO_ARGUE, p1's turn
+    expect(store.get(code)!.phase).toBe('DUO_ARGUE');
+  }
+
+  it('rejects an early finish (floor) and a finish from the listener', () => {
+    const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
+    const { code } = store.create();
+    toArgue(store, code);
+    expect(store.finishTurn(code, 'p1')).toEqual({ ok: false, error: 'TOO_EARLY' });
     expect(store.finishTurn(code, 'p2')).toEqual({ ok: false, error: 'NOT_SPEAKER' });
   });
 });
@@ -1944,12 +2072,12 @@ describe('late-join promotion (3.2)', () => {
     store.join(code, 'p2', 'Bob');
     store.startGame(code, 3, 'misto', 'duello');
     let g = 0;
-    while (store.get(code)!.phase !== 'DUEL_PICK' && g++ < 10) store.advancePhase(code);
+    while (store.get(code)!.phase !== 'DUO_PICK_PREDICT' && g++ < 10) store.advancePhase(code);
     store.join(code, 'late1', 'Late1');
     const room = store.get(code)!;
     expect(room.players.get('late1')!.role).toBe('pubblico');
-    store.vote(code, 'p1', 'A');
-    store.vote(code, 'p2', 'A'); // agree -> straight to DUEL_RESULT
+    store.duoSync(code, 'p1', 'A', 'A');
+    store.duoSync(code, 'p2', 'A', 'A');
     g = 0;
     while (room.dilemmaIndex === 1 && g++ < 10) store.advancePhase(code);
     expect(room.players.get('late1')!.role).toBe('pubblico'); // never promoted in duello
@@ -2413,18 +2541,19 @@ describe('RoomStore live reactions (engagement)', () => {
     expect(store.get(code)!.lastTurnApplause).toBeNull();
   });
 
-  it('allows reactions during a duel argue turn', () => {
+  it('allows reactions during a duo argue turn', () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
     const { code } = store.create();
-    store.join(code, 'p1', 'Ann');
-    store.join(code, 'p2', 'Bob');
-    store.startGame(code, 3, 'misto', 'duello'); // PHASE_INTRO
-    store.advancePhase(code); // DUEL_PICK
+    startDuo(store, code);
+    store.advancePhase(code); // DUO_ACT_INTRO
+    store.advancePhase(code); // DUO_PICK_PREDICT
+    playSintonia(store, code);
+    playSintonia(store, code); // DUO_ACT_INTRO (act 2)
+    store.advancePhase(code); // DUO_SIDE_PICK
     store.vote(code, 'p1', 'A');
-    store.vote(code, 'p2', 'B'); // disagree -> the duel goes to DUEL_ARGUE
-    store.advancePhase(code); // DUEL_REVEAL
-    store.advancePhase(code); // DUEL_ARGUE
-    expect(store.get(code)?.phase).toBe('DUEL_ARGUE');
+    store.vote(code, 'p2', 'B');
+    store.advancePhase(code); // DUO_ARGUE
+    expect(store.get(code)?.phase).toBe('DUO_ARGUE');
     expect(store.react(code, 'p2', '👏').ok).toBe(true);
   });
 

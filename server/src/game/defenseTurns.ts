@@ -11,6 +11,7 @@ export function currentSpeakerId(room: Room): string | null {
   if (room.phase === 'DEFENSE') return room.defenders[room.defenseTurnIndex]?.id ?? null;
   if (room.phase === 'INTERVENTI') return room.interventiQueue[room.interventiIndex] ?? null;
   if (room.phase === 'DUEL_ARGUE') return duelPlayers(room)[room.duelTurnIndex]?.id ?? null;
+  if (room.phase === 'DUO_ARGUE') return room.duoSpeakers[room.duoTurnIndex] ?? null;
   return null;
 }
 
@@ -69,7 +70,12 @@ export function raiseHand(room: Room, playerId: string): RaiseHandResult {
  * once the per-turn minimum has elapsed; the caller then advances the turn.
  */
 export function finishTurn(room: Room, playerId: string, now: number): FinishTurnResult {
-  if (room.phase !== 'DEFENSE' && room.phase !== 'INTERVENTI' && room.phase !== 'DUEL_ARGUE') {
+  if (
+    room.phase !== 'DEFENSE' &&
+    room.phase !== 'INTERVENTI' &&
+    room.phase !== 'DUEL_ARGUE' &&
+    room.phase !== 'DUO_ARGUE'
+  ) {
     return { ok: false, error: 'NOT_FINISHING_PHASE' };
   }
   if (currentSpeakerId(room) !== playerId) return { ok: false, error: 'NOT_SPEAKER' };

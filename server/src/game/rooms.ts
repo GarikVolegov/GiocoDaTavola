@@ -32,12 +32,15 @@ import {
   SOFT_TIMEOUT_THRESHOLD,
   SOFT_TIMEOUT_MS,
   DUEL_TURN_MIN_MS,
+  DUO_TURN_MIN_MS,
   DEFENSE_MAX_MS_NORMALE,
   DEFENSE_MAX_MS_LUNGA,
   nextPhase,
   nextDuelPhase,
+  nextDuoPhase,
   nextPercorsoPhase,
   nextStoriaPhase,
+  actForIndex,
 } from './phases';
 import {
   buildPercorsoPlan,
@@ -69,7 +72,29 @@ import {
   duelResult,
   duelSummary,
 } from './duel';
-import type { DuoPoints, DuoMoment } from './duo';
+import {
+  buildDuoActPlan,
+  expandActs,
+  duoPlayers,
+  submitDuoSync,
+  duoSyncComplete as isDuoSyncComplete,
+  duoWaver as duoWaverRate,
+  duoWaverComplete as isDuoWaverComplete,
+  duoRepickComplete as isDuoRepickComplete,
+  assignInvertedSides,
+  assignAdvocate,
+  recordSyncRound,
+  recordDuoReveal,
+  recordRoundOutcome,
+  computeRepickFlipped,
+  duoSyncReveal,
+  duoTurn,
+  duoRoundResult,
+  duoPortrait,
+  duoActState,
+  type DuoPoints,
+  type DuoMoment,
+} from './duo';
 
 // Re-export the phase state machine so existing importers (tests, index.ts)
 // keep importing GamePhase / PHASE_DURATIONS_MS / nextPhase / … from './rooms'.
@@ -960,6 +985,99 @@ export class RoomStore {
     return { ok: true, room };
   }
 
+  /** Reset the per-round duo state and draw the round's PLANNED dilemma (the
+   * escalating classic plan, player submissions included — never the raw deck
+   * unless the plan somehow ran dry). */
+  private startDuoRound(room: Room, dilemmaIndex: number): void {
+    room.currentDilemma = room.plannedDilemmas[dilemmaIndex - 1] ?? room.deck?.draw() ?? null;
+    // Roster templates (5.3) read a fresh random name every reveal, duo included.
+    if (room.currentDilemma?.roster) {
+      const nicknames = [...room.players.values()].filter((p) => !p.isBot).map((p) => p.nickname);
+      room.currentDilemma = rosterDilemmas.resolveRosterDilemma(room.currentDilemma, nicknames, this.rng);
+    }
+    room.votes.clear();
+    room.votes1.clear();
+    room.confirmedVote2.clear();
+    room.duoPredictions.clear();
+    room.duoAssignedSides = new Map();
+    room.duoSpeakers = [];
+    room.duoTurnIndex = 0;
+    room.duoWaverRatings.clear();
+    room.duoAdvocacy = false;
+    room.duoRepickFlipped = false;
+    room.turnMinEndsAt = null;
+    room.turnStartedAt = null;
+  }
+
+  /** Arm one DUO_ARGUE speaking turn (count-up start + "Ho finito" floor). */
+  private armDuoTurn(room: Room): void {
+    room.turnStartedAt = this.now();
+    room.turnMinEndsAt = this.now() + DUO_TURN_MIN_MS;
+  }
+
+  /**
+   * Advance the Percorso in 2 state machine one step (the duello analogue of the
+   * group logic in advancePhase). DUO_ARGUE runs one timed turn per planned
+   * speaker; entering it assigns the debate sides (inverted in Atto II, own
+   * sides or the devil's-advocate twist in Atto III); leaving DUO_REPICK
+   * computes the flip flag the pure transition branches on; every reveal/result
+   * entry folds the round into the score counters.
+   */
+  private advanceDuoPhase(room: Room): AdvancePhaseResult {
+    if (room.phase === 'DUO_ARGUE' && room.duoTurnIndex < room.duoSpeakers.length - 1) {
+      room.duoTurnIndex++;
+      room.phaseExpiresAt = this.expiryFor('DUO_ARGUE');
+      this.armDuoTurn(room);
+      return { ok: true, room };
+    }
+    if (room.phase === 'DUO_REPICK') {
+      room.duoRepickFlipped = computeRepickFlipped(room);
+    }
+    const t = nextDuoPhase(room.phase, room.dilemmaIndex, room.duoPlannedActs, {
+      advocacy: room.duoAdvocacy,
+      flipped: room.duoRepickFlipped,
+    });
+    const newRound = t.dilemmaIndex !== room.dilemmaIndex;
+    room.phase = t.phase;
+    room.dilemmaIndex = t.dilemmaIndex;
+    room.phaseExpiresAt = this.expiryFor(t.phase);
+    if (newRound) this.startDuoRound(room, t.dilemmaIndex);
+    if (t.phase === 'DUO_SYNC_REVEAL') recordSyncRound(room);
+    if (t.phase === 'DUO_REVEAL') recordDuoReveal(room);
+    if (t.phase === 'DUO_ARGUE') {
+      // Arriving from DUO_SIDE_PICK (act 2) or DUO_REVEAL (act 3).
+      if (actForIndex(room.duoPlannedActs, room.dilemmaIndex) === 2) {
+        assignInvertedSides(room);
+      } else {
+        const [a, b] = duoPlayers(room);
+        const va = a ? room.votes.get(a.id) : undefined;
+        const vb = b ? room.votes.get(b.id) : undefined;
+        if (va != null && va === vb) {
+          assignAdvocate(room);
+        } else {
+          room.duoAssignedSides = new Map();
+          room.duoSpeakers = [a, b].filter((p): p is Player => p != null).map((p) => p.id);
+          room.duoTurnIndex = 0;
+          room.duoAdvocacy = false;
+        }
+      }
+      this.armDuoTurn(room);
+    }
+    if (t.phase === 'DUO_WAVER') {
+      room.duoWaverRatings.clear();
+      room.turnMinEndsAt = null;
+      room.turnStartedAt = null;
+    }
+    if (t.phase === 'DUO_REPICK') {
+      room.votes1 = new Map(room.votes);
+      room.confirmedVote2 = new Set();
+      room.turnMinEndsAt = null;
+      room.turnStartedAt = null;
+    }
+    if (t.phase === 'DUO_ROUND_RESULT') recordRoundOutcome(room);
+    return { ok: true, room };
+  }
+
   /** Create a room with a code unique among the rooms currently in memory. */
   create(): Room {
     let code = this.genCode();
@@ -1079,7 +1197,11 @@ export class RoomStore {
   rematch(code: string): RematchResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'FINAL_AWARDS' && room.phase !== 'FINAL_DUEL') {
+    if (
+      room.phase !== 'FINAL_AWARDS' &&
+      room.phase !== 'FINAL_DUEL' &&
+      room.phase !== 'DUO_PORTRAIT'
+    ) {
       return { ok: false, error: 'NOT_FINISHED' };
     }
     for (const d of room.plannedDilemmas) room.excludeDilemmaIds.add(d.id);
@@ -1369,9 +1491,28 @@ export class RoomStore {
       if (eligible.length < cards.length) room.deck = new Deck(eligible);
       // Precompute the ordered sequence: submitted dilemmas first, then the deck,
       // finally escalating by complexity (alto → max → power) over the game.
-      room.plannedDilemmas = dilemmaPlan.buildClassicPlan(room.deck, room.submittedDilemmas, dilemmaCount, this.rng);
-      room.dilemmaCount = room.plannedDilemmas.length || dilemmaCount;
+      // The duello plays MORE dilemmas than the leader's 3/5/7 wire value: the
+      // three duo acts expand it (4/7/10) — escalation then lands the spiciest
+      // dilemmas in Atto III for free.
+      const targetCount =
+        mode === 'duello'
+          ? buildDuoActPlan(dilemmaCount).reduce((a, b) => a + b, 0)
+          : dilemmaCount;
+      room.plannedDilemmas = dilemmaPlan.buildClassicPlan(room.deck, room.submittedDilemmas, targetCount, this.rng);
+      room.dilemmaCount = room.plannedDilemmas.length || targetCount;
       room.submittedQueue = []; // baked into plannedDilemmas
+    }
+    // Percorso in 2: expand the act plan alongside the planned dilemmas,
+    // trimmed when the deck could not fill the duo total.
+    if (mode === 'duello') {
+      let acts = expandActs(buildDuoActPlan(dilemmaCount));
+      if (room.plannedDilemmas.length > 0 && room.plannedDilemmas.length < acts.length) {
+        acts = acts.slice(0, room.plannedDilemmas.length);
+      }
+      room.duoPlannedActs = acts;
+      room.dilemmaCount = acts.length;
+    } else {
+      room.duoPlannedActs = [];
     }
     // Pick the surprise "Avvocato del Diavolo" round up front (group mode only;
     // never in storia, where the curated narrative must stay intact).
@@ -1390,6 +1531,18 @@ export class RoomStore {
     room.duelScore = new Map();
     room.duelAgreements = 0;
     room.duelTurnIndex = 0;
+    room.duoPredictions = new Map();
+    room.duoAssignedSides = new Map();
+    room.duoSpeakers = [];
+    room.duoTurnIndex = 0;
+    room.duoWaverRatings = new Map();
+    room.duoFairness = 0;
+    room.duoAdvocacy = false;
+    room.duoRepickFlipped = false;
+    room.duoScore = new Map();
+    room.duoTruePicks = 0;
+    room.duoFirstPickAgreements = 0;
+    room.duoMoments = [];
     return { ok: true, room };
   }
 
@@ -1402,12 +1555,17 @@ export class RoomStore {
   advancePhase(code: string): AdvancePhaseResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase === 'LOBBY' || room.phase === 'FINAL_AWARDS' || room.phase === 'FINAL_DUEL') {
+    if (
+      room.phase === 'LOBBY' ||
+      room.phase === 'FINAL_AWARDS' ||
+      room.phase === 'FINAL_DUEL' ||
+      room.phase === 'DUO_PORTRAIT'
+    ) {
       return { ok: false, error: 'NO_NEXT_PHASE' };
     }
 
-    // The 1v1 duel runs its own state machine, separate from the group sequence.
-    if (room.mode === 'duello') return this.advanceDuelPhase(room);
+    // The Percorso in 2 runs its own state machine, separate from the group sequence.
+    if (room.mode === 'duello') return this.advanceDuoPhase(room);
 
     // "L'Infiltrato": the end-game accusation leads into FINAL_AWARDS, resolving
     // whether the infiltrator was caught and whether they won.
@@ -2298,6 +2456,67 @@ export class RoomStore {
   publicDuelSummary(code: string) {
     const room = this.rooms.get(code);
     return room ? duelSummary(room) : null;
+  }
+
+  /** Atto I combined submit: own secret pick + prediction of the partner's. */
+  duoSync(code: string, playerId: string, own: VoteChoice, predict: VoteChoice): boolean {
+    const room = this.rooms.get(code);
+    return room ? submitDuoSync(room, playerId, own, predict) : false;
+  }
+
+  /** True once both players submitted pick+prediction (early-advance gate). */
+  duoSyncComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? isDuoSyncComplete(room) : false;
+  }
+
+  /** Record a secret "ti ha fatto vacillare?" rating during DUO_WAVER. */
+  duoWaver(code: string, playerId: string, rating: 0 | 1 | 2): boolean {
+    const room = this.rooms.get(code);
+    return room ? duoWaverRate(room, playerId, rating) : false;
+  }
+
+  /** True once every expected rater rated (early-advance gate for DUO_WAVER). */
+  duoWaverComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? isDuoWaverComplete(room) : false;
+  }
+
+  /** True once everyone who re-picks confirmed (early-advance for DUO_REPICK). */
+  duoRepickComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? isDuoRepickComplete(room) : false;
+  }
+
+  /** Public Atto I reveal (only DUO_SYNC_REVEAL): picks + prediction hits. */
+  publicDuoSyncReveal(code: string) {
+    const room = this.rooms.get(code);
+    return room ? duoSyncReveal(room) : null;
+  }
+
+  /** Public duo argue turn (only DUO_ARGUE): speaker, assigned side, floor. */
+  publicDuoTurn(code: string) {
+    const room = this.rooms.get(code);
+    return room ? duoTurn(room, this.now()) : null;
+  }
+
+  /** Public duo round outcome (only DUO_ROUND_RESULT): act-shaped points. */
+  publicDuoRoundResult(code: string) {
+    const room = this.rooms.get(code);
+    return room ? duoRoundResult(room) : null;
+  }
+
+  /** Public couple portrait (only DUO_PORTRAIT): the finale's whole payload. */
+  publicDuoPortrait(code: string) {
+    const room = this.rooms.get(code);
+    return room ? duoPortrait(room) : null;
+  }
+
+  /** Structural duo act progress (in-game duello phases only; never secret). */
+  publicDuoActState(code: string) {
+    const room = this.rooms.get(code);
+    if (!room || room.mode !== 'duello' || room.phase === 'LOBBY') return null;
+    return duoActState(room);
   }
 
   /**
