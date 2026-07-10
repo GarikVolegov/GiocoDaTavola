@@ -12,6 +12,17 @@ import {
   duoWaverComplete,
   duoRepickComplete,
 } from '../duo';
+import {
+  recordSyncRound,
+  recordDuoReveal,
+  computeRepickFlipped,
+  recordRoundOutcome,
+  duoSyncReveal,
+  duoRoundResult,
+  duoPortrait,
+  duoTurn,
+  duoActState,
+} from '../duo';
 import { nextDuoPhase, PHASE_DURATIONS_MS, DUO_TURN_MIN_MS } from '../phases';
 import { RoomStore, type Room } from '../rooms';
 
@@ -371,6 +382,281 @@ describe('duoRepickComplete', () => {
     expect(duoRepickComplete(room)).toBe(false);
     room.confirmedVote2.add(bob); // ...the listener is who matters
     expect(duoRepickComplete(room)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scoring, gated readers and the couple portrait.
+// ---------------------------------------------------------------------------
+
+describe('recordSyncRound (Atto I)', () => {
+  it('counts sintonia and rewards correct predictions', () => {
+    const { room, ann, bob } = duoRoom();
+    room.phase = 'DUO_PICK_PREDICT';
+    submitDuoSync(room, ann, 'A', 'B'); // Ann picks A, predicts Bob=B (right)
+    submitDuoSync(room, bob, 'B', 'B'); // Bob picks B, predicts Ann=B (wrong)
+    recordSyncRound(room);
+    expect(room.duoTruePicks).toBe(1);
+    expect(room.duoFirstPickAgreements).toBe(0);
+    expect(room.duoScore.get(ann)?.tiConosco).toBe(1);
+    expect(room.duoScore.get(bob)?.tiConosco ?? 0).toBe(0);
+  });
+
+  it('counts an agreement when both picked the same side', () => {
+    const { room, ann, bob } = duoRoom();
+    room.phase = 'DUO_PICK_PREDICT';
+    submitDuoSync(room, ann, 'A', 'A');
+    submitDuoSync(room, bob, 'A', 'A');
+    recordSyncRound(room);
+    expect(room.duoTruePicks).toBe(1);
+    expect(room.duoFirstPickAgreements).toBe(1);
+    expect(room.duoScore.get(ann)?.tiConosco).toBe(1);
+    expect(room.duoScore.get(bob)?.tiConosco).toBe(1);
+  });
+});
+
+describe('recordDuoReveal (Atto III sintonia counters)', () => {
+  it('tracks true picks and agreements at the reveal', () => {
+    const { room, ann, bob } = duoRoom();
+    room.votes.set(ann, 'A');
+    room.votes.set(bob, 'B');
+    recordDuoReveal(room);
+    expect(room.duoTruePicks).toBe(1);
+    expect(room.duoFirstPickAgreements).toBe(0);
+    room.votes.set(bob, 'A');
+    recordDuoReveal(room);
+    expect(room.duoTruePicks).toBe(2);
+    expect(room.duoFirstPickAgreements).toBe(1);
+  });
+});
+
+describe('computeRepickFlipped', () => {
+  it('in the advocacy twist only the listener counts', () => {
+    const { room, ann, bob } = duoRoom();
+    room.duoAdvocacy = true;
+    room.duoAssignedSides.set(ann, 'B'); // Ann is the advocate
+    room.votes1.set(bob, 'A');
+    room.votes.set(bob, 'A');
+    expect(computeRepickFlipped(room)).toBe(false);
+    room.votes.set(bob, 'B');
+    expect(computeRepickFlipped(room)).toBe(true);
+  });
+
+  it('in the normal path any flip counts', () => {
+    const { room, ann, bob } = duoRoom();
+    room.votes1.set(ann, 'A');
+    room.votes1.set(bob, 'B');
+    room.votes.set(ann, 'A');
+    room.votes.set(bob, 'B');
+    expect(computeRepickFlipped(room)).toBe(false);
+    room.votes.set(ann, 'B');
+    expect(computeRepickFlipped(room)).toBe(true);
+  });
+});
+
+/** Drive a room to a scored Atto II round result by hand. */
+function actTwoOutcome(ratings: { ann: 0 | 1 | 2; bob: 0 | 1 | 2 }) {
+  const ctx = duoRoom();
+  const { room, ann, bob } = ctx;
+  room.duoPlannedActs = [2]; // one act-2 dilemma
+  room.dilemmaIndex = 1;
+  room.votes.set(ann, 'A');
+  room.votes.set(bob, 'A');
+  assignInvertedSides(room);
+  room.phase = 'DUO_WAVER';
+  duoWaver(room, ann, ratings.ann); // Ann rates BOB's arringa
+  duoWaver(room, bob, ratings.bob); // Bob rates ANN's arringa
+  room.phase = 'DUO_ROUND_RESULT';
+  recordRoundOutcome(room);
+  return ctx;
+}
+
+describe('recordRoundOutcome', () => {
+  it('Atto II: each arguer earns the rating the OTHER gave (🤯 becomes a moment)', () => {
+    const { room, ann, bob } = actTwoOutcome({ ann: 2, bob: 1 });
+    expect(room.duoScore.get(bob)?.vacillare).toBe(2); // Ann rated Bob 🤯
+    expect(room.duoScore.get(ann)?.vacillare).toBe(1); // Bob rated Ann 🤔
+    expect(room.duoMoments.some((m) => m.emoji === '🤯' && m.playerId === bob)).toBe(true);
+  });
+
+  it('Atto III normal: flipping the partner is worth +2 persuasione and a moment', () => {
+    const { room, ann, bob } = duoRoom();
+    room.duoPlannedActs = [3];
+    room.dilemmaIndex = 1;
+    room.duoAdvocacy = false;
+    room.votes1.set(ann, 'A');
+    room.votes1.set(bob, 'B');
+    room.votes.set(ann, 'A');
+    room.votes.set(bob, 'A'); // Bob flipped to Ann's side
+    room.phase = 'DUO_ROUND_RESULT';
+    recordRoundOutcome(room);
+    expect(room.duoScore.get(ann)?.persuasione).toBe(2);
+    expect(room.duoScore.get(bob)?.persuasione ?? 0).toBe(0);
+    expect(room.duoMoments.some((m) => m.playerId === ann)).toBe(true);
+  });
+
+  it('Atto III twist: a flip pays +2 ribaltone; no flip pays the listener rating', () => {
+    const flip = duoRoom();
+    flip.room.duoPlannedActs = [3];
+    flip.room.dilemmaIndex = 1;
+    flip.room.votes.set(flip.ann, 'A');
+    flip.room.votes.set(flip.bob, 'A');
+    assignAdvocate(flip.room); // Ann advocates B
+    flip.room.votes1.set(flip.bob, 'A');
+    flip.room.votes.set(flip.bob, 'B'); // the listener flipped
+    flip.room.duoRepickFlipped = true;
+    flip.room.phase = 'DUO_ROUND_RESULT';
+    recordRoundOutcome(flip.room);
+    expect(flip.room.duoScore.get(flip.ann)?.ribaltone).toBe(2);
+    expect(flip.room.duoMoments.some((m) => m.title.includes('Ribaltone'))).toBe(true);
+
+    const hold = duoRoom();
+    hold.room.duoPlannedActs = [3];
+    hold.room.dilemmaIndex = 1;
+    hold.room.votes.set(hold.ann, 'A');
+    hold.room.votes.set(hold.bob, 'A');
+    assignAdvocate(hold.room); // Ann advocates B
+    hold.room.votes1.set(hold.bob, 'A');
+    hold.room.votes.set(hold.bob, 'A'); // no flip
+    hold.room.duoRepickFlipped = false;
+    hold.room.phase = 'DUO_WAVER';
+    duoWaver(hold.room, hold.bob, 1);
+    hold.room.phase = 'DUO_ROUND_RESULT';
+    recordRoundOutcome(hold.room);
+    expect(hold.room.duoScore.get(hold.ann)?.vacillare).toBe(1);
+    expect(hold.room.duoScore.get(hold.ann)?.ribaltone ?? 0).toBe(0);
+  });
+});
+
+describe('gated duo readers', () => {
+  it('duoSyncReveal answers only in DUO_SYNC_REVEAL with picks + prediction hits', () => {
+    const { room, ann, bob } = duoRoom();
+    room.phase = 'DUO_PICK_PREDICT';
+    submitDuoSync(room, ann, 'A', 'B');
+    submitDuoSync(room, bob, 'B', 'B');
+    expect(duoSyncReveal(room)).toBeNull();
+    recordSyncRound(room);
+    room.phase = 'DUO_SYNC_REVEAL';
+    const reveal = duoSyncReveal(room)!;
+    expect(reveal.agreed).toBe(false);
+    expect(reveal.picks.map((p) => p.choice)).toEqual(['A', 'B']);
+    expect(reveal.predictions.find((p) => p.id === ann)?.correct).toBe(true);
+    expect(reveal.predictions.find((p) => p.id === bob)?.correct).toBe(false);
+    expect(reveal.truePicks).toBe(1);
+  });
+
+  it('duoRoundResult answers only in DUO_ROUND_RESULT with the act outcome', () => {
+    const ctx = actTwoOutcome({ ann: 0, bob: 2 });
+    const result = duoRoundResult(ctx.room)!;
+    expect(result.act).toBe(2);
+    expect(result.advocacy).toBe(false);
+    expect(result.vacillare.find((v) => v.id === ctx.ann)?.received).toBe(2);
+    expect(result.vacillare.find((v) => v.id === ctx.bob)?.received).toBe(0);
+    expect(result.scores.find((s) => s.id === ctx.ann)?.total).toBe(2);
+    ctx.room.phase = 'DUO_PICK';
+    expect(duoRoundResult(ctx.room)).toBeNull();
+  });
+
+  it('duoTurn exposes the assigned side with inverted/advocate flags', () => {
+    const { room, ann, bob } = duoRoom();
+    room.duoPlannedActs = [2];
+    room.dilemmaIndex = 1;
+    room.votes.set(ann, 'A');
+    room.votes.set(bob, 'B');
+    assignInvertedSides(room);
+    expect(duoTurn(room, 0)).toBeNull(); // not in DUO_ARGUE
+    room.phase = 'DUO_ARGUE';
+    room.turnStartedAt = 1_000;
+    room.turnMinEndsAt = 16_000;
+    const turn = duoTurn(room, 5_000)!;
+    expect(turn.speaker?.id).toBe(ann);
+    expect(turn.speaker?.side).toBe('B'); // Ann argues the side she did NOT pick
+    expect(turn.speaker?.inverted).toBe(true);
+    expect(turn.speaker?.advocate).toBe(false);
+    expect(turn.listenerId).toBe(bob);
+    expect(turn.turn).toBe(1);
+    expect(turn.totalTurns).toBe(2);
+    expect(turn.canFinish).toBe(false);
+    expect(duoTurn(room, 16_500)!.canFinish).toBe(true);
+  });
+
+  it('duoActState reports the act and the position within it', () => {
+    const { room } = duoRoom();
+    room.duoPlannedActs = [1, 1, 2, 3];
+    room.phase = 'DUO_PICK_PREDICT';
+    room.dilemmaIndex = 2;
+    expect(duoActState(room)).toEqual({ act: 1, roundInAct: 2, roundsInAct: 2, totalActs: 3 });
+    room.phase = 'DUO_ACT_INTRO'; // the card announces the COMING act
+    expect(duoActState(room)).toEqual({ act: 2, roundInAct: 0, roundsInAct: 1, totalActs: 3 });
+    room.phase = 'DUO_PICK';
+    room.dilemmaIndex = 4;
+    expect(duoActState(room)).toEqual({ act: 3, roundInAct: 1, roundsInAct: 1, totalActs: 3 });
+  });
+});
+
+describe('duoPortrait', () => {
+  function scoredRoom() {
+    const ctx = duoRoom();
+    const { room, ann, bob } = ctx;
+    room.duoTruePicks = 4;
+    room.duoFirstPickAgreements = 2;
+    room.duoScore.set(ann, { tiConosco: 3, vacillare: 1, persuasione: 2, ribaltone: 0 });
+    room.duoScore.set(bob, { tiConosco: 1, vacillare: 2, persuasione: 0, ribaltone: 2 });
+    room.duoMoments.push(
+      { emoji: '🤯', title: 'Ha fatto vacillare', description: 'x', playerId: ann },
+      { emoji: '🎭', title: 'Ribaltone!', description: 'y', playerId: bob },
+    );
+    room.phase = 'DUO_PORTRAIT';
+    return ctx;
+  }
+
+  it('answers only in DUO_PORTRAIT', () => {
+    const { room } = duoRoom();
+    expect(duoPortrait(room)).toBeNull();
+  });
+
+  it('computes sintonia %, verdict totals and the winner', () => {
+    const { room, ann, bob } = scoredRoom();
+    const portrait = duoPortrait(room)!;
+    expect(portrait.sintoniaPct).toBe(50);
+    expect(portrait.scores.find((s) => s.id === ann)?.total).toBe(6);
+    expect(portrait.scores.find((s) => s.id === bob)?.total).toBe(5);
+    expect(portrait.winnerId).toBe(ann);
+    expect(portrait.tiConosco.find((t) => t.id === ann)?.hits).toBe(3);
+  });
+
+  it('a tie crowns nobody and zero true picks give 0% without crashing', () => {
+    const { room, bob } = scoredRoom();
+    room.duoScore.get(bob)!.vacillare = 3; // 6 vs 6
+    expect(duoPortrait(room)!.winnerId).toBeNull();
+    room.duoTruePicks = 0;
+    room.duoFirstPickAgreements = 0;
+    expect(duoPortrait(room)!.sintoniaPct).toBe(0);
+  });
+
+  it('picks the momento della serata by priority: ribaltone over 🤯', () => {
+    const { room } = scoredRoom();
+    expect(duoPortrait(room)!.momento?.title).toContain('Ribaltone');
+  });
+
+  it('hands exactly 2 titles per player, matching the counters', () => {
+    const { room, ann, bob } = scoredRoom();
+    const titoli = duoPortrait(room)!.titoli;
+    expect(titoli.filter((t) => t.playerId === ann)).toHaveLength(2);
+    expect(titoli.filter((t) => t.playerId === bob)).toHaveLength(2);
+    expect(titoli.find((t) => t.title === 'Il Persuasore')?.playerId).toBe(ann);
+    expect(titoli.find((t) => t.title === "L'Avvocato del Diavolo")?.playerId).toBe(bob);
+    expect(titoli.find((t) => t.title === 'Il Telepate')?.playerId).toBe(ann);
+  });
+
+  it('falls back to jolly titles when nobody scored anything', () => {
+    const { room, ann, bob } = duoRoom();
+    room.phase = 'DUO_PORTRAIT';
+    const titoli = duoPortrait(room)!.titoli;
+    expect(titoli.filter((t) => t.playerId === ann)).toHaveLength(2);
+    expect(titoli.filter((t) => t.playerId === bob)).toHaveLength(2);
+    expect(duoPortrait(room)!.momento).toBeNull();
+    expect(duoPortrait(room)!.winnerId).toBeNull();
   });
 });
 
