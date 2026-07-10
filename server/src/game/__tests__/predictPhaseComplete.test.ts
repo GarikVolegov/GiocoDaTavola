@@ -3,10 +3,9 @@ import { RoomStore, generateRoomCode, type VoteChoice } from '../rooms';
 import { Deck, type Dilemma, type ContentRegister } from '../deck';
 
 // A deterministic 8-dilemma fixture so a 5-round game (>=5 unlocks the "Quanto
-// mi conosci" round) has enough draws. With rng=()=>0, pickDevilRound (called
-// first, consuming the same rng) always picks round 2 as the devil round,
-// which pickKnowRound then excludes — so the know round always lands on
-// round 3 for this fixture/rng combo (see knowRound.pickKnowRound).
+// mi conosci" round) has enough draws. pickDevilRound is now deterministic
+// (always dilemmaCount - 1, the penultimate round — 6.2), which pickKnowRound
+// then excludes when drawing its own round via rng (see knowRound.pickKnowRound).
 const DILEMMA_FIXTURE: Dilemma[] = Array.from({ length: 8 }, (_, i) => ({
   id: `d${i + 1}`,
   text: `Dilemma ${i + 1}?`,

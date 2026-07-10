@@ -18,12 +18,13 @@ function baseStats(over: Partial<PlayerStats> = {}): PlayerStats {
   return { rounds: 1, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 0, ...over };
 }
 
-// Drive a fresh group room to PREDICT of round 1 (normal round; devil round is 2
-// with rng=()=>0), applying the given VOTE_1 choices for sock-0..n.
-function reachPredict(store: RoomStore, sides: VoteChoice[]): string {
+// Drive a fresh group room to PREDICT of round 1 (normal round in a 3-round game;
+// devil round is 2), applying the given VOTE_1 choices for sock-0..n. `dilemmaCount`
+// defaults to 3 but can be set to 1 to make round 1 the game's FINAL round too (6.2).
+function reachPredict(store: RoomStore, sides: VoteChoice[], dilemmaCount = 3): string {
   const { code } = store.create();
   for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
-  store.startGame(code, 3);
+  store.startGame(code, dilemmaCount);
   store.advancePhase(code); // DILEMMA_REVEAL
   store.advancePhase(code); // VOTE_1
   sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
@@ -122,5 +123,56 @@ describe('Scommetti sul ribaltone — resolution & award', () => {
     const room = store.get(code)!;
     room.stats.set('sock-0', baseStats({}));
     expect(computeAwards(room).find((a) => a.id === 'sensitivo')).toBeUndefined();
+  });
+});
+
+// Drive to PREDICT of the game's FINAL round (round 3 of a 3-round game). Earlier
+// rounds are walked through with no explicit bets — applyPredictDefaults will fill
+// in a default 'regge' for each on exit, which may itself score (contaminating the
+// absolute correctSwingBets count) — tests below measure the round-3 DELTA instead
+// of an absolute value, so that contamination doesn't matter.
+function reachFinalPredict(store: RoomStore, sides: VoteChoice[]): string {
+  const { code } = store.create();
+  for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
+  store.startGame(code, 3);
+  let g = 0;
+  while (!(store.get(code)!.phase === 'PREDICT' && store.get(code)!.dilemmaIndex === 3) && g++ < 60) {
+    store.advancePhase(code);
+    if (store.get(code)!.phase === 'VOTE_1') sides.forEach((s, i) => store.vote(code, `sock-${i}`, s));
+  }
+  return code;
+}
+
+describe("Scommetti sul ribaltone — posta doppia sul round finale (6.2, 'struttura a 3 atti')", () => {
+  it('pays DOUBLE correctSwingBets on the final round', () => {
+    const store = makeStore(() => 0);
+    const code = reachFinalPredict(store, ['A', 'A', 'B']); // lead A (2-1)
+    expect(store.get(code)?.dilemmaIndex).toBe(store.get(code)?.dilemmaCount);
+    const before = store.get(code)!.stats.get('sock-0')?.correctSwingBets ?? 0;
+    store.swingBet(code, 'sock-0', 'ribalta');
+    resolveRound(store, code, { 'sock-0': 'B' }); // flips A->B: 'ribalta' is correct
+    const after = store.get(code)!.stats.get('sock-0')?.correctSwingBets ?? 0;
+    expect(after - before).toBe(2); // posta doppia: +2, not +1
+  });
+
+  it('normal (non-final) rounds still pay single stakes', () => {
+    const store = makeStore(() => 0);
+    const code = reachPredict(store, ['A', 'A', 'B']); // round 1 of 3 — not final
+    expect(store.get(code)?.dilemmaIndex).not.toBe(store.get(code)?.dilemmaCount);
+    store.swingBet(code, 'sock-0', 'ribalta');
+    resolveRound(store, code, { 'sock-0': 'B' });
+    expect(store.get(code)!.stats.get('sock-0')?.correctSwingBets).toBe(1);
+  });
+
+  it('publicFinalStakes is true only on the final round', () => {
+    const store = makeStore(() => 0);
+    const nonFinal = reachPredict(store, ['A', 'A', 'B']); // round 1 of 3
+    expect(store.publicFinalStakes(nonFinal)).toBe(false);
+
+    const store2 = makeStore(() => 0);
+    const final = reachFinalPredict(store2, ['A', 'A', 'B']); // round 3 of 3
+    expect(store2.publicFinalStakes(final)).toBe(true);
+
+    expect(store.publicFinalStakes('ZZZZ')).toBe(false);
   });
 });

@@ -221,6 +221,9 @@ function gameStatePayload(room: Room) {
     // the side they did NOT vote). Revealed only from DEFENSE on, so it can't
     // skew the first vote/prediction.
     isDevilRound: rooms.publicDevilRound(room.code),
+    // Whether this is the game's FINAL round, where the swing bet pays double
+    // (6.2, "posta doppia") — not a secret twist, so shown unconditionally.
+    finalStakesRound: rooms.publicFinalStakes(room.code),
     // This round's silly performance constraint for the defenders (2.3),
     // public during DEFENSE/INTERVENTI; null otherwise or if none was drawn.
     absurdConstraint: rooms.publicAbsurdConstraint(room.code),

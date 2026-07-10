@@ -655,6 +655,29 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/ci sarà un ribaltone/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /REGGE/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /RIBALTA/ })).toBeInTheDocument();
+    expect(screen.queryByText(/posta doppia/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the "posta doppia" badge at PREDICT on the game\'s final round (6.2)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'PREDICT',
+        dilemmaCount: 3,
+        dilemmaIndex: 3,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd3', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        knowPairs: null,
+        finalStakesRound: true,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/posta doppia/i)).toBeInTheDocument();
   });
 
   it('shows the "quanto mi conosci" guess at PREDICT when assigned', () => {

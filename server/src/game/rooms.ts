@@ -1316,7 +1316,7 @@ export class RoomStore {
     // never in storia, where the curated narrative must stay intact).
     const totalRounds = room.dilemmaCount ?? 0;
     const allowTwists = mode === 'gruppo' && !useStoria;
-    room.devilRoundIndex = allowTwists ? devilAdvocate.pickDevilRound(totalRounds, this.rng) : null;
+    room.devilRoundIndex = allowTwists ? devilAdvocate.pickDevilRound(totalRounds) : null;
     // …and (longer games only) a "Quanto mi conosci" round, distinct from the devil one.
     room.knowRoundIndex = allowTwists ? knowRound.pickKnowRound(totalRounds, room.devilRoundIndex, this.rng) : null;
     // …and, per the leader's "caos" dial (4.3), a subset of rounds that draw a
@@ -2173,6 +2173,13 @@ export class RoomStore {
   publicDevilRound(code: string): boolean {
     const room = this.rooms.get(code);
     return room ? devilAdvocate.publicDevilRound(room) : false;
+  }
+
+  /** Whether the round in play is the game's FINAL round, where the swing bet
+   * pays double (6.2, "posta doppia") — not a secret twist, so always visible. */
+  publicFinalStakes(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? predictions.isFinalRound(room) : false;
   }
 
   /** This round's absurd defense constraint (2.3), public during DEFENSE/

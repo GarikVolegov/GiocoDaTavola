@@ -6,7 +6,7 @@
 import type { Room, VoteChoice, VoteTally } from './rooms';
 import { tally } from './voteCount';
 import { ensureStats } from './awards';
-import { leadFlipped } from './predictions';
+import { leadFlipped, isFinalRound } from './predictions';
 import { detectNamedMoments } from './namedMoments';
 
 /**
@@ -59,8 +59,10 @@ export function recordRoundStats(room: Room): void {
     }
   }
   // Credit each swing bettor who correctly called whether the lead would change
-  // ('ribalta' when it flipped, 'regge' when it held).
+  // ('ribalta' when it flipped, 'regge' when it held). The final round's bet pays
+  // DOUBLE (6.2, "posta doppia") — the game's last designed beat of rising stakes.
   const flipped = leadFlipped(room);
+  const stakes = isFinalRound(room) ? 2 : 1;
   // "L'Infiltrato col merito" (4.5): a round where the leading side flipped
   // scores for the infiltrator ONLY if they actively used their sabotage tool
   // this round — a passive lucky flip they had no hand in earns nothing.
@@ -68,7 +70,7 @@ export function recordRoundStats(room: Room): void {
   for (const [id, bet] of room.swingBets) {
     if ((bet === 'ribalta') === flipped) {
       const s = ensureStats(room, id);
-      s.correctSwingBets = (s.correctSwingBets ?? 0) + 1;
+      s.correctSwingBets = (s.correctSwingBets ?? 0) + stakes;
     }
   }
   // Credit each defender with the peer "best speaker" votes they received.

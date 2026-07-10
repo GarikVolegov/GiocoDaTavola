@@ -45,11 +45,12 @@ const makeFixtureDeck = (_register: ContentRegister) => new Deck(DILEMMA_FIXTURE
 
 // helper: drive a fresh room into DEFENSE with a known split. Each entry of
 // `sides` is one player's secret vote; rng is injected so defender selection
-// is deterministic (the store's 4th ctor arg).
-function defenseRoom(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B']): string {
+// is deterministic (the store's 4th ctor arg). `dilemmaCount` defaults to 3
+// (the devil round then always lands on round 2, its penultimate — 6.2).
+function defenseRoom(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B'], dilemmaCount = 3): string {
   const { code } = store.create();
   for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
-  store.startGame(code, 3); // PHASE_INTRO
+  store.startGame(code, dilemmaCount); // PHASE_INTRO
   store.advancePhase(code); // DILEMMA_REVEAL
   store.advancePhase(code); // VOTE_1
   sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
@@ -2900,11 +2901,11 @@ describe('RoomStore VOTE_2 confirm (auto-paced)', () => {
 
 describe('RoomStore defense — equa rotazione difensori', () => {
   it('dà priorità a chi non ha ancora difeso un lato rispetto a chi lo ha già fatto', () => {
-    // rng=()=>0.999 mette il round Avvocato del Diavolo ULTIMO (round 3), così i
-    // round 1-2 sono normali (nessun ribaltamento di lato), e a parità il
-    // tiebreak pesca l'ultimo candidato (come fa già il test US-010 esistente).
+    // dilemmaCount=5 -> il round Avvocato del Diavolo è sempre il penultimo (round
+    // 4, 6.2), così i round 1-2 restano normali (nessun ribaltamento di lato), e
+    // a parità il tiebreak pesca l'ultimo candidato (come fa già il test US-010).
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0.999);
-    const code = defenseRoom(store, ['A', 'B', 'B']); // round 1
+    const code = defenseRoom(store, ['A', 'B', 'B'], 5); // round 1
     expect(store.get(code)?.defenders.find((d) => d.side === 'B')?.id).toBe('sock-2');
 
     nextDefense(store, code, ['A', 'B', 'B']); // round 2 (normale)
@@ -2915,7 +2916,7 @@ describe('RoomStore defense — equa rotazione difensori', () => {
 
   it("continua a scegliere l'unico votante di un lato a ogni round", () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0.999);
-    const code = defenseRoom(store, ['A', 'B', 'B']); // solo sock-0 vota A
+    const code = defenseRoom(store, ['A', 'B', 'B'], 5); // solo sock-0 vota A, round 1-2 normali
     expect(store.get(code)?.defenders.find((d) => d.side === 'A')?.id).toBe('sock-0');
     nextDefense(store, code, ['A', 'B', 'B']);
     expect(store.get(code)?.defenders.find((d) => d.side === 'A')?.id).toBe('sock-0');

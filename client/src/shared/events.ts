@@ -789,6 +789,11 @@ export interface GameStatePayload {
    */
   isDevilRound: boolean;
   /**
+   * True in the game's FINAL round, where the swing bet pays double (6.2,
+   * "posta doppia") — not a secret twist, always visible.
+   */
+  finalStakesRound: boolean;
+  /**
    * This round's silly performance constraint for the defenders, public
    * during DEFENSE/INTERVENTI; null otherwise, or if this round drew none.
    */

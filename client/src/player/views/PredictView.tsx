@@ -23,6 +23,8 @@ interface PredictViewProps {
   playerCount: number;
   missingPredictors: string[] | null;
   skipButton: ReactNode;
+  /** The game's final round: the swing bet pays double here (6.2, "posta doppia"). */
+  finalStakesRound: boolean;
 }
 
 // The phone's PREDICT screen. Two flavours: a private "quanto mi conosci" guess
@@ -42,6 +44,7 @@ export default function PredictView({
   playerCount,
   missingPredictors,
   skipButton,
+  finalStakesRound,
 }: PredictViewProps) {
   if (knowPair) {
     return (
@@ -136,6 +139,11 @@ export default function PredictView({
         aria-label="La tua scommessa sul ribaltone"
         style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', width: 'min(90vw, 22rem)' }}
       >
+        {finalStakesRound && (
+          <p style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0, color: 'var(--gold)' }}>
+            🔥 Ultimo round — posta doppia!
+          </p>
+        )}
         <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0.5rem 0 0' }}>🎰 Ci sarà un ribaltone?</p>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
           {(

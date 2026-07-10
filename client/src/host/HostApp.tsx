@@ -335,6 +335,11 @@ export default function HostApp() {
             </p>
           ) : (
             <>
+              {game.finalStakesRound && (
+                <p style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: 'var(--gold)' }}>
+                  🔥 Ultimo round — posta doppia!
+                </p>
+              )}
               <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
                 Pronosticate dal telefono: chi avrà più voti <em>dopo</em> le difese? ·{' '}
                 {game.predictedCount}/{players.length}

@@ -40,32 +40,38 @@ function reachDevilDefense(store: RoomStore, sides: VoteChoice[]): string {
 }
 
 describe('Avvocato del Diavolo — round selection', () => {
-  it('picks a devil round in [2..dilemmaCount], never the first', () => {
-    const store = makeStore(() => 0); // -> 2 + floor(0 * (n-1)) = 2
+  it('always lands on the PENULTIMATE round (6.2, "struttura a 3 atti")', () => {
+    const store = makeStore(() => 0);
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `p${i}`, `P${i}`);
     store.startGame(code, 3);
-    expect(store.get(code)?.devilRoundIndex).toBe(2);
+    expect(store.get(code)?.devilRoundIndex).toBe(2); // dilemmaCount - 1
   });
 
-  it('places the devil round deterministically via rng (last possible round)', () => {
-    const store = makeStore(() => 0.999); // 2 + floor(0.999 * 4) = 5
-    const { code } = store.create();
-    for (let i = 0; i < 3; i++) store.join(code, `p${i}`, `P${i}`);
-    store.startGame(code, 5);
-    expect(store.get(code)?.devilRoundIndex).toBe(5);
-  });
-
-  it('never targets the first round across the rng range', () => {
+  it('is deterministic regardless of rng — always dilemmaCount - 1', () => {
     for (const r of [0, 0.25, 0.5, 0.75, 0.999]) {
       const store = makeStore(() => r);
       const { code } = store.create();
       for (let i = 0; i < 3; i++) store.join(code, `p${i}`, `P${i}`);
       store.startGame(code, 7);
-      const idx = store.get(code)!.devilRoundIndex!;
-      expect(idx).toBeGreaterThanOrEqual(2);
-      expect(idx).toBeLessThanOrEqual(7);
+      expect(store.get(code)?.devilRoundIndex).toBe(6);
     }
+  });
+
+  it('scales with dilemmaCount (always one before the last round)', () => {
+    const store = makeStore(() => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `p${i}`, `P${i}`);
+    store.startGame(code, 5);
+    expect(store.get(code)?.devilRoundIndex).toBe(4);
+  });
+
+  it('never targets the first OR last round — needs at least 3 dilemmas', () => {
+    const store = makeStore(() => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `p${i}`, `P${i}`);
+    store.startGame(code, 2);
+    expect(store.get(code)?.devilRoundIndex).toBeNull();
   });
 
   it('has no devil round in duello mode', () => {

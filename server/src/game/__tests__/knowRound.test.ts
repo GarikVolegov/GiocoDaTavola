@@ -23,14 +23,15 @@ function baseStats(over: Partial<PlayerStats> = {}): PlayerStats {
   };
 }
 
-// Drive a 5-round game (devil=2, know=3 with rng=()=>0) to PREDICT of the know
-// round, casting `sides` each VOTE_1 (so round 3's first votes are known).
+// Drive a 5-round game (devil=4, the penultimate round — 6.2; know=2 with
+// rng=()=>0, the first candidate excluding the devil round) to PREDICT of the
+// know round, casting `sides` each VOTE_1 (so round 2's first votes are known).
 function reachKnowPredict(store: RoomStore, sides: VoteChoice[]): string {
   const { code } = store.create();
   for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
   store.startGame(code, 5);
   let g = 0;
-  while (!(store.get(code)!.phase === 'PREDICT' && store.get(code)!.dilemmaIndex === 3) && g++ < 80) {
+  while (!(store.get(code)!.phase === 'PREDICT' && store.get(code)!.dilemmaIndex === 2) && g++ < 80) {
     store.advancePhase(code);
     if (store.get(code)!.phase === 'VOTE_1') sides.forEach((s, i) => store.vote(code, `sock-${i}`, s));
   }
@@ -49,8 +50,8 @@ describe('Quanto mi conosci — round selection', () => {
     const { code: c5 } = s5.create();
     for (let i = 0; i < 3; i++) s5.join(c5, `p${i}`, `P${i}`);
     s5.startGame(c5, 5);
-    expect(s5.get(c5)?.devilRoundIndex).toBe(2);
-    expect(s5.get(c5)?.knowRoundIndex).toBe(3);
+    expect(s5.get(c5)?.devilRoundIndex).toBe(4); // dilemmaCount - 1 (6.2)
+    expect(s5.get(c5)?.knowRoundIndex).toBe(2);
   });
 });
 
@@ -59,7 +60,7 @@ describe('Quanto mi conosci — guessing', () => {
     const store = makeStore(() => 0);
     const code = reachKnowPredict(store, ['A', 'B', 'B']);
     expect(store.get(code)?.phase).toBe('PREDICT');
-    expect(store.get(code)?.dilemmaIndex).toBe(3);
+    expect(store.get(code)?.dilemmaIndex).toBe(2);
     const pairs = store.publicKnowPairs(code)!;
     expect(pairs.length).toBe(3);
     expect(pairs.find((p) => p.guesserId === 'sock-0')?.targetId).toBe('sock-1');

@@ -78,6 +78,15 @@ export function allSwingBet(room: Room): boolean {
 }
 
 /**
+ * Whether this is the game's FINAL round — the swing bet pays double points here
+ * (6.2, "struttura a 3 atti"): one more beat of designed escalation, landing right
+ * after the devil round's twist two rounds earlier.
+ */
+export function isFinalRound(room: Room): boolean {
+  return room.dilemmaCount != null && room.dilemmaIndex === room.dilemmaCount;
+}
+
+/**
  * Whether the leading side changed between the first vote (votes1) and the second
  * (votes) — a tie counts as its own "side", so A→tie or tie→A both flip.
  */

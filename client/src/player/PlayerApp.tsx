@@ -893,6 +893,7 @@ export default function PlayerApp() {
         playerCount={players.length}
         missingPredictors={game?.missingPredictors ?? null}
         skipButton={skipButton}
+        finalStakesRound={game?.finalStakesRound ?? false}
       />
     );
   }
