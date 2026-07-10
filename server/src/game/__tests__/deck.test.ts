@@ -138,6 +138,10 @@ describe('dilemmasForRegister', () => {
     expect(car.length).toBeGreaterThanOrEqual(10);
     expect(car.every((d) => d.register === 'carriera')).toBe(true);
   });
+
+  it('carriera ha contenuto sufficiente per una serata lunga in ampiezza (5.6: 40+)', () => {
+    expect(dilemmasForRegister(all, 'carriera').length).toBeGreaterThanOrEqual(40);
+  });
 });
 
 describe('deck content volume & balance', () => {
@@ -246,6 +250,18 @@ describe('classificazione complessità (alto < max < power)', () => {
 
   it('almeno un dilemma power è marcato "delicato" (tema pesante, opt-in)', () => {
     expect(all.some((d) => d.complessita === 'power' && d.delicato === true)).toBe(true);
+  });
+
+  it("business ha un'escalation reale: copre anche l'apertura 'sorbetto' e il picco 'power' (5.6), non solo alto/max", () => {
+    const biz = all.filter((d) => d.register === 'business');
+    expect(biz.some((d) => d.complessita === 'sorbetto')).toBe(true);
+    expect(biz.some((d) => d.complessita === 'power')).toBe(true);
+  });
+
+  it("carriera ha un'escalation reale: copre anche l'apertura 'sorbetto' e il picco 'power' (5.6), non solo alto/max", () => {
+    const car = all.filter((d) => d.register === 'carriera');
+    expect(car.some((d) => d.complessita === 'sorbetto')).toBe(true);
+    expect(car.some((d) => d.complessita === 'power')).toBe(true);
   });
 });
 

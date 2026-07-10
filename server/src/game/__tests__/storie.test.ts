@@ -199,6 +199,12 @@ describe('catalogo storie — contenuti reali (sci-fi, bivi reali)', () => {
     expect(Math.max(...stories.map(totalScenes))).toBeGreaterThanOrEqual(12);
   });
 
+  it('ha almeno 2 storie brevi e leggere/avventurose per le serate corte (5.6: 20-30 min)', () => {
+    const short = stories.filter((s) => s.durataStimaMin <= 30);
+    expect(short.length).toBeGreaterThanOrEqual(2);
+    expect(short.every((s) => s.genre === 'avventura')).toBe(true);
+  });
+
   it('ogni storia è strutturata in più atti ed è ben formata', () => {
     for (const s of stories) {
       expect(validateStory(s)).toEqual([]);

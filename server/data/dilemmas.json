@@ -6457,5 +6457,761 @@
       "Decidere insieme evita rimpianti dopo",
       "Anche una piccola scelta condivisa unisce di più"
     ]
+  },
+  {
+    "id": "dc13",
+    "text": "Rispondi alle mail di lavoro anche di domenica sera?",
+    "optionA": "Sì, mi tolgo il pensiero subito",
+    "optionB": "No, il weekend è sacro",
+    "register": "carriera",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Meglio smaltirle che pensarci tutto il weekend",
+      "Chi risponde subito si fa notare",
+      "Cinque minuti di domenica valgono un lunedì più leggero"
+    ],
+    "spuntiB": [
+      "Il tempo libero non è un extra, è un diritto",
+      "Rispondere sempre insegna che sei disturbabile sempre",
+      "Il lunedì esiste apposta per il lavoro"
+    ]
+  },
+  {
+    "id": "dc14",
+    "text": "In videocall: webcam sempre accesa o spenta appena puoi?",
+    "optionA": "Sempre accesa, ci metto la faccia",
+    "optionB": "Spenta appena posso",
+    "register": "carriera",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Si comunica meglio guardandosi negli occhi",
+      "Mostra rispetto per chi parla",
+      "Ti fa sembrare più presente e affidabile"
+    ],
+    "spuntiB": [
+      "Nessuno guarda davvero le webcam altrui",
+      "Una pausa dallo sguardo altrui è sacrosanta",
+      "L'audio conta più del video in riunione"
+    ]
+  },
+  {
+    "id": "dc15",
+    "text": "La pausa pranzo: veloce alla scrivania per finire prima, o lunga con i colleghi per staccare davvero?",
+    "optionA": "Veloce alla scrivania, poi stacco prima",
+    "optionB": "Lunga coi colleghi, mi serve per davvero",
+    "register": "carriera",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Chi finisce prima si gode il resto della giornata",
+      "Una pausa corta basta a ricaricare",
+      "Il lavoro fatto bene parla da solo"
+    ],
+    "spuntiB": [
+      "Le relazioni in ufficio si costruiscono a tavola",
+      "Una vera pausa rende più lucidi al pomeriggio",
+      "Mangiare di corsa non è mai una vittoria"
+    ]
+  },
+  {
+    "id": "dc16",
+    "text": "Biglietti da visita: te li fai ancora stampare, o bastano LinkedIn e un QR code?",
+    "optionA": "Stampati: un oggetto vero resta impresso",
+    "optionB": "Digitali: LinkedIn e un QR bastano e avanzano",
+    "register": "carriera",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Un pezzo di carta si ricorda più di uno swipe",
+      "Fa un'ottima impressione a chi lo riceve",
+      "È un piccolo rito che vale la spesa"
+    ],
+    "spuntiB": [
+      "Nessuno li rilegge più, finiscono in un cassetto",
+      "Un QR si aggiorna, la carta stampata no",
+      "È più ecologico e più pratico"
+    ]
+  },
+  {
+    "id": "dc17",
+    "text": "Il gruppo WhatsApp di lavoro: lo silenzi la sera, o resti sempre raggiungibile?",
+    "optionA": "Lo silenzio: la sera è mia",
+    "optionB": "Resto raggiungibile: non si sa mai",
+    "register": "carriera",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "I confini vanno difesi, non solo dichiarati",
+      "Il riposo serve a lavorare meglio il giorno dopo",
+      "Un vero urgente chiama, non scrive"
+    ],
+    "spuntiB": [
+      "Essere reattivi fa la differenza in certi momenti",
+      "Un messaggio letto in tempo può evitare un problema",
+      "Restare connessi è ormai parte del mestiere"
+    ]
+  },
+  {
+    "id": "dc18",
+    "text": "Il primo giorno in un nuovo lavoro: arrivi mezz'ora prima per fare bella figura, o arrivi puntuale e basta?",
+    "optionA": "Mezz'ora prima: la prima impressione conta",
+    "optionB": "Puntuale e basta: non serve strafare",
+    "register": "carriera",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Chi arriva prima dimostra entusiasmo vero",
+      "La prima settimana si è sempre osservati di più",
+      "Meglio abbondare che rischiare di essere in ritardo"
+    ],
+    "spuntiB": [
+      "La puntualità è già rispetto sufficiente",
+      "Strafare il primo giorno alza aspettative impossibili",
+      "Il valore si dimostra nei mesi, non nei minuti"
+    ]
+  },
+  {
+    "id": "dc19",
+    "text": "La tua azienda pareggia l'offerta di un'altra per trattenerti: resti o vai comunque?",
+    "optionA": "Resto: hanno dimostrato di volermi",
+    "optionB": "Vado comunque: la nuova offerta arrivava per un motivo",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Un'azienda che investe su di te merita fiducia",
+      "Ricominciare altrove ha sempre un costo nascosto",
+      "Restare mostra che non sei in vendita al miglior offerente"
+    ],
+    "spuntiB": [
+      "Se dovevano pareggiare, potevano farlo prima",
+      "Chi resta dopo la contro-offerta spesso viene notato come \"quello che ha minacciato\"",
+      "Il motivo per cui volevi andartene resta lì, intatto"
+    ]
+  },
+  {
+    "id": "dc20",
+    "text": "Due offerte sul tavolo: stipendio più alto in un ruolo noioso, o stipendio più basso in un ruolo che ti entusiasma.",
+    "optionA": "Prendo lo stipendio: i soldi aprono altre porte",
+    "optionB": "Prendo l'entusiasmo: il resto si aggiusta",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "I soldi comprano tempo, libertà, sicurezza",
+      "Un lavoro noioso si sopporta, uno povero no",
+      "Puoi sempre cercare entusiasmo fuori dall'ufficio"
+    ],
+    "spuntiB": [
+      "Otto ore al giorno di noia costano più di quanto sembri",
+      "L'entusiasmo produce risultati migliori nel tempo",
+      "Uno stipendio più alto non compra la voglia di alzarsi al mattino"
+    ]
+  },
+  {
+    "id": "dc21",
+    "text": "Meriti un aumento: lo chiedi direttamente, o aspetti che il capo se ne accorga da solo?",
+    "optionA": "Lo chiedo: nessuno regala quello che non chiedi",
+    "optionB": "Aspetto: il merito dovrebbe parlare da sé",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Chi non chiede resta spesso sottopagato per anni",
+      "Chiedere è una competenza professionale come le altre",
+      "Il silenzio viene letto come soddisfazione"
+    ],
+    "spuntiB": [
+      "Chiedere può sembrare presuntuoso se il momento è sbagliato",
+      "Un buon capo dovrebbe accorgersene senza essere spinto",
+      "Aspettare protegge la relazione con chi decide"
+    ]
+  },
+  {
+    "id": "dc22",
+    "text": "Ti offrono il lavoro della vita, ma in un'altra città: lasci tutto il tuo giro di amici per partire?",
+    "optionA": "Parto: le occasioni così non tornano",
+    "optionB": "Resto: gli affetti valgono più di una carriera",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Un'occasione enorme capita una volta sola",
+      "Nuove amicizie si costruiscono ovunque",
+      "Restare per paura è un rimpianto che dura una vita"
+    ],
+    "spuntiB": [
+      "Gli affetti veri sono più rari di un buon lavoro",
+      "Si può costruire una carriera anche restando",
+      "Ricominciare da soli in una città nuova ha un prezzo alto"
+    ]
+  },
+  {
+    "id": "dc23",
+    "text": "In riunione il capo elogia solo te per un'idea nata dal lavoro di tutto il team: correggi subito, o accetti l'elogio?",
+    "optionA": "Correggo subito: il merito è di tutti",
+    "optionB": "Accetto: sarà un'altra occasione per ridistribuirlo",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Prendersi un merito non tuo logora la fiducia del team",
+      "Chi condivide il merito lo riceve doppio in futuro",
+      "Zittirsi ora significa doverlo giustificare dopo"
+    ],
+    "spuntiB": [
+      "Correggere il capo in pubblico può sembrare ingrato",
+      "Un elogio ricevuto puoi comunque girarlo in privato",
+      "Un solo momento non definisce chi prende il merito davvero"
+    ]
+  },
+  {
+    "id": "dc24",
+    "text": "Uno stage non pagato in un'azienda prestigiosa, o un lavoro pagato in una realtà sconosciuta: cosa scegli?",
+    "optionA": "Lo stage prestigioso: il nome apre porte dopo",
+    "optionB": "Il lavoro pagato: l'esperienza vale più del logo",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Un nome forte sul curriculum pesa per anni",
+      "Le connessioni che fai lì valgono più dello stipendio perso",
+      "Molti grandi percorsi iniziano da un sacrificio iniziale"
+    ],
+    "spuntiB": [
+      "Lavorare gratis normalizza lo sfruttamento di chi verrà dopo",
+      "Un'esperienza vera vale più di un logo sul curriculum",
+      "I soldi guadagnati oggi sono un'indipendenza che non si compra col prestigio"
+    ]
+  },
+  {
+    "id": "dc25",
+    "text": "Il tuo capo è brillante e porta risultati, ma umilia le persone in pubblico: lo segnali, o lasci correre finché funziona?",
+    "optionA": "Lo segnalo: i risultati non giustificano tutto",
+    "optionB": "Lascio correre: finché porta risultati, meglio non toccare l'equilibrio",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "I risultati costruiti sull'umiliazione hanno un costo nascosto",
+      "Chi tace diventa complice del clima che si respira",
+      "Un buon leader ottiene risultati senza distruggere le persone"
+    ],
+    "spuntiB": [
+      "Segnalarlo senza prove solide può ritorcersi contro di te",
+      "Un cambiamento improvviso rischia di far crollare tutto",
+      "Non tutti i capi difficili sono davvero tossici"
+    ]
+  },
+  {
+    "id": "dc26",
+    "text": "Ti propongono un passo indietro di ruolo, ma con orari sani e meno stress: accetti la retrocessione?",
+    "optionA": "Accetto: la qualità della vita vale più del titolo",
+    "optionB": "Rifiuto: non voglio fare un passo indietro nella carriera",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Un titolo non paga le serate perse con chi ami",
+      "Meno stress oggi significa più energia per il futuro",
+      "Il \"successo\" che ti consuma non è successo vero"
+    ],
+    "spuntiB": [
+      "Un passo indietro è difficile da recuperare dopo",
+      "Il mercato giudica i titoli, non la serenità",
+      "Puoi trovare equilibrio anche restando al tuo livello"
+    ]
+  },
+  {
+    "id": "dc27",
+    "text": "Stai cercando un altro lavoro: lo dici al tuo capo attuale sperando in una contro-offerta, o resti in silenzio finché non hai firmato?",
+    "optionA": "Glielo dico: la trasparenza può giocare a mio favore",
+    "optionB": "Resto in silenzio: prima l'offerta, poi si vedrà",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "La trasparenza può aprire una trattativa vantaggiosa",
+      "Un capo onesto apprezza la sincerità anticipata",
+      "Nascondere tutto rischia di sembrare un tradimento se lo scopre da solo"
+    ],
+    "spuntiB": [
+      "Rivelarlo troppo presto può farti trattare come \"già uscito\"",
+      "Un'offerta in mano vale più di una promessa",
+      "La discrezione ti protegge finché non hai davvero deciso"
+    ]
+  },
+  {
+    "id": "dc28",
+    "text": "Un lavoro sicuro in un'azienda il cui prodotto non ti convince, o uno stipendio più basso in una missione in cui credi davvero: cosa scegli?",
+    "optionA": "La sicurezza: uno stipendio certo non si discute",
+    "optionB": "La missione: voglio credere in quello che faccio",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Otto ore al giorno per qualcosa che non ti convince logorano di più della paga bassa",
+      "La sicurezza economica è la base di tutto il resto",
+      "Puoi sempre trovare senso fuori dall'orario di lavoro"
+    ],
+    "spuntiB": [
+      "Lavorare per una missione cambia il modo in cui vivi ogni giornata",
+      "Il denaro senza significato stanca comunque, solo più lentamente",
+      "Credere in quello che fai è un investimento sulla motivazione futura"
+    ]
+  },
+  {
+    "id": "dc29",
+    "text": "Diventi il capo dei tuoi ex colleghi, gli stessi con cui prima scherzavi alla pari: accetti il ruolo o lo rifiuti per non rovinare i rapporti?",
+    "optionA": "Accetto: il ruolo non deve rovinare l'amicizia",
+    "optionB": "Rifiuto: preferisco restare alla pari con loro",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Il merito va accettato, non evitato per timidezza",
+      "Un buon capo può restare un amico giusto",
+      "Rifiutare un'occasione per gli altri non li aiuta davvero"
+    ],
+    "spuntiB": [
+      "Comandare chi era tuo pari cambia ogni dinamica",
+      "La lealtà tra colleghi vale più di un titolo",
+      "Un rifiuto onesto protegge relazioni che contano da anni"
+    ]
+  },
+  {
+    "id": "dc30",
+    "text": "Hai un posto stabile: lo lasci per fare il libero professionista a tempo pieno, con tutti i rischi che comporta?",
+    "optionA": "Lo lascio: voglio essere padrone del mio tempo",
+    "optionB": "Resto: la stabilità vale più della libertà incerta",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Chi non prova non saprà mai cosa avrebbe potuto essere",
+      "La libertà di scegliere i propri progetti non ha prezzo",
+      "Il rischio calcolato oggi vale un futuro diverso"
+    ],
+    "spuntiB": [
+      "Un reddito incerto pesa su ogni scelta della vita quotidiana",
+      "La stabilità permette di programmare, non solo di sperare",
+      "Si può costruire libertà anche dentro un posto fisso"
+    ]
+  },
+  {
+    "id": "dc31",
+    "text": "In riunione sei l'unico contrario a una decisione su cui tutti concordano: parli e rischi la tua reputazione, o stai zitto e lasci correre?",
+    "optionA": "Parlo: il silenzio non protegge nessuno se sbagliano",
+    "optionB": "Sto zitto: non vale la pena rischiare per una decisione già presa",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Un errore visto e taciuto pesa anche su chi tace",
+      "Chi dice la verità scomoda guadagna credibilità nel tempo",
+      "Il compito di chi lavora bene è anche avvertire per tempo"
+    ],
+    "spuntiB": [
+      "Opporsi da solo raramente cambia una decisione già presa",
+      "Il momento sbagliato per parlare può bruciare l'argomento giusto",
+      "A volte conviene scegliere le proprie battaglie"
+    ]
+  },
+  {
+    "id": "dc32",
+    "text": "Agli eventi di networking: costruisci connessioni con metodo, o lasci che sia il tuo lavoro a parlare da solo nel tempo?",
+    "optionA": "Networking attivo: le occasioni si costruiscono, non si aspettano",
+    "optionB": "Solo il lavoro: la qualità si nota senza bisogno di promuoversi",
+    "register": "carriera",
+    "complessita": "alto",
+    "spuntiA": [
+      "Molte occasioni nascono da una conversazione, non da un curriculum",
+      "Chi non si fa conoscere resta spesso invisibile",
+      "Costruire relazioni è già parte del mestiere"
+    ],
+    "spuntiB": [
+      "Il tempo speso a promuoversi è tempo tolto al lavoro vero",
+      "Un lavoro eccellente si diffonde comunque, con più credibilità",
+      "Il networking forzato suona spesso falso"
+    ]
+  },
+  {
+    "id": "dc33",
+    "text": "Scopri una pratica scorretta (non illegale, ma sbagliata) nella tua azienda: la denunci pubblicamente rischiando la tua reputazione nel settore, o la segnali solo internamente?",
+    "optionA": "La denuncio pubblicamente: la verità viene prima della carriera",
+    "optionB": "La segnalo solo internamente: cambio le cose senza bruciarmi",
+    "register": "carriera",
+    "complessita": "max",
+    "spuntiA": [
+      "Una denuncia pubblica costringe davvero al cambiamento",
+      "Chi tace diventa parte del problema",
+      "La reputazione di chi dice la verità si ricostruisce, quella di chi tace no"
+    ],
+    "spuntiB": [
+      "Una via interna può cambiare le cose senza distruggere nessuno",
+      "Bruciarsi il settore per un solo caso è un prezzo enorme",
+      "La discrezione a volte ottiene di più del clamore"
+    ]
+  },
+  {
+    "id": "dc34",
+    "text": "Il tuo partner ottiene il lavoro dei sogni in un'altra città: lasci il lavoro che ami per seguirlo, o resti e affrontate la distanza?",
+    "optionA": "Lo seguo: la relazione viene prima della mia carriera",
+    "optionB": "Resto: non voglio sacrificare quello che ho costruito",
+    "register": "carriera",
+    "complessita": "max",
+    "spuntiA": [
+      "Un amore che non si adatta mai finisce per logorarsi",
+      "Le carriere si ricostruiscono, le relazioni importanti no",
+      "Sostenersi a vicenda è la base di ogni coppia solida"
+    ],
+    "spuntiB": [
+      "Sacrificare tutto per un altro spesso genera rimpianti nascosti",
+      "La distanza si può gestire, l'identità professionale no",
+      "Chi ama davvero non chiede di rinunciare a se stessi"
+    ]
+  },
+  {
+    "id": "dc35",
+    "text": "Ti offrono la promozione della vita, ma richiede disponibilità totale proprio ora che i tuoi figli sono piccoli: la accetti?",
+    "optionA": "La accetto: è un'occasione che non tornerà mai più",
+    "optionB": "La rifiuto: questi anni con loro non tornano indietro",
+    "register": "carriera",
+    "complessita": "max",
+    "spuntiA": [
+      "Un futuro economico solido protegge anche i tuoi figli",
+      "Le occasioni così arrivano una volta in una carriera",
+      "Essere un genitore presente non richiede di essere presente ogni minuto"
+    ],
+    "spuntiB": [
+      "Il tempo perso con un figlio piccolo non si recupera con nessuno stipendio",
+      "Un'altra promozione arriverà, un'infanzia no",
+      "Il vero successo si misura anche fuori dall'ufficio"
+    ]
+  },
+  {
+    "id": "dc36",
+    "text": "Scopri che il tuo mentore, a cui devi tutto, ha mentito sulle proprie credenziali per anni: lo smascheri, o proteggi chi ti ha aperto la strada?",
+    "optionA": "Lo smaschero: la verità vale più del debito che ho con lui",
+    "optionB": "Lo proteggo: gli devo la carriera che ho oggi",
+    "register": "carriera",
+    "complessita": "max",
+    "spuntiA": [
+      "Una bugia scoperta prima o poi esplode comunque, meglio ora",
+      "Il tuo silenzio ti rende complice della sua menzogna",
+      "Chi si è costruito su una bugia non merita protezione eterna"
+    ],
+    "spuntiB": [
+      "Deve a lui la sua occasione, non deve tradirlo alla prima crepa",
+      "Distruggere chi ti ha aiutato è un debito morale pesante",
+      "Ci sono modi per correggere senza distruggere una persona"
+    ]
+  },
+  {
+    "id": "dc37",
+    "text": "Ti offrono il lavoro dei sogni, ma l'azienda ha valori che confliggono con i tuoi: lo rifiuti per coerenza?",
+    "optionA": "Lo rifiuto: non lavorerei mai contro i miei valori",
+    "optionB": "Lo accetto: dentro posso comunque provare a fare la differenza",
+    "register": "carriera",
+    "complessita": "max",
+    "spuntiA": [
+      "Lavorare contro i propri valori logora più di ogni stipendio",
+      "La coerenza personale vale più di ogni occasione",
+      "Un rifiuto netto manda un messaggio chiaro al settore"
+    ],
+    "spuntiB": [
+      "Da dentro puoi cambiare più cose che da fuori restando puro",
+      "Rifiutare non cambia nulla, resta solo un gesto simbolico",
+      "I valori si difendono anche lavorando, non solo restando a guardare"
+    ]
+  },
+  {
+    "id": "dc38",
+    "text": "Un lavoro che paga il triplo, ma in un settore che trovi moralmente discutibile: lo accetti per il futuro della tua famiglia?",
+    "optionA": "Lo accetto: la sicurezza della mia famiglia viene prima di tutto",
+    "optionB": "Lo rifiuto: non voglio guadagnarmi da vivere così",
+    "register": "carriera",
+    "complessita": "max",
+    "spuntiA": [
+      "Un futuro economico solido protegge chi ami più di ogni principio astratto",
+      "Puoi comunque restare una persona onesta facendo un lavoro discutibile",
+      "Il triplo dello stipendio cambia davvero la vita di chi ami"
+    ],
+    "spuntiB": [
+      "I soldi guadagnati contro i propri valori pesano ogni singolo giorno",
+      "Un esempio sbagliato ai figli vale più di ogni stipendio",
+      "C'è sempre un altro modo di garantire un futuro, anche se più lento"
+    ]
+  },
+  {
+    "id": "dc39",
+    "text": "Un genitore anziano ha bisogno di te proprio mentre ti si apre l'occasione di carriera all'estero che aspettavi da una vita: cosa scegli?",
+    "optionA": "Parto: questa occasione capita una volta sola nella vita",
+    "optionB": "Resto: un genitore non aspetta il momento comodo",
+    "register": "carriera",
+    "complessita": "max",
+    "spuntiA": [
+      "Un futuro costruito ora protegge anche chi ami, più avanti",
+      "Restare fermi per sempre non è amore, è paura",
+      "Ci sono modi per esserci anche da lontano"
+    ],
+    "spuntiB": [
+      "Il tempo che resta con un genitore anziano non si recupera",
+      "Nessuna carriera vale il rimpianto di non essere stato presente",
+      "Le occasioni tornano, le persone che ami non sempre"
+    ]
+  },
+  {
+    "id": "dc40",
+    "text": "Ti offrono la carriera dei sogni, ma a una condizione: non potrai mai più rivedere le persone che ami nella tua città natale.",
+    "optionA": "Accetto, senza rimpianti me la gioco fino in fondo",
+    "optionB": "Rifiuto, niente vale quella rinuncia",
+    "register": "carriera",
+    "complessita": "power",
+    "spuntiA": [
+      "Un'occasione così non ricapita mai due volte in una vita",
+      "Le persone che ami possono restare vicine anche da lontano, coi mezzi giusti",
+      "A volte bisogna scegliere se stessi per poter dare di più agli altri"
+    ],
+    "spuntiB": [
+      "Nessuna carriera vale una vita passata senza le persone che ami",
+      "Il successo senza qualcuno con cui condividerlo è vuoto",
+      "Ci sono legami che, una volta spezzati, non tornano più come prima"
+    ]
+  },
+  {
+    "id": "dc41",
+    "text": "Potresti garantirti un lavoro sicuro e comodo per tutta la vita, ma dovresti rinunciare per sempre alla possibilità di essere davvero orgoglioso di ciò che fai.",
+    "optionA": "Lo accetto: la sicurezza vale il compromesso",
+    "optionB": "Rifiuto: l'orgoglio del mio lavoro è troppo importante",
+    "register": "carriera",
+    "complessita": "power",
+    "spuntiA": [
+      "La sicurezza economica protegge da paure che nessun orgoglio placa",
+      "Non tutti hanno il lusso di scegliere il senso, prima serve la stabilità",
+      "Un lavoro comodo lascia energie per trovare senso altrove"
+    ],
+    "spuntiB": [
+      "Passare la vita senza mai essere fieri di ciò che fai è un lento spegnersi",
+      "Il senso del proprio lavoro pesa più della comodità nel lungo periodo",
+      "Rinunciare all'orgoglio per sempre è rinunciare a una parte di sé"
+    ]
+  },
+  {
+    "id": "dc42",
+    "text": "Scopri che l'intero settore in cui hai costruito vent'anni di carriera fa, nel complesso, più danno che bene al mondo.",
+    "optionA": "Resto e provo a cambiarlo dall'interno",
+    "optionB": "Me ne vado e ricomincio da zero, qualunque costo",
+    "register": "carriera",
+    "complessita": "power",
+    "spuntiA": [
+      "Vent'anni di esperienza dentro pesano più di un addio simbolico",
+      "Chi resta e lotta dall'interno può cambiare davvero le regole del gioco",
+      "Andarsene lascia il settore esattamente com'era, nelle mani di altri"
+    ],
+    "spuntiB": [
+      "Restare a lungo in un sistema dannoso finisce per corrompere anche te",
+      "Ricominciare da zero è doloroso, ma libera davvero la coscienza",
+      "Vent'anni bastano per sapere quando è il momento di dire basta"
+    ]
+  },
+  {
+    "id": "be01",
+    "text": "Ufficio open space o uffici singoli chiusi?",
+    "optionA": "Open space: si comunica e collabora meglio",
+    "optionB": "Uffici chiusi: si lavora meglio in silenzio",
+    "register": "business",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Le idee migliori nascono da scambi spontanei tra scrivanie",
+      "Abbatte le gerarchie visive tra i ruoli",
+      "Costa meno e sfrutta meglio lo spazio"
+    ],
+    "spuntiB": [
+      "La concentrazione vera ha bisogno di silenzio",
+      "Ogni conversazione altrui è un'interruzione",
+      "La privacy delle chiamate delicate va rispettata"
+    ]
+  },
+  {
+    "id": "be02",
+    "text": "Le riunioni: in piedi per farle più corte, o sedute comode come sempre?",
+    "optionA": "In piedi: si va dritti al punto",
+    "optionB": "Sedute: si ragiona meglio senza fretta",
+    "register": "business",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Nessuno tira per le lunghe se ha le gambe stanche",
+      "Le riunioni comode finiscono sempre per allungarsi",
+      "Il tempo risparmiato torna a tutti come produttività"
+    ],
+    "spuntiB": [
+      "Le decisioni migliori nascono con calma, non di corsa",
+      "Stare in piedi distrae più di quanto sembri",
+      "Un'ora seduta rende meglio di dieci minuti frettolosi"
+    ]
+  },
+  {
+    "id": "be03",
+    "text": "Il nome dell'azienda: serio e professionale, o buffo e facile da ricordare?",
+    "optionA": "Serio: trasmette affidabilità fin da subito",
+    "optionB": "Buffo: si ricorda e si racconta da solo",
+    "register": "business",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Un nome serio apre porte con clienti importanti",
+      "Nei settori tradizionali la serietà conta più della simpatia",
+      "Rassicura chi deve fidarsi con soldi veri"
+    ],
+    "spuntiB": [
+      "Un nome che fa sorridere si diffonde da solo",
+      "Nel mare di aziende serie, uno buffo si nota subito",
+      "La gente ricorda le storie, non gli acronimi"
+    ]
+  },
+  {
+    "id": "be04",
+    "text": "Venerdì in ufficio: giacca e cravatta come sempre, o casual friday libero per tutti?",
+    "optionA": "Sempre formale: la coerenza conta ogni giorno",
+    "optionB": "Casual friday: un giorno di leggerezza fa bene",
+    "register": "business",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "La coerenza nell'immagine rassicura clienti e partner",
+      "Un dress code fisso evita discussioni continue",
+      "La professionalità non dovrebbe avere eccezioni"
+    ],
+    "spuntiB": [
+      "Un giorno più rilassato alleggerisce il clima in ufficio",
+      "La creatività fiorisce quando ci si sente più a proprio agio",
+      "Piccole libertà motivano più di un regolamento rigido"
+    ]
+  },
+  {
+    "id": "be05",
+    "text": "Snack e caffè gratis in ufficio: un investimento sul morale, o uno spreco travestito da welfare?",
+    "optionA": "Investimento: il morale alto si ripaga da solo",
+    "optionB": "Spreco: sono soldi che potrebbero andare altrove",
+    "register": "business",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Un piccolo gesto quotidiano tiene alto l'umore del team",
+      "Costa poco rispetto al tempo che fa risparmiare",
+      "Chi si sente curato lavora con più energia"
+    ],
+    "spuntiB": [
+      "Un aumento vero pesa più di uno snack gratis",
+      "Sono soldi che potrebbero finire in formazione o bonus",
+      "Il welfare vero non si misura in barrette di cereali"
+    ]
+  },
+  {
+    "id": "be06",
+    "text": "Il logo aziendale: lo rinnovi ogni pochi anni per restare fresco, o lo tieni identico per sempre?",
+    "optionA": "Lo rinnovo: bisogna stare al passo con i tempi",
+    "optionB": "Lo tengo identico: la riconoscibilità è un tesoro",
+    "register": "business",
+    "complessita": "sorbetto",
+    "spuntiA": [
+      "Un logo aggiornato racconta un'azienda che si evolve",
+      "Restare fermi troppo a lungo sembra datato",
+      "Un piccolo restyling tiene viva l'attenzione del pubblico"
+    ],
+    "spuntiB": [
+      "Un logo stabile costruisce fiducia nel tempo",
+      "Ogni cambio rischia di confondere chi ti conosce già",
+      "Le aziende più iconiche non hanno mai cambiato simbolo"
+    ]
+  },
+  {
+    "id": "be07",
+    "text": "Ti offrono di vendere l'azienda che hai fondato: i soldi cambierebbero la tua vita, ma il compratore smantellerebbe tutto ciò per cui l'hai creata.",
+    "optionA": "Vendo: i soldi sono reali, la missione può rinascere altrove",
+    "optionB": "Rifiuto: la missione vale più di ogni cifra",
+    "register": "business",
+    "complessita": "power",
+    "spuntiA": [
+      "Con quei soldi potresti finanziare cause anche più grandi",
+      "Un'azienda non è per sempre, un patrimonio sì",
+      "Restare aggrappati a un'idea può costare l'occasione della vita"
+    ],
+    "spuntiB": [
+      "Un'azienda venduta e smantellata è un tradimento verso chi ci ha creduto con te",
+      "Il denaro non ripaga il vedere distrutto ciò che hai costruito",
+      "La missione è il vero motivo per cui hai iniziato, non il conto in banca"
+    ]
+  },
+  {
+    "id": "be08",
+    "text": "Devi licenziare il tuo migliore amico, cofondatore dell'azienda, perché la sua parte del lavoro sta affondando tutti gli altri.",
+    "optionA": "Lo licenzio: l'azienda e chi ci lavora vengono prima",
+    "optionB": "Lo tengo: l'amicizia viene prima di ogni bilancio",
+    "register": "business",
+    "complessita": "power",
+    "spuntiA": [
+      "Proteggere un solo amico a scapito di tutti gli altri non è giusto",
+      "Un cofondatore che affonda l'azienda tradisce anche l'amicizia stessa",
+      "Le decisioni difficili sono il prezzo di guidare qualcosa di più grande di due persone"
+    ],
+    "spuntiB": [
+      "Un'amicizia vera non si sacrifica per un bilancio trimestrale",
+      "Ci sono sempre altri modi per risolvere prima di licenziare chi ami",
+      "Un'azienda costruita tradendo un amico non vale più nulla"
+    ]
+  },
+  {
+    "id": "be09",
+    "text": "Scopri che il prodotto della tua azienda, pur legale, fa più male che bene alle persone che lo usano.",
+    "optionA": "Resto e provo a cambiarlo dall'interno",
+    "optionB": "Me ne vado, non voglio più far parte del danno",
+    "register": "business",
+    "complessita": "power",
+    "spuntiA": [
+      "Chi resta può davvero correggere la rotta, chi va via lascia campo libero ad altri",
+      "Cambiare un prodotto dall'interno pesa più di un gesto simbolico",
+      "Andarsene non cancella il danno già fatto, solo la tua responsabilità"
+    ],
+    "spuntiB": [
+      "Restare a lungo in un sistema dannoso finisce per corrompere anche te",
+      "La tua coscienza non aspetta i tempi di un consiglio di amministrazione",
+      "A volte l'unico modo onesto di fermare un danno è non farne più parte"
+    ]
+  },
+  {
+    "id": "be10",
+    "text": "Puoi salvare l'azienda e i posti di lavoro di cento dipendenti, ma solo mentendo agli investitori sui numeri reali.",
+    "optionA": "Mento: cento famiglie valgono più di un bilancio",
+    "optionB": "Dico la verità, anche se forse chiudiamo",
+    "register": "business",
+    "complessita": "power",
+    "spuntiA": [
+      "Cento stipendi reali pesano più di una riga falsa su un foglio",
+      "Una bugia per salvare vite concrete è un male minore",
+      "Gli investitori rischiano soldi, i dipendenti rischiano il futuro"
+    ],
+    "spuntiB": [
+      "Una bugia agli investitori, se scoperta, distrugge tutto comunque",
+      "La fiducia persa non si ricostruisce con nessun bilancio",
+      "Cento posti salvati su una menzogna sono cento posti fragili"
+    ]
+  },
+  {
+    "id": "be11",
+    "text": "Ti offrono di diventare CEO dell'azienda al posto del fondatore, l'unico che ha creduto in te quando nessun altro lo faceva.",
+    "optionA": "Accetto il posto: un'occasione così non ricapita",
+    "optionB": "Rifiuto per lealtà: non lo farei mai a lui",
+    "register": "business",
+    "complessita": "power",
+    "spuntiA": [
+      "Il merito personale non dovrebbe fermarsi per gratitudine",
+      "Chi ti ha creduto capirebbe la scelta di crescere",
+      "Rifiutare un'occasione enorme per lealtà è un prezzo altissimo da pagare"
+    ],
+    "spuntiB": [
+      "Prendere il suo posto sarebbe un tradimento verso chi ti ha dato tutto",
+      "La lealtà vera si dimostra proprio quando conviene tradirla",
+      "Ci sono occasioni che non valgono il prezzo di un'amicizia spezzata"
+    ]
+  },
+  {
+    "id": "be12",
+    "text": "L'azienda può sopravvivere solo tagliando drasticamente la qualità e i valori che l'hanno resa unica.",
+    "optionA": "Taglio: sopravvivere viene prima di tutto",
+    "optionB": "Non taglio: meglio chiudere fedeli a se stessi",
+    "register": "business",
+    "complessita": "power",
+    "spuntiA": [
+      "Un'azienda chiusa non aiuta più nessuno dei suoi dipendenti",
+      "Si può sempre ricostruire la qualità una volta al sicuro",
+      "Sopravvivere oggi è l'unica condizione per contare ancora domani"
+    ],
+    "spuntiB": [
+      "Un'azienda snaturata non è più quella per cui vale la pena lottare",
+      "Tradire i propri valori per sopravvivere è già una forma di chiusura",
+      "Meglio un'uscita di scena fedele a sé stessi che un compromesso senza fine"
+    ]
   }
 ]
