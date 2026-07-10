@@ -195,6 +195,19 @@ export default function HostApp() {
     const duelTurn = game.duelTurn;
     const duelResult = game.duelResult;
     const duelSummary = game.duelSummary;
+    // Leader-paced beats (storia narration + the percorso tappa recap) have no
+    // server timer — the group is waiting on one specific phone. Named so
+    // everyone knows who to nudge; reframed if that leader just disconnected —
+    // leadership reassigns automatically (RECONNECT_GRACE_MS), so this is a
+    // transient "hang on" cue, not a stall (6.3).
+    const currentLeader = players.find((p) => p.id === game.leaderId) ?? null;
+    const leaderWaitCue = currentLeader && (
+      <p style={{ fontSize: '1rem', opacity: 0.7, margin: 0 }}>
+        {currentLeader.connected === false
+          ? `🔌 ${currentLeader.nickname} si è disconnesso — passiamo il testimone a breve…`
+          : `In attesa di ${currentLeader.nickname} ▶`}
+      </p>
+    );
     return (
       <main style={screen}>
         <ReactionSwarm />
@@ -236,8 +249,9 @@ export default function HostApp() {
                 {p.tappaDilemmas} {p.tappaDilemmas === 1 ? 'dilemma' : 'dilemmi'} · {p.tappaSwings} {p.tappaSwings === 1 ? 'ribaltone' : 'ribaltoni'}
               </p>
               <p style={{ fontSize: '1.2rem', opacity: 0.8, margin: 0 }}>
-                {isLast ? 'Avete raggiunto la vetta 🏔️' : 'Pausa: il leader riprende quando volete.'}
+                {isLast ? 'Avete raggiunto la vetta 🏔️' : 'Pausa: riprendete quando volete.'}
               </p>
+              {!isLast && leaderWaitCue}
             </Card>
           );
         })()}
@@ -249,6 +263,7 @@ export default function HostApp() {
             <h2 style={{ fontSize: '2.2rem', margin: 0, fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>{game.storia.title}</h2>
             <p style={{ fontSize: '1.2rem', opacity: 0.75, margin: 0 }}>con {game.storia.protagonist}</p>
             <p style={{ fontSize: '1.45rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.premessa}</p>
+            {leaderWaitCue}
           </Card>
         )}
 
@@ -258,6 +273,7 @@ export default function HostApp() {
               <p style={{ fontSize: '1rem', opacity: 0.6, margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{game.storia.actTitle}</p>
             )}
             <p style={{ fontSize: '1.5rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.sceneNarration}</p>
+            {leaderWaitCue}
           </Card>
         )}
 
@@ -269,6 +285,7 @@ export default function HostApp() {
               </h2>
             )}
             <p style={{ fontSize: '1.45rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.consequence}</p>
+            {leaderWaitCue}
           </Card>
         )}
 
@@ -276,6 +293,7 @@ export default function HostApp() {
           <Card glow="accent" style={{ maxWidth: '46rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', textAlign: 'center', alignItems: 'center' }}>
             <span style={{ fontSize: '3.5rem' }}>🌅</span>
             <p style={{ fontSize: '1.5rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.epilogo}</p>
+            {leaderWaitCue}
           </Card>
         )}
 

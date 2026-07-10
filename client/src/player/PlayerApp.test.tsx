@@ -946,6 +946,58 @@ describe('PlayerApp', () => {
     expect(screen.queryByRole('button', { name: /giocate ancora/i })).toBeNull();
   });
 
+  it('shows who the group is waiting on by nickname during a leader-paced narrative beat (6.3)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea', connected: true },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'STORY_INTRO',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        storia: { title: 'La Prova', emoji: '🌊', protagonist: 'Nora', premessa: 'Una lunga storia.' },
+        leaderId: 'p2',
+      });
+    });
+    expect(screen.getByText(/in attesa di bea/i)).toBeInTheDocument();
+  });
+
+  it('flags a disconnected leader distinctly during a narrative beat, instead of a bare stall (6.3)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea', connected: false },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'STORY_INTRO',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        storia: { title: 'La Prova', emoji: '🌊', protagonist: 'Nora', premessa: 'Una lunga storia.' },
+        leaderId: 'p2',
+      });
+    });
+    expect(screen.getByText(/bea si è disconnesso/i)).toBeInTheDocument();
+  });
+
   it('shows the lobby with the add-dilemma card after joining (no game state yet)', () => {
     render(<PlayerApp />);
     act(() => {

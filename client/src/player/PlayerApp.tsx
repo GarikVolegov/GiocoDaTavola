@@ -967,6 +967,7 @@ export default function PlayerApp() {
           remaining={remaining}
           playerId={playerId}
           isLeader={isLeader}
+          players={players}
           onAdvance={advance}
           onRematch={rematch}
           infiltratoRole={infiltratoRole}

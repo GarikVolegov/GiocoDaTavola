@@ -7,6 +7,7 @@ import {
   tappaMeta,
   type GameStatePayload,
   type BlindSpot,
+  type PublicPlayer,
   type PlayerInfiltratoRolePayload,
   type PlayerPredictionResultPayload,
   type PlayerSwingBetResultPayload,
@@ -24,6 +25,7 @@ interface StatusViewProps {
   remaining: number | null;
   playerId: string | null;
   isLeader: boolean;
+  players: PublicPlayer[];
   onAdvance: () => void;
   onRematch: () => void;
   infiltratoRole: PlayerInfiltratoRolePayload | null;
@@ -45,6 +47,7 @@ export default function StatusView({
   remaining,
   playerId,
   isLeader,
+  players,
   onAdvance,
   onRematch,
   infiltratoRole,
@@ -64,15 +67,27 @@ export default function StatusView({
   const wrongSwingBetTitle = useMemo(() => pickIronicTitle(WRONG_SWING_BET_TITLES), [swingBetResult]);
   const wrongKnowTitle = useMemo(() => pickIronicTitle(WRONG_KNOW_TITLES), [knowResult]);
   const wrongGroupMindTitle = useMemo(() => pickIronicTitle(WRONG_KNOW_TITLES), [groupMindResult]);
-  // Leader-paced narrative beats (storia): the leader advances; others wait. The
-  // host screen is the narrator, so the phone only needs this small control.
+  // Leader-paced beats (storia narration + the percorso tappa recap): the leader
+  // advances; others wait. Named by nickname so the group knows WHO to nudge, and
+  // reframed if that leader just dropped — leadership reassigns automatically on
+  // disconnect (RECONNECT_GRACE_MS), so this is a transient "hang on" message, not
+  // a stall: the story's own state (6.3) is untouched and resumes exactly where it
+  // left off once a new leader's phone picks up the "Continua ▶" control.
+  const currentLeader = players.find((p) => p.id === game?.leaderId) ?? null;
+  const waitingMessage = (): ReactNode => {
+    if (!currentLeader) return 'In attesa del leader…';
+    if (currentLeader.connected === false) {
+      return `🔌 ${currentLeader.nickname} si è disconnesso — passiamo il testimone a breve…`;
+    }
+    return `In attesa di ${currentLeader.nickname}…`;
+  };
   const narratorAdvance = (label: string) =>
     isLeader ? (
       <Button variant="primary" onClick={onAdvance}>
         {label}
       </Button>
     ) : (
-      <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem' }}>In attesa del narratore…</p>
+      <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem' }}>{waitingMessage()}</p>
     );
   return (
     <main style={wrap}>
@@ -117,13 +132,7 @@ export default function StatusView({
               <p style={{ fontSize: '0.9rem', opacity: 0.7, margin: 0 }}>
                 {isLast ? 'Avete raggiunto la vetta 🏔️' : 'Pausa: riprendete quando volete.'}
               </p>
-              {isLeader ? (
-                <Button variant="primary" onClick={onAdvance}>
-                  {isLast ? 'Vai ai premi ▶' : 'Continua ▶'}
-                </Button>
-              ) : (
-                <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem' }}>In attesa del leader…</p>
-              )}
+              {narratorAdvance(isLast ? 'Vai ai premi ▶' : 'Continua ▶')}
             </Card>
           );
         })() : null

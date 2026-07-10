@@ -1,8 +1,12 @@
-// Host-only story narration: read the prose aloud with the Web Speech API. ONLY
-// the main device (the /host screen) calls this — phones never narrate. Speech is
-// gated by the shared mute toggle and one utterance plays at a time (a new line
-// cancels the previous so they never overlap). The pure `narrationFor` mapping is
-// unit-tested; `speak`/`cancelNarration` are thin Web Speech side-effects.
+// Story narration: read the prose aloud with the Web Speech API. Only the LEADER's
+// phone calls this (via useHostAudio) — other phones and the shared /host screen
+// only show the narration as text. Speech is gated by the shared mute toggle and
+// one utterance plays at a time (a new line cancels the previous so they never
+// overlap). `narrationFor` is purely derived from (phase, storia), so a fresh
+// leader (reassigned after the old one disconnects — 6.3) picks the narration
+// straight back up wherever the story currently stands, with no lost state. The
+// pure `narrationFor` mapping is unit-tested; `speak`/`cancelNarration` are thin
+// Web Speech side-effects.
 import type { GamePhase, StoriaView } from '../../shared/events';
 import { isMuted } from './engine';
 
