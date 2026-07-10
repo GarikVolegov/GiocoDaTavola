@@ -35,6 +35,17 @@ describe('loadDilemmas (server/data/dilemmas.json)', () => {
       expect(d.text.includes('{nome}') || d.optionA.includes('{nome}') || d.optionB.includes('{nome}')).toBe(true);
     }
   });
+
+  it('every famiglia (5.4, near-duplicate grouping) has at least 2 members — a group of 1 is a data mistake', () => {
+    const counts = new Map<string, number>();
+    for (const d of loadDilemmas()) {
+      if (d.famiglia) counts.set(d.famiglia, (counts.get(d.famiglia) ?? 0) + 1);
+    }
+    expect(counts.size).toBeGreaterThan(0);
+    for (const [famiglia, count] of counts) {
+      expect(count, `famiglia "${famiglia}" has only ${count} member(s)`).toBeGreaterThanOrEqual(2);
+    }
+  });
 });
 
 describe('Deck', () => {

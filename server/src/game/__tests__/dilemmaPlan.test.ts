@@ -136,3 +136,47 @@ describe('buildClassicPlan — submitted (UGC) dilemmas are spread out, not fron
     expect(plan.length).toBe(2);
   });
 });
+
+describe('buildClassicPlan — pool hygiene: famiglia + bilanciamento (5.4)', () => {
+  function famiglia(id: string, fam: string): Dilemma {
+    return { id, text: `${id}?`, optionA: 'A', optionB: 'B', register: 'vita', famiglia: fam };
+  }
+  function sbilanciato(id: string): Dilemma {
+    return { id, text: `${id}?`, optionA: 'A', optionB: 'B', register: 'vita', bilanciamento: 'sbilanciato' };
+  }
+
+  it('draws at most one dilemma per famiglia when enough other content exists', () => {
+    const deck = new Deck(
+      [famiglia('f1', 'segreto'), famiglia('f2', 'segreto'), fixture('d1', 'alto'), fixture('d2', 'alto')],
+      () => 0,
+    );
+    const plan = buildClassicPlan(deck, [], 3, () => 0);
+    const fromFamily = plan.filter((d) => d.famiglia === 'segreto');
+    expect(fromFamily.length).toBe(1);
+    expect(plan.length).toBe(3); // still a full game — the rejected sibling didn't shortchange it
+  });
+
+  it('a lone family member draws normally alongside unrelated content', () => {
+    const deck = new Deck([famiglia('f1', 'segreto'), fixture('d1', 'alto'), fixture('d2', 'alto')], () => 0);
+    const plan = buildClassicPlan(deck, [], 3, () => 0);
+    expect(plan.map((d) => d.id).sort()).toEqual(['d1', 'd2', 'f1']);
+  });
+
+  it('backfills a same-family repeat rather than shortchanging the game when the deck has nothing else', () => {
+    const deck = new Deck([famiglia('f1', 'segreto'), famiglia('f2', 'segreto')], () => 0);
+    const plan = buildClassicPlan(deck, [], 2, () => 0);
+    expect(plan.map((d) => d.id).sort()).toEqual(['f1', 'f2']); // both played: a repeat beats 1 round short
+  });
+
+  it('never places two "sbilanciato" dilemmas back to back when enough balanced content exists', () => {
+    const deck = new Deck(
+      [sbilanciato('s1'), sbilanciato('s2'), fixture('d1', 'alto'), fixture('d2', 'alto')],
+      () => 0,
+    );
+    const plan = buildClassicPlan(deck, [], 4, () => 0);
+    for (let i = 0; i < plan.length - 1; i++) {
+      const bothFlat = plan[i].bilanciamento === 'sbilanciato' && plan[i + 1].bilanciamento === 'sbilanciato';
+      expect(bothFlat).toBe(false);
+    }
+  });
+});

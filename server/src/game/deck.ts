@@ -52,6 +52,21 @@ export interface Dilemma {
    * (deviceSeenIds/excludeDilemmaIds) and never truly gets "consumed".
    */
   roster?: boolean;
+  /**
+   * "Igiene del pool" (5.4): groups near-duplicate dilemmas (same premise,
+   * different wording) so at most one member plays in a single game —
+   * dilemmaPlan.ts's buildClassicPlan enforces it. Absent ⇒ not part of any
+   * family (the common case).
+   */
+  famiglia?: string;
+  /**
+   * "Igiene del pool" (5.4): the content author's expectation of how the vote
+   * splits — 'equilibrato' invites real debate; 'sbilanciato' tends toward a
+   * near-unanimous vote (still worth keeping around, just not back to back —
+   * dilemmaPlan.ts's pacing spaces them out so they don't "uccidere il
+   * round" two in a row). Absent ⇒ no signal either way.
+   */
+  bilanciamento?: 'equilibrato' | 'sbilanciato';
   /** 2–3 talking points for someone defending side A (optionA). */
   spuntiA: string[];
   /** 2–3 talking points for someone defending side B (optionB). */

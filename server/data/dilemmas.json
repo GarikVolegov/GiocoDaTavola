@@ -438,7 +438,8 @@
       "Se fosse al contrario, vorresti sapere anche tu",
       "Tenere un segreto che riguarda qualcun altro lo rende complice",
       "La verità, anche scomoda, è sempre un atto di rispetto"
-    ]
+    ],
+    "famiglia": "segreto-tradimento"
   },
   {
     "id": "d26",
@@ -552,7 +553,8 @@
       "Alcune verità non cambiano la situazione ma distruggono la serenità",
       "Il momento di dire una verità difficile è cruciale: aspettare può essere saggio",
       "Proteggere chi ami dal dolore è a volte l'atto più amorevole"
-    ]
+    ],
+    "famiglia": "verita-dolorosa"
   },
   {
     "id": "d36",
@@ -1221,7 +1223,8 @@
       "Se tradisco lui, che amico sono?",
       "Non tocca a me decidere per gli altri",
       "Chi confida deve potersi fidare sempre"
-    ]
+    ],
+    "famiglia": "segreto-tradimento"
   },
   {
     "id": "h16",
@@ -1278,7 +1281,8 @@
       "Un legame fondato su un segreto è già crepato",
       "Decidere per lei è toglierle dignità",
       "I non detti marciscono e tornano peggio"
-    ]
+    ],
+    "famiglia": "verita-dolorosa"
   },
   {
     "id": "h19",
@@ -2305,7 +2309,8 @@
       "Un legame fondato su un’illusione resta falso",
       "Ha il diritto di conoscere la realtà, non una favola",
       "Le verità nascoste pesano comunque, anche taciute"
-    ]
+    ],
+    "famiglia": "verita-dolorosa"
   },
   {
     "id": "s29",
