@@ -67,7 +67,24 @@ export type GamePhase =
   | 'DUEL_ARGUE'
   | 'DUEL_REPICK'
   | 'DUEL_RESULT'
-  | 'FINAL_DUEL';
+  | 'FINAL_DUEL'
+  // "Percorso in 2" (the rebuilt duello): three fixed acts + the couple portrait.
+  // DUO_ACT_INTRO frames each act (like TAPPA_INTRO). Atto I plays
+  // DUO_PICK_PREDICT → DUO_SYNC_REVEAL; Atto II plays DUO_SIDE_PICK → DUO_ARGUE
+  // → DUO_WAVER → DUO_ROUND_RESULT; Atto III plays DUO_PICK → DUO_REVEAL →
+  // DUO_ARGUE → DUO_REPICK → (DUO_WAVER on the no-flip advocacy twist) →
+  // DUO_ROUND_RESULT. DUO_PORTRAIT is terminal (handled by nextDuoPhase).
+  | 'DUO_ACT_INTRO'
+  | 'DUO_PICK_PREDICT'
+  | 'DUO_SYNC_REVEAL'
+  | 'DUO_SIDE_PICK'
+  | 'DUO_ARGUE'
+  | 'DUO_WAVER'
+  | 'DUO_ROUND_RESULT'
+  | 'DUO_PICK'
+  | 'DUO_REVEAL'
+  | 'DUO_REPICK'
+  | 'DUO_PORTRAIT';
 
 /**
  * Per-turn timing for the self-paced defense + interventi. A human speaker gets a
@@ -91,6 +108,9 @@ export const TURN_BOT_MS = 20_000;
 /** Per-turn floor for a human's DUEL_ARGUE turn — mirrors INTERVENTO_MIN_MS;
  * kept separate so the two can diverge later without cross-affecting. */
 export const DUEL_TURN_MIN_MS = 15_000;
+
+/** Per-turn floor for a DUO_ARGUE arringa (Percorso in 2). */
+export const DUO_TURN_MIN_MS = 15_000;
 
 /**
  * Self-paced phases (VOTE_1/VOTE_2/PREDICT/SPEAKER_VOTE) have no fixed timer —
@@ -156,6 +176,19 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   DUEL_REPICK: 20_000,
   DUEL_RESULT: 8_000,
   FINAL_DUEL: null,
+  // Percorso in 2: every input phase has a real timer + server early-advance
+  // (the group's soft-timeout quorum can never arm with only 2 players).
+  DUO_ACT_INTRO: 7_000,
+  DUO_PICK_PREDICT: 30_000,
+  DUO_SYNC_REVEAL: 8_000,
+  DUO_SIDE_PICK: 12_000,
+  DUO_ARGUE: 45_000,
+  DUO_WAVER: 15_000,
+  DUO_ROUND_RESULT: 8_000,
+  DUO_PICK: 20_000,
+  DUO_REVEAL: 6_000,
+  DUO_REPICK: 20_000,
+  DUO_PORTRAIT: null,
 };
 
 /**
@@ -375,5 +408,70 @@ export function nextDuelPhase(
   if (i >= 0 && i < DUEL_SEQUENCE.length - 1) {
     return { phase: DUEL_SEQUENCE[i + 1], dilemmaIndex };
   }
+  return { phase: current, dilemmaIndex };
+}
+
+/**
+ * The act (1|2|3) of the 1-based dilemma `dilemmaIndex` in a Percorso in 2;
+ * `plannedActs[i]` is the act of dilemma i+1 (same convention as percorso's
+ * plannedTappe). 0 when out of range.
+ */
+export function actForIndex(plannedActs: number[], dilemmaIndex: number): number {
+  return plannedActs[dilemmaIndex - 1] ?? 0;
+}
+
+/** The secret-pick phase that opens a round of the given act. */
+function duoPickPhase(act: number): GamePhase {
+  return act === 1 ? 'DUO_PICK_PREDICT' : act === 2 ? 'DUO_SIDE_PICK' : 'DUO_PICK';
+}
+
+/**
+ * Pure state-machine transition for the "Percorso in 2" (rebuilt duello).
+ * Rounds run act-shaped sequences (see the GamePhase comment); ends of round
+ * either continue within the act, detour through DUO_ACT_INTRO at an act
+ * boundary (index unchanged, like TAPPA_RECAP→TAPPA_INTRO), or terminate at
+ * DUO_PORTRAIT. `flags` is only consulted leaving DUO_REPICK: on the Atto III
+ * advocacy twist a listener who did NOT flip still rates the arringa
+ * (DUO_WAVER) before the round result.
+ */
+export function nextDuoPhase(
+  current: GamePhase,
+  dilemmaIndex: number,
+  plannedActs: number[],
+  flags: { advocacy: boolean; flipped: boolean },
+): PhaseTransition {
+  const total = plannedActs.length;
+  const endOfRound = (): PhaseTransition => {
+    if (dilemmaIndex >= total) return { phase: 'DUO_PORTRAIT', dilemmaIndex };
+    const nextAct = actForIndex(plannedActs, dilemmaIndex + 1);
+    return actForIndex(plannedActs, dilemmaIndex) === nextAct
+      ? { phase: duoPickPhase(nextAct), dilemmaIndex: dilemmaIndex + 1 }
+      : { phase: 'DUO_ACT_INTRO', dilemmaIndex };
+  };
+  if (current === 'PHASE_INTRO') return { phase: 'DUO_ACT_INTRO', dilemmaIndex: 0 };
+  if (current === 'DUO_ACT_INTRO') {
+    return {
+      phase: duoPickPhase(actForIndex(plannedActs, dilemmaIndex + 1)),
+      dilemmaIndex: dilemmaIndex + 1,
+    };
+  }
+  if (current === 'DUO_PICK_PREDICT') return { phase: 'DUO_SYNC_REVEAL', dilemmaIndex };
+  if (current === 'DUO_SYNC_REVEAL') return endOfRound();
+  if (current === 'DUO_SIDE_PICK') return { phase: 'DUO_ARGUE', dilemmaIndex };
+  if (current === 'DUO_ARGUE') {
+    return actForIndex(plannedActs, dilemmaIndex) === 2
+      ? { phase: 'DUO_WAVER', dilemmaIndex }
+      : { phase: 'DUO_REPICK', dilemmaIndex };
+  }
+  if (current === 'DUO_WAVER') return { phase: 'DUO_ROUND_RESULT', dilemmaIndex };
+  if (current === 'DUO_PICK') return { phase: 'DUO_REVEAL', dilemmaIndex };
+  if (current === 'DUO_REVEAL') return { phase: 'DUO_ARGUE', dilemmaIndex };
+  if (current === 'DUO_REPICK') {
+    return flags.advocacy && !flags.flipped
+      ? { phase: 'DUO_WAVER', dilemmaIndex }
+      : { phase: 'DUO_ROUND_RESULT', dilemmaIndex };
+  }
+  if (current === 'DUO_ROUND_RESULT') return endOfRound();
+  // LOBBY and DUO_PORTRAIT have no automatic successor.
   return { phase: current, dilemmaIndex };
 }
