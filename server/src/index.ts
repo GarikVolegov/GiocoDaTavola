@@ -112,16 +112,19 @@ function cancelGrace(playerId: string): void {
   }
 }
 
-// After a roster change during a vote: VOTE_1 / DUEL_PICK can complete early
+// After a roster change during a vote: the cast-style phases can complete early
 // once every present player has voted; otherwise just refresh the host's count.
-// (VOTE_2 / DUEL_REPICK always run their full timer — they start pre-filled.)
 function refreshAfterRosterChange(code: string): void {
   const room = rooms.get(code);
   if (!room) return;
-  if ((room.phase === 'VOTE_1' || room.phase === 'DUEL_PICK') && rooms.allVoted(code)) {
+  const isCastPhase =
+    room.phase === 'VOTE_1' || room.phase === 'DUO_SIDE_PICK' || room.phase === 'DUO_PICK';
+  if (isCastPhase && rooms.allVoted(code)) {
     advanceAndBroadcast(code);
   } else if (room.phase === 'VOTE_2' && rooms.allConfirmed(code)) {
     advanceAndBroadcast(code); // a leaver was the last unconfirmed -> don't block
+  } else if (room.phase === 'DUO_REPICK' && rooms.duoRepickComplete(code)) {
+    advanceAndBroadcast(code);
   } else {
     if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
     broadcastGameState(code);
@@ -243,14 +246,20 @@ function gameStatePayload(room: Room) {
     // The final "Punti Serata" podium/ranking, gated to FINAL_AWARDS (null
     // otherwise). Point totals only — never individual votes.
     podium: rooms.publicPodium(room.code),
-    // 1v1 duel: the room's mode + the duel views, each gated to its own phase.
+    // Percorso in 2: the room's mode + the duo views, each gated to its own
+    // phase inside the store readers (predictions secret until the sync
+    // reveal, waver ratings secret until the round result; counts are
+    // aggregate-only like every other progress number here).
     mode: room.mode,
     // The leader-player's id, so the creator's phone shows its controls.
     leaderId: room.leaderId,
-    duelReveal: rooms.publicDuelReveal(room.code),
-    duelTurn: rooms.publicDuelTurn(room.code),
-    duelResult: rooms.publicDuelResult(room.code),
-    duelSummary: rooms.publicDuelSummary(room.code),
+    duoAct: rooms.publicDuoActState(room.code),
+    duoSyncedCount: room.duoPredictions.size,
+    duoWaverCount: room.duoWaverRatings.size,
+    duoSyncReveal: rooms.publicDuoSyncReveal(room.code),
+    duoTurn: rooms.publicDuoTurn(room.code),
+    duoRoundResult: rooms.publicDuoRoundResult(room.code),
+    duoPortrait: rooms.publicDuoPortrait(room.code),
   };
 }
 
@@ -390,7 +399,7 @@ function advanceAndBroadcast(code: string): void {
       if (sid) io.to(sid).emit('player:groupMindResult', { correct: r.correct, guess: r.guess, actual: r.actual });
     }
   }
-  if (room && room.phase === 'FINAL_AWARDS') {
+  if (room && (room.phase === 'FINAL_AWARDS' || room.phase === 'DUO_PORTRAIT')) {
     saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards failed', e));
     saveGameRecords(gamesToPersist(room)).catch((e) => console.error('[db] saveGameRecords failed', e));
   }
@@ -742,17 +751,67 @@ io.on('connection', (socket) => {
     }
     // Confirm the player's own current choice back to just them.
     socket.emit('player:voted', { choice: result.room.votes.get(playerId) });
-    // No timer on the vote phases — advance as soon as everyone present has acted.
-    // VOTE_1 / DUEL_PICK: everyone has voted. VOTE_2: changing the vote also confirms
-    // it (store), so advance once everyone has confirmed.
+    // Advance as soon as everyone present has acted. VOTE_1 and the duo picks:
+    // everyone has voted. VOTE_2 / DUO_REPICK: changing the vote also confirms
+    // it (store), so advance once everyone required has confirmed.
     const phase = result.room.phase;
-    if ((phase === 'VOTE_1' || phase === 'DUEL_PICK') && rooms.allVoted(code)) {
+    const isCastPhase = phase === 'VOTE_1' || phase === 'DUO_SIDE_PICK' || phase === 'DUO_PICK';
+    if (isCastPhase && rooms.allVoted(code)) {
       advanceAndBroadcast(code);
     } else if (phase === 'VOTE_2' && rooms.allConfirmed(code)) {
+      advanceAndBroadcast(code);
+    } else if (phase === 'DUO_REPICK' && rooms.duoRepickComplete(code)) {
       advanceAndBroadcast(code);
     } else {
       if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code); // refresh the count for the host
+    }
+  });
+
+  // Percorso in 2, Atto I: a player submits their own pick AND the prediction of
+  // the partner's pick in one move. Both stay secret until DUO_SYNC_REVEAL; the
+  // phase early-advances once both players have submitted.
+  socket.on('player:duoSync', (payload: { own?: string; predict?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const own = String(payload?.own ?? '');
+    const predict = String(payload?.predict ?? '');
+    const valid =
+      (own === 'A' || own === 'B') &&
+      (predict === 'A' || predict === 'B') &&
+      rooms.duoSync(code, playerId, own, predict);
+    if (!valid) {
+      socket.emit('player:duoSyncError', { error: 'NOT_SYNC_PHASE' });
+      return;
+    }
+    socket.emit('player:duoSynced', { own, predict });
+    if (rooms.duoSyncComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code); // refresh the aggregate count
+    }
+  });
+
+  // Percorso in 2: a listener rates the arringa ("ti ha fatto vacillare?").
+  // Ratings stay secret until DUO_ROUND_RESULT; early-advance once all rated.
+  socket.on('player:duoWaver', (payload: { rating?: number }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const rating = Number(payload?.rating);
+    const valid =
+      (rating === 0 || rating === 1 || rating === 2) &&
+      rooms.duoWaver(code, playerId, rating as 0 | 1 | 2);
+    if (!valid) {
+      socket.emit('player:duoWaverError', { error: 'NOT_WAVER_PHASE' });
+      return;
+    }
+    socket.emit('player:duoWavered', { rating });
+    if (rooms.duoWaverComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code);
     }
   });
 
@@ -765,7 +824,11 @@ io.on('connection', (socket) => {
     const { code } = session;
     const result = rooms.confirmVote(code, session.playerId);
     if (!result.ok) return;
-    if (rooms.allConfirmed(code)) {
+    const done =
+      result.room.phase === 'DUO_REPICK'
+        ? rooms.duoRepickComplete(code) // the advocate never re-picks
+        : rooms.allConfirmed(code);
+    if (done) {
       advanceAndBroadcast(code);
     } else {
       if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
@@ -1029,7 +1092,7 @@ io.on('connection', (socket) => {
     if (!userId) return;
     rooms.setPlayerUser(session.code, session.playerId, userId);
     const room = rooms.get(session.code);
-    if (room && room.phase === 'FINAL_AWARDS') {
+    if (room && (room.phase === 'FINAL_AWARDS' || room.phase === 'DUO_PORTRAIT')) {
       saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards (identify) failed', e));
       saveGameRecords(gamesToPersist(room)).catch((e) => console.error('[db] saveGameRecords (identify) failed', e));
     }

@@ -188,7 +188,8 @@ function ensurePoints(room: Room, id: string): DuoPoints {
   return pts;
 }
 
-const totalPoints = (pts?: DuoPoints): number =>
+/** A player's duo verdict total (all four counters summed). */
+export const duoTotalPoints = (pts?: DuoPoints): number =>
   pts ? pts.tiConosco + pts.vacillare + pts.persuasione + pts.ribaltone : 0;
 
 /**
@@ -498,7 +499,7 @@ export function duoRoundResult(room: Room): DuoRoundResult | null {
   const scores = players.map((p) => ({
     id: p.id,
     nickname: p.nickname,
-    total: totalPoints(room.duoScore.get(p.id)),
+    total: duoTotalPoints(room.duoScore.get(p.id)),
   }));
   return { act, advocacy: room.duoAdvocacy, vacillare, convinced, scores };
 }
@@ -602,7 +603,7 @@ export function duoPortrait(room: Room): DuoPortrait | null {
   const scores = players.map((p) => ({
     id: p.id,
     nickname: p.nickname,
-    total: totalPoints(room.duoScore.get(p.id)),
+    total: duoTotalPoints(room.duoScore.get(p.id)),
   }));
   let winnerId: string | null = null;
   if (scores.length === 2 && scores[0].total !== scores[1].total) {
