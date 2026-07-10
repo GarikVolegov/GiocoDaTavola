@@ -126,7 +126,7 @@ const exitStyle: CSSProperties = {
   color: 'var(--terracotta, inherit)',
   fontSize: '0.95rem',
   fontWeight: 700,
-  textAlign: 'left',
+  textAlign: 'center',
   padding: 'var(--space-1) 0',
   cursor: 'pointer',
 };
@@ -136,7 +136,7 @@ const cancelStyle: CSSProperties = {
   border: 'none',
   color: 'var(--text-muted)',
   fontSize: '0.9rem',
-  textAlign: 'left',
+  textAlign: 'center',
   padding: 'var(--space-1) 0',
   cursor: 'pointer',
 };

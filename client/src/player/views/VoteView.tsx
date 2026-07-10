@@ -84,6 +84,7 @@ export default function VoteView({
             label={dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
             selected={vote === letter}
             onClick={() => onVote(letter)}
+            centered
           />
         ))}
       </div>

@@ -74,6 +74,7 @@ export default function PredictView({
               label={dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
               selected={knowGuess === letter}
               onClick={() => onKnowGuess(letter)}
+              centered
             />
           ))}
         </div>
@@ -114,6 +115,7 @@ export default function PredictView({
             label={dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
             selected={predicted === letter}
             onClick={() => onPredict(letter)}
+            centered
           />
         ))}
       </div>

@@ -51,6 +51,7 @@ export default function SpeakerVoteView({
               label={d.nickname}
               selected={speakerVote === d.id}
               onClick={() => onVote(d.id)}
+              centered
             />
           ))}
         </div>

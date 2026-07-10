@@ -38,6 +38,7 @@ export default function AccuseView({ candidates, remaining, myAccusation, onAccu
             label={`${p.nickname}${p.isBot ? ' 🤖' : ''}`}
             selected={myAccusation === p.id}
             onClick={() => onAccuse(p.id)}
+            centered
           />
         ))}
       </div>
