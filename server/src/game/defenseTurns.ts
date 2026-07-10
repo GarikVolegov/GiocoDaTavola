@@ -1,16 +1,14 @@
-// Turn-control for the speaking phases (DEFENSE / INTERVENTI / DUEL_ARGUE): who is
+// Turn-control for the speaking phases (DEFENSE / INTERVENTI / DUO_ARGUE): who is
 // currently speaking, the raise-hand queue, and the speaker's "I'm done" signal.
 // Operates on a Room; RoomStore delegates after the room lookup. Type-only imports
-// from rooms.ts keep it cycle-free; the duel speaking order comes from duel.ts.
+// from rooms.ts keep it cycle-free.
 import type { Room, RaiseHandResult, FinishTurnResult, DefenseState } from './rooms';
-import { duelPlayers } from './duel';
 import { isDefensePhase, isInterventiPhase } from './phases';
 
 /** The id of the player currently speaking, or null. */
 export function currentSpeakerId(room: Room): string | null {
   if (room.phase === 'DEFENSE') return room.defenders[room.defenseTurnIndex]?.id ?? null;
   if (room.phase === 'INTERVENTI') return room.interventiQueue[room.interventiIndex] ?? null;
-  if (room.phase === 'DUEL_ARGUE') return duelPlayers(room)[room.duelTurnIndex]?.id ?? null;
   if (room.phase === 'DUO_ARGUE') return room.duoSpeakers[room.duoTurnIndex] ?? null;
   return null;
 }
@@ -70,12 +68,7 @@ export function raiseHand(room: Room, playerId: string): RaiseHandResult {
  * once the per-turn minimum has elapsed; the caller then advances the turn.
  */
 export function finishTurn(room: Room, playerId: string, now: number): FinishTurnResult {
-  if (
-    room.phase !== 'DEFENSE' &&
-    room.phase !== 'INTERVENTI' &&
-    room.phase !== 'DUEL_ARGUE' &&
-    room.phase !== 'DUO_ARGUE'
-  ) {
+  if (room.phase !== 'DEFENSE' && room.phase !== 'INTERVENTI' && room.phase !== 'DUO_ARGUE') {
     return { ok: false, error: 'NOT_FINISHING_PHASE' };
   }
   if (currentSpeakerId(room) !== playerId) return { ok: false, error: 'NOT_SPEAKER' };

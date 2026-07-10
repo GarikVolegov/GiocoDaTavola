@@ -2295,7 +2295,7 @@ describe('startGame — device-remembered dilemmas (5.1, "memoria del già-visto
 });
 
 describe('rematch()', () => {
-  it('rejects from anywhere except FINAL_AWARDS/FINAL_DUEL', () => {
+  it('rejects from anywhere except FINAL_AWARDS/DUO_PORTRAIT', () => {
     const store = new RoomStore();
     const { code } = store.create();
     store.join(code, 'p1', 'Ann');
@@ -2472,7 +2472,7 @@ describe('RoomStore live reactions (engagement)', () => {
     expect(store.get(code)?.stats.get('sock-0')?.reactionsReceived).toBe(2);
   });
 
-  it('rejects a reaction outside DEFENSE / DUEL_ARGUE', () => {
+  it('rejects a reaction outside DEFENSE / DUO_ARGUE', () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);

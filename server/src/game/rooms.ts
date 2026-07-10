@@ -31,12 +31,10 @@ import {
   PHASE_DURATIONS_MS,
   SOFT_TIMEOUT_THRESHOLD,
   SOFT_TIMEOUT_MS,
-  DUEL_TURN_MIN_MS,
   DUO_TURN_MIN_MS,
   DEFENSE_MAX_MS_NORMALE,
   DEFENSE_MAX_MS_LUNGA,
   nextPhase,
-  nextDuelPhase,
   nextDuoPhase,
   nextPercorsoPhase,
   nextStoriaPhase,
@@ -63,15 +61,6 @@ import { tally } from './voteCount';
 import { computeAwards as computeAwardsFor, type Award, type PlayerStats } from './awards';
 import { computeBlindSpot, type BlindSpot } from './blindspots';
 import { computePodium, type PodiumEntry } from './podium';
-import {
-  duelPlayers,
-  duelAgreed,
-  recordDuelResult,
-  duelReveal,
-  duelTurn,
-  duelResult,
-  duelSummary,
-} from './duel';
 import {
   buildDuoActPlan,
   expandActs,
@@ -182,7 +171,7 @@ function isContentRegister(v: string): v is ContentRegister {
 
 /**
  * The fixed allowlist of live audience-reaction emojis a phone may send during
- * DEFENSE / DUEL_ARGUE. A small set keeps the host's "swarm" readable and the
+ * DEFENSE / DUO_ARGUE. A small set keeps the host's "swarm" readable and the
  * input un-spoofable (anything else is rejected).
  */
 export const REACTIONS = ['👏', '🔥', '🤯', '😂', '🤔'] as const;
@@ -508,12 +497,6 @@ export interface Room {
   botSeq: number;
   /** Game mode: 'gruppo' (classic) or 'duello' (2-player). Default 'gruppo'. */
   mode: GameMode;
-  /** Which duel argue turn (0-based) is speaking during DUEL_ARGUE. */
-  duelTurnIndex: number;
-  /** Duel score: persuasions per player id (times they flipped the other). */
-  duelScore: Map<string, number>;
-  /** Duel: how many rounds the two players already agreed (no duel needed). */
-  duelAgreements: number;
   // --- "Percorso in 2" (the rebuilt duello). All duo fields are Map/array/
   // plain values on purpose: the crash-restore snapshot round-trips Maps but
   // NOT Sets, so a Set here would silently lose state on revival.
@@ -556,7 +539,7 @@ export interface Room {
   lastReactionAt: Map<string, number>;
   /**
    * Emoji -> count for the CURRENT speaker's turn only (DEFENSE/INTERVENTI/
-   * DUEL_ARGUE), reset when a turn starts (armTurn). Live/in-progress —
+   * DUO_ARGUE), reset when a turn starts (armTurn). Live/in-progress —
    * `lastTurnApplause` is the frozen snapshot for the turn that just ended.
    */
   turnReactionTally: Partial<Record<Reaction, number>>;
@@ -943,48 +926,6 @@ export class RoomStore {
 
 
 
-  /**
-   * Advance the 1v1 duel state machine one step (the duello analogue of the group
-   * logic in advancePhase). DUEL_ARGUE runs one timed turn per player (mirror of
-   * DEFENSE); DUEL_REVEAL branches on whether the two picks agree; entering a new
-   * round (DUEL_PICK) draws a dilemma and clears the picks; DUEL_REPICK snapshots
-   * the first pick; DUEL_RESULT records the round's outcome.
-   */
-  private advanceDuelPhase(room: Room): AdvancePhaseResult {
-    if (room.phase === 'DUEL_ARGUE' && room.duelTurnIndex < duelPlayers(room).length - 1) {
-      room.duelTurnIndex++;
-      room.phaseExpiresAt = this.expiryFor('DUEL_ARGUE');
-      room.turnStartedAt = this.now();
-      room.turnMinEndsAt = this.now() + DUEL_TURN_MIN_MS;
-      return { ok: true, room };
-    }
-    const agreed = room.phase === 'DUEL_REVEAL' ? duelAgreed(room) : false;
-    const t = nextDuelPhase(room.phase, room.dilemmaIndex, room.dilemmaCount ?? 0, agreed);
-    room.phase = t.phase;
-    room.dilemmaIndex = t.dilemmaIndex;
-    room.phaseExpiresAt = this.expiryFor(t.phase);
-    if (t.phase === 'DUEL_PICK') {
-      room.currentDilemma = room.deck?.draw() ?? null;
-      room.votes.clear();
-      room.votes1.clear();
-      room.duelTurnIndex = 0;
-    }
-    if (t.phase === 'DUEL_ARGUE') {
-      room.turnStartedAt = this.now();
-      room.turnMinEndsAt = this.now() + DUEL_TURN_MIN_MS;
-    }
-    if (t.phase === 'DUEL_REPICK') {
-      room.votes1 = new Map(room.votes);
-    }
-    if (t.phase === 'DUEL_RESULT') {
-      // Agreed path skips DUEL_REPICK, so votes1 was never snapshotted — take it
-      // now so recordDuelResult sees first==second (no flips) and counts the agree.
-      if (room.votes1.size === 0) room.votes1 = new Map(room.votes);
-      recordDuelResult(room);
-    }
-    return { ok: true, room };
-  }
-
   /** Reset the per-round duo state and draw the round's PLANNED dilemma (the
    * escalating classic plan, player submissions included — never the raw deck
    * unless the plan somehow ran dry). */
@@ -1160,9 +1101,6 @@ export class RoomStore {
       stats: new Map(),
       botSeq: 0,
       mode: 'gruppo',
-      duelTurnIndex: 0,
-      duelScore: new Map(),
-      duelAgreements: 0,
       duoPlannedActs: [],
       duoPredictions: new Map(),
       duoAssignedSides: new Map(),
@@ -1189,7 +1127,7 @@ export class RoomStore {
   }
 
   /**
-   * Return a finished room (FINAL_AWARDS/FINAL_DUEL) to LOBBY with the same
+   * Return a finished room (FINAL_AWARDS/DUO_PORTRAIT) to LOBBY with the same
    * code/leader/roster, remembering this game's dilemmas so the next
    * startGame's deck excludes them. Resets every round-scoped field `create()`
    * initializes except code/createdAt/leaderId/players (those must survive).
@@ -1197,11 +1135,7 @@ export class RoomStore {
   rematch(code: string): RematchResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (
-      room.phase !== 'FINAL_AWARDS' &&
-      room.phase !== 'FINAL_DUEL' &&
-      room.phase !== 'DUO_PORTRAIT'
-    ) {
+    if (room.phase !== 'FINAL_AWARDS' && room.phase !== 'DUO_PORTRAIT') {
       return { ok: false, error: 'NOT_FINISHED' };
     }
     for (const d of room.plannedDilemmas) room.excludeDilemmaIds.add(d.id);
@@ -1277,9 +1211,6 @@ export class RoomStore {
     room.turnMinEndsAt = null;
     room.turnStartedAt = null;
     room.stats = new Map();
-    room.duelTurnIndex = 0;
-    room.duelScore = new Map();
-    room.duelAgreements = 0;
     room.duoPlannedActs = [];
     room.duoPredictions = new Map();
     room.duoAssignedSides = new Map();
@@ -1528,9 +1459,6 @@ export class RoomStore {
     room.currentTwist = null;
     room.stats = new Map();
     room.defenseCounts = new Map();
-    room.duelScore = new Map();
-    room.duelAgreements = 0;
-    room.duelTurnIndex = 0;
     room.duoPredictions = new Map();
     room.duoAssignedSides = new Map();
     room.duoSpeakers = [];
@@ -1558,7 +1486,6 @@ export class RoomStore {
     if (
       room.phase === 'LOBBY' ||
       room.phase === 'FINAL_AWARDS' ||
-      room.phase === 'FINAL_DUEL' ||
       room.phase === 'DUO_PORTRAIT'
     ) {
       return { ok: false, error: 'NO_NEXT_PHASE' };
@@ -1906,9 +1833,9 @@ export class RoomStore {
     return voting.vote(room, playerId, choice);
   }
 
-  /** The id of the player currently speaking (defender in DEFENSE, arguer in DUEL_ARGUE), or null. */
+  /** The id of the player currently speaking (defender in DEFENSE, arguer in DUO_ARGUE), or null. */
   /**
-   * Record a live audience reaction from a phone during DEFENSE / DUEL_ARGUE. The
+   * Record a live audience reaction from a phone during DEFENSE / DUO_ARGUE. The
    * reaction is attributed to whoever is currently speaking (the defender/arguer),
    * accumulating their `reactionsReceived` for the end-game "Beniamino" award.
    * Rate-limited per player (anti-spam) and restricted to the emoji allowlist.
@@ -2418,44 +2345,6 @@ export class RoomStore {
   publicDefense(code: string): DefenseState | null {
     const room = this.rooms.get(code);
     return room ? defenseTurns.publicDefense(room, this.now()) : null;
-  }
-
-  /**
-   * Public duel reveal (only DUEL_REVEAL, null otherwise): both players' picks +
-   * whether they agreed. The picks are intentionally public here — that's the
-   * point of the reveal; no other state leaks.
-   */
-  publicDuelReveal(code: string) {
-    const room = this.rooms.get(code);
-    return room ? duelReveal(room) : null;
-  }
-
-  /**
-   * Public duel argue turn (only DUEL_ARGUE, null otherwise): who is arguing now
-   * (the current player + their picked side) and the turn progress.
-   */
-  publicDuelTurn(code: string) {
-    const room = this.rooms.get(code);
-    return room ? duelTurn(room, this.now()) : null;
-  }
-
-  /**
-   * Public duel result (only DUEL_RESULT, null otherwise): whether they agreed,
-   * and—if not—who convinced whom (a player whose re-pick changed was convinced
-   * by the other). Derived from votes1 (first pick) vs votes (re-pick).
-   */
-  publicDuelResult(code: string) {
-    const room = this.rooms.get(code);
-    return room ? duelResult(room) : null;
-  }
-
-  /**
-   * Public duel summary (only FINAL_DUEL, null otherwise): each player's total
-   * persuasions and how many rounds the two agreed.
-   */
-  publicDuelSummary(code: string) {
-    const room = this.rooms.get(code);
-    return room ? duelSummary(room) : null;
   }
 
   /** Atto I combined submit: own secret pick + prediction of the partner's. */

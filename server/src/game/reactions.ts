@@ -14,17 +14,12 @@ function isReaction(e: string): e is Reaction {
 
 /**
  * Record a live audience reaction from a phone during DEFENSE / INTERVENTI /
- * DUEL_ARGUE, attributed to whoever is currently speaking (their
+ * DUO_ARGUE, attributed to whoever is currently speaking (their
  * `reactionsReceived` for the end-game award). Rate-limited per player and
  * restricted to the emoji allowlist. Reactions never touch the secret votes.
  */
 export function react(room: Room, playerId: string, emoji: string, now: number): ReactResult {
-  if (
-    room.phase !== 'DEFENSE' &&
-    room.phase !== 'INTERVENTI' &&
-    room.phase !== 'DUEL_ARGUE' &&
-    room.phase !== 'DUO_ARGUE'
-  ) {
+  if (room.phase !== 'DEFENSE' && room.phase !== 'INTERVENTI' && room.phase !== 'DUO_ARGUE') {
     return { ok: false, error: 'NOT_REACTING_PHASE' };
   }
   if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };

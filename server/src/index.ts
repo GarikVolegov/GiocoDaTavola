@@ -163,7 +163,7 @@ function gameStatePayload(room: Room) {
     votedCount: room.votes.size,
     confirmedCount: rooms.confirmedCount(room.code),
     // Nicknames of connected players still missing their action this voting
-    // phase (VOTE_1/VOTE_2/DUEL_PICK/DUEL_REPICK); null otherwise. Never
+    // phase (VOTE_1/VOTE_2 e le fasi duo); null otherwise. Never
     // reveals WHICH choice — presence only.
     missingVoters: rooms.missingVoters(room.code),
     // How many players have made a secret prediction this round (PREDICT phase).
@@ -836,7 +836,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // A player taps a live reaction during DEFENSE / DUEL_ARGUE. The store validates
+  // A player taps a live reaction during DEFENSE / DUO_ARGUE. The store validates
   // the phase/emoji and rate-limits per player, then attributes it to the current
   // speaker; we re-broadcast just the emoji as a lightweight stream the host
   // animates (no full game:state — reactions are ephemeral, never secret votes).

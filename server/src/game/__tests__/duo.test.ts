@@ -685,7 +685,7 @@ describe('duo room state lifecycle', () => {
     store.join(code, 'sock-bob', 'Bob');
     const room = store.get(code)!;
     const [ann] = [...room.players.keys()];
-    room.phase = 'FINAL_DUEL';
+    room.phase = 'DUO_PORTRAIT';
     room.duoPlannedActs = [1, 2, 3];
     room.duoPredictions.set(ann, 'A');
     room.duoAssignedSides.set(ann, 'B');

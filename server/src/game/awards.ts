@@ -19,7 +19,7 @@ export interface PlayerStats {
   defendedCount: number;
   /**
    * Live audience reactions received while this player was the current speaker
-   * (DEFENSE / DUEL_ARGUE). Optional + only set once non-zero, so a player who
+   * (DEFENSE / DUO_ARGUE). Optional + only set once non-zero, so a player who
    * was never reacted to keeps the base shape.
    */
   reactionsReceived?: number;
