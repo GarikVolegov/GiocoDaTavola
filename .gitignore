@@ -11,3 +11,4 @@ coverage/
 
 # Superpowers brainstorm mockups
 .superpowers/
+.worktrees/
