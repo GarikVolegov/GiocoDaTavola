@@ -13,7 +13,7 @@ import {
   type PlayerKnowGuessResultPayload,
   type PlayerGroupMindResultPayload,
 } from '../../shared/events';
-import { Card, Button, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel } from '../../shared/ui';
+import { Card, Button, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel, PodiumPanel } from '../../shared/ui';
 import { NORTHSTAR_URL } from '../../shared/northstar';
 import { pickIronicTitle, WRONG_PREDICTION_TITLES, WRONG_SWING_BET_TITLES, WRONG_KNOW_TITLES } from '../../shared/ironicTitles';
 import { wrap } from './layout';
@@ -368,6 +368,19 @@ export default function StatusView({
                 🕵️ Il replay: ha seminato dubbi in {game.infiltratoResult.toolUses} round.
               </p>
             </Card>
+          )}
+          {game?.podium && game.podium.length > 0 && (
+            <>
+              {(() => {
+                const me = game.podium.find((e) => e.player.id === playerId);
+                return me ? (
+                  <p style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
+                    🏅 Il tuo posto: {me.rank}° · {me.points} {me.points === 1 ? 'punto' : 'punti'}
+                  </p>
+                ) : null;
+              })()}
+              <PodiumPanel podium={game.podium} meId={playerId} />
+            </>
           )}
           {game?.namedMoments && <NamedMomentsPanel moments={game.namedMoments} />}
           {game?.awards && <AwardsPanel awards={game.awards} />}

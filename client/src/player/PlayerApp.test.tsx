@@ -564,6 +564,32 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/bea ha convinto 3 persone/i)).toBeInTheDocument();
   });
 
+  it('mostra il podio con il proprio piazzamento a FINAL_AWARDS', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'FINAL_AWARDS',
+        dilemmaCount: 3,
+        dilemmaIndex: 3,
+        phaseExpiresAt: null,
+        podium: [
+          { player: { id: 'p2', nickname: 'Bea' }, points: 12, rank: 1 },
+          { player: { id: 'p1', nickname: 'Alice' }, points: 9, rank: 2 },
+        ],
+        awards: [],
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/il podio della serata/i)).toBeInTheDocument();
+    expect(screen.getByText(/il tuo posto: 2°/i)).toBeInTheDocument();
+    expect(screen.getByText(/alice \(tu\)/i)).toBeInTheDocument();
+  });
+
   it('renders nothing for "I momenti della serata" when the game produced none', () => {
     render(<PlayerApp />);
     act(() => {
