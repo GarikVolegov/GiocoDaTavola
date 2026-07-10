@@ -2014,6 +2014,47 @@ describe('startGame — mood + delicate-theme opt-in (2.2)', () => {
   });
 });
 
+describe('DILEMMA_REVEAL — roster-template dilemmas (5.3, "contenuto combinatorio sul roster")', () => {
+  const ROSTER_FIXTURE: Dilemma[] = [
+    {
+      id: 'rt01',
+      text: '{nome} eredita 50k: cosa ci fa?',
+      optionA: 'Li investe',
+      optionB: 'Li mette da parte',
+      register: 'vita',
+      roster: true,
+      spuntiA: [],
+      spuntiB: [],
+    },
+  ];
+  const rosterDeck = (_r: ContentRegister) => new Deck(ROSTER_FIXTURE, () => 0);
+
+  it("fills {nome} with a random player's nickname on reveal", () => {
+    const store = new RoomStore(generateRoomCode, () => 0, rosterDeck, () => 0);
+    const { code } = store.create();
+    store.join(code, 'p1', 'Marco');
+    store.join(code, 'p2', 'Bea');
+    store.join(code, 'p3', 'Cid');
+    store.startGame(code, 3);
+    store.advancePhase(code); // DILEMMA_REVEAL
+    const revealed = store.get(code)!.currentDilemma!;
+    expect(revealed.id).toBe('rt01'); // same id — exclusion/authorship still keys off the template
+    expect(revealed.text).toMatch(/^(Marco|Bea|Cid) eredita 50k/);
+    expect(revealed.text).not.toContain('{nome}');
+  });
+
+  it('never excludes a roster template as "già visto" — it reads differently every time (5.1 x 5.3)', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, rosterDeck, () => 0);
+    const { code } = store.create();
+    store.join(code, 'p1', 'Marco');
+    store.join(code, 'p2', 'Bea');
+    store.join(code, 'p3', 'Cid');
+    // The device claims to have already seen rt01 — it must still be drawn.
+    store.startGame(code, 3, 'misto', 'gruppo', false, false, undefined, undefined, 'mista', false, false, 'assente', ['rt01']);
+    expect(store.get(code)!.plannedDilemmas.map((d) => d.id)).toEqual(['rt01']);
+  });
+});
+
 describe('startGame — device-remembered dilemmas (5.1, "memoria del già-visto")', () => {
   function mixedFixture(id: string, complessita: Complessita, delicato = false): Dilemma {
     return { id, text: `${id}?`, optionA: 'A', optionB: 'B', register: 'vita', complessita, delicato, spuntiA: [], spuntiB: [] };

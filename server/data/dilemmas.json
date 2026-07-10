@@ -6300,5 +6300,157 @@
       "Potrebbe diventare la foto più divertente della serata",
       "Non vale la pena stressarsi per un abbinamento casuale"
     ]
+  },
+  {
+    "id": "rt01",
+    "text": "{nome} eredita 50.000€ da uno zio lontano: cosa ci fa?",
+    "optionA": "Li investe tutti, subito",
+    "optionB": "Li mette da parte, con calma",
+    "register": "vita",
+    "complessita": "alto",
+    "roster": true,
+    "spuntiA": [
+      "Un'occasione così non ricapita",
+      "Il tempo nel mercato conta più del tempismo",
+      "Chi non rischia non vince niente"
+    ],
+    "spuntiB": [
+      "Meglio dormire sonni tranquilli",
+      "I soldi facili si perdono facile",
+      "Con calma si decide meglio, sempre"
+    ]
+  },
+  {
+    "id": "rt02",
+    "text": "Il gruppo deve scegliere chi organizza il prossimo viaggio: a chi lo affidereste?",
+    "optionA": "A {nome}, che pensa a tutto nei dettagli",
+    "optionB": "Meglio organizzarlo insieme, a turno",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "roster": true,
+    "spuntiA": [
+      "Chi è organizzato risparmia tempo a tutti",
+      "Uno che decide evita le liti da gruppo Whatsapp",
+      "I dettagli fanno la differenza in vacanza"
+    ],
+    "spuntiB": [
+      "Deciso insieme, nessuno si lamenta dopo",
+      "Organizzare da soli è un peso ingiusto",
+      "Il viaggio è di tutti, anche l'organizzazione"
+    ]
+  },
+  {
+    "id": "rt03",
+    "text": "{nome} viene promosso a capo del tuo team dall'oggi al domani. Come reagisci?",
+    "optionA": "Sono contento, se lo merita",
+    "optionB": "Un po' mi brucia, onestamente",
+    "register": "carriera",
+    "complessita": "alto",
+    "roster": true,
+    "spuntiA": [
+      "Il merito va riconosciuto senza invidia",
+      "Un buon capo migliora il lavoro di tutti",
+      "La squadra vince se vince chi la guida"
+    ],
+    "spuntiB": [
+      "È normale sentirsi in competizione",
+      "Ammetterlo è più onesto che fingere",
+      "Anche i migliori a volte restano indietro"
+    ]
+  },
+  {
+    "id": "rt04",
+    "text": "Dovete scegliere un socio per una nuova impresa rischiosa: scegliereste {nome}?",
+    "optionA": "Sì, mi fido ciecamente",
+    "optionB": "No, prima ci penserei bene",
+    "register": "business",
+    "complessita": "alto",
+    "roster": true,
+    "spuntiA": [
+      "La fiducia è la base di ogni società",
+      "Conoscerlo bene vale più di un curriculum",
+      "Un socio fidato vale più di uno bravo"
+    ],
+    "spuntiB": [
+      "Gli affari e l'amicizia non si mescolano bene",
+      "Meglio un contratto chiaro di una stretta di mano",
+      "Anche chi conosci può sorprenderti, in peggio"
+    ]
+  },
+  {
+    "id": "rt05",
+    "text": "Se il gruppo dovesse sopravvivere su un'isola deserta, a chi affidereste la sopravvivenza di tutti?",
+    "optionA": "A {nome}, senza dubbio",
+    "optionB": "Nessuno da solo: ce la caveremmo insieme",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "roster": true,
+    "spuntiA": [
+      "Serve chi sa restare lucido nel caos",
+      "Un leader chiaro evita il panico generale",
+      "Meglio fidarsi di chi ha già dimostrato sangue freddo"
+    ],
+    "spuntiB": [
+      "Le decisioni prese insieme reggono meglio",
+      "Nessuno ha sempre ragione da solo",
+      "La sopravvivenza è un lavoro di squadra"
+    ]
+  },
+  {
+    "id": "rt06",
+    "text": "{nome} ti chiede di essere sincero su un suo grosso difetto. Cosa fai?",
+    "optionA": "Glielo dico tutto, chiaro e diretto",
+    "optionB": "Glielo dico, ma addolcito",
+    "register": "vita",
+    "complessita": "alto",
+    "roster": true,
+    "spuntiA": [
+      "La sincerità vera aiuta a crescere davvero",
+      "Un'amicizia onesta vale più di una comoda",
+      "Girarci intorno non aiuta nessuno"
+    ],
+    "spuntiB": [
+      "Il modo in cui dici le cose conta quanto il contenuto",
+      "Si può essere onesti senza essere brutali",
+      "Proteggere chi ami non è disonestà"
+    ]
+  },
+  {
+    "id": "rt07",
+    "text": "L'azienda deve licenziare una persona per tagliare i costi: e se toccasse decidere su {nome}?",
+    "optionA": "Le regole sono regole: si guarda ai numeri",
+    "optionB": "Cercherei un'alternativa, costi quel che costi",
+    "register": "business",
+    "complessita": "max",
+    "roster": true,
+    "spuntiA": [
+      "Un'azienda che non regge i conti non aiuta nessuno",
+      "Le decisioni difficili fanno parte del ruolo",
+      "La freddezza qui protegge tutti gli altri posti"
+    ],
+    "spuntiB": [
+      "Dietro ogni numero c'è una persona vera",
+      "Si trovano sempre altre strade, se si cercano davvero",
+      "Un'azienda si giudica da come tratta chi è in difficoltà"
+    ]
+  },
+  {
+    "id": "rt08",
+    "text": "Il gruppo vince un premio a sorpresa: chi tra voi merita di deciderne l'uso, se non {nome}?",
+    "optionA": "{nome}, ha sempre buon senso",
+    "optionB": "Si decide insieme, punto",
+    "register": "vita",
+    "complessita": "sorbetto",
+    "roster": true,
+    "spuntiA": [
+      "Chi ha buon senso lo dimostra nei piccoli momenti",
+      "Delegare a chi lo merita è saggio",
+      "Non tutte le decisioni vanno prese in comitato"
+    ],
+    "spuntiB": [
+      "Il premio è del gruppo, la decisione pure",
+      "Decidere insieme evita rimpianti dopo",
+      "Anche una piccola scelta condivisa unisce di più"
+    ]
   }
 ]

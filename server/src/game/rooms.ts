@@ -9,6 +9,7 @@ import * as writeRound from './writeRound';
 import type { WritePrompt, PublicWrittenAnswer, WriteRevealAnswer } from './writeRound';
 import * as twists from './twists';
 import type { Twist, Caos } from './twists';
+import * as rosterDilemmas from './rosterDilemmas';
 import * as infiltrato from './infiltrato';
 import * as predictions from './predictions';
 import * as speakerVote from './speakerVote';
@@ -1284,7 +1285,10 @@ export class RoomStore {
       // leader explicitly asked for them. Validated above via isMood.
       const cards = room.deck.cards;
       const moodEligible = filterByMood(cards, mood as Mood, delicatoOptIn);
-      const fresh = moodEligible.filter((d) => !excludeIds.has(d.id));
+      // Roster templates (5.3) read differently every time (a fresh random
+      // name), so "già visto" exclusion never applies to them — they're
+      // exempt from ever being filtered out here.
+      const fresh = moodEligible.filter((d) => d.roster || !excludeIds.has(d.id));
       // Never let exclusion empty the pool outright (a huge device history) —
       // a shorter or repeated game beats a broken one.
       const eligible = fresh.length > 0 ? fresh : moodEligible;
@@ -1506,6 +1510,12 @@ export class RoomStore {
           room.submittedQueue.shift() ??
           room.deck?.draw() ??
           null;
+      }
+      // "Contenuto combinatorio sul roster" (5.3): a template dilemma gets a
+      // fresh random player's name every time it's revealed.
+      if (room.currentDilemma?.roster) {
+        const nicknames = [...room.players.values()].filter((p) => !p.isBot).map((p) => p.nickname);
+        room.currentDilemma = rosterDilemmas.resolveRosterDilemma(room.currentDilemma, nicknames, this.rng);
       }
       room.votes.clear();
       room.votes1.clear();

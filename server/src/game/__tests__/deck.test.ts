@@ -27,6 +27,14 @@ describe('loadDilemmas (server/data/dilemmas.json)', () => {
     const ids = new Set(dilemmas.map((d) => d.id));
     expect(ids.size).toBe(dilemmas.length);
   });
+
+  it('every roster-template dilemma (5.3) actually embeds the {nome} placeholder', () => {
+    const rosterDilemmas = loadDilemmas().filter((d) => d.roster);
+    expect(rosterDilemmas.length).toBeGreaterThan(0);
+    for (const d of rosterDilemmas) {
+      expect(d.text.includes('{nome}') || d.optionA.includes('{nome}') || d.optionB.includes('{nome}')).toBe(true);
+    }
+  });
 });
 
 describe('Deck', () => {

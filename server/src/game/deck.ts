@@ -44,6 +44,14 @@ export interface Dilemma {
    * opt in (2.2's "tema delicato" toggle) to make it eligible.
    */
   delicato?: boolean;
+  /**
+   * "Contenuto combinatorio sul roster" (5.3): a template whose text/options
+   * embed a `{nome}` placeholder, filled in with a random player's nickname
+   * on each DILEMMA_REVEAL (rosterDilemmas.ts) — the same template reads
+   * differently every game, so it's exempt from the "già visto" exclusion
+   * (deviceSeenIds/excludeDilemmaIds) and never truly gets "consumed".
+   */
+  roster?: boolean;
   /** 2–3 talking points for someone defending side A (optionA). */
   spuntiA: string[];
   /** 2–3 talking points for someone defending side B (optionB). */
