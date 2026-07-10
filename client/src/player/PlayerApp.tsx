@@ -56,6 +56,7 @@ import {
 } from '../shared/events';
 import { Card, JoinQr, Button, Field, TextInput, Alert, ShareInviteButton } from '../shared/ui';
 import { useHostAudio } from '../host/audio/useHostAudio';
+import { useSfxCues } from '../host/audio/useSfxCues';
 import { MuteButton } from '../host/MuteButton';
 import { AudioGate } from '../host/AudioGate';
 // Lazy so jsQR (the camera decoder) only loads when a player actually opens the scanner.
@@ -628,17 +629,27 @@ export default function PlayerApp() {
   // This phone holds the leadership when the room's leaderId matches our seat.
   const isLeader = game?.leaderId != null && game.leaderId === playerId;
 
-  // All game audio — musichetta, event SFX and the Storie narrator voice — plays on the
-  // LEADER's phone ONLY, so a single device makes sound (no cacophony from 8 phones). The
-  // others stay silent and just read the narration text. Unlocks on the leader's first tap
-  // (browser autoplay policy); the AudioGate is an explicit fallback. Called unconditionally
-  // here (before the render branches) so the audio survives across phase changes.
+  // Musichetta + the Storie narrator voice play on the LEADER's phone ONLY, so a single
+  // device carries them (no cacophony from 8 phones). The others stay silent for these
+  // and just read the narration text. Unlocks on the leader's first tap (browser autoplay
+  // policy); the AudioGate is an explicit fallback. Called unconditionally here (before
+  // the render branches) so the audio survives across phase changes.
   const { audioReady, activateAudio } = useHostAudio({ enabled: isLeader, game });
-  const leaderAudio = isLeader ? (
+  // Event stings (reveal/swing/win/awards/timerWarn/handRaise) play on EVERY phone once
+  // joined (6.1, "energia collettiva") — the leader already gets them via useHostAudio
+  // above, so this only adds sound for the non-leader phones. Unlocks silently on this
+  // device's own first tap; no gate UI needed since players tap constantly to play.
+  useSfxCues({ enabled: joinedCode != null && !isLeader, game });
+  // Every joined phone gets a mute toggle: the leader's gates behind the explicit
+  // AudioGate tap (musichetta/narrator need it), everyone else just gets the corner
+  // button since their stings unlock silently on the first natural tap.
+  const audioControls = isLeader ? (
     <>
       {!audioReady && <AudioGate onActivate={activateAudio} />}
       {audioReady && <MuteButton />}
     </>
+  ) : joinedCode ? (
+    <MuteButton />
   ) : null;
 
   // Leader controls (gated server-side; non-leader emits are ignored).
@@ -948,7 +959,7 @@ export default function PlayerApp() {
   if (joinedCode && phase !== 'LOBBY') {
     return withLeaveMenu(
       <>
-        {leaderAudio}
+        {audioControls}
         <StatusView
           phase={phase}
           game={game}
@@ -972,7 +983,7 @@ export default function PlayerApp() {
   if (joinedCode) {
     return (
       <main style={wrap}>
-        {leaderAudio}
+        {audioControls}
         <h1 style={{ fontSize: '1.5rem', margin: 0 }}>Sei nella stanza</h1>
         <div
           style={{

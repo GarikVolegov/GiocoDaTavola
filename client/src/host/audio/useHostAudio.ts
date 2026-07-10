@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { useCountdown } from '../../shared/useCountdown';
+import { useEffect, useState } from 'react';
 import { isWaitingPhase } from '../../shared/time';
 import { unlockAudio } from './engine';
 import { startMusic, stopMusic, setMusicIntensity } from './music';
 import { play as playSfx } from './sfx';
-import { sfxForTransition, shouldWarnAt, handRaised } from './cues';
+import { useSfxCues } from './useSfxCues';
 import { speak, cancelNarration, narrationFor, unlockSpeech } from './narrator';
 import type { GameStatePayload, GamePhase } from '../../shared/events';
 
@@ -22,14 +21,14 @@ interface UseHostAudioResult {
 }
 
 /**
- * The whole "audio director" for a single device: a quiet background musichetta during
- * waiting/speaking phases, event sound effects on phase changes, and the Storie narrator
- * voice on each narrative beat. Extracted from HostApp so the LEADER's phone can host the
- * audio (only one device makes sound — no cacophony). Inert unless `enabled` is true.
+ * The LEADER-only audio director: a quiet background musichetta during waiting/speaking
+ * phases plus the Storie narrator voice on each narrative beat (only one device plays
+ * these — no cacophony from 8 phones). Also fires the shared event stings via
+ * `useSfxCues`, which every other phone in the room plays independently (6.1). Inert
+ * unless `enabled` is true.
  */
 export function useHostAudio({ enabled, game }: UseHostAudioArgs): UseHostAudioResult {
   const phase: GamePhase = game?.phase ?? 'LOBBY';
-  const remaining = useCountdown(game?.phaseExpiresAt ?? null);
   const speaking = phase === 'DEFENSE' || phase === 'INTERVENTI';
 
   // Unlock on the first user gesture (the browser autoplay policy needs a gesture).
@@ -85,32 +84,10 @@ export function useHostAudio({ enabled, game }: UseHostAudioArgs): UseHostAudioR
   }, [active, narrationLine]);
   useEffect(() => () => cancelNarration(), []);
 
-  // Event sound effects: fire a sting when the phase changes to a noteworthy moment.
-  const prevPhaseRef = useRef<GamePhase | null>(null);
-  useEffect(() => {
-    const prev = prevPhaseRef.current;
-    prevPhaseRef.current = phase;
-    if (!active || !game) return;
-    const cue = sfxForTransition(prev, phase, game);
-    if (cue) playSfx(cue);
-  }, [phase, active, game]);
-
-  // Soft ticks in the final seconds of a countdown — but not while someone is speaking.
-  const prevRemainingRef = useRef<number | null>(null);
-  useEffect(() => {
-    const prev = prevRemainingRef.current;
-    prevRemainingRef.current = remaining;
-    if (active && !speaking && shouldWarnAt(prev, remaining)) playSfx('timerWarn');
-  }, [remaining, active, speaking]);
-
-  // A gentle ding whenever a new hand joins the intervention queue.
-  const prevQueueLenRef = useRef<number | null>(null);
-  useEffect(() => {
-    const len = phase === 'INTERVENTI' ? game?.defense?.queue?.length ?? null : null;
-    const prev = prevQueueLenRef.current;
-    prevQueueLenRef.current = len;
-    if (active && handRaised(prev, len)) playSfx('handRaise');
-  }, [phase, active, game]);
+  // Event stings (reveal/swing/win/awards/timerWarn/handRaise) are shared with every
+  // other phone in the room (6.1) — the leader gets them through the same path, gated
+  // by the same `enabled`/`active` unlock as everything else here.
+  useSfxCues({ enabled, game });
 
   return { audioReady, activateAudio };
 }
