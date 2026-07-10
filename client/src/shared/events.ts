@@ -579,6 +579,13 @@ export interface Award {
   winner: PublicPlayer;
 }
 
+/** One row of the final "Punti Serata" ranking (rank 1..3 stand on the podium). */
+export interface PodiumEntry {
+  player: PublicPlayer;
+  points: number;
+  rank: number;
+}
+
 /** "Momenti nominati" (5.5, mirror of the server's `NamedMomentKind`). */
 export type NamedMomentKind = 'plebiscito' | 'paritario' | 'ribaltone' | 'triplaPersuasione';
 
@@ -805,6 +812,8 @@ export interface GameStatePayload {
   /** "I momenti della serata" (5.5): every titled moment across the game,
    * shown before the awards, only in FINAL_AWARDS; null otherwise. */
   namedMoments: NamedMoment[] | null;
+  /** The final "Punti Serata" podium/ranking, best first, only in FINAL_AWARDS; null otherwise. */
+  podium: PodiumEntry[] | null;
   /** Game mode of the room; 'gruppo' until/unless a duel is started. */
   mode: GameMode;
   /** The leader-player's id (drives the game); null until a leader exists. */

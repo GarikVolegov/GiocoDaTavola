@@ -11,7 +11,7 @@ export { CodeDisplay } from './CodeDisplay';
 export { Field } from './Field';
 export { TextInput } from './TextInput';
 export { Alert } from './Alert';
-export { DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel } from './PublicViews';
+export { DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel, PodiumPanel } from './PublicViews';
 export { Logo } from './Logo';
 export { Avatar } from './Avatar';
 export { Swing } from './Swing';
