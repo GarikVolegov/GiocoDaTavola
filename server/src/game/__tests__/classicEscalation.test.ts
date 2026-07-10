@@ -57,13 +57,14 @@ describe('Classic: escalation di complessità (alto → max → power)', () => {
     expect(seen.at(-1)).not.toBe(COMPLESSITA_RANK.power);
   });
 
-  it('i dilemmi scritti dai giocatori aprono la partita (warm-up “alto”)', () => {
+  it('i dilemmi scritti dai giocatori entrano in gioco ma non aprono la partita quando il mazzo offre un\'alternativa (5.2, "non bruciati in testa")', () => {
     const store = makeStore();
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `s${i}`, `P${i}`);
     store.submitDilemma(code, 's0', 'Una mia domanda?', 'Sì', 'No');
     store.startGame(code, 5);
     const plan = store.get(code)!.plannedDilemmas;
-    expect(plan[0].id.startsWith('usr-')).toBe(true);
+    expect(plan.some((d) => d.id.startsWith('usr-'))).toBe(true); // still played…
+    expect(plan[0].id.startsWith('usr-')).toBe(false); // …but not as the opener
   });
 });

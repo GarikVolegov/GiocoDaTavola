@@ -96,3 +96,43 @@ describe('buildClassicPlan — pacing rules (2.1)', () => {
     expect(plan).toEqual([fixture('power1', 'power')]);
   });
 });
+
+describe('buildClassicPlan — submitted (UGC) dilemmas are spread out, not front-loaded (5.2)', () => {
+  const usr = (id: string): Dilemma => ({ id, text: `${id}?`, optionA: 'A', optionB: 'B', register: 'vita' });
+
+  it("doesn't open the game with a submitted dilemma when the deck offers an alternative", () => {
+    const deck = new Deck([fixture('d1', 'alto'), fixture('d2', 'alto'), fixture('d3', 'alto')], () => 0);
+    const submitted = [usr('usr-1')];
+    const plan = buildClassicPlan(deck, submitted, 4, () => 0);
+    expect(plan.map((d) => d.id)).toContain('usr-1'); // still played…
+    expect(plan[0].id).not.toBe('usr-1'); // …just not as the opener
+  });
+
+  it('never places two submitted dilemmas back to back when enough deck dilemmas exist to space them out', () => {
+    const deck = new Deck(
+      [fixture('d1', 'alto'), fixture('d2', 'alto'), fixture('d3', 'alto')],
+      () => 0,
+    );
+    const submitted = [usr('usr-1'), usr('usr-2')];
+    const plan = buildClassicPlan(deck, submitted, 5, () => 0);
+    for (let i = 0; i < plan.length - 1; i++) {
+      const bothUgc = plan[i].id.startsWith('usr-') && plan[i + 1].id.startsWith('usr-');
+      expect(bothUgc).toBe(false);
+    }
+    expect(plan.map((d) => d.id).sort()).toEqual(['d1', 'd2', 'd3', 'usr-1', 'usr-2']);
+  });
+
+  it('degenerates gracefully (no crash, nothing dropped) when the game is entirely player-submitted', () => {
+    const deck = new Deck([], () => 0);
+    const submitted = [usr('usr-1'), usr('usr-2'), usr('usr-3')];
+    const plan = buildClassicPlan(deck, submitted, 3, () => 0);
+    expect(plan.map((d) => d.id).sort()).toEqual(['usr-1', 'usr-2', 'usr-3']);
+  });
+
+  it('caps submitted dilemmas at the requested count, leaving the rest for the caller to carry forward', () => {
+    const deck = new Deck([], () => 0);
+    const submitted = [usr('usr-1'), usr('usr-2'), usr('usr-3'), usr('usr-4')];
+    const plan = buildClassicPlan(deck, submitted, 2, () => 0);
+    expect(plan.length).toBe(2);
+  });
+});

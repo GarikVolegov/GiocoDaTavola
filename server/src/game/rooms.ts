@@ -1026,6 +1026,11 @@ export class RoomStore {
       return { ok: false, error: 'NOT_FINISHED' };
     }
     for (const d of room.plannedDilemmas) room.excludeDilemmaIds.add(d.id);
+    // 5.2 "mai scartati in silenzio": a player-submitted dilemma that didn't
+    // make it into THIS game (the group wrote more than the round count)
+    // survives into the next one instead of being silently wiped — only the
+    // ones actually played are dropped.
+    const playedIds = new Set(room.plannedDilemmas.map((d) => d.id));
     room.phase = 'LOBBY';
     room.dilemmaCount = null;
     room.register = null;
@@ -1051,8 +1056,8 @@ export class RoomStore {
     room.phaseExpiresAt = null;
     room.deck = null;
     room.currentDilemma = null;
-    room.submittedDilemmas = [];
-    room.dilemmaAuthors = new Map();
+    room.submittedDilemmas = room.submittedDilemmas.filter((d) => !playedIds.has(d.id));
+    for (const id of playedIds) room.dilemmaAuthors.delete(id);
     room.submittedQueue = [];
     room.devilRoundIndex = null;
     room.knowRoundIndex = null;

@@ -95,4 +95,19 @@ export function recordRoundStats(room: Room): void {
       s.authoredSwing = (s.authoredSwing ?? 0) + roundSwitched;
     }
   }
+  // Credit the author with how close to 50/50 their dilemma's final split
+  // landed — the 🎯 Spacca la Stanza award (5.2), rewarding controversial,
+  // well-balanced dilemmas over safe unanimous ones. Keeps their BEST split
+  // across every one of their dilemmas played this game.
+  if (dilemmaId) {
+    const authorId = room.dilemmaAuthors.get(dilemmaId);
+    const total = second.A + second.B;
+    if (authorId && total > 0) {
+      const balance = Math.min(second.A, second.B) / total;
+      const s = ensureStats(room, authorId);
+      if (s.authoredBestBalance == null || balance > s.authoredBestBalance) {
+        s.authoredBestBalance = balance;
+      }
+    }
+  }
 }

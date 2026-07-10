@@ -67,15 +67,17 @@ describe('Dilemmi dai giocatori — submission', () => {
 });
 
 describe('Dilemmi dai giocatori — play order & award', () => {
-  it('plays player-submitted dilemmas BEFORE the official deck', () => {
+  it('plays player-submitted dilemmas during the game, spread out rather than opening it (5.2)', () => {
     const store = makeStore(() => 0);
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.submitDilemma(code, 'sock-0', 'Mio dilemma?', 'Sì', 'No');
     store.startGame(code, 3);
+    const plan = store.get(code)!.plannedDilemmas;
+    expect(plan.map((d) => d.id)).toContain('usr-sock-0-1'); // still played…
+    expect(plan[0].id).not.toBe('usr-sock-0-1'); // …but the deck opens instead
     store.advancePhase(code); // DILEMMA_REVEAL (round 1)
-    expect(store.get(code)?.currentDilemma?.id).toBe('usr-sock-0-1');
-    expect(store.get(code)?.currentDilemma?.text).toBe('Mio dilemma?');
+    expect(store.get(code)?.currentDilemma?.text).not.toBe('Mio dilemma?');
   });
 
   it('credits authoredSwing to the author when the round changes minds', () => {
@@ -84,9 +86,18 @@ describe('Dilemmi dai giocatori — play order & award', () => {
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.submitDilemma(code, 'sock-0', 'D?', 'A!', 'B!');
     store.startGame(code, 3);
+    // Walk to whichever round plays the submitted dilemma (5.2: no longer
+    // guaranteed to be round 1).
     let g = 0;
+    while (store.get(code)!.currentDilemma?.id !== 'usr-sock-0-1' && g++ < 20) {
+      store.advancePhase(code);
+      if (store.get(code)!.phase === 'VOTE_1' || store.get(code)!.phase === 'VOTE_2') {
+        for (const id of ['sock-0', 'sock-1', 'sock-2']) store.vote(code, id, 'A');
+      }
+    }
+    expect(store.get(code)?.currentDilemma?.id).toBe('usr-sock-0-1');
+    g = 0;
     while (store.get(code)!.phase !== 'VOTE_1' && g++ < 10) store.advancePhase(code);
-    expect(store.get(code)?.currentDilemma?.id).toBe('usr-sock-0-1'); // round 1 is the submitted one
     store.vote(code, 'sock-0', 'A');
     store.vote(code, 'sock-1', 'A');
     store.vote(code, 'sock-2', 'B');
@@ -107,5 +118,49 @@ describe('Dilemmi dai giocatori — play order & award', () => {
     room.stats.set('sock-0', baseStats({ authoredSwing: 4 }));
     room.stats.set('sock-1', baseStats({ authoredSwing: 1 }));
     expect(computeAwards(room).find((a) => a.id === 'autore')?.winner.id).toBe('sock-0');
+  });
+
+  it('credits authoredBestBalance from the round\'s final split, keeping the closest-to-50/50 across rounds (5.2)', () => {
+    const store = makeStore(() => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.submitDilemma(code, 'sock-0', 'D?', 'A!', 'B!');
+    store.startGame(code, 3);
+    let g = 0;
+    while (store.get(code)!.currentDilemma?.id !== 'usr-sock-0-1' && g++ < 20) {
+      store.advancePhase(code);
+      if (store.get(code)!.phase === 'VOTE_1' || store.get(code)!.phase === 'VOTE_2') {
+        for (const id of ['sock-0', 'sock-1', 'sock-2']) store.vote(code, id, 'A');
+      }
+    }
+    g = 0;
+    while (store.get(code)!.phase !== 'VOTE_1' && g++ < 10) store.advancePhase(code);
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'B');
+    store.vote(code, 'sock-2', 'A'); // final split 2-1 -> balance = 1/3
+    g = 0;
+    while (store.get(code)!.phase !== 'PHASE_RESULTS' && g++ < 8) store.advancePhase(code);
+    const balance = store.get(code)?.stats.get('sock-0')?.authoredBestBalance;
+    expect(balance).toBeCloseTo(1 / 3);
+  });
+
+  it("awards Spacca la Stanza to the author whose dilemma split closest to 50/50", () => {
+    const store = makeStore(() => 0);
+    const { code } = store.create();
+    store.join(code, 'sock-0', 'Ann');
+    store.join(code, 'sock-1', 'Bob');
+    const room = store.get(code)!;
+    room.stats.set('sock-0', baseStats({ authoredBestBalance: 0.5 })); // perfect split
+    room.stats.set('sock-1', baseStats({ authoredBestBalance: 0.1 })); // lopsided
+    expect(computeAwards(room).find((a) => a.id === 'spaccalastanza')?.winner.id).toBe('sock-0');
+  });
+
+  it('omits Spacca la Stanza when no submitted dilemma was ever played', () => {
+    const store = makeStore(() => 0);
+    const { code } = store.create();
+    store.join(code, 'sock-0', 'Ann');
+    const room = store.get(code)!;
+    room.stats.set('sock-0', baseStats());
+    expect(computeAwards(room).find((a) => a.id === 'spaccalastanza')).toBeUndefined();
   });
 });

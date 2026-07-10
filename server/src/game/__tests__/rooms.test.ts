@@ -2110,6 +2110,48 @@ describe('rematch()', () => {
     store.startGame(code, 3);
     expect(store.get(code)!.plannedDilemmas.map((d) => d.id)).toEqual(['d4']);
   });
+
+  it("5.2 'mai scartati in silenzio': a submitted dilemma that didn't fit THIS game survives into the next", () => {
+    const emptyDeck = (_r: ContentRegister) => new Deck([], () => 0);
+    const store = new RoomStore(generateRoomCode, () => 0, emptyDeck, () => 0);
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    store.join(code, 'p2', 'Bob');
+    store.join(code, 'p3', 'Cid');
+    store.setLeader(code, 'p1');
+    // 4 submitted dilemmas, an empty deck, dilemmaCount=3 -> exactly 1 is left over.
+    store.submitDilemma(code, 'p1', 'Q1?', 'A', 'B');
+    store.submitDilemma(code, 'p1', 'Q2?', 'A', 'B');
+    store.submitDilemma(code, 'p2', 'Q3?', 'A', 'B');
+    store.submitDilemma(code, 'p2', 'Q4?', 'A', 'B');
+    store.startGame(code, 3);
+    expect(store.get(code)!.plannedDilemmas.length).toBe(3);
+
+    let guard = 0;
+    while (store.get(code)!.phase !== 'FINAL_AWARDS' && guard++ < 60) {
+      store.advancePhase(code);
+      if (store.get(code)!.phase === 'VOTE_1' || store.get(code)!.phase === 'VOTE_2') {
+        for (const id of ['p1', 'p2', 'p3']) store.vote(code, id, 'A');
+      }
+    }
+    const playedIds = new Set(store.get(code)!.plannedDilemmas.map((d) => d.id));
+    expect(playedIds.size).toBe(3);
+
+    store.rematch(code);
+    // The 1 unplayed submitted dilemma survived — not wiped — and its authorship
+    // mapping survived with it (still attributable once it's finally played).
+    const room = store.get(code)!;
+    expect(room.submittedDilemmas.length).toBe(1);
+    const leftoverId = room.submittedDilemmas[0].id;
+    expect(playedIds.has(leftoverId)).toBe(false);
+    expect(room.dilemmaAuthors.has(leftoverId)).toBe(true);
+    for (const id of playedIds) expect(room.dilemmaAuthors.has(id)).toBe(false);
+
+    // It gets played (still with an empty deck) in the very next game, with no
+    // need to resubmit anything.
+    store.startGame(code, 3);
+    expect(store.get(code)!.plannedDilemmas.map((d) => d.id)).toEqual([leftoverId]);
+  });
 });
 
 describe('currentDilemmaAuthor', () => {

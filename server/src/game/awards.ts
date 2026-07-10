@@ -59,6 +59,14 @@ export interface PlayerStats {
    * the jolly "Il Fulmine" award. Optional + only set once non-zero.
    */
   firstToVoteCount?: number;
+  /**
+   * The BEST (closest to 50/50) final-vote balance across this player's own
+   * submitted dilemmas that got played this game — min(A,B)/total, so 0.5 is a
+   * perfect split and 0 is unanimous. Feeds the "Spacca la stanza" award
+   * (5.2): rewards writing controversial, well-balanced dilemmas over safe
+   * ones. Optional + only set once a submitted dilemma of theirs was played.
+   */
+  authoredBestBalance?: number;
 }
 
 /** The fun end-of-game superlatives (persuasion-themed). */
@@ -74,6 +82,7 @@ export type AwardId =
   | 'voltagabbana'
   | 'sensitivo'
   | 'autore'
+  | 'spaccalastanza'
   | 'telepate'
   // Jolly pool (2.5): each goes to an otherwise empty-handed player, one apiece
   // — never competed for like the awards above. See computeAwards's jolly pass.
@@ -156,6 +165,9 @@ export function computeAwards(room: Room): Award[] {
     { id: 'autore', title: "L'Autore", emoji: '✍️',
       description: 'Il suo dilemma ha fatto cambiare più idee.',
       winner: winnerBy((s) => s.authoredSwing ?? 0, (s) => (s.authoredSwing ?? 0) > 0) },
+    { id: 'spaccalastanza', title: 'Spacca la Stanza', emoji: '🎯',
+      description: 'Il suo dilemma ha diviso il gruppo quasi a metà.',
+      winner: winnerBy((s) => s.authoredBestBalance ?? 0, (s) => (s.authoredBestBalance ?? 0) > 0) },
     { id: 'telepate', title: 'Il Telepate', emoji: '🔮',
       description: 'Ha indovinato più spesso come avevano votato gli amici.',
       winner: winnerBy((s) => s.knowCorrect ?? 0, (s) => (s.knowCorrect ?? 0) > 0) },

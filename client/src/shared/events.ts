@@ -558,6 +558,7 @@ export type AwardId =
   | 'voltagabbana'
   | 'sensitivo'
   | 'autore'
+  | 'spaccalastanza'
   | 'telepate'
   // Jolly pool (2.5): each goes to an otherwise empty-handed player.
   | 'fulmine'
