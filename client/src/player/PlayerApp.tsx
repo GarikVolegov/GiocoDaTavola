@@ -54,7 +54,7 @@ import {
   RAISE_HAND_ERROR_MESSAGES,
   INFILTRATO_TOOL_ERROR_MESSAGES,
 } from '../shared/events';
-import { Card, JoinQr, Button, Field, TextInput, Alert } from '../shared/ui';
+import { Card, JoinQr, Button, Field, TextInput, Alert, ShareInviteButton } from '../shared/ui';
 import { useHostAudio } from '../host/audio/useHostAudio';
 import { MuteButton } from '../host/MuteButton';
 import { AudioGate } from '../host/AudioGate';
@@ -989,6 +989,7 @@ export default function PlayerApp() {
           <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.7 }}>
             Fai inquadrare il QR per entrare — oppure detta il codice
           </p>
+          <ShareInviteButton code={joinedCode} />
         </div>
         <h2 style={{ fontSize: '1.1rem', margin: '0.5rem 0 0' }}>
           Giocatori ({players.length}/8)

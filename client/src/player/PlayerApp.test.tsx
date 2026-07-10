@@ -89,6 +89,18 @@ describe('PlayerApp', () => {
     expect(screen.getByText('Codice stanza non valido')).toBeInTheDocument();
   });
 
+  it('shows a share-invite button in the post-creation lobby', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+    });
+    expect(screen.getByRole('button', { name: /inoltra invito/i })).toBeInTheDocument();
+  });
+
   it('renders the dilemma options at VOTE_1 after joining', () => {
     render(<PlayerApp />);
     act(() => {
