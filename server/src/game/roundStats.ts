@@ -7,6 +7,7 @@ import type { Room, VoteChoice, VoteTally } from './rooms';
 import { tally } from './voteCount';
 import { ensureStats } from './awards';
 import { leadFlipped } from './predictions';
+import { detectNamedMoments } from './namedMoments';
 
 /**
  * Fold the just-finished round into each player's accumulating stats: who took
@@ -110,4 +111,8 @@ export function recordRoundStats(room: Room): void {
       }
     }
   }
+  // "Momenti nominati" (5.5): detect this round's titled moments (plebiscito,
+  // testa a testa, ribaltone, tripla persuasione) and accumulate them into the
+  // end-of-game recap ("I momenti della serata", shown before the awards).
+  room.namedMoments.push(...detectNamedMoments(room, second, netSwing));
 }

@@ -237,6 +237,9 @@ function gameStatePayload(room: Room) {
     dilemmaAuthor: rooms.currentDilemmaAuthor(room.code),
     // The end-of-game awards, gated to FINAL_AWARDS (null otherwise).
     awards: rooms.publicAwards(room.code),
+    // "I momenti della serata" (5.5): every titled moment across the game,
+    // shown before the awards, gated to FINAL_AWARDS (null otherwise).
+    namedMoments: rooms.publicNamedMoments(room.code),
     // 1v1 duel: the room's mode + the duel views, each gated to its own phase.
     mode: room.mode,
     // The leader-player's id, so the creator's phone shows its controls.

@@ -1,7 +1,7 @@
 // Pure presentation components for the game's PUBLIC phases — the views that
 // look the same on every phone and on the optional TV (/host). Props-typed from
 // events.ts; they carry only aggregate, non-secret data (never who voted what).
-import { COMPLESSITA_LABELS, type PublicDilemma, type VoteSplit, type PublicSwing, type DefenseImpact, type Award } from '../events';
+import { COMPLESSITA_LABELS, type PublicDilemma, type VoteSplit, type PublicSwing, type DefenseImpact, type Award, type NamedMoment } from '../events';
 import { Card, CardGrid } from './index';
 import Celebration from './Celebration';
 
@@ -96,6 +96,35 @@ export function ResultsPanel({ swing }: { swing: PublicSwing }) {
           ))}
         </div>
       )}
+    </section>
+  );
+}
+
+/**
+ * "I momenti della serata" (5.5): the game's titled highlights, shown before
+ * the awards at FINAL_AWARDS. A shareable recap — the group's own word-of-
+ * mouth artifact. Renders nothing when the game produced no named moments
+ * (e.g. a very short or very flat game).
+ */
+export function NamedMomentsPanel({ moments }: { moments: NamedMoment[] }) {
+  if (moments.length === 0) return null;
+  return (
+    <section aria-label="I momenti della serata" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', width: '100%' }}>
+      <p style={{ fontSize: 'clamp(1.1rem, 2.2vw, 1.5rem)', fontWeight: 800, margin: 0 }}>✨ I momenti della serata</p>
+      <CardGrid min={16} aria-label="Momenti della serata">
+        {moments.map((m, i) => (
+          <Card
+            key={`${m.kind}-${m.dilemmaIndex}-${i}`}
+            glow="accent"
+            style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', alignItems: 'center', textAlign: 'center' }}
+          >
+            <span style={{ fontSize: 'clamp(1.8rem, 3.2vw, 2.6rem)' }}>{m.emoji}</span>
+            <span style={{ fontSize: 'clamp(1rem, 1.8vw, 1.3rem)', fontWeight: 800 }}>{m.title}</span>
+            <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>{m.description}</span>
+            <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>Round {m.dilemmaIndex}</span>
+          </Card>
+        ))}
+      </CardGrid>
     </section>
   );
 }

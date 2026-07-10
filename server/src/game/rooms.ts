@@ -10,6 +10,7 @@ import type { WritePrompt, PublicWrittenAnswer, WriteRevealAnswer } from './writ
 import * as twists from './twists';
 import type { Twist, Caos } from './twists';
 import * as rosterDilemmas from './rosterDilemmas';
+import type { NamedMoment } from './namedMoments';
 import * as infiltrato from './infiltrato';
 import * as predictions from './predictions';
 import * as speakerVote from './speakerVote';
@@ -382,6 +383,10 @@ export interface Room {
   infiltratoDecoySpunto: string | null;
   /** How many rounds the infiltrator used their tool this game (the FINAL_AWARDS "replay"). */
   infiltratoToolUses: number;
+  /** "Momenti nominati" (5.5): every titled moment detected across the game
+   * (plebiscito, testa a testa, ribaltone, tripla persuasione) — "I momenti
+   * della serata", shown before the awards at FINAL_AWARDS. */
+  namedMoments: NamedMoment[];
   /** End-game accusation votes: accuser id -> accused id (ACCUSE phase). */
   accusations: Map<string, string>;
   /** Resolved infiltrator outcome, computed on entry to FINAL_AWARDS; null otherwise. */
@@ -977,6 +982,7 @@ export class RoomStore {
       infiltratoToolUsedThisRound: false,
       infiltratoDecoySpunto: null,
       infiltratoToolUses: 0,
+      namedMoments: [],
       accusations: new Map(),
       infiltratoResult: null,
       teams: new Map(),
@@ -1078,6 +1084,7 @@ export class RoomStore {
     room.infiltratoToolUsedThisRound = false;
     room.infiltratoDecoySpunto = null;
     room.infiltratoToolUses = 0;
+    room.namedMoments = [];
     room.accusations = new Map();
     room.infiltratoResult = null;
     room.teams = new Map();
@@ -1205,6 +1212,7 @@ export class RoomStore {
     room.infiltratoToolUsedThisRound = false;
     room.infiltratoDecoySpunto = null;
     room.infiltratoToolUses = 0;
+    room.namedMoments = [];
     room.accusations = new Map();
     room.infiltratoResult = null;
     // Split players into two teams (alternating by join order) when enabled.
@@ -1970,6 +1978,16 @@ export class RoomStore {
   publicInfiltratoResult(code: string): InfiltratoResult | null {
     const room = this.rooms.get(code);
     return room ? infiltrato.publicInfiltratoResult(room) : null;
+  }
+
+  /**
+   * "I momenti della serata" (5.5): every named moment detected across the
+   * game, only at FINAL_AWARDS (shown before the awards); null otherwise.
+   */
+  publicNamedMoments(code: string): NamedMoment[] | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'FINAL_AWARDS') return null;
+    return room.namedMoments;
   }
 
   /**

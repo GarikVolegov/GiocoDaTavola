@@ -13,7 +13,7 @@ import {
   type PlayerKnowGuessResultPayload,
   type PlayerGroupMindResultPayload,
 } from '../../shared/events';
-import { Card, Button, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel } from '../../shared/ui';
+import { Card, Button, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel } from '../../shared/ui';
 import { NORTHSTAR_URL } from '../../shared/northstar';
 import { pickIronicTitle, WRONG_PREDICTION_TITLES, WRONG_SWING_BET_TITLES, WRONG_KNOW_TITLES } from '../../shared/ironicTitles';
 import { wrap } from './layout';
@@ -369,6 +369,7 @@ export default function StatusView({
               </p>
             </Card>
           )}
+          {game?.namedMoments && <NamedMomentsPanel moments={game.namedMoments} />}
           {game?.awards && <AwardsPanel awards={game.awards} />}
           <Card
             glow="a"

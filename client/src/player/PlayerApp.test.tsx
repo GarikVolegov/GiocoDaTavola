@@ -537,6 +537,54 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/seminato dubbi in 2 round/i)).toBeInTheDocument();
   });
 
+  it('shows "I momenti della serata" before the awards at FINAL_AWARDS (5.5)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'FINAL_AWARDS',
+        dilemmaCount: 3,
+        dilemmaIndex: 3,
+        phaseExpiresAt: null,
+        namedMoments: [
+          { kind: 'plebiscito', dilemmaIndex: 1, title: 'Plebiscito!', description: 'Tutti dalla stessa parte.', emoji: '🙌' },
+          { kind: 'triplaPersuasione', dilemmaIndex: 2, title: 'Tripla Persuasione!', description: 'Bea ha convinto 3 persone.', emoji: '🎯', playerId: 'p2', playerNickname: 'Bea' },
+        ],
+        awards: [],
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/i momenti della serata/i)).toBeInTheDocument();
+    expect(screen.getByText('Plebiscito!')).toBeInTheDocument();
+    expect(screen.getByText('Tripla Persuasione!')).toBeInTheDocument();
+    expect(screen.getByText(/bea ha convinto 3 persone/i)).toBeInTheDocument();
+  });
+
+  it('renders nothing for "I momenti della serata" when the game produced none', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'FINAL_AWARDS',
+        dilemmaCount: 3,
+        dilemmaIndex: 3,
+        phaseExpiresAt: null,
+        namedMoments: [],
+        awards: [],
+        leaderId: null,
+      });
+    });
+    expect(screen.queryByText(/i momenti della serata/i)).toBeNull();
+  });
+
   it('shows the finish affordance when it is your turn at DEFENSE', () => {
     render(<PlayerApp />);
     act(() => {

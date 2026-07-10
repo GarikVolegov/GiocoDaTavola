@@ -2014,6 +2014,75 @@ describe('startGame — mood + delicate-theme opt-in (2.2)', () => {
   });
 });
 
+describe('namedMoments — "I momenti della serata" recap (5.5)', () => {
+  const FIXTURE: Dilemma[] = Array.from({ length: 3 }, (_, i) => ({
+    id: `d${i + 1}`,
+    text: `Dilemma ${i + 1}?`,
+    optionA: `A${i + 1}`,
+    optionB: `B${i + 1}`,
+    register: 'vita' as const,
+    spuntiA: [],
+    spuntiB: [],
+  }));
+  const fixtureDeck = (_r: ContentRegister) => new Deck(FIXTURE, () => 0);
+
+  it('accumulates moments across the game and surfaces them only at FINAL_AWARDS', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, fixtureDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 4; i++) store.join(code, `s${i}`, `P${i}`);
+    store.startGame(code, 3);
+    expect(store.publicNamedMoments(code)).toBeNull(); // not FINAL_AWARDS yet
+
+    // Round 1: everyone votes A both times -> plebiscito.
+    let g = 0;
+    while (store.get(code)!.phase !== 'VOTE_1' && g++ < 14) store.advancePhase(code);
+    for (const id of ['s0', 's1', 's2', 's3']) store.vote(code, id, 'A');
+    g = 0;
+    while (store.get(code)!.phase !== 'VOTE_2' && g++ < 14) store.advancePhase(code);
+    for (const id of ['s0', 's1', 's2', 's3']) store.vote(code, id, 'A');
+    g = 0;
+    while (store.get(code)!.phase !== 'PHASE_RESULTS' && g++ < 6) store.advancePhase(code);
+    expect(store.get(code)!.namedMoments.map((m) => m.kind)).toContain('plebiscito');
+
+    // Rounds 2-3: play out normally (2-2 split both times, no swing).
+    for (let round = 0; round < 2; round++) {
+      g = 0;
+      while (store.get(code)!.phase !== 'VOTE_1' && g++ < 14) store.advancePhase(code);
+      store.vote(code, 's0', 'A');
+      store.vote(code, 's1', 'A');
+      store.vote(code, 's2', 'B');
+      store.vote(code, 's3', 'B');
+      g = 0;
+      while (store.get(code)!.phase !== 'VOTE_2' && g++ < 14) store.advancePhase(code);
+      g = 0;
+      while (store.get(code)!.phase !== 'PHASE_RESULTS' && g++ < 6) store.advancePhase(code);
+    }
+    g = 0;
+    while (store.get(code)!.phase !== 'FINAL_AWARDS' && g++ < 10) store.advancePhase(code);
+    const moments = store.publicNamedMoments(code)!;
+    expect(moments.length).toBeGreaterThan(0);
+    expect(moments.some((m) => m.kind === 'plebiscito')).toBe(true);
+    expect(moments.every((m) => m.dilemmaIndex >= 1 && m.dilemmaIndex <= 3)).toBe(true);
+  });
+
+  it('resets on rematch — no moments carry over into the next game', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, fixtureDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 4; i++) store.join(code, `s${i}`, `P${i}`);
+    store.startGame(code, 3);
+    let g = 0;
+    while (store.get(code)!.phase !== 'FINAL_AWARDS' && g++ < 100) {
+      store.advancePhase(code);
+      if (store.get(code)!.phase === 'VOTE_1' || store.get(code)!.phase === 'VOTE_2') {
+        for (const id of ['s0', 's1', 's2', 's3']) store.vote(code, id, 'A');
+      }
+    }
+    expect(store.get(code)!.namedMoments.length).toBeGreaterThan(0);
+    store.rematch(code);
+    expect(store.get(code)!.namedMoments).toEqual([]);
+  });
+});
+
 describe('DILEMMA_REVEAL — roster-template dilemmas (5.3, "contenuto combinatorio sul roster")', () => {
   const ROSTER_FIXTURE: Dilemma[] = [
     {

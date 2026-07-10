@@ -18,7 +18,7 @@ import {
   type PublicPlayer,
   type PercorsoView,
 } from '../shared/events';
-import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip, leanFromSplit } from '../shared/ui';
+import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip, leanFromSplit } from '../shared/ui';
 import ReactionSwarm from '../shared/ReactionSwarm';
 
 const screen = {
@@ -190,6 +190,7 @@ export default function HostApp() {
     const defense = game.defense;
     const swing = game.swing;
     const awards = game.awards;
+    const namedMoments = game.namedMoments;
     const duelReveal = game.duelReveal;
     const duelTurn = game.duelTurn;
     const duelResult = game.duelResult;
@@ -579,6 +580,7 @@ export default function HostApp() {
           </div>
         )}
 
+        {phase === 'FINAL_AWARDS' && namedMoments && <NamedMomentsPanel moments={namedMoments} />}
         {phase === 'FINAL_AWARDS' && awards && <AwardsPanel awards={awards} />}
 
         {phase === 'DUEL_PICK' && (

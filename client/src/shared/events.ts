@@ -579,6 +579,20 @@ export interface Award {
   winner: PublicPlayer;
 }
 
+/** "Momenti nominati" (5.5, mirror of the server's `NamedMomentKind`). */
+export type NamedMomentKind = 'plebiscito' | 'paritario' | 'ribaltone' | 'triplaPersuasione';
+
+/** A titled, detected moment from one round — "I momenti della serata". */
+export interface NamedMoment {
+  kind: NamedMomentKind;
+  dilemmaIndex: number;
+  title: string;
+  description: string;
+  emoji: string;
+  playerId?: string;
+  playerNickname?: string;
+}
+
 /** Duel reveal (DUEL_REVEAL): both players' picks + whether they agreed. */
 export interface DuelReveal {
   picks: Array<{ id: string; nickname: string; choice: VoteChoice }>;
@@ -788,6 +802,9 @@ export interface GameStatePayload {
   dilemmaAuthor: string | null;
   /** The end-of-game awards, shown only in FINAL_AWARDS; null otherwise. */
   awards: Award[] | null;
+  /** "I momenti della serata" (5.5): every titled moment across the game,
+   * shown before the awards, only in FINAL_AWARDS; null otherwise. */
+  namedMoments: NamedMoment[] | null;
   /** Game mode of the room; 'gruppo' until/unless a duel is started. */
   mode: GameMode;
   /** The leader-player's id (drives the game); null until a leader exists. */
