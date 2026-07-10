@@ -18,7 +18,7 @@ import {
   type PublicPlayer,
   type PercorsoView,
 } from '../shared/events';
-import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip, leanFromSplit } from '../shared/ui';
+import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel, PodiumPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip, leanFromSplit } from '../shared/ui';
 import ReactionSwarm from '../shared/ReactionSwarm';
 
 const screen = {
@@ -580,6 +580,7 @@ export default function HostApp() {
           </div>
         )}
 
+        {phase === 'FINAL_AWARDS' && game.podium && <PodiumPanel podium={game.podium} />}
         {phase === 'FINAL_AWARDS' && namedMoments && <NamedMomentsPanel moments={namedMoments} />}
         {phase === 'FINAL_AWARDS' && awards && <AwardsPanel awards={awards} />}
 
