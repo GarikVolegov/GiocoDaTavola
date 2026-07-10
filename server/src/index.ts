@@ -591,7 +591,7 @@ io.on('connection', (socket) => {
 
   // The leader starts the game for their room, choosing the dilemma count.
   // Gated: only the socket whose player is the room leader may start.
-  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string; storyId?: string; mood?: string; delicatoOptIn?: boolean; serataLunga?: boolean; caos?: string }) => {
+  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string; storyId?: string; mood?: string; delicatoOptIn?: boolean; serataLunga?: boolean; caos?: string; seenDilemmaIds?: string[] }) => {
     const code = leaderCodeFor(socket.id);
     if (!code) {
       socket.emit('leader:startError', { error: 'ROOM_NOT_FOUND' });
@@ -607,6 +607,11 @@ io.on('connection', (socket) => {
     // classic count/register and always runs in gruppo mode.
     const storia =
       payload?.format === 'storia' ? { storyId: String(payload?.storyId ?? '') } : undefined;
+    // 5.1: the leader's own device memory of already-seen dilemmas (localStorage,
+    // sent fresh on every start). Capped + sanitized against a hostile payload.
+    const seenDilemmaIds = Array.isArray(payload?.seenDilemmaIds)
+      ? payload.seenDilemmaIds.slice(0, 1000).map((id) => String(id))
+      : [];
     const result = rooms.startGame(
       code,
       Number(payload?.dilemmaCount),
@@ -620,6 +625,7 @@ io.on('connection', (socket) => {
       Boolean(payload?.delicatoOptIn),
       Boolean(payload?.serataLunga),
       String(payload?.caos ?? 'assente'),
+      seenDilemmaIds,
     );
     if (!result.ok) {
       socket.emit('leader:startError', { error: result.error });

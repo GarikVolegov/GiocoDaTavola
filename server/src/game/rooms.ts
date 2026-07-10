@@ -1124,6 +1124,10 @@ export class RoomStore {
     delicatoOptIn: boolean = false,
     serataLunga: boolean = false,
     caos: string = 'assente',
+    /** 5.1: dilemma ids the leader's OWN device has already seen (across
+     * separate games, from localStorage) — merged with the room's own
+     * rematch exclusion. Ignored outside classic format. */
+    deviceSeenIds: string[] = [],
   ): StartGameResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
@@ -1264,14 +1268,21 @@ export class RoomStore {
       room.deck = this.makeDeck(register as ContentRegister);
       // A rematch remembers the just-finished game's dilemmas so they don't
       // repeat here; consumed once (cleared immediately) so a THIRD game
-      // doesn't keep excluding a game from two rematches ago.
-      const excludeIds = room.excludeDilemmaIds;
+      // doesn't keep excluding a game from two rematches ago. Merged with the
+      // leader's own device memory (5.1, "già-visto") — dilemmas their phone
+      // has seen across separate games, so a recurring group avoids déjà-vu
+      // even without a rematch.
+      const excludeIds = new Set([...room.excludeDilemmaIds, ...deviceSeenIds]);
       room.excludeDilemmaIds = new Set();
       // Mood (2.2) narrows the pool by complexity tier; the delicate-theme
       // opt-in additionally excludes flagged 'power' dilemmas unless the
       // leader explicitly asked for them. Validated above via isMood.
       const cards = room.deck.cards;
-      const eligible = filterByMood(cards, mood as Mood, delicatoOptIn).filter((d) => !excludeIds.has(d.id));
+      const moodEligible = filterByMood(cards, mood as Mood, delicatoOptIn);
+      const fresh = moodEligible.filter((d) => !excludeIds.has(d.id));
+      // Never let exclusion empty the pool outright (a huge device history) —
+      // a shorter or repeated game beats a broken one.
+      const eligible = fresh.length > 0 ? fresh : moodEligible;
       // Only rebuild when something was actually excluded — an unfiltered
       // rebuild would replace the deck's own injected rng with the default
       // Math.random, silently breaking draw-order determinism in tests.

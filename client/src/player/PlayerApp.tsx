@@ -74,6 +74,7 @@ import StatusView from './views/StatusView';
 import LeaveGameMenu from './LeaveGameMenu';
 import SubmitDilemmaCard from './views/SubmitDilemmaCard';
 import LeaderSetup, { type TipoPartita } from './views/LeaderSetup';
+import { getSeenDilemmaIds, addSeenDilemmaIds } from '../shared/seenDilemmas';
 import { wrap } from './views/layout';
 
 
@@ -420,6 +421,12 @@ export default function PlayerApp() {
     setInfiltratoToolError(null);
   }, [game?.dilemmaIndex]);
 
+  // 5.1 "Memoria del già-visto": remember every dilemma this device sees, so a
+  // recurring group avoids déjà-vu even across separate (non-rematch) games.
+  useEffect(() => {
+    if (game?.dilemma?.id) addSeenDilemmaIds([game.dilemma.id]);
+  }, [game?.dilemma?.id]);
+
   // When the phone's user is logged in, send the Clerk token so the server can
   // attribute saved awards. Re-runs on login and on (re)joining a room.
   const { isSignedIn, getToken } = useAuth();
@@ -677,6 +684,7 @@ export default function PlayerApp() {
       delicatoOptIn,
       serataLunga,
       caos,
+      seenDilemmaIds: getSeenDilemmaIds(), // 5.1: avoid déjà-vu across separate games on this device
     });
   };
   const castAccuse = (accusedId: string) => {

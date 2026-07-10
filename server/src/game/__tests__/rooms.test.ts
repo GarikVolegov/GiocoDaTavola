@@ -2014,6 +2014,48 @@ describe('startGame — mood + delicate-theme opt-in (2.2)', () => {
   });
 });
 
+describe('startGame — device-remembered dilemmas (5.1, "memoria del già-visto")', () => {
+  function mixedFixture(id: string, complessita: Complessita, delicato = false): Dilemma {
+    return { id, text: `${id}?`, optionA: 'A', optionB: 'B', register: 'vita', complessita, delicato, spuntiA: [], spuntiB: [] };
+  }
+  const MIXED: Dilemma[] = [
+    mixedFixture('s1', 'sorbetto'),
+    mixedFixture('a1', 'alto'),
+    mixedFixture('m1', 'max'),
+    mixedFixture('p1', 'power'),
+  ];
+  const mixedDeck = (_r: ContentRegister) => new Deck(MIXED, () => 0);
+
+  it("excludes the leader's device-seen ids from the pool", () => {
+    const store = new RoomStore(generateRoomCode, () => 0, mixedDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `p${i}`, `P${i}`);
+    store.startGame(code, 5, 'misto', 'gruppo', false, false, undefined, undefined, 'mista', true, false, 'assente', ['s1', 'a1']);
+    const ids = store.get(code)!.plannedDilemmas.map((d) => d.id).sort();
+    expect(ids).toEqual(['m1', 'p1']);
+  });
+
+  it('falls back to the full pool rather than starving the game when device memory excludes everything', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, mixedDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `p${i}`, `P${i}`);
+    store.startGame(code, 5, 'misto', 'gruppo', false, false, undefined, undefined, 'mista', true, false, 'assente', ['s1', 'a1', 'm1', 'p1']);
+    const ids = store.get(code)!.plannedDilemmas.map((d) => d.id).sort();
+    expect(ids).toEqual(['a1', 'm1', 'p1', 's1']); // ignored the exhaustive exclusion, used the full pool
+  });
+
+  it('merges device memory with the rematch exclusion, not replacing it', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, mixedDeck, () => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `p${i}`, `P${i}`);
+    const room = store.get(code)!;
+    room.excludeDilemmaIds = new Set(['s1']); // as if this were a rematch
+    store.startGame(code, 5, 'misto', 'gruppo', false, false, undefined, undefined, 'mista', true, false, 'assente', ['a1']);
+    const ids = store.get(code)!.plannedDilemmas.map((d) => d.id).sort();
+    expect(ids).toEqual(['m1', 'p1']);
+  });
+});
+
 describe('rematch()', () => {
   it('rejects from anywhere except FINAL_AWARDS/FINAL_DUEL', () => {
     const store = new RoomStore();
