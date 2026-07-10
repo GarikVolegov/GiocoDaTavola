@@ -69,6 +69,7 @@ import {
   duelResult,
   duelSummary,
 } from './duel';
+import type { DuoPoints, DuoMoment } from './duo';
 
 // Re-export the phase state machine so existing importers (tests, index.ts)
 // keep importing GamePhase / PHASE_DURATIONS_MS / nextPhase / … from './rooms'.
@@ -488,6 +489,40 @@ export interface Room {
   duelScore: Map<string, number>;
   /** Duel: how many rounds the two players already agreed (no duel needed). */
   duelAgreements: number;
+  // --- "Percorso in 2" (the rebuilt duello). All duo fields are Map/array/
+  // plain values on purpose: the crash-restore snapshot round-trips Maps but
+  // NOT Sets, so a Set here would silently lose state on revival.
+  /** Parallel to plannedDilemmas — the act (1|2|3) of each planned dilemma. */
+  duoPlannedActs: number[];
+  /** Atto I: each player's secret prediction of the PARTNER's pick. Secret
+   * until DUO_SYNC_REVEAL; cleared each round. */
+  duoPredictions: Map<string, VoteChoice>;
+  /** Assigned debate sides this round: both players in Atto II (parti
+   * invertite), only the advocate in the Atto III agreement twist. */
+  duoAssignedSides: Map<string, VoteChoice>;
+  /** Ordered arguer ids for this round's DUO_ARGUE (2 in Atto II, 1 in the twist). */
+  duoSpeakers: string[];
+  /** Which duo argue turn (0-based) is speaking during DUO_ARGUE. */
+  duoTurnIndex: number;
+  /** Secret "ti ha fatto vacillare?" ratings, rater id -> 0|1|2. Secret until
+   * DUO_ROUND_RESULT; cleared each round. */
+  duoWaverRatings: Map<string, 0 | 1 | 2>;
+  /** Alternation counter for the duo tie-breaks (who flips side on equal picks,
+   * who plays devil's advocate). Grows monotonically across the game. */
+  duoFairness: number;
+  /** Whether this Atto III round took the agreement twist (devil's advocate). */
+  duoAdvocacy: boolean;
+  /** Whether the listener flipped at DUO_REPICK (computed leaving the phase). */
+  duoRepickFlipped: boolean;
+  /** Percorso in 2 score counters per player id (drives the portrait verdict). */
+  duoScore: Map<string, DuoPoints>;
+  /** How many dilemmas had a true first pick from both (Atti I+III) — the
+   * sintonia % denominator. */
+  duoTruePicks: number;
+  /** How many of those true first picks agreed — the sintonia % numerator. */
+  duoFirstPickAgreements: number;
+  /** Duo highlights accumulated across the game ("il momento della serata"). */
+  duoMoments: DuoMoment[];
   /**
    * Last time (epoch ms) each player sent a live reaction, keyed by player id —
    * used only to rate-limit the reaction stream. Reset never needed (stale
@@ -1010,6 +1045,19 @@ export class RoomStore {
       duelTurnIndex: 0,
       duelScore: new Map(),
       duelAgreements: 0,
+      duoPlannedActs: [],
+      duoPredictions: new Map(),
+      duoAssignedSides: new Map(),
+      duoSpeakers: [],
+      duoTurnIndex: 0,
+      duoWaverRatings: new Map(),
+      duoFairness: 0,
+      duoAdvocacy: false,
+      duoRepickFlipped: false,
+      duoScore: new Map(),
+      duoTruePicks: 0,
+      duoFirstPickAgreements: 0,
+      duoMoments: [],
       lastReactionAt: new Map(),
       turnReactionTally: {},
       lastTurnApplause: null,
@@ -1110,6 +1158,19 @@ export class RoomStore {
     room.duelTurnIndex = 0;
     room.duelScore = new Map();
     room.duelAgreements = 0;
+    room.duoPlannedActs = [];
+    room.duoPredictions = new Map();
+    room.duoAssignedSides = new Map();
+    room.duoSpeakers = [];
+    room.duoTurnIndex = 0;
+    room.duoWaverRatings = new Map();
+    room.duoFairness = 0;
+    room.duoAdvocacy = false;
+    room.duoRepickFlipped = false;
+    room.duoScore = new Map();
+    room.duoTruePicks = 0;
+    room.duoFirstPickAgreements = 0;
+    room.duoMoments = [];
     room.lastReactionAt = new Map();
     room.turnReactionTally = {};
     room.lastTurnApplause = null;
