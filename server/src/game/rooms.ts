@@ -59,6 +59,7 @@ import {
 import { tally } from './voteCount';
 import { computeAwards as computeAwardsFor, type Award, type PlayerStats } from './awards';
 import { computeBlindSpot, type BlindSpot } from './blindspots';
+import { computePodium, type PodiumEntry } from './podium';
 import {
   duelPlayers,
   duelAgreed,
@@ -81,6 +82,7 @@ export * from './storie';
 // Re-export the scoring types so consumers keep importing them from './rooms'.
 export type { Award, AwardId, PlayerStats } from './awards';
 export type { BlindSpot, BlindSpotId } from './blindspots';
+export type { PodiumEntry } from './podium';
 
 const CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const CODE_LENGTH = 4;
@@ -2296,6 +2298,16 @@ export class RoomStore {
     const room = this.rooms.get(code);
     if (!room || room.phase !== 'FINAL_AWARDS') return null;
     return this.computeAwards(code);
+  }
+
+  /**
+   * The end-of-game podium (full "Punti Serata" ranking, best first), only at
+   * FINAL_AWARDS (null otherwise) — mirrors publicAwards's gate.
+   */
+  publicPodium(code: string): PodiumEntry[] | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'FINAL_AWARDS') return null;
+    return computePodium(room);
   }
 
   /**

@@ -82,3 +82,19 @@ describe('computePodium — la classifica finale', () => {
     expect(computePodium(room)[0]).toEqual({ player: { id: 'a', nickname: 'P0' }, points: 4, rank: 1 });
   });
 });
+
+describe('publicPodium — gate FINAL_AWARDS', () => {
+  it('è null fuori da FINAL_AWARDS e popolato a FINAL_AWARDS', () => {
+    const store = makeStore();
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3);
+    const room = store.get(code)!;
+    room.stats.set('sock-0', baseStats({ rounds: 2 }));
+    expect(store.publicPodium(code)).toBeNull();
+    let g = 0;
+    while (room.phase !== 'FINAL_AWARDS' && g++ < 100) store.advancePhase(code);
+    expect(room.phase).toBe('FINAL_AWARDS');
+    expect(store.publicPodium(code)?.[0]?.player.id).toBe('sock-0');
+  });
+});
