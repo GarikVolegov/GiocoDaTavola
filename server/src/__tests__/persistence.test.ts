@@ -16,9 +16,10 @@ function finishedRoom(store: RoomStore, tagged: boolean): string {
   while (store.get(code)?.phase !== 'FINAL_AWARDS' && guard++ < 200) {
     const room = store.get(code)!;
     if (room.phase === 'VOTE_1' || room.phase === 'VOTE_2') {
+      // Split vote: an all-A first vote would skip + replace the dilemma (UNANIMOUS_REVEAL).
       store.vote(code, 'p1', 'A');
-      store.vote(code, 'p2', 'A');
-      store.vote(code, 'p3', 'A');
+      store.vote(code, 'p2', 'B');
+      store.vote(code, 'p3', 'B');
     }
     store.advancePhase(code);
   }

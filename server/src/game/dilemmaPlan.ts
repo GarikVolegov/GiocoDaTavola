@@ -6,6 +6,7 @@
 // the game rather than clustered at the front. Pure given a Deck + rng.
 // (Percorso planning lives in percorso.ts.)
 import { COMPLESSITA_RANK, type Deck, type Dilemma, type Complessita } from './deck';
+import type { Room } from './rooms';
 
 /** A fresh shuffled copy of `arr` using the injected rng (Fisher–Yates). */
 function shuffle<T>(arr: T[], rng: () => number): T[] {
@@ -141,4 +142,40 @@ export function buildClassicPlan(
     .sort((a, b) => rank(a.d) - rank(b.d) || a.i - b.i)
     .map((x) => x.d);
   return enforcePacing(escalating, submittedIds);
+}
+
+/**
+ * Swap the CURRENT planned dilemma (1-based Room.dilemmaIndex) for a fresh deck
+ * card, in place — the round replays at the same index. Used by both the
+ * unanimous-vote skip and the leader's "Scarta dilemma". Respects the famiglia
+ * rule against the whole plan (played + upcoming); a same-family draw is set
+ * aside and only backfilled if the deck offers nothing else (a repeat beats no
+ * replacement); unused set-asides return to the deck. The discarded id joins
+ * excludeDilemmaIds so a rematch never re-proposes it. Returns false — plan
+ * untouched — when there is no deck (percorso/storia) or it is exhausted.
+ */
+export function replaceCurrentDilemma(room: Room): boolean {
+  const { deck } = room;
+  if (!deck) return false;
+  const idx = room.dilemmaIndex - 1;
+  const old = room.plannedDilemmas[idx];
+  const usedFamilies = new Set(
+    room.plannedDilemmas.map((d) => d.famiglia).filter((f): f is string => f != null),
+  );
+  const setAside: Dilemma[] = [];
+  let fresh: Dilemma | null = null;
+  for (let d = deck.draw(); d; d = deck.draw()) {
+    if (d.famiglia != null && usedFamilies.has(d.famiglia)) {
+      setAside.push(d);
+      continue;
+    }
+    fresh = d;
+    break;
+  }
+  if (!fresh && setAside.length > 0) fresh = setAside.shift()!;
+  deck.putBack(setAside);
+  if (!fresh) return false;
+  if (old) room.excludeDilemmaIds.add(old.id);
+  room.plannedDilemmas[idx] = fresh;
+  return true;
 }

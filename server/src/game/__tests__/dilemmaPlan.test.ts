@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { buildClassicPlan } from '../dilemmaPlan';
+import { buildClassicPlan, replaceCurrentDilemma } from '../dilemmaPlan';
 import { Deck, type Dilemma, type Complessita } from '../deck';
+import { RoomStore, type Room } from '../rooms';
 
 function fixture(id: string, complessita: Complessita): Dilemma {
   return { id, text: `${id}?`, optionA: 'A', optionB: 'B', register: 'vita', complessita };
@@ -178,5 +179,65 @@ describe('buildClassicPlan — pool hygiene: famiglia + bilanciamento (5.4)', ()
       const bothFlat = plan[i].bilanciamento === 'sbilanciato' && plan[i + 1].bilanciamento === 'sbilanciato';
       expect(bothFlat).toBe(false);
     }
+  });
+});
+
+describe('replaceCurrentDilemma (scarta-e-rimpiazza, stesso round)', () => {
+  function fixture(id: string, famiglia?: string): Dilemma {
+    return { id, text: `${id}?`, optionA: 'A', optionB: 'B', register: 'vita', famiglia };
+  }
+  function roomWith(planned: Dilemma[], deckCards: Dilemma[], dilemmaIndex = 1): Room {
+    const store = new RoomStore();
+    const { code } = store.create();
+    const room = store.get(code)!;
+    room.plannedDilemmas = [...planned];
+    room.deck = new Deck(deckCards, () => 0);
+    room.dilemmaIndex = dilemmaIndex;
+    return room;
+  }
+
+  it('swaps the current planned dilemma for a deck card and excludes the discarded id', () => {
+    const room = roomWith([fixture('old')], [fixture('fresh')]);
+    expect(replaceCurrentDilemma(room)).toBe(true);
+    expect(room.plannedDilemmas[0].id).toBe('fresh');
+    expect(room.excludeDilemmaIds.has('old')).toBe(true);
+  });
+
+  it('replaces at the CURRENT index, leaving other rounds untouched', () => {
+    const room = roomWith([fixture('d1'), fixture('d2'), fixture('d3')], [fixture('fresh')], 2);
+    expect(replaceCurrentDilemma(room)).toBe(true);
+    expect(room.plannedDilemmas.map((d) => d.id)).toEqual(['d1', 'fresh', 'd3']);
+  });
+
+  it('respects the famiglia rule: skips a same-family card when a neutral one exists, returning the set-aside to the deck', () => {
+    const room = roomWith(
+      [fixture('old'), fixture('cugino', 'segreto')],
+      [fixture('rivale', 'segreto'), fixture('neutro')],
+    );
+    expect(replaceCurrentDilemma(room)).toBe(true);
+    expect(room.plannedDilemmas[0].id).toBe('neutro');
+    expect(room.deck!.remainingCount).toBe(1); // 'rivale' set aside, then put back
+  });
+
+  it('backfills a same-family repeat when the deck has nothing else (a repeat beats no replacement)', () => {
+    const room = roomWith(
+      [fixture('old'), fixture('cugino', 'segreto')],
+      [fixture('rivale', 'segreto')],
+    );
+    expect(replaceCurrentDilemma(room)).toBe(true);
+    expect(room.plannedDilemmas[0].id).toBe('rivale');
+  });
+
+  it('returns false on an exhausted deck, leaving the plan untouched', () => {
+    const room = roomWith([fixture('old')], []);
+    expect(replaceCurrentDilemma(room)).toBe(false);
+    expect(room.plannedDilemmas[0].id).toBe('old');
+    expect(room.excludeDilemmaIds.has('old')).toBe(false);
+  });
+
+  it('returns false when the room has no deck (percorso/storia)', () => {
+    const room = roomWith([fixture('old')], []);
+    room.deck = null;
+    expect(replaceCurrentDilemma(room)).toBe(false);
   });
 });

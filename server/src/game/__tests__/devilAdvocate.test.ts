@@ -24,15 +24,17 @@ function baseStats(over: Partial<PlayerStats> = {}): PlayerStats {
 
 // Drive a group room to DEFENSE of the devil round (round 2, with rng=()=>0).
 // Round 1 is walked through with no votes; the given `sides` are this round's
-// VOTE_1 choices for sock-0..n.
-function reachDevilDefense(store: RoomStore, sides: VoteChoice[]): string {
+// VOTE_1 choices for sock-0..n (null = didn't vote — a 100% unanimous VOTE_1
+// now skips the debate entirely, so the one-sided devil scenario is reached
+// via a below-floor round instead).
+function reachDevilDefense(store: RoomStore, sides: (VoteChoice | null)[]): string {
   const { code } = store.create();
   for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
   store.startGame(code, 3); // devilRoundIndex = 2 with rng=()=>0
   let g = 0;
   while (store.get(code)!.dilemmaIndex !== 2 && g++ < 50) store.advancePhase(code);
   store.advancePhase(code); // VOTE_1 (round 2)
-  sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
+  sides.forEach((side, i) => side && store.vote(code, `sock-${i}`, side));
   store.advancePhase(code); // SPLIT_REVEAL
   store.advancePhase(code); // PREDICT
   store.advancePhase(code); // DEFENSE
@@ -101,7 +103,7 @@ describe('Avvocato del Diavolo — defender selection', () => {
 
   it('still gives the unpopular side a voice when everyone voted alike', () => {
     const store = makeStore(() => 0);
-    const code = reachDevilDefense(store, ['A', 'A', 'A']); // nobody picked B
+    const code = reachDevilDefense(store, ['A', null, null]); // nobody picked B
     // The sole defender is an A-voter forced to argue B.
     expect(store.get(code)?.defenders).toEqual([
       { id: 'sock-0', nickname: 'P0', side: 'B', devil: true },

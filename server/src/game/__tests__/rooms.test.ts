@@ -44,16 +44,19 @@ const DILEMMA_FIXTURE: Dilemma[] = Array.from({ length: 6 }, (_, i) => ({
 const makeFixtureDeck = (_register: ContentRegister) => new Deck(DILEMMA_FIXTURE, () => 0);
 
 // helper: drive a fresh room into DEFENSE with a known split. Each entry of
-// `sides` is one player's secret vote; rng is injected so defender selection
-// is deterministic (the store's 4th ctor arg). `dilemmaCount` defaults to 3
-// (the devil round then always lands on round 2, its penultimate — 6.2).
-function defenseRoom(store: RoomStore, sides: VoteChoice[] = ['A', 'B', 'B'], dilemmaCount = 3): string {
+// `sides` is one player's secret vote (null = didn't vote — a below-floor
+// round is the surviving classic path to a single defender, since a 100%
+// unanimous VOTE_1 now skips the debate entirely); rng is injected so defender
+// selection is deterministic (the store's 4th ctor arg). `dilemmaCount`
+// defaults to 3 (the devil round then always lands on round 2, its
+// penultimate — 6.2).
+function defenseRoom(store: RoomStore, sides: (VoteChoice | null)[] = ['A', 'B', 'B'], dilemmaCount = 3): string {
   const { code } = store.create();
   for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
   store.startGame(code, dilemmaCount); // PHASE_INTRO
   store.advancePhase(code); // DILEMMA_REVEAL
   store.advancePhase(code); // VOTE_1
-  sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
+  sides.forEach((side, i) => side && store.vote(code, `sock-${i}`, side));
   store.advancePhase(code); // SPLIT_REVEAL
   store.advancePhase(code); // PREDICT
   store.advancePhase(code); // DEFENSE
@@ -648,7 +651,7 @@ describe('RoomStore defense (US-010)', () => {
 
   it('skips a side with 0 votes (single defender)', () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
-    const code = defenseRoom(store, ['A', 'A', 'A']); // nobody picked B
+    const code = defenseRoom(store, ['A', null, null]); // nobody picked B
     expect(store.get(code)?.defenders).toEqual([{ id: 'sock-0', nickname: 'P0', side: 'A' }]);
   });
 
@@ -673,7 +676,7 @@ describe('RoomStore defense (US-010)', () => {
 
   it('a single defender means a single turn then VOTE_2', () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
-    const code = defenseRoom(store, ['A', 'A', 'A']); // 1 defender
+    const code = defenseRoom(store, ['A', null, null]); // 1 defender
     expect(store.get(code)?.defenseTurnIndex).toBe(0);
     store.advancePhase(code);
     expect(store.get(code)?.phase).toBe('VOTE_2');
@@ -972,22 +975,25 @@ describe('RoomStore per-player stats (Fase A)', () => {
     const code = startedStatsRoom(store);
     // Round 1: as above (sock-1 switches to A).
     playRound(store, code, { 'sock-0': 'A', 'sock-1': 'B', 'sock-2': 'B' }, { 'sock-1': 'A' });
-    // Round 2: everyone votes A, nobody changes -> majority A, no swing.
-    // With fair rotation: sock-0 and sock-1 have defended (count=1), while sock-2
-    // hasn't (count=0). So round 2 picks sock-2 for A (lowest count).
-    playRound(store, code, { 'sock-0': 'A', 'sock-1': 'A', 'sock-2': 'A' });
+    // Round 2 (the devil round, penultimate of 3 — 6.2): A=2 B=1, then sock-2
+    // switches to A at VOTE_2 -> majority A, netSwing A=+1 B=-1. (An all-A
+    // first vote would now skip the round entirely — UNANIMOUS_REVEAL.)
+    // Fair rotation: sock-0/sock-1 defended round 1 (count=1, tie -> rng 0
+    // picks sock-0 for A), sock-2 (count=0) for B. As devils they argue the
+    // OPPOSITE side: sock-0 argues B (loses), sock-2 argues A (gains +1).
+    playRound(store, code, { 'sock-0': 'A', 'sock-1': 'A', 'sock-2': 'B' }, { 'sock-2': 'A' });
     const stats = store.get(code)!.stats;
     // Round 2's PREDICT phase is left with nobody having predicted (playRound
     // never calls predict/swingBet), so the soft-timeout auto-default (task 0.1)
     // backfills everyone to the leading side ("A") + "regge" on exit — which
-    // happens to match round 2's actual outcome, crediting correctPredictions
-    // and correctSwingBets for all three players. Round 1's defaults (to "B",
-    // the round-1 leading side at PREDICT time) don't match its actual outcome
-    // (A), so they credit nothing there.
+    // matches round 2's actual outcome (majority A, lead held), crediting
+    // correctPredictions and correctSwingBets for all three players. Round 1's
+    // defaults (to "B", the round-1 leading side at PREDICT time) don't match
+    // its actual outcome (A, lead flipped), so they credit nothing there.
     // sock-0 is the first key in vote1 both rounds -> firstToVoteCount: 2.
-    expect(stats.get('sock-0')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 2, minorityCount: 0, persuasion: 1, defendedCount: 1, correctPredictions: 1, correctSwingBets: 1, firstToVoteCount: 2 });
+    expect(stats.get('sock-0')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 2, minorityCount: 0, persuasion: 1, defendedCount: 2, correctPredictions: 1, correctSwingBets: 1, firstToVoteCount: 2 });
     expect(stats.get('sock-1')).toEqual({ rounds: 2, changedCount: 1, majorityCount: 2, minorityCount: 0, persuasion: 0, defendedCount: 1, correctPredictions: 1, correctSwingBets: 1 });
-    expect(stats.get('sock-2')).toEqual({ rounds: 2, changedCount: 0, majorityCount: 1, minorityCount: 1, persuasion: 0, defendedCount: 1, correctPredictions: 1, correctSwingBets: 1 });
+    expect(stats.get('sock-2')).toEqual({ rounds: 2, changedCount: 1, majorityCount: 1, minorityCount: 1, persuasion: 1, devilPersuasion: 1, defendedCount: 1, correctPredictions: 1, correctSwingBets: 1 });
   });
 
   it('counts a round each defender defended (defendedCount)', () => {
@@ -1268,7 +1274,8 @@ describe('RoomStore bots (Fase B)', () => {
     while (store.get(c)!.phase !== 'PHASE_RESULTS' && g++ < 10) {
       store.advancePhase(c);
       if (store.get(c)!.phase === 'VOTE_1' || store.get(c)!.phase === 'VOTE_2') {
-        for (let i = 0; i < 3; i++) store.vote(c, `sock-${i}`, 'A');
+        // Split vote: an all-A first vote would skip the round (UNANIMOUS_REVEAL).
+        for (let i = 0; i < 3; i++) store.vote(c, `sock-${i}`, i === 0 ? 'A' : 'B');
       }
     }
     expect(store.get(c)!.phase).toBe('PHASE_RESULTS');
@@ -1755,7 +1762,8 @@ describe('RoomStore reconnection / connected state', () => {
     while (store.get(code)?.phase !== 'FINAL_AWARDS' && guard++ < 200) {
       const phase = store.get(code)!.phase;
       if (phase === 'VOTE_1' || phase === 'VOTE_2') {
-        ['p0', 'p1', 'p2'].forEach((id) => store.vote(code, id, 'A'));
+        // Split vote: an all-A first vote would skip the round (UNANIMOUS_REVEAL).
+        ['p0', 'p1', 'p2'].forEach((id, i) => store.vote(code, id, i === 0 ? 'A' : 'B'));
       }
       store.advancePhase(code);
     }
@@ -2074,7 +2082,12 @@ describe('namedMoments — "I momenti della serata" recap (5.5)', () => {
     let g = 0;
     while (store.get(code)!.phase !== 'FINAL_AWARDS' && g++ < 100) {
       store.advancePhase(code);
-      if (store.get(code)!.phase === 'VOTE_1' || store.get(code)!.phase === 'VOTE_2') {
+      const phase = store.get(code)!.phase;
+      if (phase === 'VOTE_1') {
+        // Split first vote (an all-A one would skip the round), then everyone
+        // converges on A at VOTE_2 -> a 'plebiscito' moment still fires.
+        ['s0', 's1', 's2', 's3'].forEach((id, i) => store.vote(code, id, i === 0 ? 'A' : 'B'));
+      } else if (phase === 'VOTE_2') {
         for (const id of ['s0', 's1', 's2', 's3']) store.vote(code, id, 'A');
       }
     }
@@ -2201,7 +2214,8 @@ describe('rematch()', () => {
     while (store.get(code)!.phase !== 'FINAL_AWARDS' && guard++ < 60) {
       store.advancePhase(code);
       if (store.get(code)!.phase === 'VOTE_1' || store.get(code)!.phase === 'VOTE_2') {
-        for (const id of ['p1', 'p2', 'p3']) store.vote(code, id, 'A');
+        // Split vote: an all-A first vote would skip + replace the dilemma (UNANIMOUS_REVEAL).
+        ['p1', 'p2', 'p3'].forEach((id, i) => store.vote(code, id, i === 0 ? 'A' : 'B'));
       }
     }
     expect(store.get(code)!.phase).toBe('FINAL_AWARDS');
@@ -2242,7 +2256,8 @@ describe('rematch()', () => {
     while (store.get(code)!.phase !== 'FINAL_AWARDS' && guard++ < 60) {
       store.advancePhase(code);
       if (store.get(code)!.phase === 'VOTE_1' || store.get(code)!.phase === 'VOTE_2') {
-        for (const id of ['p1', 'p2', 'p3']) store.vote(code, id, 'A');
+        // Split vote: an all-A first vote would skip + replace the dilemma (UNANIMOUS_REVEAL).
+        ['p1', 'p2', 'p3'].forEach((id, i) => store.vote(code, id, i === 0 ? 'A' : 'B'));
       }
     }
     const playedIds = new Set(store.get(code)!.plannedDilemmas.map((d) => d.id));
@@ -2879,7 +2894,10 @@ describe('RoomStore VOTE_2 confirm (auto-paced)', () => {
     store.startGame(code, 3);
     let g = 0;
     while (store.get(code)?.phase !== 'VOTE_1' && g++ < 12) store.advancePhase(code);
-    store.vote(code, 'sock-0', 'A');
+    // Vote AGAINST the bots' side: aligning with them would be unanimous and
+    // skip the round (UNANIMOUS_REVEAL) before ever reaching VOTE_2.
+    const botSide = [...store.get(code)!.votes.values()][0];
+    store.vote(code, 'sock-0', botSide === 'A' ? 'B' : 'A');
     g = 0;
     while (store.get(code)?.phase !== 'VOTE_2' && g++ < 12) store.advancePhase(code);
     // 2 bots already confirmed; only the human is pending.
@@ -3078,7 +3096,7 @@ describe('finishTurn', () => {
 describe('advancePhase weaving DEFENSE/INTERVENTI', () => {
   it('a defender with raised hands enters INTERVENTI, walks the queue, then resumes', () => {
     const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
-    const code = defenseRoom(store, ['A', 'A', 'A']); // one defender (side A)
+    const code = defenseRoom(store, ['A', null, null]); // one defender (side A)
     const defender = store.get(code)!.defenders[0].id;
     const others = [...store.get(code)!.players.keys()].filter((id) => id !== defender);
     store.raiseHand(code, others[0]);
@@ -3097,7 +3115,7 @@ describe('advancePhase weaving DEFENSE/INTERVENTI', () => {
 
   it('a defender with NO raised hands skips INTERVENTI', () => {
     const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
-    const code = defenseRoom(store, ['A', 'A', 'A']);
+    const code = defenseRoom(store, ['A', null, null]);
     store.advancePhase(code);
     expect(store.get(code)!.phase).toBe('VOTE_2');
   });
@@ -3121,7 +3139,7 @@ describe('advancePhase weaving DEFENSE/INTERVENTI', () => {
 describe('reactions during INTERVENTI', () => {
   it('attributes an emoji to the current intervenor', () => {
     const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
-    const code = defenseRoom(store, ['A', 'A', 'A']);
+    const code = defenseRoom(store, ['A', null, null]);
     const defender = store.get(code)!.defenders[0].id;
     const others = [...store.get(code)!.players.keys()].filter((id) => id !== defender);
     store.raiseHand(code, others[0]);
@@ -3136,7 +3154,7 @@ describe('reactions during INTERVENTI', () => {
 describe('publicDefense count vs names', () => {
   it('exposes only the count during DEFENSE, names from INTERVENTI', () => {
     const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
-    const code = defenseRoom(store, ['A', 'A', 'A']);
+    const code = defenseRoom(store, ['A', null, null]);
     const defender = store.get(code)!.defenders[0].id;
     const others = [...store.get(code)!.players.keys()].filter((id) => id !== defender);
     store.raiseHand(code, others[0]);
@@ -3157,7 +3175,7 @@ describe('publicDefense count vs names', () => {
   it('canFinish flips once the floor passes', () => {
     let now = 1_000;
     const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
-    const code = defenseRoom(store, ['A', 'A', 'A']);
+    const code = defenseRoom(store, ['A', null, null]);
     expect(store.publicDefense(code)!.canFinish).toBe(false);
     now = 1_000 + 30_000;
     expect(store.publicDefense(code)!.canFinish).toBe(true);
@@ -3167,12 +3185,176 @@ describe('publicDefense count vs names', () => {
 describe('leave prunes raised hands', () => {
   it('drops a leaver from the live queue', () => {
     const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
-    const code = defenseRoom(store, ['A', 'A', 'A']);
+    const code = defenseRoom(store, ['A', null, null]);
     const defender = store.get(code)!.defenders[0].id;
     const others = [...store.get(code)!.players.keys()].filter((id) => id !== defender);
     store.raiseHand(code, others[0]);
     store.raiseHand(code, others[1]);
     store.leave(code, others[0]);
     expect(store.get(code)!.raisedHands).toEqual([others[1]]);
+  });
+});
+
+describe('voto unanime salta il dibattito (UNANIMOUS_REVEAL)', () => {
+  // 3 humans, fixture deck (plan d1..d3, deck keeps d4..d6), clock frozen at 1000.
+  function unanimousVote1Room(store: RoomStore) {
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3); // PHASE_INTRO
+    store.advancePhase(code); // DILEMMA_REVEAL (d1)
+    store.advancePhase(code); // VOTE_1
+    return code;
+  }
+  const makeStore = () => new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
+
+  it('VOTE_1 chiuso unanime ⇒ UNANIMOUS_REVEAL (stesso round, timer 4.5s), non SPLIT_REVEAL', () => {
+    const store = makeStore();
+    const code = unanimousVote1Room(store);
+    for (let i = 0; i < 3; i++) store.vote(code, `sock-${i}`, 'A');
+    store.advancePhase(code);
+    const room = store.get(code)!;
+    expect(room.phase).toBe('UNANIMOUS_REVEAL');
+    expect(room.dilemmaIndex).toBe(1);
+    expect(room.phaseExpiresAt).toBe(1_000 + PHASE_DURATIONS_MS.UNANIMOUS_REVEAL!);
+    expect(store.publicUnanimous(code)).toEqual({ side: 'A', count: 3 });
+  });
+
+  it('un voto spaccato va a SPLIT_REVEAL come sempre', () => {
+    const store = makeStore();
+    const code = unanimousVote1Room(store);
+    (['A', 'B', 'B'] as const).forEach((side, i) => store.vote(code, `sock-${i}`, side));
+    store.advancePhase(code);
+    expect(store.get(code)!.phase).toBe('SPLIT_REVEAL');
+  });
+
+  it('sotto il floor di 2 voti (es. "Salta ▶" con 1 solo voto) NON è unanimità', () => {
+    const store = makeStore();
+    const code = unanimousVote1Room(store);
+    store.vote(code, 'sock-0', 'A');
+    store.advancePhase(code);
+    expect(store.get(code)!.phase).toBe('SPLIT_REVEAL');
+  });
+
+  it("uscendo da UNANIMOUS_REVEAL il dilemma è RIMPIAZZATO nello stesso round: stesso indice, carta nuova, voti azzerati, scartato escluso dal rematch", () => {
+    const store = makeStore();
+    const code = unanimousVote1Room(store);
+    for (let i = 0; i < 3; i++) store.vote(code, `sock-${i}`, 'B');
+    store.advancePhase(code); // UNANIMOUS_REVEAL
+    store.advancePhase(code); // re-reveal
+    const room = store.get(code)!;
+    expect(room.phase).toBe('DILEMMA_REVEAL');
+    expect(room.dilemmaIndex).toBe(1);
+    expect(room.currentDilemma?.id).toBe('d4');
+    expect(room.plannedDilemmas[0].id).toBe('d4');
+    expect(room.votes.size).toBe(0);
+    expect(room.votes1.size).toBe(0);
+    expect(room.excludeDilemmaIds.has('d1')).toBe(true);
+    expect(store.publicUnanimous(code)).toBeNull();
+  });
+
+  it('i bot ri-votano sul dilemma sostitutivo (nessun round bloccato)', () => {
+    const store = makeStore();
+    const { code } = store.create();
+    store.join(code, 'sock-0', 'Umano');
+    store.addBot(code);
+    store.addBot(code);
+    store.startGame(code, 3);
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1 (i bot hanno già votato)
+    const room = store.get(code)!;
+    const botSide = [...room.votes.values()][0];
+    expect(room.votes.size).toBe(2);
+    // L'umano si allinea ai bot: unanimità legittima.
+    for (const v of room.votes.values()) expect(v).toBe(botSide);
+    store.vote(code, 'sock-0', botSide);
+    store.advancePhase(code); // UNANIMOUS_REVEAL
+    store.advancePhase(code); // re-reveal del sostituto
+    expect(store.get(code)!.phase).toBe('DILEMMA_REVEAL');
+    store.advancePhase(code); // VOTE_1 del sostituto
+    expect(store.get(code)!.votes.size).toBe(2); // i bot hanno ri-votato
+  });
+
+  it('a mazzo esaurito il round unanime avanza normalmente al successivo', () => {
+    const store = makeStore();
+    const code = unanimousVote1Room(store);
+    const room = store.get(code)!;
+    while (room.deck!.draw()) { /* svuota il mazzo */ }
+    for (let i = 0; i < 3; i++) store.vote(code, `sock-${i}`, 'A');
+    store.advancePhase(code); // UNANIMOUS_REVEAL
+    store.advancePhase(code); // niente rimpiazzo ⇒ round successivo
+    expect(room.phase).toBe('DILEMMA_REVEAL');
+    expect(room.dilemmaIndex).toBe(2);
+    expect(room.currentDilemma?.id).toBe('d2');
+  });
+
+  it("a mazzo esaurito sull'ULTIMO round si chiude a FINAL_AWARDS", () => {
+    const store = makeStore();
+    const code = unanimousVote1Room(store);
+    const room = store.get(code)!;
+    let guard = 0;
+    // Cammina fino al VOTE_1 del round 3 (l'ultimo).
+    while (!(room.phase === 'VOTE_1' && room.dilemmaIndex === 3) && guard++ < 100) {
+      store.advancePhase(code);
+    }
+    while (room.deck!.draw()) { /* svuota il mazzo */ }
+    for (let i = 0; i < 3; i++) store.vote(code, `sock-${i}`, 'B');
+    store.advancePhase(code); // UNANIMOUS_REVEAL
+    store.advancePhase(code);
+    expect(room.phase).toBe('FINAL_AWARDS');
+  });
+
+  it('il round unanime rimpiazzato non sporca le statistiche né i momenti', () => {
+    const store = makeStore();
+    const code = unanimousVote1Room(store);
+    for (let i = 0; i < 3; i++) store.vote(code, `sock-${i}`, 'A');
+    store.advancePhase(code); // UNANIMOUS_REVEAL
+    store.advancePhase(code); // DILEMMA_REVEAL (sostituto)
+    store.advancePhase(code); // VOTE_1
+    (['A', 'B', 'B'] as const).forEach((side, i) => store.vote(code, `sock-${i}`, side));
+    const room = store.get(code)!;
+    let guard = 0;
+    while (room.phase !== 'PHASE_RESULTS' && guard++ < 50) store.advancePhase(code);
+    expect(room.stats.get('sock-0')?.rounds).toBe(1); // solo il round sostitutivo conta
+    expect(room.namedMoments.some((m) => m.kind === 'plebiscito')).toBe(false);
+  });
+
+  it('il checkpoint Mente del Gruppo resta agganciato al round sostitutivo (indice invariato)', () => {
+    const store = makeStore();
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 5);
+    const room = store.get(code)!;
+    let guard = 0;
+    // Cammina fino al VOTE_1 del round 2 (il checkpoint cade uscendo dal suo PHASE_RESULTS).
+    while (!(room.phase === 'VOTE_1' && room.dilemmaIndex === 2) && guard++ < 100) {
+      store.advancePhase(code);
+    }
+    for (let i = 0; i < 3; i++) store.vote(code, `sock-${i}`, 'A');
+    store.advancePhase(code); // UNANIMOUS_REVEAL
+    store.advancePhase(code); // re-reveal del sostituto (sempre idx 2)
+    expect(room.dilemmaIndex).toBe(2);
+    const visited: GamePhase[] = [];
+    guard = 0;
+    while (room.phase !== 'DILEMMA_REVEAL' || room.dilemmaIndex !== 3) {
+      store.advancePhase(code);
+      visited.push(room.phase);
+      if (guard++ > 50) break;
+    }
+    expect(visited).toContain('GROUP_MIND');
+  });
+
+  it('fuori dal formato classic (percorso) il voto unanime mostra il normale SPLIT_REVEAL', () => {
+    const store = makeStore();
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3);
+    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    const room = store.get(code)!;
+    room.format = 'percorso';
+    room.plannedTappe = [1, 1, 1];
+    for (let i = 0; i < 3; i++) store.vote(code, `sock-${i}`, 'A');
+    store.advancePhase(code);
+    expect(room.phase).toBe('SPLIT_REVEAL');
   });
 });

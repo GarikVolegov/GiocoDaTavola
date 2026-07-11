@@ -74,6 +74,27 @@ export function publicSplit(room: Room): { A: number; B: number } | null {
   return tally(room.votes);
 }
 
+/**
+ * The side everyone picked, or null if the vote is split. Requires at least 2
+ * actual votes: a leader "Salta ▶" with 0-1 votes cast is not unanimity (same
+ * floor as the "Plebiscito!" named moment).
+ */
+export function unanimousSide(t: VoteTally): 'A' | 'B' | null {
+  if (t.A + t.B < 2) return null;
+  if (t.B === 0) return 'A';
+  if (t.A === 0) return 'B';
+  return null;
+}
+
+/** The unanimous side + how many voted it, only during UNANIMOUS_REVEAL; else
+ * null. Aggregate only — never identities. */
+export function publicUnanimous(room: Room): { side: 'A' | 'B'; count: number } | null {
+  if (room.phase !== 'UNANIMOUS_REVEAL') return null;
+  const t = tally(room.votes);
+  const side = unanimousSide(t);
+  return side ? { side, count: t[side] } : null;
+}
+
 /** True once every connected player has voted (ends VOTE_1 early). A player
  * who late-joined THIS round (3.2) is excluded — they may not have even
  * seen the prompt yet, so their absence must never block the round. */
