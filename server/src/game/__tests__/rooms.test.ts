@@ -3358,3 +3358,120 @@ describe('voto unanime salta il dibattito (UNANIMOUS_REVEAL)', () => {
     expect(room.phase).toBe('SPLIT_REVEAL');
   });
 });
+
+describe('skipDilemma — "Scarta dilemma" del leader', () => {
+  const makeStore = () => new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
+  function toPhase(store: RoomStore, code: string, phase: GamePhase) {
+    let g = 0;
+    while (store.get(code)!.phase !== phase && g++ < 20) store.advancePhase(code);
+  }
+  function started(store: RoomStore) {
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, 3);
+    return code;
+  }
+
+  it('da DILEMMA_REVEAL rimpiazza subito il dilemma: stesso round, carta nuova, expiry fresco', () => {
+    const store = makeStore();
+    const code = started(store);
+    toPhase(store, code, 'DILEMMA_REVEAL');
+    expect(store.get(code)!.currentDilemma?.id).toBe('d1');
+    const res = store.skipDilemma(code);
+    expect(res.ok).toBe(true);
+    const room = store.get(code)!;
+    expect(room.phase).toBe('DILEMMA_REVEAL');
+    expect(room.dilemmaIndex).toBe(1);
+    expect(room.currentDilemma?.id).toBe('d4');
+    expect(room.excludeDilemmaIds.has('d1')).toBe(true);
+    expect(room.phaseExpiresAt).toBe(1_000 + PHASE_DURATIONS_MS.DILEMMA_REVEAL!);
+  });
+
+  it('da VOTE_1 con voti già castati azzera i voti e riparte dal reveal del sostituto', () => {
+    const store = makeStore();
+    const code = started(store);
+    toPhase(store, code, 'VOTE_1');
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'B');
+    const res = store.skipDilemma(code);
+    expect(res.ok).toBe(true);
+    const room = store.get(code)!;
+    expect(room.phase).toBe('DILEMMA_REVEAL');
+    expect(room.dilemmaIndex).toBe(1);
+    expect(room.currentDilemma?.id).toBe('d4');
+    expect(room.votes.size).toBe(0);
+  });
+
+  it('a mazzo esaurito lo scarto avanza il round invece di rimpiazzare', () => {
+    const store = makeStore();
+    const code = started(store);
+    toPhase(store, code, 'DILEMMA_REVEAL');
+    const room = store.get(code)!;
+    while (room.deck!.draw()) { /* svuota il mazzo */ }
+    const res = store.skipDilemma(code);
+    expect(res.ok).toBe(true);
+    expect(room.phase).toBe('DILEMMA_REVEAL');
+    expect(room.dilemmaIndex).toBe(2);
+    expect(room.currentDilemma?.id).toBe('d2');
+  });
+
+  it('è rifiutato fuori da DILEMMA_REVEAL/VOTE_1 (il reveal chiude la finestra)', () => {
+    const store = makeStore();
+    const code = started(store);
+    toPhase(store, code, 'VOTE_1');
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'B');
+    store.vote(code, 'sock-2', 'B');
+    toPhase(store, code, 'SPLIT_REVEAL');
+    expect(store.skipDilemma(code)).toEqual({ ok: false, error: 'NOT_SKIPPABLE_PHASE' });
+    toPhase(store, code, 'VOTE_2');
+    expect(store.skipDilemma(code)).toEqual({ ok: false, error: 'NOT_SKIPPABLE_PHASE' });
+  });
+
+  it('è rifiutato in LOBBY e per una stanza inesistente', () => {
+    const store = makeStore();
+    const { code } = store.create();
+    expect(store.skipDilemma(code)).toEqual({ ok: false, error: 'NOT_SKIPPABLE_PHASE' });
+    expect(store.skipDilemma('ZZZZ')).toEqual({ ok: false, error: 'ROOM_NOT_FOUND' });
+  });
+
+  it('è rifiutato fuori dal formato classic (percorso non ha un mazzo da cui pescare)', () => {
+    const store = makeStore();
+    const code = started(store);
+    toPhase(store, code, 'DILEMMA_REVEAL');
+    store.get(code)!.format = 'percorso';
+    expect(store.skipDilemma(code)).toEqual({ ok: false, error: 'NOT_CLASSIC' });
+  });
+
+  it('è rifiutato nel duello (che ha la sua macchina a stati)', () => {
+    const store = makeStore();
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    store.join(code, 'p2', 'Bob');
+    store.startGame(code, 3, 'misto', 'duello');
+    store.advancePhase(code); // DUEL_PICK
+    expect(store.skipDilemma(code)).toEqual({ ok: false, error: 'NOT_CLASSIC' });
+  });
+
+  it('il rematch dopo uno scarto esclude anche il dilemma scartato dal prossimo mazzo', () => {
+    const store = makeStore();
+    const code = started(store);
+    toPhase(store, code, 'DILEMMA_REVEAL');
+    store.skipDilemma(code); // d1 scartato, sostituito da d4
+    const room = store.get(code)!;
+    let guard = 0;
+    while (room.phase !== 'FINAL_AWARDS' && guard++ < 100) {
+      store.advancePhase(code);
+      if (room.phase === 'VOTE_1' || room.phase === 'VOTE_2') {
+        ['sock-0', 'sock-1', 'sock-2'].forEach((id, i) => store.vote(code, id, i === 0 ? 'A' : 'B'));
+      }
+    }
+    expect(room.phase).toBe('FINAL_AWARDS');
+    store.rematch(code);
+    store.startGame(code, 3);
+    // Il nuovo piano non ripropone né i giocati (d4,d2,d3) né lo scartato d1.
+    const nextIds = store.get(code)!.plannedDilemmas.map((d) => d.id);
+    expect(nextIds).not.toContain('d1');
+    expect(nextIds).not.toContain('d4');
+  });
+});

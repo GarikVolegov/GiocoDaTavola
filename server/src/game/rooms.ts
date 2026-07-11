@@ -663,6 +663,12 @@ export type AdvancePhaseResult =
   | { ok: true; room: Room }
   | { ok: false; error: AdvancePhaseError };
 
+export type SkipDilemmaError = 'ROOM_NOT_FOUND' | 'NOT_SKIPPABLE_PHASE' | 'NOT_CLASSIC';
+
+export type SkipDilemmaResult =
+  | { ok: true; room: Room }
+  | { ok: false; error: SkipDilemmaError };
+
 export type VoteError =
   | 'ROOM_NOT_FOUND'
   | 'NOT_VOTING_PHASE'
@@ -1330,6 +1336,28 @@ export class RoomStore {
     room.duelAgreements = 0;
     room.duelTurnIndex = 0;
     return { ok: true, room };
+  }
+
+  /**
+   * The leader's "Scarta dilemma": discard the current dilemma while it can
+   * still be discarded — DILEMMA_REVEAL or an open VOTE_1 (once the split is
+   * revealed the round is committed). Classic format only (percorso/storia
+   * have no deck to redraw from; the duel runs its own machine). Reuses the
+   * UNANIMOUS_REVEAL exit of advancePhase — the room is put in that phase
+   * synthetically (never broadcast) so the replace-or-advance side effects
+   * live in exactly one place.
+   */
+  skipDilemma(code: string): SkipDilemmaResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.format !== 'classic' || room.mode === 'duello') {
+      return { ok: false, error: 'NOT_CLASSIC' };
+    }
+    if (room.phase !== 'DILEMMA_REVEAL' && room.phase !== 'VOTE_1') {
+      return { ok: false, error: 'NOT_SKIPPABLE_PHASE' };
+    }
+    room.phase = 'UNANIMOUS_REVEAL';
+    return this.advancePhase(code);
   }
 
   /**

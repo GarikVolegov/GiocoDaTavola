@@ -211,6 +211,9 @@ function gameStatePayload(room: Room) {
     // The aggregate A/B split, gated to SPLIT_REVEAL (null otherwise). Counts
     // only — never who voted what.
     split: rooms.publicSplit(room.code),
+    // The unanimous side + count, gated to UNANIMOUS_REVEAL (null otherwise).
+    // Aggregate only — never who voted what.
+    unanimous: rooms.publicUnanimous(room.code),
     // Who is defending + turn progress, gated to DEFENSE (null otherwise). Only
     // the chosen defenders' identities/side are public; no other votes leak.
     defense: rooms.publicDefense(room.code),
@@ -659,6 +662,24 @@ io.on('connection', (socket) => {
     const code = leaderCodeFor(socket.id);
     if (!code) return;
     advanceAndBroadcast(code);
+  });
+
+  // The leader discards the current dilemma (DILEMMA_REVEAL or an open VOTE_1):
+  // a fresh card replays the same round, or — deck exhausted — the round just
+  // advances. Everyone gets a room:dilemmaSkipped ping (toast + sting).
+  socket.on('leader:skipDilemma', () => {
+    const code = leaderCodeFor(socket.id);
+    if (!code) return;
+    const hadLateJoiners = (rooms.get(code)?.lateJoiners.size ?? 0) > 0;
+    const result = rooms.skipDilemma(code);
+    if (!result.ok) return;
+    io.to(code).emit('room:dilemmaSkipped', {});
+    broadcastGameState(code);
+    // The re-reveal is a round boundary: a pending late-joiner may have just
+    // been promoted (mirrors advanceAndBroadcast).
+    if (hadLateJoiners) broadcastLobby(code);
+    persistSnapshot(code, serializeRoom(result.room)).catch((e) => console.error('[snapshot] persist failed', e));
+    schedulePhase(code);
   });
 
   // The leader returns a finished room to LOBBY for a rematch: same roster,
