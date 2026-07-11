@@ -9,7 +9,8 @@ export type SfxName = 'reveal' | 'swing' | 'win' | 'awards' | 'timerWarn' | 'han
 /** The slice of game state cue decisions need; `GameStatePayload` satisfies it structurally. */
 export interface CueGame {
   swing: { switched: number; leadFlipped?: boolean } | null;
-  duelResult: { convinced: readonly unknown[] } | null;
+  /** Legacy duel field (sweep-scheduled; the duo cue lands with the host migration). */
+  duelResult?: { convinced: readonly unknown[] } | null;
 }
 
 /** The sting to play when the host moves from `prev` to `next`, or null for a quiet change. */

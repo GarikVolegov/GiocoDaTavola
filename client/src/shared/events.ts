@@ -38,8 +38,20 @@ export const SocketEvents = {
   PlayerVoteError: 'player:voteError',
   /** Player explicitly confirms their (pre-filled) second vote (VOTE_2). */
   PlayerConfirmVote: 'player:confirmVote',
-  /** Player taps a live audience reaction (DEFENSE / INTERVENTI / DUEL_ARGUE). */
+  /** Player taps a live audience reaction (DEFENSE / INTERVENTI / DUO_ARGUE). */
   PlayerReact: 'player:react',
+  /** Percorso in 2 (Atto I): own secret pick + prediction of the partner's, in one move. */
+  PlayerDuoSync: 'player:duoSync',
+  /** Server confirms the player's own pick+prediction back to them only. */
+  PlayerDuoSynced: 'player:duoSynced',
+  /** Server rejects the duo sync (wrong phase, not a player, bad choice). */
+  PlayerDuoSyncError: 'player:duoSyncError',
+  /** Percorso in 2: the listener secretly rates the arringa ("ti ha fatto vacillare?"). */
+  PlayerDuoWaver: 'player:duoWaver',
+  /** Server confirms the player's rating back to them only. */
+  PlayerDuoWavered: 'player:duoWavered',
+  /** Server rejects the rating (wrong phase, you are the advocate, out of range). */
+  PlayerDuoWaverError: 'player:duoWaverError',
   /** Server re-broadcasts a single reaction emoji to everyone (the swarm on every screen). */
   RoomReaction: 'room:reaction',
   /** Player raises/lowers their hand during a defender's turn (DEFENSE). */
@@ -259,7 +271,7 @@ export type GameMode = (typeof GAME_MODES)[number];
 /** Host-facing labels for the game modes. */
 export const MODE_LABELS: Record<GameMode, { nome: string; descr: string }> = {
   gruppo: { nome: 'Gruppo', descr: '3–8 giocatori' },
-  duello: { nome: '1v1 Duello', descr: '2 giocatori' },
+  duello: { nome: 'Percorso in 2', descr: 'in coppia · 2 giocatori' },
 };
 
 /** The evening's mood (2.2, mirror of the server's deck.ts `Mood`). */
@@ -337,13 +349,27 @@ export type GamePhase =
   | 'STORY_EPILOGUE'
   | 'ACCUSE'
   | 'FINAL_AWARDS'
-  // 1v1 "Duello" mode phases (mirror server rooms.ts).
+  // Legacy 1v1 duel phases (server no longer emits them; kept only until the
+  // last client references migrate — removed in the final sweep).
   | 'DUEL_PICK'
   | 'DUEL_REVEAL'
   | 'DUEL_ARGUE'
   | 'DUEL_REPICK'
   | 'DUEL_RESULT'
-  | 'FINAL_DUEL';
+  | 'FINAL_DUEL'
+  // "Percorso in 2" (the rebuilt duello, mirror server phases.ts): three fixed
+  // acts (Sintonia / A parti invertite / Schierati) + the couple portrait.
+  | 'DUO_ACT_INTRO'
+  | 'DUO_PICK_PREDICT'
+  | 'DUO_SYNC_REVEAL'
+  | 'DUO_SIDE_PICK'
+  | 'DUO_ARGUE'
+  | 'DUO_WAVER'
+  | 'DUO_ROUND_RESULT'
+  | 'DUO_PICK'
+  | 'DUO_REVEAL'
+  | 'DUO_REPICK'
+  | 'DUO_PORTRAIT';
 
 export interface PlayerJoinPayload {
   code: string;
@@ -631,6 +657,85 @@ export interface DuelSummary {
   agreements: number;
 }
 
+/** Percorso in 2: which act is in play and the position within it (never secret). */
+export interface DuoActState {
+  act: number;
+  roundInAct: number;
+  roundsInAct: number;
+  totalActs: number;
+}
+
+/** Atto I reveal (DUO_SYNC_REVEAL): both picks + prediction hits + sintonia counters. */
+export interface DuoSyncReveal {
+  picks: Array<{ id: string; nickname: string; choice: VoteChoice }>;
+  predictions: Array<{ id: string; nickname: string; predicted: VoteChoice; correct: boolean }>;
+  agreed: boolean;
+  agreements: number;
+  truePicks: number;
+}
+
+/** Duo argue turn (DUO_ARGUE): who argues now, on which (possibly assigned) side. */
+export interface DuoTurn {
+  speaker: {
+    id: string;
+    nickname: string;
+    side: VoteChoice;
+    /** Atto II: arguing a side that is not their pick. */
+    inverted: boolean;
+    /** Atto III twist: the designated devil's advocate. */
+    advocate: boolean;
+  } | null;
+  listenerId: string | null;
+  turn: number;
+  totalTurns: number;
+  minEndsAt: number | null;
+  canFinish: boolean;
+  startedAt: number | null;
+}
+
+/** Duo round outcome (DUO_ROUND_RESULT): act-shaped points + running totals. */
+export interface DuoRoundResult {
+  act: number;
+  advocacy: boolean;
+  vacillare: Array<{ id: string; nickname: string; received: 0 | 1 | 2 }>;
+  convinced: Array<{
+    persuader: { id: string; nickname: string };
+    convinced: { id: string; nickname: string };
+    ribaltone: boolean;
+  }>;
+  scores: Array<{ id: string; nickname: string; total: number }>;
+}
+
+/** A duo highlight surfaced in the portrait ("il momento della serata"). */
+export interface DuoMomentView {
+  emoji: string;
+  title: string;
+  description: string;
+  playerId?: string;
+}
+
+/** One of the two playful titles each player earns at the portrait. */
+export interface DuoTitle {
+  playerId: string;
+  nickname: string;
+  emoji: string;
+  title: string;
+  description: string;
+}
+
+/** The couple portrait (DUO_PORTRAIT): the finale's whole payload. */
+export interface DuoPortrait {
+  sintoniaPct: number;
+  agreements: number;
+  truePicks: number;
+  tiConosco: Array<{ id: string; nickname: string; hits: number }>;
+  scores: Array<{ id: string; nickname: string; total: number }>;
+  /** The playful micro-verdict's winner; null on a perfect tie. */
+  winnerId: string | null;
+  momento: DuoMomentView | null;
+  titoli: DuoTitle[];
+}
+
 /** Per-tappa progress within a percorso (mirror server PercorsoTappaProgress). */
 export interface PercorsoTappaProgress {
   id: number;
@@ -818,14 +923,25 @@ export interface GameStatePayload {
   mode: GameMode;
   /** The leader-player's id (drives the game); null until a leader exists. */
   leaderId: string | null;
-  /** Duel: both picks + agreement, shown only in DUEL_REVEAL; null otherwise. */
-  duelReveal: DuelReveal | null;
-  /** Duel: current arguer + turn, shown only in DUEL_ARGUE; null otherwise. */
-  duelTurn: DuelTurn | null;
-  /** Duel: round outcome, shown only in DUEL_RESULT; null otherwise. */
-  duelResult: DuelResult | null;
-  /** Duel: end summary, shown only in FINAL_DUEL; null otherwise. */
-  duelSummary: DuelSummary | null;
+  /** Legacy duel views: the server no longer sends them (sweep-scheduled). */
+  duelReveal?: DuelReveal | null;
+  duelTurn?: DuelTurn | null;
+  duelResult?: DuelResult | null;
+  duelSummary?: DuelSummary | null;
+  /** Percorso in 2: act progress (in-game duello only; null otherwise). */
+  duoAct: DuoActState | null;
+  /** How many players submitted their Atto I pick+prediction (aggregate only). */
+  duoSyncedCount: number;
+  /** How many "ti ha fatto vacillare?" ratings are in (aggregate only). */
+  duoWaverCount: number;
+  /** Atto I reveal, shown only in DUO_SYNC_REVEAL; null otherwise. */
+  duoSyncReveal: DuoSyncReveal | null;
+  /** Current arringa turn, shown only in DUO_ARGUE; null otherwise. */
+  duoTurn: DuoTurn | null;
+  /** Round outcome, shown only in DUO_ROUND_RESULT; null otherwise. */
+  duoRoundResult: DuoRoundResult | null;
+  /** The couple portrait, shown only in DUO_PORTRAIT; null otherwise. */
+  duoPortrait: DuoPortrait | null;
   /** "La Mente del Gruppo" (4.1): the current question; null outside GROUP_MIND/GROUP_MIND_REVEAL. */
   groupMindQuestion: GroupMindQuestion | null;
   /** Who's still missing their answer+guess this round; null outside GROUP_MIND. */
@@ -1236,6 +1352,17 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   DUEL_REPICK: 'Si ri-sceglie',
   DUEL_RESULT: 'Esito',
   FINAL_DUEL: 'Risultato finale',
+  DUO_ACT_INTRO: 'Nuovo atto',
+  DUO_PICK_PREDICT: 'Scegli e prevedi',
+  DUO_SYNC_REVEAL: 'Sintonia',
+  DUO_SIDE_PICK: 'Da che parte stai?',
+  DUO_ARGUE: 'Arringa',
+  DUO_WAVER: 'Ti ha fatto vacillare?',
+  DUO_ROUND_RESULT: 'Esito del round',
+  DUO_PICK: 'Schierati',
+  DUO_REVEAL: 'Rivelazione',
+  DUO_REPICK: 'Confermi o cambi?',
+  DUO_PORTRAIT: 'Ritratto di coppia',
 };
 
 export type StartGameError =
@@ -1260,7 +1387,7 @@ export const START_ERROR_MESSAGES: Record<StartGameError, string> = {
   ROOM_NOT_FOUND: 'Stanza non trovata',
   NOT_ENOUGH_PLAYERS: 'Servono almeno 3 partecipanti (anche bot)',
   NO_HUMAN_PLAYERS: 'Serve almeno una persona in carne e ossa',
-  WRONG_PLAYER_COUNT: 'Il 1v1 richiede esattamente 2 giocatori',
+  WRONG_PLAYER_COUNT: 'Il Percorso in 2 richiede esattamente 2 giocatori',
   INVALID_DILEMMA_COUNT: 'Numero di dilemmi non valido',
   INVALID_REGISTER: 'Registro non valido',
   INVALID_PERCORSO: 'Configurazione del percorso non valida',
