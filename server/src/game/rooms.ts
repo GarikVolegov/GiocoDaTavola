@@ -81,6 +81,7 @@ import {
   duoRoundResult,
   duoPortrait,
   duoActState,
+  duoAdvocateId,
   type DuoPoints,
   type DuoMoment,
 } from './duo';
@@ -2406,6 +2407,12 @@ export class RoomStore {
     const room = this.rooms.get(code);
     if (!room || room.mode !== 'duello' || room.phase === 'LOBBY') return null;
     return duoActState(room);
+  }
+
+  /** The current twist round's devil's advocate id (public while it plays out). */
+  publicDuoAdvocateId(code: string) {
+    const room = this.rooms.get(code);
+    return room ? duoAdvocateId(room) : null;
   }
 
   /**

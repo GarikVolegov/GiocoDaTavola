@@ -22,6 +22,7 @@ import {
   duoPortrait,
   duoTurn,
   duoActState,
+  duoAdvocateId,
 } from '../duo';
 import { nextDuoPhase, PHASE_DURATIONS_MS, DUO_TURN_MIN_MS } from '../phases';
 import { RoomStore, type Room } from '../rooms';
@@ -545,6 +546,17 @@ describe('gated duo readers', () => {
     expect(reveal.truePicks).toBe(1);
   });
 
+  it('duoSyncReveal also answers in DUO_REVEAL (Atto III picks, no predictions)', () => {
+    const { room, ann, bob } = duoRoom();
+    room.votes.set(ann, 'A');
+    room.votes.set(bob, 'A');
+    room.phase = 'DUO_REVEAL';
+    const reveal = duoSyncReveal(room)!;
+    expect(reveal.agreed).toBe(true);
+    expect(reveal.picks).toHaveLength(2);
+    expect(reveal.predictions).toEqual([]);
+  });
+
   it('duoRoundResult answers only in DUO_ROUND_RESULT with the act outcome', () => {
     const ctx = actTwoOutcome({ ann: 0, bob: 2 });
     const result = duoRoundResult(ctx.room)!;
@@ -591,6 +603,23 @@ describe('gated duo readers', () => {
     room.phase = 'DUO_PICK';
     room.dilemmaIndex = 4;
     expect(duoActState(room)).toEqual({ act: 3, roundInAct: 1, roundsInAct: 1, totalActs: 3 });
+  });
+});
+
+describe('duoAdvocateId', () => {
+  it('exposes the advocate only during the twist round phases', () => {
+    const { room, ann } = duoRoom();
+    room.votes.set(ann, 'A');
+    room.votes.set(duoRoom().bob, 'A'); // irrelevant second room guard
+    expect(duoAdvocateId(room)).toBeNull(); // no advocacy yet
+    room.duoAdvocacy = true;
+    room.duoAssignedSides.set(ann, 'B');
+    for (const phase of ['DUO_ARGUE', 'DUO_REPICK', 'DUO_WAVER', 'DUO_ROUND_RESULT'] as const) {
+      room.phase = phase;
+      expect(duoAdvocateId(room)).toBe(ann);
+    }
+    room.phase = 'DUO_PICK'; // next round's pick: the twist is over
+    expect(duoAdvocateId(room)).toBeNull();
   });
 });
 

@@ -5,6 +5,7 @@ import {
   OBJECTIVE,
   SPLIT_REVEAL_WINDOW_S,
   tappaMeta,
+  DUO_ACT_META,
   type GameStatePayload,
   type BlindSpot,
   type PlayerInfiltratoRolePayload,
@@ -438,47 +439,71 @@ export default function StatusView({
             </SignInButton>
           </Show>
         </>
-      ) : phase === 'DUEL_REVEAL' ? (
+      ) : phase === 'DUO_ACT_INTRO' ? (
+        (() => {
+          const meta = DUO_ACT_META[game?.duoAct?.act ?? 1];
+          return meta ? (
+            <Card
+              glow="accent"
+              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
+            >
+              <p style={{ fontSize: '3rem', margin: 0 }}>{meta.emoji}</p>
+              <p style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>{meta.nome}</p>
+              <p style={{ fontSize: '0.95rem', opacity: 0.85, margin: 0 }}>{meta.sottotitolo}</p>
+            </Card>
+          ) : null;
+        })()
+      ) : phase === 'DUO_SYNC_REVEAL' || phase === 'DUO_REVEAL' ? (
         <>
           <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
-            {game?.duelReveal?.agreed ? "Siete d'accordo! 🤝" : "Non siete d'accordo — si discute"}
+            {game?.duoSyncReveal?.agreed ? "Siete d'accordo! 🤝" : "Non siete d'accordo — si discute"}
           </p>
-          {game?.duelReveal?.picks.map((p) => (
+          {game?.duoSyncReveal?.picks.map((p) => (
             <p key={p.id} style={{ fontSize: '1.05rem', margin: 0 }}>
               <strong>{p.nickname}</strong>: {p.choice}
             </p>
           ))}
-        </>
-      ) : phase === 'DUEL_RESULT' ? (
-        <>
-          {game?.duelResult?.agreed ? (
-            <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>Siete d'accordo! 🤝</p>
-          ) : (
-            game?.duelResult?.convinced.map((c) => (
-              <p key={c.convinced.id} style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-                <strong>{c.persuader.nickname}</strong> ha convinto <strong>{c.convinced.nickname}</strong>! 🎯
-              </p>
-            ))
-          )}
-        </>
-      ) : phase === 'FINAL_DUEL' ? (
-        <>
-          {game?.duelSummary && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-              {game.duelSummary.scores.map((s) => (
-                <p key={s.id} style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-                  <strong>{s.nickname}</strong>: {s.persuasions} {s.persuasions === 1 ? 'persuasione' : 'persuasioni'}
+          {phase === 'DUO_SYNC_REVEAL' &&
+            game?.duoSyncReveal?.predictions
+              .filter((p) => p.correct)
+              .map((p) => (
+                <p key={p.id} style={{ fontSize: '0.95rem', opacity: 0.85, margin: 0 }}>
+                  🔮 <strong>{p.nickname}</strong> ci ha visto giusto (+1 «ti conosco»)
                 </p>
               ))}
-              <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0 }}>
-                D'accordo su {game.duelSummary.agreements} {game.duelSummary.agreements === 1 ? 'dilemma' : 'dilemmi'}
-              </p>
-            </div>
+          {phase === 'DUO_REVEAL' && game?.duoSyncReveal?.agreed && (
+            <p style={{ fontSize: '0.95rem', opacity: 0.85, margin: 0 }}>
+              🎭 Twist: uno di voi diventa avvocato del diavolo…
+            </p>
           )}
-          {isLeader && (
-            <Button variant="primary" onClick={onRematch} style={{ marginTop: '0.25rem' }}>
-              Giocate ancora ▶
-            </Button>
+        </>
+      ) : phase === 'DUO_ROUND_RESULT' ? (
+        <>
+          {game?.duoRoundResult?.convinced.map((c) => (
+            <p key={c.convinced.id} style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+              {c.ribaltone ? '🎭 Ribaltone! ' : '🎯 '}
+              <strong>{c.persuader.nickname}</strong> ha fatto cambiare idea a{' '}
+              <strong>{c.convinced.nickname}</strong> (+2)
+            </p>
+          ))}
+          {game?.duoRoundResult?.vacillare
+            .filter((v) => v.received > 0)
+            .map((v) => (
+              <p key={v.id} style={{ fontSize: '1.05rem', margin: 0 }}>
+                ✨ <strong>{v.nickname}</strong> ha fatto vacillare (+{v.received})
+              </p>
+            ))}
+          {game?.duoRoundResult &&
+            game.duoRoundResult.convinced.length === 0 &&
+            game.duoRoundResult.vacillare.every((v) => v.received === 0) && (
+              <p style={{ fontSize: '1.05rem', opacity: 0.85, margin: 0 }}>
+                Nessuno ha ceduto di un millimetro 🪨
+              </p>
+            )}
+          {game?.duoRoundResult && (
+            <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0 }}>
+              {game.duoRoundResult.scores.map((s) => `${s.nickname} ${s.total}`).join(' · ')}
+            </p>
           )}
         </>
       ) : (

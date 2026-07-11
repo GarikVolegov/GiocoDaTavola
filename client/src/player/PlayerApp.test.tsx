@@ -679,45 +679,36 @@ describe('PlayerApp', () => {
     expect(screen.getByText('Bea')).toBeInTheDocument(); // the target to guess
   });
 
-  it('shows who is arguing for a spectator at DUEL_ARGUE', () => {
+  // ---- Percorso in 2 (duello) -------------------------------------------
+
+  const duoJoin = () => {
+    serverEmit('player:joined', {
+      code: 'ABCD',
+      token: 'tok',
+      player: { id: 'p1', nickname: 'Alice' },
+    });
+    serverEmit('lobby:update', {
+      players: [
+        { id: 'p1', nickname: 'Alice' },
+        { id: 'p2', nickname: 'Bea' },
+      ],
+    });
+  };
+
+  it('shows who is arguing (a parti invertite) for the listener at DUO_ARGUE', () => {
     render(<PlayerApp />);
     act(() => {
-      serverEmit('player:joined', {
-        code: 'ABCD',
-        token: 'tok',
-        player: { id: 'p1', nickname: 'Alice' },
-      });
+      duoJoin();
       serverEmit('game:state', {
-        phase: 'DUEL_ARGUE',
-        dilemmaCount: 3,
-        dilemmaIndex: 0,
+        phase: 'DUO_ARGUE',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 3,
         phaseExpiresAt: null,
         dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
-        duelTurn: { speaker: { id: 'p2', nickname: 'Bea', side: 'A' }, turn: 1, totalTurns: 4 },
-        leaderId: null,
-      });
-    });
-    expect(screen.getByText(/sta argomentando/i)).toBeInTheDocument();
-    expect(screen.getByText('Bea')).toBeInTheDocument();
-  });
-
-  it('shows the finish affordance once the floor lifts at DUEL_ARGUE', () => {
-    render(<PlayerApp />);
-    act(() => {
-      serverEmit('player:joined', {
-        code: 'ABCD',
-        token: 'tok',
-        player: { id: 'p1', nickname: 'Alice' },
-      });
-      serverEmit('game:state', {
-        phase: 'DUEL_ARGUE',
-        dilemmaCount: 3,
-        dilemmaIndex: 1,
-        phaseExpiresAt: null,
-        mode: 'duello',
-        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
-        duelTurn: {
-          speaker: { id: 'p1', nickname: 'Alice', side: 'A' },
+        duoTurn: {
+          speaker: { id: 'p2', nickname: 'Bea', side: 'A', inverted: true, advocate: false },
+          listenerId: 'p1',
           turn: 1,
           totalTurns: 2,
           minEndsAt: null,
@@ -727,28 +718,55 @@ describe('PlayerApp', () => {
         leaderId: null,
       });
     });
+    expect(screen.getByText(/sta argomentando/i)).toBeInTheDocument();
+    expect(screen.getByText('Bea')).toBeInTheDocument();
+    expect(screen.getByText(/parti invertite/i)).toBeInTheDocument();
+  });
+
+  it('shows the assigned-side banner to the arguer and enables the finish once the floor lifts', () => {
+    render(<PlayerApp />);
+    act(() => {
+      duoJoin();
+      serverEmit('game:state', {
+        phase: 'DUO_ARGUE',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 3,
+        phaseExpiresAt: null,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        duoTurn: {
+          speaker: { id: 'p1', nickname: 'Alice', side: 'B', inverted: true, advocate: false },
+          listenerId: 'p2',
+          turn: 1,
+          totalTurns: 2,
+          minEndsAt: null,
+          canFinish: true,
+          startedAt: Date.now(),
+        },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/non è il tuo/i)).toBeInTheDocument(); // "difendi il lato B (non è il tuo!)"
     expect(screen.getByRole('button', { name: /ho finito/i })).toBeEnabled();
   });
 
-  it('locks the finish button before the floor lifts at DUEL_ARGUE', () => {
+  it('locks the finish button before the floor lifts and flags the devil advocate', () => {
     render(<PlayerApp />);
     act(() => {
-      serverEmit('player:joined', {
-        code: 'ABCD',
-        token: 'tok',
-        player: { id: 'p1', nickname: 'Alice' },
-      });
+      duoJoin();
       serverEmit('game:state', {
-        phase: 'DUEL_ARGUE',
-        dilemmaCount: 3,
-        dilemmaIndex: 1,
-        phaseExpiresAt: null,
+        phase: 'DUO_ARGUE',
         mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 4,
+        phaseExpiresAt: null,
         dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
-        duelTurn: {
-          speaker: { id: 'p1', nickname: 'Alice', side: 'A' },
+        duoAdvocateId: 'p1',
+        duoTurn: {
+          speaker: { id: 'p1', nickname: 'Alice', side: 'B', inverted: false, advocate: true },
+          listenerId: 'p2',
           turn: 1,
-          totalTurns: 2,
+          totalTurns: 1,
           minEndsAt: Date.now() + 15_000,
           canFinish: false,
           startedAt: Date.now(),
@@ -756,7 +774,154 @@ describe('PlayerApp', () => {
         leaderId: null,
       });
     });
+    expect(screen.getByText(/avvocato del diavolo/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ho finito/i })).toBeDisabled();
+  });
+
+  it('DUO_PICK_PREDICT: emits player:duoSync only once BOTH selections are in (any order)', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      duoJoin();
+      serverEmit('game:state', {
+        phase: 'DUO_PICK_PREDICT',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        duoSyncedCount: 0,
+        leaderId: null,
+      });
+    });
+    // Two selection groups: my own pick, and my prediction of Bea's pick.
+    const ownGroup = screen.getByRole('group', { name: /la tua scelta/i });
+    const predictGroup = screen.getByRole('group', { name: /cosa sceglie bea/i });
+    emitSpy.mockClear();
+    fireEvent.click(within(ownGroup).getByText('Mare'));
+    expect(emitSpy).not.toHaveBeenCalledWith('player:duoSync', expect.anything());
+    fireEvent.click(within(predictGroup).getByText('Montagna'));
+    expect(emitSpy).toHaveBeenCalledWith('player:duoSync', { own: 'A', predict: 'B' });
+    // The server echo flips the view into "sent, changeable" feedback.
+    act(() => {
+      serverEmit('player:duoSynced', { own: 'A', predict: 'B' });
+    });
+    expect(screen.getByText(/✓ inviato/i)).toBeInTheDocument();
+    emitSpy.mockRestore();
+  });
+
+  it('renders the vote screen with duo subtitles at DUO_SIDE_PICK and DUO_PICK', () => {
+    render(<PlayerApp />);
+    act(() => {
+      duoJoin();
+      serverEmit('game:state', {
+        phase: 'DUO_SIDE_PICK',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 3,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd3', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText('Da che parte stai?')).toBeInTheDocument();
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'DUO_PICK',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 4,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd4', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText('Schierati')).toBeInTheDocument();
+  });
+
+  it('DUO_REPICK: the listener confirms; the devil advocate only waits', () => {
+    render(<PlayerApp />);
+    act(() => {
+      duoJoin();
+      serverEmit('game:state', {
+        phase: 'DUO_REPICK',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 4,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd4', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        duoAdvocateId: null,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByRole('button', { name: /confermo/i })).toBeInTheDocument();
+    // Same phase, but I argued as the devil's advocate: nothing to re-pick.
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'DUO_REPICK',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 4,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd4', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        duoAdvocateId: 'p1',
+        leaderId: null,
+      });
+    });
+    expect(screen.queryByRole('button', { name: /confermo/i })).toBeNull();
+    expect(screen.getByText(/bea/i)).toBeInTheDocument(); // "ora decide Bea…"
+  });
+
+  it('DUO_WAVER: three ratings normally, two in the twist, none for the advocate', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      duoJoin();
+      serverEmit('game:state', {
+        phase: 'DUO_WAVER',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 3,
+        phaseExpiresAt: null,
+        duoAdvocateId: null,
+        duoWaverCount: 0,
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/ti ha fatto vacillare/i)).toBeInTheDocument();
+    emitSpy.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: /🤯/ }));
+    expect(emitSpy).toHaveBeenCalledWith('player:duoWaver', { rating: 2 });
+    // Twist: I'm the listener — the 🤯 is reserved for a real flip (max 1).
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'DUO_WAVER',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 4,
+        phaseExpiresAt: null,
+        duoAdvocateId: 'p2',
+        duoWaverCount: 0,
+        leaderId: null,
+      });
+    });
+    expect(screen.queryByRole('button', { name: /🤯/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /🤔/ })).toBeInTheDocument();
+    // Twist again, but I'm the advocate: I only wait for the verdict.
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'DUO_WAVER',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 4,
+        phaseExpiresAt: null,
+        duoAdvocateId: 'p1',
+        duoWaverCount: 0,
+        leaderId: null,
+      });
+    });
+    expect(screen.queryByRole('button', { name: /🤔/ })).toBeNull();
+    emitSpy.mockRestore();
   });
 
   it('shows the dilemma at DILEMMA_REVEAL (status view)', () => {
@@ -779,106 +944,188 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/mare o montagna/i)).toBeInTheDocument();
   });
 
-  it('shows the duel summary phone-first at FINAL_DUEL (3.4), not just "guarda lo schermo"', () => {
+  it('DUO_ACT_INTRO announces the coming act phone-first', () => {
     render(<PlayerApp />);
     act(() => {
-      serverEmit('player:joined', {
-        code: 'ABCD',
-        token: 'tok',
-        player: { id: 'p1', nickname: 'Alice' },
-      });
+      duoJoin();
       serverEmit('game:state', {
-        phase: 'FINAL_DUEL',
-        dilemmaCount: 3,
-        dilemmaIndex: 0,
+        phase: 'DUO_ACT_INTRO',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 2,
         phaseExpiresAt: null,
-        duelSummary: {
-          scores: [
-            { id: 'p1', nickname: 'Alice', persuasions: 2 },
-            { id: 'p2', nickname: 'Bea', persuasions: 1 },
-          ],
-          agreements: 1,
-        },
+        duoAct: { act: 2, roundInAct: 0, roundsInAct: 1, totalActs: 3 },
         leaderId: null,
       });
     });
-    expect(screen.getByText(/alice/i)).toBeInTheDocument();
-    expect(screen.getByText(/bea/i)).toBeInTheDocument();
-    expect(screen.queryByText(/guarda il risultato sullo schermo/i)).toBeNull();
+    expect(screen.getByText(/a parti invertite/i)).toBeInTheDocument();
   });
 
-  it('shows both picks and whether they agreed at DUEL_REVEAL (3.4)', () => {
+  it('DUO_SYNC_REVEAL shows both picks and the prediction hits', () => {
     render(<PlayerApp />);
     act(() => {
-      serverEmit('player:joined', {
-        code: 'ABCD',
-        token: 'tok',
-        player: { id: 'p1', nickname: 'Alice' },
-      });
+      duoJoin();
       serverEmit('game:state', {
-        phase: 'DUEL_REVEAL',
-        dilemmaCount: 3,
+        phase: 'DUO_SYNC_REVEAL',
+        mode: 'duello',
+        dilemmaCount: 4,
         dilemmaIndex: 1,
         phaseExpiresAt: null,
-        duelReveal: {
+        duoSyncReveal: {
           picks: [
             { id: 'p1', nickname: 'Alice', choice: 'A' },
             { id: 'p2', nickname: 'Bea', choice: 'B' },
           ],
+          predictions: [
+            { id: 'p1', nickname: 'Alice', predicted: 'B', correct: true },
+            { id: 'p2', nickname: 'Bea', predicted: 'B', correct: false },
+          ],
           agreed: false,
+          agreements: 0,
+          truePicks: 1,
         },
         leaderId: null,
       });
     });
-    expect(screen.getByText(/alice/i)).toBeInTheDocument();
-    expect(screen.getByText(/bea/i)).toBeInTheDocument();
     expect(screen.getByText(/non siete d'accordo/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/alice/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/ci ha visto giusto/i)).toBeInTheDocument(); // Alice's correct call
   });
 
-  it('shows who convinced whom at DUEL_RESULT when they disagreed (3.4)', () => {
+  it('DUO_REVEAL shows the picks and announces the twist on agreement', () => {
     render(<PlayerApp />);
     act(() => {
-      serverEmit('player:joined', {
-        code: 'ABCD',
-        token: 'tok',
-        player: { id: 'p1', nickname: 'Alice' },
-      });
+      duoJoin();
       serverEmit('game:state', {
-        phase: 'DUEL_RESULT',
-        dilemmaCount: 3,
-        dilemmaIndex: 1,
+        phase: 'DUO_REVEAL',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 4,
         phaseExpiresAt: null,
-        duelResult: {
-          agreed: false,
+        duoSyncReveal: {
+          picks: [
+            { id: 'p1', nickname: 'Alice', choice: 'A' },
+            { id: 'p2', nickname: 'Bea', choice: 'A' },
+          ],
+          predictions: [],
+          agreed: true,
+          agreements: 2,
+          truePicks: 3,
+        },
+        dilemma: { id: 'd4', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText(/siete d'accordo/i)).toBeInTheDocument();
+    expect(screen.getByText(/avvocato del diavolo/i)).toBeInTheDocument(); // il twist in arrivo
+  });
+
+  it('DUO_ROUND_RESULT shows ribaltoni and running totals', () => {
+    render(<PlayerApp />);
+    act(() => {
+      duoJoin();
+      serverEmit('game:state', {
+        phase: 'DUO_ROUND_RESULT',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 4,
+        phaseExpiresAt: null,
+        duoRoundResult: {
+          act: 3,
+          advocacy: true,
+          vacillare: [],
           convinced: [
-            { persuader: { id: 'p1', nickname: 'Alice' }, convinced: { id: 'p2', nickname: 'Bea' } },
+            {
+              persuader: { id: 'p1', nickname: 'Alice' },
+              convinced: { id: 'p2', nickname: 'Bea' },
+              ribaltone: true,
+            },
+          ],
+          scores: [
+            { id: 'p1', nickname: 'Alice', total: 4 },
+            { id: 'p2', nickname: 'Bea', total: 3 },
           ],
         },
         leaderId: null,
       });
     });
-    expect(screen.getByText(/alice/i)).toBeInTheDocument();
-    expect(screen.getByText(/bea/i)).toBeInTheDocument();
+    expect(screen.getByText(/ribaltone/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/alice/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/bea/i).length).toBeGreaterThan(0);
   });
 
-  it('shows agreement at DUEL_RESULT when they agreed', () => {
+  it('DUO_PORTRAIT shows the couple portrait and lets the leader rematch', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
     render(<PlayerApp />);
     act(() => {
-      serverEmit('player:joined', {
-        code: 'ABCD',
-        token: 'tok',
-        player: { id: 'p1', nickname: 'Alice' },
-      });
+      duoJoin();
       serverEmit('game:state', {
-        phase: 'DUEL_RESULT',
-        dilemmaCount: 3,
-        dilemmaIndex: 1,
+        phase: 'DUO_PORTRAIT',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 4,
         phaseExpiresAt: null,
-        duelResult: { agreed: true, convinced: [] },
+        duoPortrait: {
+          sintoniaPct: 67,
+          agreements: 2,
+          truePicks: 3,
+          tiConosco: [
+            { id: 'p1', nickname: 'Alice', hits: 2 },
+            { id: 'p2', nickname: 'Bea', hits: 1 },
+          ],
+          scores: [
+            { id: 'p1', nickname: 'Alice', total: 6 },
+            { id: 'p2', nickname: 'Bea', total: 5 },
+          ],
+          winnerId: 'p1',
+          momento: { emoji: '🎭', title: 'Ribaltone!', description: 'Alice ha ribaltato Bea' },
+          titoli: [
+            { playerId: 'p1', nickname: 'Alice', emoji: '🎯', title: 'Il Persuasore', description: 'x' },
+            { playerId: 'p1', nickname: 'Alice', emoji: '🔮', title: 'Il Telepate', description: 'y' },
+            { playerId: 'p2', nickname: 'Bea', emoji: '✨', title: "L'Incantatore", description: 'z' },
+            { playerId: 'p2', nickname: 'Bea', emoji: '⚔️', title: 'Il Duellante', description: 'w' },
+          ],
+        },
+        leaderId: 'p1',
+      });
+    });
+    expect(screen.getByText(/67%/)).toBeInTheDocument();
+    expect(screen.getByText(/l'ha spuntata/i)).toBeInTheDocument(); // il micro-verdetto
+    expect(screen.getByText(/il persuasore/i)).toBeInTheDocument();
+    expect(screen.getByText('Ribaltone!')).toBeInTheDocument();
+    emitSpy.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: /giocate ancora/i }));
+    expect(emitSpy).toHaveBeenCalledWith('leader:rematch');
+    emitSpy.mockRestore();
+  });
+
+  it('DUO_PORTRAIT declares the perfect tie instead of a winner', () => {
+    render(<PlayerApp />);
+    act(() => {
+      duoJoin();
+      serverEmit('game:state', {
+        phase: 'DUO_PORTRAIT',
+        mode: 'duello',
+        dilemmaCount: 4,
+        dilemmaIndex: 4,
+        phaseExpiresAt: null,
+        duoPortrait: {
+          sintoniaPct: 100,
+          agreements: 3,
+          truePicks: 3,
+          tiConosco: [],
+          scores: [
+            { id: 'p1', nickname: 'Alice', total: 4 },
+            { id: 'p2', nickname: 'Bea', total: 4 },
+          ],
+          winnerId: null,
+          momento: null,
+          titoli: [],
+        },
         leaderId: null,
       });
     });
-    expect(screen.getByText(/siete d'accordo/i)).toBeInTheDocument();
+    expect(screen.getByText(/pareggio/i)).toBeInTheDocument();
   });
 
   it('shows "Giocate ancora" to the leader at FINAL_AWARDS and emits leader:rematch', () => {

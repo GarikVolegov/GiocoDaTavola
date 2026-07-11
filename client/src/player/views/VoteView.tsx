@@ -3,7 +3,7 @@ import { PHASE_LABELS, type VoteChoice } from '../../shared/events';
 import { Button, VoteOption, Alert } from '../../shared/ui';
 import { wrap, formatWaitingList } from './layout';
 
-type VotePhase = 'VOTE_1' | 'VOTE_2' | 'DUEL_PICK' | 'DUEL_REPICK';
+type VotePhase = 'VOTE_1' | 'VOTE_2' | 'DUO_SIDE_PICK' | 'DUO_PICK' | 'DUO_REPICK';
 
 interface VoteDilemma {
   text: string;
@@ -44,16 +44,20 @@ export default function VoteView({
   missingVoters,
   skipButton,
 }: VoteViewProps) {
-  // VOTE_2 / DUEL_REPICK keep the player's first choice as the default they can
+  // VOTE_2 / DUO_REPICK keep the player's first choice as the default they can
   // keep or change; the sub-line nudges them per phase.
   const subtitle =
     phase === 'VOTE_2'
       ? 'Hai sentito le difese: confermi o cambi idea?'
-      : phase === 'DUEL_PICK'
-        ? 'Scegli la tua posizione.'
-        : phase === 'DUEL_REPICK'
-          ? 'Ti ha convinto? Conferma o cambia.'
-          : null;
+      : phase === 'DUO_SIDE_PICK'
+        ? 'Scegli il lato che ti convince davvero. Poi… si vedrà chi difende cosa.'
+        : phase === 'DUO_PICK'
+          ? 'Il duello vero: scegli la tua posizione.'
+          : phase === 'DUO_REPICK'
+            ? "Ti ha fatto vacillare l'arringa? Conferma o cambia."
+            : null;
+  const isCastPhase = phase === 'VOTE_1' || phase === 'DUO_SIDE_PICK' || phase === 'DUO_PICK';
+  const isConfirmPhase = phase === 'VOTE_2' || phase === 'DUO_REPICK';
   return (
     <main style={wrap}>
       <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
@@ -97,7 +101,7 @@ export default function VoteView({
       ) : (
         <p style={{ opacity: 0.7, margin: 0 }}>Tocca A o B per votare.</p>
       )}
-      {(phase === 'VOTE_1' || phase === 'DUEL_PICK') &&
+      {isCastPhase &&
         (missingVoters && missingVoters.length > 0 ? (
           <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
             Aspettiamo {formatWaitingList(missingVoters)}…
@@ -107,7 +111,7 @@ export default function VoteView({
             Hanno votato {votedCount}/{playerCount}
           </p>
         ))}
-      {phase === 'VOTE_2' &&
+      {isConfirmPhase &&
         (confirmed ? (
           <>
             <p style={{ fontWeight: 800, margin: '0.25rem 0 0', fontSize: '1.05rem' }}>

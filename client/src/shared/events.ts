@@ -665,6 +665,25 @@ export interface DuoActState {
   totalActs: number;
 }
 
+/** Display metadata for the three duo acts (act-intro cards, host badges). */
+export const DUO_ACT_META: Record<number, { emoji: string; nome: string; sottotitolo: string }> = {
+  1: {
+    emoji: '🔮',
+    nome: 'Atto I — Sintonia',
+    sottotitolo: 'Scegli il tuo lato e prevedi quello di chi hai davanti.',
+  },
+  2: {
+    emoji: '🎭',
+    nome: 'Atto II — A parti invertite',
+    sottotitolo: 'Il gioco vi assegna i lati: difendi quello che non è tuo.',
+  },
+  3: {
+    emoji: '⚔️',
+    nome: 'Atto III — Schierati',
+    sottotitolo: 'Il duello vero: convinci, o lasciati convincere.',
+  },
+};
+
 /** Atto I reveal (DUO_SYNC_REVEAL): both picks + prediction hits + sintonia counters. */
 export interface DuoSyncReveal {
   picks: Array<{ id: string; nickname: string; choice: VoteChoice }>;
@@ -930,6 +949,8 @@ export interface GameStatePayload {
   duelSummary?: DuelSummary | null;
   /** Percorso in 2: act progress (in-game duello only; null otherwise). */
   duoAct: DuoActState | null;
+  /** The twist round's devil's advocate id, public only while it plays out. */
+  duoAdvocateId: string | null;
   /** How many players submitted their Atto I pick+prediction (aggregate only). */
   duoSyncedCount: number;
   /** How many "ti ha fatto vacillare?" ratings are in (aggregate only). */

@@ -254,6 +254,9 @@ function gameStatePayload(room: Room) {
     // The leader-player's id, so the creator's phone shows its controls.
     leaderId: room.leaderId,
     duoAct: rooms.publicDuoActState(room.code),
+    // The twist round's devil's advocate (public only while it plays out) — the
+    // phones use it to hide the re-pick/waver controls from the advocate.
+    duoAdvocateId: rooms.publicDuoAdvocateId(room.code),
     duoSyncedCount: room.duoPredictions.size,
     duoWaverCount: room.duoWaverRatings.size,
     duoSyncReveal: rooms.publicDuoSyncReveal(room.code),

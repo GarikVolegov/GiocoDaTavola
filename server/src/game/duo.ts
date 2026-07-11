@@ -398,9 +398,10 @@ export interface DuoActState {
   totalActs: number;
 }
 
-/** Public Atto I reveal (only DUO_SYNC_REVEAL): both picks + prediction hits. */
+/** Public picks reveal: Atto I (DUO_SYNC_REVEAL, with prediction hits) and the
+ * Atto III first-pick reveal (DUO_REVEAL, picks only — no predictions there). */
 export function duoSyncReveal(room: Room): DuoSyncReveal | null {
-  if (room.phase !== 'DUO_SYNC_REVEAL') return null;
+  if (room.phase !== 'DUO_SYNC_REVEAL' && room.phase !== 'DUO_REVEAL') return null;
   const players = duoPlayers(room);
   const picks = players
     .map((p) => ({ id: p.id, nickname: p.nickname, choice: room.votes.get(p.id) }))
@@ -502,6 +503,24 @@ export function duoRoundResult(room: Room): DuoRoundResult | null {
     total: duoTotalPoints(room.duoScore.get(p.id)),
   }));
   return { act, advocacy: room.duoAdvocacy, vacillare, convinced, scores };
+}
+
+/**
+ * The devil's advocate of the CURRENT twist round, public only while the twist
+ * plays out (their identity was announced on the argue turn anyway); null in
+ * every other phase/round. Lets phones tailor the waver/re-pick screens.
+ */
+export function duoAdvocateId(room: Room): string | null {
+  if (!room.duoAdvocacy) return null;
+  if (
+    room.phase !== 'DUO_ARGUE' &&
+    room.phase !== 'DUO_REPICK' &&
+    room.phase !== 'DUO_WAVER' &&
+    room.phase !== 'DUO_ROUND_RESULT'
+  ) {
+    return null;
+  }
+  return [...room.duoAssignedSides.keys()][0] ?? null;
 }
 
 /** Structural act progress (never secret): which act, which round within it. */
