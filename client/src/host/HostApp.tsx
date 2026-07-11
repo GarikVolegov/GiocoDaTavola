@@ -327,6 +327,26 @@ export default function HostApp() {
             split && <SplitBar split={split} />
           ))}
 
+        {phase === 'UNANIMOUS_REVEAL' && game.unanimous && (
+          <>
+            <Celebration pieces={40} />
+            <p style={{ fontSize: '3.5rem', margin: 0 }} aria-hidden>
+              🎉
+            </p>
+            {dilemma && (
+              <p style={{ fontSize: 'clamp(1.8rem, 4vw, 2.6rem)', fontWeight: 800, margin: 0, maxWidth: '46rem' }}>
+                {game.unanimous.side === 'A' ? dilemma.optionA : dilemma.optionB}
+              </p>
+            )}
+            <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, opacity: 0.9 }}>
+              {game.unanimous.count} su {game.unanimous.count} dalla stessa parte
+            </p>
+            <p style={{ fontSize: '1.15rem', margin: 0, opacity: 0.7 }}>
+              Niente dibattito — nuovo dilemma in arrivo…
+            </p>
+          </>
+        )}
+
         {phase === 'PREDICT' && (
           game.knowPairs ? (
             <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>

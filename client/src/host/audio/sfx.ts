@@ -65,6 +65,17 @@ const RECIPES: Record<SfxName, (ctx: AudioContext, dest: AudioNode, t0: number) 
     tone(ctx, dest, t0, { freq: 784, start: 0, dur: 0.12, type: 'sine', gain: 0.12 }); // G5
     tone(ctx, dest, t0, { freq: 1046.5, start: 0.07, dur: 0.2, type: 'sine', gain: 0.12 }); // C6
   },
+  // Quick bright unison burst — "Tutti d'accordo!": shorter and cheekier than
+  // the duel 'win' fanfare, same major-chord family.
+  unanimous: (ctx, dest, t0) => {
+    const notes = [659.25, 783.99, 1046.5]; // E5 G5 C6
+    notes.forEach((f, i) => tone(ctx, dest, t0, { freq: f, start: i * 0.06, dur: 0.22, type: 'triangle', gain: 0.16 }));
+    tone(ctx, dest, t0, { freq: 1318.5, start: 0.2, dur: 0.28, type: 'sine', gain: 0.14 }); // E6 sparkle
+  },
+  // Short falling whoosh — the leader tossed the dilemma away.
+  discard: (ctx, dest, t0) => {
+    tone(ctx, dest, t0, { freq: 520, freqEnd: 140, start: 0, dur: 0.28, type: 'sawtooth', gain: 0.1 });
+  },
 };
 
 /** Play a one-shot sound effect on the host. Respects mute; safe when audio is unavailable. */

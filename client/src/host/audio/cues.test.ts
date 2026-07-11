@@ -13,6 +13,14 @@ describe('sfxForTransition', () => {
     expect(sfxForTransition('DILEMMA_REVEAL', 'DUEL_REVEAL', game())).toBe('reveal');
   });
 
+  it('plays the unanimous fanfare entering UNANIMOUS_REVEAL', () => {
+    expect(sfxForTransition('VOTE_1', 'UNANIMOUS_REVEAL', game())).toBe('unanimous');
+  });
+
+  it('stays quiet on the discard re-reveal (same phase — the sting comes from the room:dilemmaSkipped listener)', () => {
+    expect(sfxForTransition('DILEMMA_REVEAL', 'DILEMMA_REVEAL', game())).toBeNull();
+  });
+
   it('plays a dramatic swing sting when the majority actually flipped', () => {
     expect(
       sfxForTransition('INTERVENTI', 'PHASE_RESULTS', game({ swing: { switched: 2 } })),

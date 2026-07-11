@@ -57,6 +57,7 @@ import {
 import { Card, JoinQr, Button, Field, TextInput, Alert, ShareInviteButton } from '../shared/ui';
 import { useHostAudio } from '../host/audio/useHostAudio';
 import { useSfxCues } from '../host/audio/useSfxCues';
+import { play as playSfx } from '../host/audio/sfx';
 import { MuteButton } from '../host/MuteButton';
 import { AudioGate } from '../host/AudioGate';
 // Lazy so jsQR (the camera decoder) only loads when a player actually opens the scanner.
@@ -182,6 +183,11 @@ export default function PlayerApp() {
   // PREDICT/SPEAKER_VOTE/DUEL_PICK/DUEL_REPICK) so an impatient leader can't
   // silently cut off someone else's still-forming vote with one stray tap.
   const [confirmingSkip, setConfirmingSkip] = useState(false);
+  // "Scarta dilemma" needs its own 2nd-tap guard once someone has already cast
+  // a secret vote — tossing the dilemma throws that vote away.
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  // Brief everyone-sees-it toast when the leader tosses the dilemma.
+  const [dilemmaSkippedToast, setDilemmaSkippedToast] = useState(false);
   // Player-written dilemmas (lobby): the draft form + how many we've added.
   const [dilemmaText, setDilemmaText] = useState('');
   const [dilemmaA, setDilemmaA] = useState('');
@@ -487,11 +493,31 @@ export default function PlayerApp() {
     setRaiseHandError(null);
   }, [turnSpeakerId, phase]);
 
-  // A "confirming skip" belongs to one phase only: a leftover armed state must
-  // never carry into the next phase and fire an unintended skip on its first tap.
+  // A "confirming skip/discard" belongs to one phase only: a leftover armed state
+  // must never carry into the next phase and fire an unintended tap-through.
   useEffect(() => {
     setConfirmingSkip(false);
+    setConfirmingDiscard(false);
   }, [phase]);
+
+  // The leader tossed the dilemma (room:dilemmaSkipped): brief toast + falling
+  // whoosh on every phone. The re-reveal keeps the same phase, so the normal
+  // phase-transition sting never fires for a discard.
+  const toastTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    const socket = getSocket();
+    const onDilemmaSkipped = () => {
+      playSfx('discard');
+      setDilemmaSkippedToast(true);
+      if (toastTimerRef.current != null) window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = window.setTimeout(() => setDilemmaSkippedToast(false), 3_500);
+    };
+    socket.on(SocketEvents.RoomDilemmaSkipped, onDilemmaSkipped);
+    return () => {
+      socket.off(SocketEvents.RoomDilemmaSkipped, onDilemmaSkipped);
+      if (toastTimerRef.current != null) window.clearTimeout(toastTimerRef.current);
+    };
+  }, []);
 
   // A confirmation belongs to one VOTE_2 round only: drop it whenever the phase
   // changes so the next second-vote starts from the "Confermo" affordance again.
@@ -778,6 +804,31 @@ export default function PlayerApp() {
       )
     ) : null;
 
+  // The leader's "Scarta dilemma" (classic only): toss a dud dilemma while it can
+  // still be tossed — DILEMMA_REVEAL or an open VOTE_1. One tap, but once someone
+  // has already cast a secret vote it arms a confirming 2nd tap instead.
+  const discard = () => {
+    setConfirmingDiscard(false);
+    buzz(25);
+    getSocket().emit(SocketEvents.LeaderSkipDilemma);
+  };
+  const canDiscard =
+    isLeader && game?.format === 'classic' && (phase === 'DILEMMA_REVEAL' || phase === 'VOTE_1');
+  const discardButton = canDiscard ? (
+    phase === 'VOTE_1' && (game?.votedCount ?? 0) > 0 ? (
+      <Button
+        variant="ghost"
+        onClick={() => (confirmingDiscard ? discard() : setConfirmingDiscard(true))}
+      >
+        {confirmingDiscard ? "Sicuro? C'è già chi ha votato 🗑️" : '🗑️ Scarta dilemma'}
+      </Button>
+    ) : (
+      <Button variant="ghost" onClick={discard}>
+        🗑️ Scarta dilemma
+      </Button>
+    )
+  ) : null;
+
   // Every in-game screen gets the discreet ⋮ exit (hidden, two-tap confirm). The
   // lobby keeps its own visible "Esci dalla stanza" link, so it's not wrapped here.
   // At PHASE_RESULTS (a round boundary) the leader also gets a one-tap "aggiungi
@@ -785,6 +836,27 @@ export default function PlayerApp() {
   const withLeaveMenu = (node: ReactNode) => (
     <>
       {node}
+      {dilemmaSkippedToast && (
+        <div
+          role="status"
+          style={{
+            position: 'fixed',
+            top: 'calc(env(safe-area-inset-top, 0px) + var(--space-3))',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'var(--color-surface, rgba(20, 30, 55, 0.95))',
+            border: '1px solid var(--color-border, rgba(255,255,255,0.15))',
+            borderRadius: 'var(--radius-md, 12px)',
+            padding: 'var(--space-2) var(--space-3)',
+            fontSize: '0.95rem',
+            fontWeight: 700,
+            whiteSpace: 'nowrap',
+            zIndex: 30,
+          }}
+        >
+          🗑️ Il capitano ha scartato il dilemma
+        </div>
+      )}
       <LeaveGameMenu onLeave={leaveRoom} onAddBot={isLeader && phase === 'PHASE_RESULTS' ? addBot : undefined} />
     </>
   );
@@ -810,7 +882,12 @@ export default function PlayerApp() {
         confirmedCount={game?.confirmedCount ?? 0}
         playerCount={players.length}
         missingVoters={game?.missingVoters ?? null}
-        skipButton={skipButton}
+        skipButton={
+          <>
+            {discardButton}
+            {skipButton}
+          </>
+        }
       />
     );
   }
@@ -975,7 +1052,12 @@ export default function PlayerApp() {
           knowResult={knowResult}
           groupMindResult={groupMindResult}
           blindSpot={blindSpot}
-          skipButton={skipButton}
+          skipButton={
+            <>
+              {discardButton}
+              {skipButton}
+            </>
+          }
         />
       </>
     );
