@@ -1,5 +1,5 @@
 // The game's phase state machine: the phase enum, per-phase timer durations, and
-// the pure transition functions for the group game and the 1v1 duel. Extracted
+// the pure transition functions for the group game and the Percorso in 2. Extracted
 // from rooms.ts so the (stateless, heavily-tested) state machine lives on its
 // own; RoomStore imports from here and re-exports for backward compatibility.
 
@@ -65,13 +65,6 @@ export type GamePhase =
   // room has an infiltrator (handled in advancePhase, not the pure sequence).
   | 'ACCUSE'
   | 'FINAL_AWARDS'
-  // 1v1 "Duello" mode phases (run instead of the group sequence when mode==='duello').
-  | 'DUEL_PICK'
-  | 'DUEL_REVEAL'
-  | 'DUEL_ARGUE'
-  | 'DUEL_REPICK'
-  | 'DUEL_RESULT'
-  | 'FINAL_DUEL'
   // "Percorso in 2" (the rebuilt duello): three fixed acts + the couple portrait.
   // DUO_ACT_INTRO frames each act (like TAPPA_INTRO). Atto I plays
   // DUO_PICK_PREDICT → DUO_SYNC_REVEAL; Atto II plays DUO_SIDE_PICK → DUO_ARGUE
@@ -109,11 +102,8 @@ export const DEFENSE_MAX_MS_LUNGA = 180_000;
 export const INTERVENTI_MAX_MS = 90_000;
 export const TURN_BOT_MS = 20_000;
 
-/** Per-turn floor for a human's DUEL_ARGUE turn — mirrors INTERVENTO_MIN_MS;
- * kept separate so the two can diverge later without cross-affecting. */
-export const DUEL_TURN_MIN_MS = 15_000;
-
-/** Per-turn floor for a DUO_ARGUE arringa (Percorso in 2). */
+/** Per-turn floor for a DUO_ARGUE arringa (Percorso in 2) — mirrors
+ * INTERVENTO_MIN_MS; kept separate so the two can diverge later. */
 export const DUO_TURN_MIN_MS = 15_000;
 
 /**
@@ -176,12 +166,6 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   // loud before voting who the infiltrator is (was 30s).
   ACCUSE: 75_000,
   FINAL_AWARDS: null,
-  DUEL_PICK: 20_000,
-  DUEL_REVEAL: 5_000,
-  DUEL_ARGUE: 45_000,
-  DUEL_REPICK: 20_000,
-  DUEL_RESULT: 8_000,
-  FINAL_DUEL: null,
   // Percorso in 2: every input phase has a real timer + server early-advance
   // (the group's soft-timeout quorum can never arm with only 2 players).
   DUO_ACT_INTRO: 7_000,
@@ -199,14 +183,17 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
 
 /**
  * Phases in which phones may cast/change a secret vote: the group first/second
- * votes, and the duel pick/re-pick (which reuse the same vote() path).
+ * votes, and the duo picks/re-pick (which reuse the same vote() path).
  */
 export function isVotingPhase(phase: GamePhase): boolean {
   return (
     phase === 'VOTE_1' ||
     phase === 'VOTE_2' ||
-    phase === 'DUEL_PICK' ||
-    phase === 'DUEL_REPICK'
+    // Percorso in 2: the Atto II true pick, the Atto III pick and re-pick.
+    // (DUO_PICK_PREDICT rides its own player:duoSync path instead.)
+    phase === 'DUO_SIDE_PICK' ||
+    phase === 'DUO_PICK' ||
+    phase === 'DUO_REPICK'
   );
 }
 
@@ -373,46 +360,6 @@ export function nextStoriaPhase(
   const i = DILEMMA_SEQUENCE.indexOf(current);
   if (i >= 0 && i < DILEMMA_SEQUENCE.length - 1) {
     return { phase: DILEMMA_SEQUENCE[i + 1], dilemmaIndex };
-  }
-  return { phase: current, dilemmaIndex };
-}
-
-/** Ordered phases of a single 1v1 duel round. */
-const DUEL_SEQUENCE: GamePhase[] = [
-  'DUEL_PICK',
-  'DUEL_REVEAL',
-  'DUEL_ARGUE',
-  'DUEL_REPICK',
-  'DUEL_RESULT',
-];
-
-/**
- * Pure duel state-machine transition (the 1v1 analogue of nextPhase). PHASE_INTRO
- * opens the first pick; from DUEL_REVEAL we skip straight to DUEL_RESULT when the
- * two players already `agreed` (otherwise argue → repick → result); DUEL_RESULT
- * loops to the next dilemma's DUEL_PICK or ends at FINAL_DUEL. `agreed` is only
- * consulted leaving DUEL_REVEAL.
- */
-export function nextDuelPhase(
-  current: GamePhase,
-  dilemmaIndex: number,
-  dilemmaCount: number,
-  agreed: boolean,
-): PhaseTransition {
-  if (current === 'PHASE_INTRO') return { phase: 'DUEL_PICK', dilemmaIndex: 1 };
-  if (current === 'DUEL_REVEAL') {
-    return agreed
-      ? { phase: 'DUEL_RESULT', dilemmaIndex }
-      : { phase: 'DUEL_ARGUE', dilemmaIndex };
-  }
-  if (current === 'DUEL_RESULT') {
-    return dilemmaIndex < dilemmaCount
-      ? { phase: 'DUEL_PICK', dilemmaIndex: dilemmaIndex + 1 }
-      : { phase: 'FINAL_DUEL', dilemmaIndex };
-  }
-  const i = DUEL_SEQUENCE.indexOf(current);
-  if (i >= 0 && i < DUEL_SEQUENCE.length - 1) {
-    return { phase: DUEL_SEQUENCE[i + 1], dilemmaIndex };
   }
   return { phase: current, dilemmaIndex };
 }

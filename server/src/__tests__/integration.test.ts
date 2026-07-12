@@ -109,6 +109,44 @@ describe('socket integration', () => {
     expect((splitState as Record<string, unknown>).votes).toBeUndefined();
   }, 15000);
 
+  it('duello Atto I over sockets: duoSync early-advances into the sync reveal', async () => {
+    const leader = await connect();
+    const leaderJoinedP = once<JoinedPayload>(leader, 'player:joined');
+    leader.emit('player:createRoom', { nickname: 'Ann' });
+    const { code } = await leaderJoinedP;
+
+    const bob = await connect();
+    const bobJoinedP = once<JoinedPayload>(bob, 'player:joined');
+    bob.emit('player:join', { code, nickname: 'Bob' });
+    await bobJoinedP;
+
+    const introP = waitForPhase(leader, 'PHASE_INTRO');
+    leader.emit('leader:startGame', { dilemmaCount: 3, register: 'misto', mode: 'duello' });
+    await introP;
+
+    // Skip the timed intro cards: PHASE_INTRO -> DUO_ACT_INTRO -> DUO_PICK_PREDICT.
+    const actIntroP = waitForPhase(leader, 'DUO_ACT_INTRO');
+    leader.emit('leader:advancePhase');
+    await actIntroP;
+    const pickP = waitForPhase(leader, 'DUO_PICK_PREDICT');
+    leader.emit('leader:advancePhase');
+    const pickState = (await pickP) as GameState & { duoSyncReveal: unknown };
+    expect(pickState.duoSyncReveal).toBeNull(); // secret until the reveal
+
+    // Both submit pick+prediction -> the phase early-advances to the reveal.
+    const revealP = waitForPhase(leader, 'DUO_SYNC_REVEAL');
+    const syncedP = once<{ own: string; predict: string }>(leader, 'player:duoSynced');
+    leader.emit('player:duoSync', { own: 'A', predict: 'B' });
+    const synced = await syncedP;
+    expect(synced).toEqual({ own: 'A', predict: 'B' });
+    bob.emit('player:duoSync', { own: 'B', predict: 'B' });
+    const revealState = (await revealP) as GameState & {
+      duoSyncReveal: { agreed: boolean; picks: unknown[]; predictions: unknown[] } | null;
+    };
+    expect(revealState.duoSyncReveal?.agreed).toBe(false);
+    expect(revealState.duoSyncReveal?.picks).toHaveLength(2);
+  }, 15000);
+
   it('reclaims the same seat on reconnect with the saved token', async () => {
     const leader = await connect();
     const leaderJoinedP = once<JoinedPayload>(leader, 'player:joined');

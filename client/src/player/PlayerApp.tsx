@@ -70,7 +70,10 @@ import PredictView from './views/PredictView';
 import GroupMindView from './views/GroupMindView';
 import WriteView from './views/WriteView';
 import WriteVoteView from './views/WriteVoteView';
-import DuelArgueView from './views/DuelArgueView';
+import DuoArgueView from './views/DuoArgueView';
+import PickPredictView from './views/PickPredictView';
+import WaverView from './views/WaverView';
+import PortraitView from './views/PortraitView';
 import StatusView from './views/StatusView';
 import LeaveGameMenu from './LeaveGameMenu';
 import SubmitDilemmaCard from './views/SubmitDilemmaCard';
@@ -173,13 +176,20 @@ export default function PlayerApp() {
   const [infiltratoToolError, setInfiltratoToolError] = useState<string | null>(null);
   const [myAccusation, setMyAccusation] = useState<string | null>(null);
   const [speakerVote, setSpeakerVote] = useState<string | null>(null);
+  // Percorso in 2 (Atto I): the two-part secret submission — own pick + the
+  // prediction of the partner's — and whether the combined emit was echoed.
+  const [duoOwn, setDuoOwn] = useState<VoteChoice | null>(null);
+  const [duoPredict, setDuoPredict] = useState<VoteChoice | null>(null);
+  const [duoSynced, setDuoSynced] = useState(false);
+  // Percorso in 2 (DUO_WAVER): this phone's secret "ti ha fatto vacillare?" rating.
+  const [duoRating, setDuoRating] = useState<0 | 1 | 2 | null>(null);
   const [handRaised, setHandRaised] = useState(false);
   const [raiseHandError, setRaiseHandError] = useState<string | null>(null);
   // Two-step guard on the lobby's "leave room" link: the first tap arms it, the
   // second actually leaves — so a stray tap never drops the player out of the room.
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   // "Salta ▶" needs a 2nd tap during a secret-vote phase (VOTE_1/VOTE_2/
-  // PREDICT/SPEAKER_VOTE/DUEL_PICK/DUEL_REPICK) so an impatient leader can't
+  // PREDICT/SPEAKER_VOTE/DUO_PICK/DUO_REPICK) so an impatient leader can't
   // silently cut off someone else's still-forming vote with one stray tap.
   const [confirmingSkip, setConfirmingSkip] = useState(false);
   // "Scarta dilemma" needs its own 2nd-tap guard once someone has already cast
@@ -282,6 +292,12 @@ export default function PlayerApp() {
       setInfiltratoToolError(INFILTRATO_TOOL_ERROR_MESSAGES[error] ?? 'Non puoi agire ora');
     const onAccused = ({ accusedId }: PlayerAccusedPayload) => setMyAccusation(accusedId);
     const onSpeakerVoted = ({ defenderId }: PlayerSpeakerVotedPayload) => setSpeakerVote(defenderId);
+    const onDuoSynced = ({ own, predict }: { own: VoteChoice; predict: VoteChoice }) => {
+      setDuoOwn(own);
+      setDuoPredict(predict);
+      setDuoSynced(true);
+    };
+    const onDuoWavered = ({ rating }: { rating: 0 | 1 | 2 }) => setDuoRating(rating);
     const onHandRaised = ({ raised }: { raised: boolean }) => {
       setHandRaised(raised);
       setRaiseHandError(null);
@@ -313,6 +329,8 @@ export default function PlayerApp() {
     socket.on(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
     socket.on(SocketEvents.PlayerSubmitDilemmaError, onSubmitDilemmaError);
     socket.on(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
+    socket.on(SocketEvents.PlayerDuoSynced, onDuoSynced);
+    socket.on(SocketEvents.PlayerDuoWavered, onDuoWavered);
     socket.on(SocketEvents.PlayerHandRaised, onHandRaised);
     socket.on(SocketEvents.PlayerRaiseHandError, onRaiseHandError);
     // On every (re)connect, if we hold a token, reclaim the same seat. Covers
@@ -368,6 +386,8 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
       socket.off(SocketEvents.PlayerSubmitDilemmaError, onSubmitDilemmaError);
       socket.off(SocketEvents.PlayerSpeakerVoted, onSpeakerVoted);
+      socket.off(SocketEvents.PlayerDuoSynced, onDuoSynced);
+      socket.off(SocketEvents.PlayerDuoWavered, onDuoWavered);
       socket.off(SocketEvents.PlayerHandRaised, onHandRaised);
       socket.off(SocketEvents.PlayerRaiseHandError, onRaiseHandError);
       socket.off('connect', onConnect);
@@ -402,10 +422,10 @@ export default function PlayerApp() {
   // The just-finished speaker's applause tally, shown briefly at the start of
   // the next turn (the server never clears it — the client treats it as a toast).
   const lastTurnApplause = useTransient(game?.lastTurnApplause ?? null, 3_000);
-  // Self-paced turn (DUEL_ARGUE): the floor countdown gates "Ho finito".
-  const duelMinRemaining = useCountdown(game?.duelTurn?.minEndsAt ?? null);
-  const duelCanFinishNow = game?.duelTurn?.minEndsAt == null || (duelMinRemaining ?? 0) <= 0;
-  const duelSpeakerElapsed = useElapsed(game?.duelTurn?.startedAt ?? null);
+  // Self-paced turn (DUO_ARGUE): the floor countdown gates "Ho finito".
+  const duoMinRemaining = useCountdown(game?.duoTurn?.minEndsAt ?? null);
+  const duoCanFinishNow = game?.duoTurn?.minEndsAt == null || (duoMinRemaining ?? 0) <= 0;
+  const duoSpeakerElapsed = useElapsed(game?.duoTurn?.startedAt ?? null);
 
   // Each new dilemma round starts with a clean (unselected) vote + prediction.
   // Keyed on the dilemma's id, not dilemmaIndex: a discarded/unanimous-skipped
@@ -428,7 +448,17 @@ export default function PlayerApp() {
     setWriteSubmitted(null);
     setWriteVotedForId(null);
     setInfiltratoToolError(null);
+    setDuoOwn(null);
+    setDuoPredict(null);
+    setDuoSynced(false);
+    setDuoRating(null);
   }, [game?.dilemma?.id]);
+
+  // The twist's DUO_WAVER arrives mid-round (same dilemmaIndex): each entry into
+  // the phase starts from a fresh, unselected rating.
+  useEffect(() => {
+    if (phase === 'DUO_WAVER') setDuoRating(null);
+  }, [phase]);
 
   // 5.1 "Memoria del già-visto": remember every dilemma this device sees, so a
   // recurring group avoids déjà-vu even across separate (non-rematch) games.
@@ -480,8 +510,8 @@ export default function PlayerApp() {
   const turnSpeakerId =
     phase === 'DEFENSE' || phase === 'INTERVENTI'
       ? game?.defense?.speakerId ?? null
-      : phase === 'DUEL_ARGUE'
-        ? game?.duelTurn?.speaker?.id ?? null
+      : phase === 'DUO_ARGUE'
+        ? game?.duoTurn?.speaker?.id ?? null
         : null;
   const myTurnToSpeak = turnSpeakerId != null && turnSpeakerId === playerId;
   useEffect(() => {
@@ -585,6 +615,28 @@ export default function PlayerApp() {
     setSpeakerVote(defenderId); // optimistic; confirmed via player:speakerVoted
     buzz(25);
     getSocket().emit(SocketEvents.PlayerVoteSpeaker, { defenderId });
+  };
+
+  // DUO_PICK_PREDICT submits both parts together in one call (GROUP_MIND
+  // pattern): each tap updates its own local state and — once the OTHER part is
+  // already chosen — emits the combined submission, in either tap order.
+  const castDuoOwn = (choice: VoteChoice) => {
+    setDuoOwn(choice); // optimistic; confirmed via player:duoSynced
+    buzz(25);
+    if (duoPredict) getSocket().emit(SocketEvents.PlayerDuoSync, { own: choice, predict: duoPredict });
+  };
+
+  const castDuoPredict = (choice: VoteChoice) => {
+    setDuoPredict(choice);
+    buzz(25);
+    if (duoOwn) getSocket().emit(SocketEvents.PlayerDuoSync, { own: duoOwn, predict: choice });
+  };
+
+  // DUO_WAVER: the secret "ti ha fatto vacillare?" rating (echoed back privately).
+  const castDuoWaver = (rating: 0 | 1 | 2) => {
+    setDuoRating(rating); // optimistic; confirmed via player:duoWavered
+    buzz(25);
+    getSocket().emit(SocketEvents.PlayerDuoWaver, { rating });
   };
 
   // With exactly one valid target (e.g. only 2 defenders total, so a defending
@@ -761,7 +813,7 @@ export default function PlayerApp() {
   const phaseHasTimer = (p: GameStatePayload['phase']) =>
     p !== 'LOBBY' &&
     p !== 'FINAL_AWARDS' &&
-    p !== 'FINAL_DUEL' &&
+    p !== 'DUO_PORTRAIT' &&
     p !== 'TAPPA_RECAP' &&
     p !== 'STORY_INTRO' &&
     p !== 'SCENE_INTRO' &&
@@ -775,8 +827,11 @@ export default function PlayerApp() {
     p === 'VOTE_2' ||
     p === 'PREDICT' ||
     p === 'SPEAKER_VOTE' ||
-    p === 'DUEL_PICK' ||
-    p === 'DUEL_REPICK' ||
+    p === 'DUO_PICK_PREDICT' ||
+    p === 'DUO_SIDE_PICK' ||
+    p === 'DUO_PICK' ||
+    p === 'DUO_REPICK' ||
+    p === 'DUO_WAVER' ||
     p === 'GROUP_MIND' ||
     p === 'WRITE' ||
     p === 'WRITE_VOTE';
@@ -863,9 +918,41 @@ export default function PlayerApp() {
     </>
   );
 
+  // The Percorso in 2 screens read the partner's name from the 2-player roster.
+  const partnerNickname = players.find((p) => p.id !== playerId)?.nickname ?? "l'altro";
+  const iAmAdvocate = game?.duoAdvocateId != null && game.duoAdvocateId === playerId;
+
+  // The devil's advocate has nothing to re-pick: their phone just waits for the
+  // listener's verdict instead of showing vote controls.
+  if (joinedCode && phase === 'DUO_REPICK' && iAmAdvocate) {
+    return withLeaveMenu(
+      <main style={wrap}>
+        {audioControls}
+        <h1 style={{ fontSize: '1.5rem', margin: 0 }}>Arringa consegnata 🎭</h1>
+        {remaining != null && (
+          <div
+            aria-label="Tempo rimanente"
+            style={{ fontSize: '2rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+          >
+            {remaining}s
+          </div>
+        )}
+        <p style={{ fontSize: '1.05rem', opacity: 0.85, margin: 0 }}>
+          Hai difeso il lato che non era tuo, da vero avvocato del diavolo.
+        </p>
+        <p style={{ opacity: 0.75, margin: 0 }}>Ora {partnerNickname} decide se l'hai ribaltato…</p>
+        {skipButton}
+      </main>
+    );
+  }
+
   if (
     joinedCode &&
-    (phase === 'VOTE_1' || phase === 'VOTE_2' || phase === 'DUEL_PICK' || phase === 'DUEL_REPICK')
+    (phase === 'VOTE_1' ||
+      phase === 'VOTE_2' ||
+      phase === 'DUO_SIDE_PICK' ||
+      phase === 'DUO_PICK' ||
+      phase === 'DUO_REPICK')
   ) {
     return withLeaveMenu(
       <VoteView
@@ -891,6 +978,53 @@ export default function PlayerApp() {
           </>
         }
       />
+    );
+  }
+
+  if (joinedCode && phase === 'DUO_PICK_PREDICT') {
+    return withLeaveMenu(
+      <>
+        {audioControls}
+        <PickPredictView
+          dilemma={game?.dilemma}
+          partnerNickname={partnerNickname}
+          remaining={remaining}
+          own={duoOwn}
+          predict={duoPredict}
+          synced={duoSynced}
+          onOwn={castDuoOwn}
+          onPredict={castDuoPredict}
+          syncedCount={game?.duoSyncedCount ?? 0}
+          skipButton={skipButton}
+        />
+      </>
+    );
+  }
+
+  if (joinedCode && phase === 'DUO_WAVER') {
+    return withLeaveMenu(
+      <>
+        {audioControls}
+        <WaverView
+          partnerNickname={partnerNickname}
+          twist={game?.duoAdvocateId != null}
+          isAdvocate={iAmAdvocate}
+          remaining={remaining}
+          rating={duoRating}
+          onRate={castDuoWaver}
+          waverCount={game?.duoWaverCount ?? 0}
+          skipButton={skipButton}
+        />
+      </>
+    );
+  }
+
+  if (joinedCode && phase === 'DUO_PORTRAIT') {
+    return withLeaveMenu(
+      <>
+        {audioControls}
+        <PortraitView portrait={game?.duoPortrait ?? null} isLeader={isLeader} onRematch={rematch} />
+      </>
     );
   }
 
@@ -924,20 +1058,23 @@ export default function PlayerApp() {
     );
   }
 
-  if (joinedCode && phase === 'DUEL_ARGUE') {
+  if (joinedCode && phase === 'DUO_ARGUE') {
     return withLeaveMenu(
-      <DuelArgueView
-        speaker={game?.duelTurn?.speaker}
-        dilemma={game?.dilemma}
-        playerId={playerId}
-        remaining={remaining}
-        canFinishNow={duelCanFinishNow}
-        minRemaining={duelMinRemaining}
-        speakerElapsed={duelSpeakerElapsed}
-        onFinish={sendFinish}
-        onReact={sendReaction}
-        skipButton={skipButton}
-      />
+      <>
+        {audioControls}
+        <DuoArgueView
+          speaker={game?.duoTurn?.speaker}
+          dilemma={game?.dilemma}
+          playerId={playerId}
+          remaining={remaining}
+          canFinishNow={duoCanFinishNow}
+          minRemaining={duoMinRemaining}
+          speakerElapsed={duoSpeakerElapsed}
+          onFinish={sendFinish}
+          onReact={sendReaction}
+          skipButton={skipButton}
+        />
+      </>
     );
   }
 

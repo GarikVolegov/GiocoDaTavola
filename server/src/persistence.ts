@@ -2,7 +2,19 @@
 // (added in Task 2). Pure first so it stays unit-testable without a database.
 
 import { computeAwards } from './game/awards';
+import { duoTitles, duoTotalPoints, type DuoTitle } from './game/duo';
 import type { Room } from './game/rooms';
+
+/** Stable award id for a duo title ("L'Avvocato del Diavolo" → duo-l-avvocato-del-diavolo). */
+function duoAwardId(t: DuoTitle): string {
+  return (
+    'duo-' +
+    t.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+  );
+}
 
 export interface PersistableAward {
   clerkUserId: string;
@@ -21,6 +33,25 @@ export interface PersistableAward {
  */
 export function awardsToPersist(room: Room): PersistableAward[] {
   const rows: PersistableAward[] = [];
+  // Percorso in 2: the portrait's duo titles are the awards (computeAwards is
+  // group-stats-shaped and never runs in duello).
+  if (room.mode === 'duello') {
+    for (const t of duoTitles(room)) {
+      const player = room.players.get(t.playerId);
+      if (!player?.clerkUserId) continue;
+      rows.push({
+        clerkUserId: player.clerkUserId,
+        awardId: duoAwardId(t),
+        title: t.title,
+        emoji: t.emoji,
+        description: t.description,
+        gameCode: room.code,
+        gameMode: room.mode,
+        nickname: player.nickname,
+      });
+    }
+    return rows;
+  }
   for (const a of computeAwards(room)) {
     const player = room.players.get(a.winner.id);
     if (!player?.clerkUserId) continue;
@@ -59,22 +90,32 @@ export interface PersistableGame {
  * players are skipped. Pure (mirror of awardsToPersist).
  */
 export function gamesToPersist(room: Room): PersistableGame[] {
+  const isDuo = room.mode === 'duello';
   // Tally awards won per player so each record can show its 🏆 count.
   const awardsByPlayer = new Map<string, number>();
-  for (const a of computeAwards(room)) {
-    awardsByPlayer.set(a.winner.id, (awardsByPlayer.get(a.winner.id) ?? 0) + 1);
+  if (isDuo) {
+    for (const t of duoTitles(room)) {
+      awardsByPlayer.set(t.playerId, (awardsByPlayer.get(t.playerId) ?? 0) + 1);
+    }
+  } else {
+    for (const a of computeAwards(room)) {
+      awardsByPlayer.set(a.winner.id, (awardsByPlayer.get(a.winner.id) ?? 0) + 1);
+    }
   }
   const rows: PersistableGame[] = [];
   for (const [id, player] of room.players) {
     if (!player.clerkUserId) continue;
     const stats = room.stats.get(id);
-    const persuasion = room.mode === 'duello' ? room.duelScore.get(id) ?? 0 : stats?.persuasion ?? 0;
+    // Duello: the dashboard's "persuasion" is the duo verdict total; group
+    // stats never accumulate there (PHASE_RESULTS is a group-only phase).
+    const persuasion = isDuo ? duoTotalPoints(room.duoScore.get(id)) : stats?.persuasion ?? 0;
+    const rounds = isDuo ? room.dilemmaCount ?? 0 : stats?.rounds ?? 0;
     rows.push({
       clerkUserId: player.clerkUserId,
       gameCode: room.code,
       mode: room.mode,
       nickname: player.nickname,
-      rounds: stats?.rounds ?? 0,
+      rounds,
       persuasion,
       changedCount: stats?.changedCount ?? 0,
       majorityCount: stats?.majorityCount ?? 0,

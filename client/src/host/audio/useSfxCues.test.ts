@@ -38,7 +38,7 @@ function game(over: Partial<GameStatePayload>): GameStatePayload {
     phase: 'LOBBY',
     phaseExpiresAt: null,
     swing: null,
-    duelResult: null,
+    duoRoundResult: null,
     defense: null,
     ...over,
   } as GameStatePayload;
