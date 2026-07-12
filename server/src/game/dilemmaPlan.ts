@@ -159,8 +159,14 @@ export function replaceCurrentDilemma(room: Room): boolean {
   if (!deck) return false;
   const idx = room.dilemmaIndex - 1;
   const old = room.plannedDilemmas[idx];
+  // The OLD dilemma's own family is about to leave the plan — it must not
+  // count as "used" against itself, or a same-family replacement gets
+  // needlessly rejected even though nothing else planned shares it.
   const usedFamilies = new Set(
-    room.plannedDilemmas.map((d) => d.famiglia).filter((f): f is string => f != null),
+    room.plannedDilemmas
+      .filter((_, i) => i !== idx)
+      .map((d) => d.famiglia)
+      .filter((f): f is string => f != null),
   );
   const setAside: Dilemma[] = [];
   let fresh: Dilemma | null = null;

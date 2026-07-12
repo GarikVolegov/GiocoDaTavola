@@ -219,6 +219,16 @@ describe('replaceCurrentDilemma (scarta-e-rimpiazza, stesso round)', () => {
     expect(room.deck!.remainingCount).toBe(1); // 'rivale' set aside, then put back
   });
 
+  it("frees up the OLD dilemma's own family — it's being discarded, so it no longer counts as \"used\"", () => {
+    // 'old' (fam=segreto) is the one being thrown away; the deck offers a
+    // sibling card first, then a neutral one. The sibling must NOT be treated
+    // as a collision — nothing else planned belongs to 'segreto' once 'old' is gone.
+    const room = roomWith([fixture('old', 'segreto')], [fixture('erede', 'segreto'), fixture('neutro')]);
+    expect(replaceCurrentDilemma(room)).toBe(true);
+    expect(room.plannedDilemmas[0].id).toBe('erede');
+    expect(room.deck!.remainingCount).toBe(1); // 'neutro' never even drawn
+  });
+
   it('backfills a same-family repeat when the deck has nothing else (a repeat beats no replacement)', () => {
     const room = roomWith(
       [fixture('old'), fixture('cugino', 'segreto')],

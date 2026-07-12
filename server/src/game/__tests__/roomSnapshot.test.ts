@@ -57,6 +57,17 @@ describe('roomSnapshot round-trip', () => {
     );
   });
 
+  it('preserves Sets as real Sets (e.g. lateJoiners, confirmedVote2) — a plain {} would crash the first .has() call', () => {
+    const room = liveRoom();
+    room.lateJoiners.add('p2');
+    room.confirmedVote2.add('p0');
+    const restored = deserializeRoom(serializeRoom(room));
+    expect(restored.lateJoiners).toBeInstanceOf(Set);
+    expect(restored.lateJoiners.has('p2')).toBe(true);
+    expect(restored.confirmedVote2).toBeInstanceOf(Set);
+    expect(restored.confirmedVote2.has('p0')).toBe(true);
+  });
+
   it('round-trips an empty/lobby room (no deck, empty Maps)', () => {
     const store = new RoomStore();
     const { code } = store.create();

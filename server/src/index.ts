@@ -349,15 +349,12 @@ function leaderCodeFor(socketId: string): string | null {
   return rooms.isLeader(session.code, session.playerId) ? session.code : null;
 }
 
-// Advance the state machine one step, broadcast it, and arm the next timer.
-// Used by both timer expiry and the leader's force-advance.
-function advanceAndBroadcast(code: string): void {
-  // A pending late-joiner (3.2) may get promoted to giocatore on this very
-  // advance (the round-boundary DILEMMA_REVEAL) — re-broadcast the roster
-  // afterward so their role badge updates everywhere, not just game state.
-  const hadLateJoiners = (rooms.get(code)?.lateJoiners.size ?? 0) > 0;
-  const result = rooms.advancePhase(code);
-  if (!result.ok) return;
+// Broadcast + side effects shared by every path that lands the room on a new
+// phase: the leader's force-advance, a timer expiry, AND the leader's
+// "Scarta dilemma" (which also re-enters DILEMMA_REVEAL or can fall through
+// to FINAL_AWARDS on an exhausted deck). `hadLateJoiners` must be sampled
+// BEFORE the phase change that might promote one, by the caller.
+function broadcastAdvance(code: string, hadLateJoiners: boolean): void {
   broadcastGameState(code);
   if (hadLateJoiners) broadcastLobby(code);
   const snapRoom = rooms.get(code);
@@ -400,6 +397,18 @@ function advanceAndBroadcast(code: string): void {
     saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards failed', e));
     saveGameRecords(gamesToPersist(room)).catch((e) => console.error('[db] saveGameRecords failed', e));
   }
+}
+
+// Advance the state machine one step, broadcast it, and arm the next timer.
+// Used by both timer expiry and the leader's force-advance.
+function advanceAndBroadcast(code: string): void {
+  // A pending late-joiner (3.2) may get promoted to giocatore on this very
+  // advance (the round-boundary DILEMMA_REVEAL) — re-broadcast the roster
+  // afterward so their role badge updates everywhere, not just game state.
+  const hadLateJoiners = (rooms.get(code)?.lateJoiners.size ?? 0) > 0;
+  const result = rooms.advancePhase(code);
+  if (!result.ok) return;
+  broadcastAdvance(code, hadLateJoiners);
 }
 
 app.get('/api/health', async (_req, res) => {
@@ -666,7 +675,10 @@ io.on('connection', (socket) => {
 
   // The leader discards the current dilemma (DILEMMA_REVEAL or an open VOTE_1):
   // a fresh card replays the same round, or — deck exhausted — the round just
-  // advances. Everyone gets a room:dilemmaSkipped ping (toast + sting).
+  // advances (which, on the game's last round, lands straight on FINAL_AWARDS).
+  // Everyone gets a room:dilemmaSkipped ping (toast + sting); broadcastAdvance
+  // covers the rest exactly like a normal advance (blind spots, awards
+  // persistence, …) so this path can't silently skip them.
   socket.on('leader:skipDilemma', () => {
     const code = leaderCodeFor(socket.id);
     if (!code) return;
@@ -674,12 +686,7 @@ io.on('connection', (socket) => {
     const result = rooms.skipDilemma(code);
     if (!result.ok) return;
     io.to(code).emit('room:dilemmaSkipped', {});
-    broadcastGameState(code);
-    // The re-reveal is a round boundary: a pending late-joiner may have just
-    // been promoted (mirrors advanceAndBroadcast).
-    if (hadLateJoiners) broadcastLobby(code);
-    persistSnapshot(code, serializeRoom(result.room)).catch((e) => console.error('[snapshot] persist failed', e));
-    schedulePhase(code);
+    broadcastAdvance(code, hadLateJoiners);
   });
 
   // The leader returns a finished room to LOBBY for a rematch: same roster,

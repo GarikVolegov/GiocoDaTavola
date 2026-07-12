@@ -3235,6 +3235,18 @@ describe('voto unanime salta il dibattito (UNANIMOUS_REVEAL)', () => {
     expect(store.get(code)!.phase).toBe('SPLIT_REVEAL');
   });
 
+  it('un voto PARZIALE forzato (soft-timeout o leader:advancePhase) NON è unanimità anche se i pochi voti castati concordano — chi manca potrebbe dissentire', () => {
+    const store = makeStore();
+    const code = unanimousVote1Room(store);
+    // Solo 2 dei 3 presenti hanno votato (entrambi 'A'); il terzo non ha ancora
+    // agito. Un force-advance a questo punto (soft-timeout scaduto o il leader
+    // che salta la fase) non deve spacciare il gruppo per unanime.
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'A');
+    store.advancePhase(code);
+    expect(store.get(code)!.phase).toBe('SPLIT_REVEAL');
+  });
+
   it("uscendo da UNANIMOUS_REVEAL il dilemma è RIMPIAZZATO nello stesso round: stesso indice, carta nuova, voti azzerati, scartato escluso dal rematch", () => {
     const store = makeStore();
     const code = unanimousVote1Room(store);

@@ -1357,7 +1357,10 @@ export class RoomStore {
       return { ok: false, error: 'NOT_SKIPPABLE_PHASE' };
     }
     room.phase = 'UNANIMOUS_REVEAL';
-    return this.advancePhase(code);
+    const advanced = this.advancePhase(code);
+    // Can't actually fail (the synthetic phase is never LOBBY/FINAL_*); the
+    // fallback only narrows the error union for the caller.
+    return advanced.ok ? advanced : { ok: false, error: 'NOT_SKIPPABLE_PHASE' };
   }
 
   /**
@@ -1487,12 +1490,16 @@ export class RoomStore {
         : step('PHASE_RESULTS', room.dilemmaIndex);
     } else {
       transition = step(room.phase, room.dilemmaIndex);
-      // A 100% unanimous first vote (classic only, ≥2 actual votes): nothing to
-      // debate — celebrate for a beat instead of playing out an empty round.
+      // A 100% unanimous first vote (classic only, ≥2 actual votes, EVERYONE
+      // present having voted — a force-advance on a partial VOTE_1 must never
+      // read "only the votes in so far agree" as the whole group agreeing):
+      // nothing to debate — celebrate for a beat instead of playing out an
+      // empty round.
       if (
         room.phase === 'VOTE_1' &&
         transition.phase === 'SPLIT_REVEAL' &&
         room.format === 'classic' &&
+        voting.allVoted(room) &&
         voting.unanimousSide(tally(room.votes)) !== null
       ) {
         transition = { phase: 'UNANIMOUS_REVEAL', dilemmaIndex: room.dilemmaIndex };
