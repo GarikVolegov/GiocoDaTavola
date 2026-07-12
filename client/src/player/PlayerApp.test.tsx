@@ -1883,7 +1883,7 @@ describe('PlayerApp', () => {
     expect(emitSpy).toHaveBeenCalledWith('player:write', { text: 'Vivi e lascia vivere' });
   });
 
-  it('votes for an answer at WRITE_VOTE, excluding its own entry (4.2)', () => {
+  it('votes for an answer at WRITE_VOTE, excluding its own entry — by opaque token, never the real player id (4.2)', () => {
     const emitSpy = vi.spyOn(fakeSocket, 'emit');
     render(<PlayerApp />);
     act(() => {
@@ -1892,6 +1892,9 @@ describe('PlayerApp', () => {
         token: 'tok',
         player: { id: 'p1', nickname: 'Alice' },
       });
+      // Privately sent on entering WRITE_VOTE: this player's OWN answer's
+      // opaque token (their real id 'p1' never appears on the wire here).
+      serverEmit('player:myWriteToken', { token: '0' });
       serverEmit('game:state', {
         phase: 'WRITE_VOTE',
         dilemmaCount: 5,
@@ -1899,8 +1902,8 @@ describe('PlayerApp', () => {
         phaseExpiresAt: null,
         writePrompt: { id: 'wp01', text: 'La tua filosofia di vita in uno slogan da maglietta.' },
         writtenAnswers: [
-          { id: 'p1', text: 'La mia risposta' },
-          { id: 'p2', text: 'La risposta di Bea' },
+          { id: '0', text: 'La mia risposta' },
+          { id: '1', text: 'La risposta di Bea' },
         ],
         writeVoteProgress: { done: 0, total: 2, missingNicknames: ['Bea'] },
         leaderId: null,
@@ -1908,7 +1911,7 @@ describe('PlayerApp', () => {
     });
     expect(screen.queryByText('La mia risposta')).toBeNull(); // own entry filtered out
     fireEvent.click(screen.getByRole('button', { name: 'La risposta di Bea' }));
-    expect(emitSpy).toHaveBeenCalledWith('player:writeVote', { votedForId: 'p2' });
+    expect(emitSpy).toHaveBeenCalledWith('player:writeVote', { votedForToken: '1' });
   });
 
   it('reveals each answer with its author + vote count at WRITE_REVEAL', () => {

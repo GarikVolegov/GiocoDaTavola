@@ -7,8 +7,10 @@ interface WriteVoteViewProps {
   remaining: number | null;
   /** The anonymized list with the viewer's own answer already excluded. */
   answers: PublicWrittenAnswer[];
-  votedForId: string | null;
-  onVote: (id: string) => void;
+  /** Each answer's `id` is an opaque per-round token (its position in the
+   * shuffled order), not a real player id — see writeRound.ts. */
+  votedForToken: string | null;
+  onVote: (token: string) => void;
   progress: { done: number; total: number; missingNicknames: string[] } | null;
   skipButton: ReactNode;
 }
@@ -16,7 +18,7 @@ interface WriteVoteViewProps {
 // The phone's WRITE_VOTE screen: everyone's answers, shuffled and anonymous —
 // tap your favorite (never your own, already filtered out by the parent).
 // Presentational — the parent owns state and the socket emit.
-export default function WriteVoteView({ prompt, remaining, answers, votedForId, onVote, progress, skipButton }: WriteVoteViewProps) {
+export default function WriteVoteView({ prompt, remaining, answers, votedForToken, onVote, progress, skipButton }: WriteVoteViewProps) {
   return (
     <main style={wrap}>
       <h1 style={{ fontSize: '1.5rem', margin: 0 }}>🗳️ {PHASE_LABELS.WRITE_VOTE}</h1>
@@ -43,13 +45,13 @@ export default function WriteVoteView({ prompt, remaining, answers, votedForId, 
             <button
               key={a.id}
               type="button"
-              aria-pressed={votedForId === a.id}
+              aria-pressed={votedForToken === a.id}
               onClick={() => onVote(a.id)}
               style={{
                 textAlign: 'center',
                 padding: 'var(--space-3)',
                 borderRadius: 'var(--radius-md)',
-                border: votedForId === a.id ? '2px solid var(--gold, currentColor)' : '1px solid var(--border-strong, currentColor)',
+                border: votedForToken === a.id ? '2px solid var(--gold, currentColor)' : '1px solid var(--border-strong, currentColor)',
                 background: 'var(--surface, transparent)',
                 color: 'inherit',
                 fontSize: '1rem',
@@ -61,7 +63,7 @@ export default function WriteVoteView({ prompt, remaining, answers, votedForId, 
           ))
         )}
       </div>
-      {votedForId ? (
+      {votedForToken ? (
         <p style={{ opacity: 0.8, margin: 0 }}>Hai votato. Vediamo chi vince! 🏆</p>
       ) : (
         <p style={{ opacity: 0.7, margin: 0 }}>Tocca la tua preferita.</p>
