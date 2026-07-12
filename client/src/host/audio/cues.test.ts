@@ -17,7 +17,7 @@ describe('sfxForTransition', () => {
     expect(sfxForTransition('VOTE_1', 'UNANIMOUS_REVEAL', game())).toBe('unanimous');
   });
 
-  it('stays quiet on the discard re-reveal (same phase — the sting comes from the room:dilemmaSkipped listener)', () => {
+  it('stays quiet on a same-phase re-entry (a discard from DILEMMA_REVEAL) — the "discard" sting itself is owned by useSfxCues, not this pure mapping', () => {
     expect(sfxForTransition('DILEMMA_REVEAL', 'DILEMMA_REVEAL', game())).toBeNull();
   });
 

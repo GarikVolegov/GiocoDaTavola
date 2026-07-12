@@ -57,7 +57,6 @@ import {
 import { Card, JoinQr, Button, Field, TextInput, Alert, ShareInviteButton } from '../shared/ui';
 import { useHostAudio } from '../host/audio/useHostAudio';
 import { useSfxCues } from '../host/audio/useSfxCues';
-import { play as playSfx } from '../host/audio/sfx';
 import { MuteButton } from '../host/MuteButton';
 import { AudioGate } from '../host/AudioGate';
 // Lazy so jsQR (the camera decoder) only loads when a player actually opens the scanner.
@@ -409,6 +408,9 @@ export default function PlayerApp() {
   const duelSpeakerElapsed = useElapsed(game?.duelTurn?.startedAt ?? null);
 
   // Each new dilemma round starts with a clean (unselected) vote + prediction.
+  // Keyed on the dilemma's id, not dilemmaIndex: a discarded/unanimous-skipped
+  // dilemma is replaced IN PLACE (same index, fresh id) — indexing on
+  // dilemmaIndex alone would miss that reset and leave a stale vote selected.
   useEffect(() => {
     setVote(null);
     setVoteError(null);
@@ -426,7 +428,7 @@ export default function PlayerApp() {
     setWriteSubmitted(null);
     setWriteVotedForId(null);
     setInfiltratoToolError(null);
-  }, [game?.dilemmaIndex]);
+  }, [game?.dilemma?.id]);
 
   // 5.1 "Memoria del già-visto": remember every dilemma this device sees, so a
   // recurring group avoids déjà-vu even across separate (non-rematch) games.
@@ -500,14 +502,14 @@ export default function PlayerApp() {
     setConfirmingDiscard(false);
   }, [phase]);
 
-  // The leader tossed the dilemma (room:dilemmaSkipped): brief toast + falling
-  // whoosh on every phone. The re-reveal keeps the same phase, so the normal
-  // phase-transition sting never fires for a discard.
+  // The leader tossed the dilemma (room:dilemmaSkipped): brief toast on every
+  // phone. The "discard" whoosh itself is owned by useSfxCues (it also needs
+  // to suppress the natural transition sting when the re-reveal lands on a
+  // different phase, e.g. discarding from an open VOTE_1).
   const toastTimerRef = useRef<number | null>(null);
   useEffect(() => {
     const socket = getSocket();
     const onDilemmaSkipped = () => {
-      playSfx('discard');
       setDilemmaSkippedToast(true);
       if (toastTimerRef.current != null) window.clearTimeout(toastTimerRef.current);
       toastTimerRef.current = window.setTimeout(() => setDilemmaSkippedToast(false), 3_500);

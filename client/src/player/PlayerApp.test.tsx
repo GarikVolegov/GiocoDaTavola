@@ -123,6 +123,55 @@ describe('PlayerApp', () => {
     expect(screen.getByText('Montagna')).toBeInTheDocument();
   });
 
+  it('clears a cast vote when the dilemma is replaced at the SAME index (unanime/scarto)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: null,
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Mare/ }));
+    expect(screen.getByText(/hai votato/i)).toBeInTheDocument();
+
+    // The round is discarded and replaced IN PLACE: same dilemmaIndex, a
+    // different dilemma id — first the re-reveal, then VOTE_1 reopens.
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'DILEMMA_REVEAL',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd4', text: 'Città o campagna?', optionA: 'Città', optionB: 'Campagna' },
+        votedCount: 0,
+        leaderId: null,
+      });
+    });
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd4', text: 'Città o campagna?', optionA: 'Città', optionB: 'Campagna' },
+        votedCount: 0,
+        leaderId: null,
+      });
+    });
+    expect(screen.queryByText(/hai votato/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/tocca a o b per votare/i)).toBeInTheDocument();
+  });
+
   it('shows the confirm affordance at VOTE_2', () => {
     render(<PlayerApp />);
     act(() => {

@@ -27,8 +27,6 @@ export function sfxForTransition(
       return 'reveal';
     case 'UNANIMOUS_REVEAL':
       // "Tutti d'accordo!" — the whole debate is skipped, celebrate the accord.
-      // ('discard' never routes through here: the leader's Scarta re-reveals the
-      // same phase, so it's fired by the room:dilemmaSkipped listener instead.)
       return 'unanimous';
     case 'PHASE_RESULTS':
       // 'swing' is the dramatic "ribaltone" sting — reserved for a genuine

@@ -3,7 +3,8 @@ import { useCountdown } from '../../shared/useCountdown';
 import { unlockAudio } from './engine';
 import { play as playSfx } from './sfx';
 import { sfxForTransition, shouldWarnAt, handRaised } from './cues';
-import type { GameStatePayload, GamePhase } from '../../shared/events';
+import { getSocket } from '../../shared/socket';
+import { SocketEvents, type GameStatePayload, type GamePhase } from '../../shared/events';
 
 interface UseSfxCuesArgs {
   enabled: boolean;
@@ -40,10 +41,35 @@ export function useSfxCues({ enabled, game }: UseSfxCuesArgs): void {
 
   const active = enabled && audioReady;
 
+  // The leader's "Scarta dilemma" re-reveals the round: from DILEMMA_REVEAL that's
+  // a same-phase (silent) re-entry, but from an open VOTE_1 it's a REAL transition
+  // (VOTE_1 -> DILEMMA_REVEAL) that sfxForTransition would read as a normal
+  // 'reveal' — doubling up with the 'discard' whoosh below. The server always
+  // emits room:dilemmaSkipped before the game:state that carries the new phase
+  // (same socket, so delivery order is preserved), so setting this ref the
+  // moment the event arrives is guaranteed to land before the phase-transition
+  // effect below runs for that same discard.
+  const suppressNextTransitionRef = useRef(false);
+  useEffect(() => {
+    const socket = getSocket();
+    const onDiscard = () => {
+      suppressNextTransitionRef.current = true;
+      if (active) playSfx('discard');
+    };
+    socket.on(SocketEvents.RoomDilemmaSkipped, onDiscard);
+    return () => {
+      socket.off(SocketEvents.RoomDilemmaSkipped, onDiscard);
+    };
+  }, [active]);
+
   const prevPhaseRef = useRef<GamePhase | null>(null);
   useEffect(() => {
     const prev = prevPhaseRef.current;
     prevPhaseRef.current = phase;
+    if (suppressNextTransitionRef.current) {
+      suppressNextTransitionRef.current = false;
+      return;
+    }
     if (!active || !game) return;
     const cue = sfxForTransition(prev, phase, game);
     if (cue) playSfx(cue);
