@@ -4,12 +4,16 @@
 
 import type { GamePhase } from '../../shared/events';
 
-export type SfxName = 'reveal' | 'swing' | 'win' | 'awards' | 'timerWarn' | 'handRaise';
+export type SfxName = 'reveal' | 'swing' | 'win' | 'awards' | 'timerWarn' | 'handRaise' | 'unanimous' | 'discard';
 
 /** The slice of game state cue decisions need; `GameStatePayload` satisfies it structurally. */
 export interface CueGame {
-  swing: { switched: number } | null;
-  duelResult: { convinced: readonly unknown[] } | null;
+  swing: { switched: number; leadFlipped?: boolean } | null;
+  /** Percorso in 2 round outcome (DUO_ROUND_RESULT): any scoring means a 'win' sting. */
+  duoRoundResult?: {
+    convinced: readonly unknown[];
+    vacillare: readonly { received: 0 | 1 | 2 }[];
+  } | null;
 }
 
 /** The sting to play when the host moves from `prev` to `next`, or null for a quiet change. */
@@ -22,15 +26,25 @@ export function sfxForTransition(
 
   switch (next) {
     case 'SPLIT_REVEAL':
-    case 'DUEL_REVEAL':
     case 'DILEMMA_REVEAL':
+    case 'DUO_SYNC_REVEAL':
+    case 'DUO_REVEAL':
       return 'reveal';
+    case 'UNANIMOUS_REVEAL':
+      // "Tutti d'accordo!" — the whole debate is skipped, celebrate the accord.
+      return 'unanimous';
     case 'PHASE_RESULTS':
-      return game.swing && game.swing.switched > 0 ? 'swing' : 'reveal';
-    case 'DUEL_RESULT':
-      return game.duelResult && game.duelResult.convinced.length > 0 ? 'win' : 'reveal';
+      // 'swing' is the dramatic "ribaltone" sting — reserved for a genuine
+      // ribaltone (the lead itself flipped, or 2+ voters switched), not any
+      // single switch that left the majority unchanged.
+      return game.swing && (game.swing.switched >= 2 || game.swing.leadFlipped) ? 'swing' : 'reveal';
+    case 'DUO_ROUND_RESULT': {
+      const r = game.duoRoundResult;
+      const scored = !!r && (r.convinced.length > 0 || r.vacillare.some((v) => v.received > 0));
+      return scored ? 'win' : 'reveal';
+    }
     case 'FINAL_AWARDS':
-    case 'FINAL_DUEL':
+    case 'DUO_PORTRAIT':
       return 'awards';
     default:
       return null;

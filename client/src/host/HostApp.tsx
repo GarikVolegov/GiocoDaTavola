@@ -1,28 +1,25 @@
-import { useEffect, useState, useRef, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import { useElapsed } from '../shared/useElapsed';
-import { formatMSS, isWaitingPhase } from '../shared/time';
-import { unlockAudio } from './audio/engine';
-import { startMusic, stopMusic, setMusicIntensity } from './audio/music';
-import { play as playSfx } from './audio/sfx';
-import { sfxForTransition, shouldWarnAt, handRaised } from './audio/cues';
-import { MuteButton } from './MuteButton';
+import { useTransient } from '../shared/useTransient';
+import { formatMSS } from '../shared/time';
 import {
   SocketEvents,
   PHASE_LABELS,
   PERSONA_LABELS,
   OBJECTIVE,
   JOIN_ERROR_MESSAGES,
+  SPLIT_REVEAL_WINDOW_S,
   tappaMeta,
+  DUO_ACT_META,
   type LobbyUpdatePayload,
   type GameStatePayload,
-  type GamePhase,
   type PlayerJoinErrorPayload,
   type PublicPlayer,
   type PercorsoView,
 } from '../shared/events';
-import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip, leanFromSplit } from '../shared/ui';
+import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel, PodiumPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip, leanFromSplit } from '../shared/ui';
 import ReactionSwarm from '../shared/ReactionSwarm';
 
 const screen = {
@@ -128,66 +125,18 @@ export default function HostApp() {
   const phase = game?.phase ?? 'LOBBY';
   const remaining = useCountdown(game?.phaseExpiresAt ?? null);
   // While someone is speaking, the big timer counts UP from 0 (turn start) instead
-  // of down from the safety cap.
-  const elapsed = useElapsed(game?.defense?.startedAt ?? null);
-  const speaking = phase === 'DEFENSE' || phase === 'INTERVENTI';
+  // of down from the safety cap. DUO_ARGUE reuses the same self-paced pattern via
+  // duoTurn.startedAt (DEFENSE and DUO_ARGUE are never active at once).
+  const speakerStartedAt = game?.defense?.startedAt ?? game?.duoTurn?.startedAt ?? null;
+  const elapsed = useElapsed(speakerStartedAt);
+  const speaking = phase === 'DEFENSE' || phase === 'INTERVENTI' || phase === 'DUO_ARGUE';
+  // The just-finished speaker's applause tally, shown briefly at the start of
+  // the next turn (the server never clears it — the client treats it as a toast).
+  const lastTurnApplause = useTransient(game?.lastTurnApplause ?? null, 3_000);
 
-  // Host audio (host-only): a quiet background "musichetta" during waiting/speaking
-  // phases plus event sound effects. Unlock on the first user gesture (the "Collega TV"
-  // submit is a pointerdown, so it counts) per the browser autoplay policy.
-  const [audioReady, setAudioReady] = useState(false);
-  useEffect(() => {
-    const onGesture = () => {
-      unlockAudio();
-      setAudioReady(true);
-    };
-    window.addEventListener('pointerdown', onGesture, { once: true });
-    window.addEventListener('keydown', onGesture, { once: true });
-    return () => {
-      window.removeEventListener('pointerdown', onGesture);
-      window.removeEventListener('keydown', onGesture);
-    };
-  }, []);
-  // The musichetta plays in waiting/speaking phases and stops elsewhere / on unmount.
-  useEffect(() => {
-    if (audioReady && isWaitingPhase(phase)) startMusic();
-    else stopMusic();
-  }, [audioReady, phase]);
-  // Duck the bed under a speaker so it never competes with someone talking.
-  useEffect(() => {
-    setMusicIntensity(speaking ? 'soft' : 'full');
-  }, [speaking]);
-  useEffect(() => () => stopMusic(), []);
-
-  // Event sound effects: fire a sting when the phase changes to a noteworthy moment.
-  // `phase` is derived from `game`, so they update together; comparing against the
-  // previous phase means non-phase game updates produce no sound (cue returns null).
-  const prevPhaseRef = useRef<GamePhase | null>(null);
-  useEffect(() => {
-    const prev = prevPhaseRef.current;
-    prevPhaseRef.current = phase;
-    if (!audioReady || !game) return;
-    const cue = sfxForTransition(prev, phase, game);
-    if (cue) playSfx(cue);
-  }, [phase, audioReady, game]);
-
-  // Soft ticks in the final seconds of a countdown — but not while someone is speaking,
-  // where the timer is a safety cap, not a deadline to race.
-  const prevRemainingRef = useRef<number | null>(null);
-  useEffect(() => {
-    const prev = prevRemainingRef.current;
-    prevRemainingRef.current = remaining;
-    if (audioReady && !speaking && shouldWarnAt(prev, remaining)) playSfx('timerWarn');
-  }, [remaining, audioReady, speaking]);
-
-  // A gentle ding whenever a new hand joins the intervention queue.
-  const prevQueueLenRef = useRef<number | null>(null);
-  useEffect(() => {
-    const len = phase === 'INTERVENTI' ? game?.defense?.queue?.length ?? null : null;
-    const prev = prevQueueLenRef.current;
-    prevQueueLenRef.current = len;
-    if (audioReady && handRaised(prev, len)) playSfx('handRaise');
-  }, [phase, audioReady, game]);
+  // NB: this screen (the old "TV" mirror) is intentionally SILENT. All audio — the
+  // musichetta, the event SFX and the Storie narrator voice — now plays on the LEADER's
+  // phone (see useHostAudio in PlayerApp), so only one device makes sound.
 
   // Sfondo "bivio": al SPLIT_REVEAL la scena pende verso il lato in testa
   // (voto AGGREGATO — i voti restano segreti, nessun aggancio durante VOTE_*).
@@ -195,12 +144,13 @@ export default function HostApp() {
   // BivioBackdrop montato in App.tsx.
   useEffect(() => {
     const root = document.documentElement;
-    const lean = phase === 'SPLIT_REVEAL' && game?.split ? leanFromSplit(game.split) : 50;
+    const inSuspense = remaining != null && remaining > SPLIT_REVEAL_WINDOW_S;
+    const lean = phase === 'SPLIT_REVEAL' && game?.split && !inSuspense ? leanFromSplit(game.split) : 50;
     root.style.setProperty('--bivio-lean', String(lean));
     return () => {
       root.style.setProperty('--bivio-lean', '50');
     };
-  }, [phase, game?.split]);
+  }, [phase, game?.split, remaining]);
 
   // No code yet: ask for one (the leader's phone shows it after creating a room).
   if (!code) {
@@ -243,23 +193,40 @@ export default function HostApp() {
     const defense = game.defense;
     const swing = game.swing;
     const awards = game.awards;
-    const duelReveal = game.duelReveal;
-    const duelTurn = game.duelTurn;
-    const duelResult = game.duelResult;
-    const duelSummary = game.duelSummary;
+    const namedMoments = game.namedMoments;
+    const duoAct = game.duoAct;
+    const duoAdvocateId = game.duoAdvocateId;
+    const duoSyncReveal = game.duoSyncReveal;
+    const duoTurn = game.duoTurn;
+    const duoRoundResult = game.duoRoundResult;
+    const duoPortrait = game.duoPortrait;
+    // Leader-paced beats (storia narration + the percorso tappa recap) have no
+    // server timer — the group is waiting on one specific phone. Named so
+    // everyone knows who to nudge; reframed if that leader just disconnected —
+    // leadership reassigns automatically (RECONNECT_GRACE_MS), so this is a
+    // transient "hang on" cue, not a stall (6.3).
+    const currentLeader = players.find((p) => p.id === game.leaderId) ?? null;
+    const leaderWaitCue = currentLeader && (
+      <p style={{ fontSize: '1rem', opacity: 0.7, margin: 0 }}>
+        {currentLeader.connected === false
+          ? `🔌 ${currentLeader.nickname} si è disconnesso — passiamo il testimone a breve…`
+          : `In attesa di ${currentLeader.nickname} ▶`}
+      </p>
+    );
     return (
       <main style={screen}>
         <ReactionSwarm />
-        <MuteButton />
         {/* Latecomers can still join mid-game: keep the code + QR in the corner. */}
         {code && <RoomCodeChip code={code} />}
         {/* Percorso: the climb map (current tappa highlighted) sits above the phase. */}
         {game.percorso && <PercorsoMap percorso={game.percorso} />}
         {inDilemma && (
           <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
-            {game.percorso
-              ? `${tappaMeta(game.percorso.currentTappa).emoji} ${tappaMeta(game.percorso.currentTappa).nome} · Dilemma ${game.dilemmaIndex}/${game.dilemmaCount}`
-              : `Dilemma ${game.dilemmaIndex}/${game.dilemmaCount}`}
+            {game.storia
+              ? `${game.storia.emoji} ${game.storia.actTitle ? game.storia.actTitle + ' · ' : ''}Bivio ${game.dilemmaIndex}/${game.dilemmaCount}`
+              : game.percorso
+                ? `${tappaMeta(game.percorso.currentTappa).emoji} ${tappaMeta(game.percorso.currentTappa).nome} · Dilemma ${game.dilemmaIndex}/${game.dilemmaCount}`
+                : `Dilemma ${game.dilemmaIndex}/${game.dilemmaCount}`}
           </p>
         )}
         <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', margin: 0, fontFamily: phase === 'PHASE_INTRO' ? 'var(--font-serif)' : 'var(--font-display)', fontWeight: phase === 'PHASE_INTRO' ? 500 : 700, ...(phase === 'PHASE_INTRO' && { letterSpacing: 'var(--tracking-serif)' }) }}>{PHASE_LABELS[phase]}</h1>
@@ -287,11 +254,65 @@ export default function HostApp() {
                 {p.tappaDilemmas} {p.tappaDilemmas === 1 ? 'dilemma' : 'dilemmi'} · {p.tappaSwings} {p.tappaSwings === 1 ? 'ribaltone' : 'ribaltoni'}
               </p>
               <p style={{ fontSize: '1.2rem', opacity: 0.8, margin: 0 }}>
-                {isLast ? 'Avete raggiunto la vetta 🏔️' : 'Pausa: il leader riprende quando volete.'}
+                {isLast ? 'Avete raggiunto la vetta 🏔️' : 'Pausa: riprendete quando volete.'}
               </p>
+              {!isLast && leaderWaitCue}
             </Card>
           );
         })()}
+
+        {/* Percorso in 2: the act-intro card marks each of the three fixed acts. */}
+        {phase === 'DUO_ACT_INTRO' && duoAct && (() => {
+          const meta = DUO_ACT_META[duoAct.act];
+          return meta ? (
+            <Card glow="accent" style={{ maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center', alignItems: 'center' }}>
+              <span style={{ fontSize: '4rem' }}>{meta.emoji}</span>
+              <h2 style={{ fontSize: '2rem', margin: 0, fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>{meta.nome}</h2>
+              <p style={{ fontSize: '1.3rem', opacity: 0.85, margin: 0 }}>{meta.sottotitolo}</p>
+            </Card>
+          ) : null;
+        })()}
+
+        {/* Storie: the narrator's prose, read aloud by the host voice. Large serif. */}
+        {phase === 'STORY_INTRO' && game.storia && (
+          <Card glow="accent" style={{ maxWidth: '46rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', textAlign: 'center', alignItems: 'center' }}>
+            <span style={{ fontSize: '4rem' }}>{game.storia.emoji}</span>
+            <h2 style={{ fontSize: '2.2rem', margin: 0, fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>{game.storia.title}</h2>
+            <p style={{ fontSize: '1.2rem', opacity: 0.75, margin: 0 }}>con {game.storia.protagonist}</p>
+            <p style={{ fontSize: '1.45rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.premessa}</p>
+            {leaderWaitCue}
+          </Card>
+        )}
+
+        {phase === 'SCENE_INTRO' && game.storia && (
+          <Card glow="accent" style={{ maxWidth: '46rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center', alignItems: 'center' }}>
+            {game.storia.actTitle && (
+              <p style={{ fontSize: '1rem', opacity: 0.6, margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{game.storia.actTitle}</p>
+            )}
+            <p style={{ fontSize: '1.5rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.sceneNarration}</p>
+            {leaderWaitCue}
+          </Card>
+        )}
+
+        {phase === 'SCENE_CONSEQUENCE' && game.storia && (
+          <Card glow="accent" style={{ maxWidth: '46rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center', alignItems: 'center' }}>
+            {game.storia.decision && (
+              <h2 style={{ fontSize: '1.6rem', margin: 0 }}>
+                Il gruppo ha scelto: {game.storia.decision === 'A' ? dilemma?.optionA : dilemma?.optionB}
+              </h2>
+            )}
+            <p style={{ fontSize: '1.45rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.consequence}</p>
+            {leaderWaitCue}
+          </Card>
+        )}
+
+        {phase === 'STORY_EPILOGUE' && game.storia && (
+          <Card glow="accent" style={{ maxWidth: '46rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', textAlign: 'center', alignItems: 'center' }}>
+            <span style={{ fontSize: '3.5rem' }}>🌅</span>
+            <p style={{ fontSize: '1.5rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.epilogo}</p>
+            {leaderWaitCue}
+          </Card>
+        )}
 
         {phase === 'PHASE_INTRO' && (
           <>
@@ -310,9 +331,14 @@ export default function HostApp() {
           (phase === 'DILEMMA_REVEAL' ||
             phase === 'VOTE_1' ||
             phase === 'VOTE_2' ||
-            phase === 'DUEL_REVEAL' ||
-            phase === 'DUEL_ARGUE' ||
-            phase === 'DUEL_REPICK') && <DilemmaCard dilemma={dilemma} />}
+            phase === 'DUO_PICK_PREDICT' ||
+            phase === 'DUO_SYNC_REVEAL' ||
+            phase === 'DUO_SIDE_PICK' ||
+            phase === 'DUO_ARGUE' ||
+            phase === 'DUO_WAVER' ||
+            phase === 'DUO_PICK' ||
+            phase === 'DUO_REVEAL' ||
+            phase === 'DUO_REPICK') && <DilemmaCard dilemma={dilemma} />}
 
         {phase === 'VOTE_1' && (
           <p
@@ -329,7 +355,37 @@ export default function HostApp() {
           </p>
         )}
 
-        {phase === 'SPLIT_REVEAL' && split && <SplitBar split={split} />}
+        {phase === 'SPLIT_REVEAL' &&
+          (remaining != null && remaining > SPLIT_REVEAL_WINDOW_S ? (
+            <div
+              aria-label="Si scopre il gruppo tra…"
+              style={{ fontSize: 'clamp(6rem, 20vw, 12rem)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+            >
+              {remaining - SPLIT_REVEAL_WINDOW_S}
+            </div>
+          ) : (
+            split && <SplitBar split={split} />
+          ))}
+
+        {phase === 'UNANIMOUS_REVEAL' && game.unanimous && (
+          <>
+            <Celebration pieces={40} />
+            <p style={{ fontSize: '3.5rem', margin: 0 }} aria-hidden>
+              🎉
+            </p>
+            {dilemma && (
+              <p style={{ fontSize: 'clamp(1.8rem, 4vw, 2.6rem)', fontWeight: 800, margin: 0, maxWidth: '46rem' }}>
+                {game.unanimous.side === 'A' ? dilemma.optionA : dilemma.optionB}
+              </p>
+            )}
+            <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, opacity: 0.9 }}>
+              {game.unanimous.count} su {game.unanimous.count} dalla stessa parte
+            </p>
+            <p style={{ fontSize: '1.15rem', margin: 0, opacity: 0.7 }}>
+              Niente dibattito — nuovo dilemma in arrivo…
+            </p>
+          </>
+        )}
 
         {phase === 'PREDICT' && (
           game.knowPairs ? (
@@ -339,6 +395,11 @@ export default function HostApp() {
             </p>
           ) : (
             <>
+              {game.finalStakesRound && (
+                <p style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: 'var(--gold)' }}>
+                  🔥 Ultimo round — posta doppia!
+                </p>
+              )}
               <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
                 Pronosticate dal telefono: chi avrà più voti <em>dopo</em> le difese? ·{' '}
                 {game.predictedCount}/{players.length}
@@ -352,7 +413,82 @@ export default function HostApp() {
 
         {phase === 'SPEAKER_VOTE' && (
           <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
-            Votate dal telefono il più convincente · {game.speakerVotedCount}/{players.length}
+            Votate dal telefono chi vi ha strappato l'applauso · {game.speakerVotedCount}/{players.length}
+          </p>
+        )}
+
+        {phase === 'GROUP_MIND' && game.groupMindQuestion && (
+          <>
+            <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
+              {game.groupMindQuestion.prompt}
+            </p>
+            <p style={{ fontSize: '1.1rem', margin: 0, opacity: 0.85 }}>
+              Rispondete dal telefono e indovinate la maggioranza ·{' '}
+              {game.groupMindProgress ? `${game.groupMindProgress.done}/${game.groupMindProgress.total}` : ''}
+            </p>
+          </>
+        )}
+
+        {phase === 'GROUP_MIND_REVEAL' && game.groupMindQuestion && game.groupMindTally && (
+          <>
+            <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
+              {game.groupMindQuestion.prompt}
+            </p>
+            <SplitBar split={game.groupMindTally} />
+            <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--gold)' }}>
+              🔮 {game.groupMindTally.correctGuessers} {game.groupMindTally.correctGuessers === 1 ? 'ha letto' : 'hanno letto'} bene il gruppo
+            </p>
+          </>
+        )}
+
+        {phase === 'WRITE' && game.writePrompt && (
+          <>
+            <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
+              {game.writePrompt.text}
+            </p>
+            <p style={{ fontSize: '1.1rem', margin: 0, opacity: 0.85 }}>
+              Scrivete dal telefono ·{' '}
+              {game.writeProgress ? `${game.writeProgress.done}/${game.writeProgress.total}` : ''}
+            </p>
+          </>
+        )}
+
+        {phase === 'WRITE_VOTE' && game.writePrompt && (
+          <>
+            <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
+              {game.writePrompt.text}
+            </p>
+            <p style={{ fontSize: '1.1rem', margin: 0, opacity: 0.85 }}>
+              Votate la vostra preferita dal telefono ·{' '}
+              {game.writeVoteProgress ? `${game.writeVoteProgress.done}/${game.writeVoteProgress.total}` : ''}
+            </p>
+          </>
+        )}
+
+        {phase === 'WRITE_REVEAL' && game.writeReveal && game.writeReveal.length > 0 && (
+          <CardGrid>
+            {[...game.writeReveal]
+              .sort((a, b) => b.votes - a.votes)
+              .map((a, i) => (
+                <Card key={a.id} glow={i === 0 && a.votes > 0 ? 'accent' : undefined} style={{ padding: 'var(--space-4)', textAlign: 'center' }}>
+                  <p style={{ margin: 0, fontSize: '1.1rem' }}>
+                    {i === 0 && a.votes > 0 && '🏆 '}
+                    {a.text}
+                  </p>
+                  <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.7 }}>
+                    {a.authorNickname} · {a.votes} {a.votes === 1 ? 'voto' : 'voti'}
+                  </p>
+                </Card>
+              ))}
+          </CardGrid>
+        )}
+
+        {(phase === 'DEFENSE' || phase === 'INTERVENTI') && lastTurnApplause && (
+          <p style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0, opacity: 0.9 }}>
+            {lastTurnApplause.nickname}:{' '}
+            {Object.entries(lastTurnApplause.tally)
+              .map(([emoji, count]) => `${emoji}×${count}`)
+              .join(' ')}
           </p>
         )}
 
@@ -365,6 +501,16 @@ export default function HostApp() {
               {game.isDevilRound && (
                 <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: 'var(--gold)' }}>
                   🎭 Avvocato del Diavolo — si difende il lato OPPOSTO al proprio voto!
+                </p>
+              )}
+              {game.absurdConstraint && (
+                <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--gold)' }}>
+                  🎭 Vincolo: {game.absurdConstraint}
+                </p>
+              )}
+              {game.twist && (
+                <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--gold)' }}>
+                  {game.twist.label}: {game.twist.description}
                 </p>
               )}
               {defense.totalTurns > 1 && (
@@ -403,7 +549,7 @@ export default function HostApp() {
                 </p>
               )}
               {defense.spunti && defense.spunti.length > 0 && (
-                <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+                <ul style={{ margin: '0.5rem 0 0', padding: 0, listStyle: 'none', textAlign: 'center', display: 'inline-flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
                   {defense.spunti.map((s, i) => (
                     <li key={`${i}-${s}`} style={{ fontSize: '1.1rem', opacity: 0.85 }}>{s}</li>
                   ))}
@@ -426,7 +572,7 @@ export default function HostApp() {
               Interviene <span style={{ color: 'var(--gold)' }}>{defense.intervenor?.nickname ?? '…'}</span> 🙋
             </p>
             {defense.queue && defense.queue.length > 0 && (
-              <ol style={{ margin: 0, paddingLeft: '1.4rem', textAlign: 'left', display: 'inline-flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+              <ol style={{ margin: 0, padding: 0, listStylePosition: 'inside', textAlign: 'center', display: 'inline-flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
                 {defense.queue.map((q) => (
                   <li
                     key={q.id}
@@ -499,21 +645,29 @@ export default function HostApp() {
           </div>
         )}
 
+        {phase === 'FINAL_AWARDS' && game.podium && <PodiumPanel podium={game.podium} />}
+        {phase === 'FINAL_AWARDS' && namedMoments && <NamedMomentsPanel moments={namedMoments} />}
         {phase === 'FINAL_AWARDS' && awards && <AwardsPanel awards={awards} />}
 
-        {phase === 'DUEL_PICK' && (
+        {phase === 'DUO_PICK_PREDICT' && (
+          <p aria-label="Quanti hanno scelto e previsto" style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>
+            Scegliete e prevedete in segreto ({game.duoSyncedCount}/2)
+          </p>
+        )}
+
+        {phase === 'DUO_SIDE_PICK' && (
           <p aria-label="Quanti hanno scelto" style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>
             Scegliete in segreto ({game.votedCount}/2)
           </p>
         )}
 
-        {phase === 'DUEL_REVEAL' && duelReveal && (
+        {(phase === 'DUO_SYNC_REVEAL' || phase === 'DUO_REVEAL') && duoSyncReveal && (
           <section
             aria-label="Le vostre scelte"
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}
           >
             <CardGrid min={10} max="min(92vw, 32rem)">
-              {duelReveal.picks.map((p) => {
+              {duoSyncReveal.picks.map((p) => {
                 const rgb = p.choice === 'A' ? '84,134,196' : '199,122,69';
                 return (
                   <div
@@ -539,21 +693,47 @@ export default function HostApp() {
               })}
             </CardGrid>
             <p style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>
-              {duelReveal.agreed ? '🤝 Siete d’accordo!' : '⚔️ Si va al duello!'}
+              {duoSyncReveal.agreed
+                ? phase === 'DUO_REVEAL'
+                  ? '🤝 Siete d’accordo! 🎭 Twist in arrivo…'
+                  : '🤝 Siete in sintonia!'
+                : phase === 'DUO_REVEAL'
+                  ? '⚔️ Si va al duello!'
+                  : 'Punti di vista diversi'}
             </p>
+            {phase === 'DUO_SYNC_REVEAL' &&
+              duoSyncReveal.predictions
+                .filter((p) => p.correct)
+                .map((p) => (
+                  <p key={p.id} style={{ fontSize: '1.1rem', opacity: 0.85, margin: 0 }}>
+                    🔮 <strong>{p.nickname}</strong> ci ha visto giusto (+1 «ti conosco»)
+                  </p>
+                ))}
           </section>
         )}
 
-        {phase === 'DUEL_ARGUE' && duelTurn?.speaker && (
+        {phase === 'DUO_ARGUE' && duoTurn?.speaker && (
           <section
             aria-label="Chi argomenta"
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)' }}
           >
-            <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
-              Turno {duelTurn.turn}/{duelTurn.totalTurns}
-            </p>
+            {duoTurn.speaker.advocate && (
+              <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: 'var(--gold)' }}>
+                🎭 Avvocato del Diavolo — difende il lato OPPOSTO al proprio voto!
+              </p>
+            )}
+            {duoTurn.speaker.inverted && !duoTurn.speaker.advocate && (
+              <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--gold)' }}>
+                🎭 A parti invertite — difende il lato che NON ha scelto
+              </p>
+            )}
+            {duoTurn.totalTurns > 1 && (
+              <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
+                Turno {duoTurn.turn}/{duoTurn.totalTurns}
+              </p>
+            )}
             <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
-              Argomenta <span style={{ color: 'var(--gold)' }}>{duelTurn.speaker.nickname}</span> 🎤
+              Argomenta <span style={{ color: 'var(--gold)' }}>{duoTurn.speaker.nickname}</span> 🎤
             </p>
             <div
               style={{
@@ -561,69 +741,133 @@ export default function HostApp() {
                 borderRadius: 'var(--radius-lg)',
                 fontSize: '1.25rem',
                 fontWeight: 700,
-                background: duelTurn.speaker.side === 'A' ? 'rgba(84,134,196,0.18)' : 'rgba(199,122,69,0.18)',
-                border: `2px solid ${duelTurn.speaker.side === 'A' ? 'rgba(84,134,196,0.5)' : 'rgba(199,122,69,0.5)'}`,
+                background: duoTurn.speaker.side === 'A' ? 'rgba(84,134,196,0.18)' : 'rgba(199,122,69,0.18)',
+                border: `2px solid ${duoTurn.speaker.side === 'A' ? 'rgba(84,134,196,0.5)' : 'rgba(199,122,69,0.5)'}`,
               }}
             >
-              Difende {duelTurn.speaker.side} ·{' '}
-              {duelTurn.speaker.side === 'A' ? dilemma?.optionA : dilemma?.optionB}
+              Difende {duoTurn.speaker.side} ·{' '}
+              {duoTurn.speaker.side === 'A' ? dilemma?.optionA : dilemma?.optionB}
             </div>
           </section>
         )}
 
-        {phase === 'DUEL_REPICK' && (
-          <p style={{ fontSize: '1.4rem', fontWeight: 600, margin: 0, opacity: 0.9 }}>
-            Ri-scegliete: vi siete convinti? 📱
+        {phase === 'DUO_WAVER' && (
+          <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
+            {duoAdvocateId
+              ? 'Chi ha ascoltato valuta in segreto: ti ha fatto vacillare?'
+              : 'Valutate in segreto: vi ha fatto vacillare?'}{' '}
+            · {game.duoWaverCount}/{duoAdvocateId ? 1 : 2}
           </p>
         )}
 
-        {phase === 'DUEL_RESULT' && duelResult && (
+        {phase === 'DUO_ROUND_RESULT' && duoRoundResult && (
           <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)' }}>
-            {duelResult.convinced.length > 0 && <Celebration />}
-            {duelResult.agreed ? (
-              <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
-                🤝 Eravate d’accordo
-              </p>
-            ) : duelResult.convinced.length > 0 ? (
-              duelResult.convinced.map((c) => (
+            {(duoRoundResult.convinced.length > 0 || duoRoundResult.vacillare.some((v) => v.received > 0)) && (
+              <Celebration />
+            )}
+            {duoRoundResult.convinced.length > 0 ? (
+              duoRoundResult.convinced.map((c) => (
                 <p key={c.convinced.id} style={{ fontSize: 'clamp(1.5rem, 4.5vw, 2.4rem)', fontWeight: 800, margin: 0 }}>
-                  <span style={{ color: 'var(--gold)' }}>{c.persuader.nickname}</span> ha convinto {c.convinced.nickname}! 🎯
+                  {c.ribaltone ? '🎭 Ribaltone! ' : '🎯 '}
+                  <span style={{ color: 'var(--gold)' }}>{c.persuader.nickname}</span> ha convinto{' '}
+                  {c.convinced.nickname}!
                 </p>
               ))
+            ) : duoRoundResult.vacillare.some((v) => v.received > 0) ? (
+              duoRoundResult.vacillare
+                .filter((v) => v.received > 0)
+                .map((v) => (
+                  <p key={v.id} style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: 800, margin: 0 }}>
+                    ✨ <span style={{ color: 'var(--gold)' }}>{v.nickname}</span> ha fatto vacillare (+{v.received})
+                  </p>
+                ))
             ) : (
-              <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>Teste dure! 🪨</p>
+              <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
+                Nessuno ha ceduto 🪨
+              </p>
             )}
-          </section>
-        )}
-
-        {phase === 'FINAL_DUEL' && duelSummary && (
-          <section
-            aria-label="Risultato del duello"
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}
-          >
-            <Celebration pieces={40} />
-            <CardGrid min={10} max="min(92vw, 30rem)">
-              {duelSummary.scores.map((s) => (
-                <Card
-                  key={s.id}
-                  glow="accent"
-                  style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', alignItems: 'center', textAlign: 'center' }}
-                >
-                  <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{s.nickname}</span>
-                  <span style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--gold)' }}>{s.persuasions}</span>
-                  <span style={{ fontSize: '0.95rem', opacity: 0.8 }}>
-                    {s.persuasions === 1 ? 'persuasione' : 'persuasioni'}
-                  </span>
-                </Card>
-              ))}
-            </CardGrid>
-            <p style={{ fontSize: '1.2rem', opacity: 0.85, margin: 0 }}>
-              Eravate d’accordo {duelSummary.agreements} {duelSummary.agreements === 1 ? 'volta' : 'volte'}
+            <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
+              {duoRoundResult.scores.map((s) => `${s.nickname} ${s.total}`).join(' · ')}
             </p>
           </section>
         )}
 
-        {speaking && game?.defense?.startedAt != null ? (
+        {phase === 'DUO_PICK' && (
+          <p aria-label="Quanti hanno scelto" style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>
+            Schieratevi in segreto ({game.votedCount}/2)
+          </p>
+        )}
+
+        {phase === 'DUO_REPICK' && (
+          <p style={{ fontSize: '1.4rem', fontWeight: 600, margin: 0, opacity: 0.9 }}>
+            {duoAdvocateId ? 'Chi ha ascoltato ri-sceglie: si è convinto?' : 'Ri-scegliete: vi siete convinti?'} 📱
+          </p>
+        )}
+
+        {phase === 'DUO_PORTRAIT' && duoPortrait && (
+          <section
+            aria-label="Ritratto di coppia"
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}
+          >
+            <Celebration pieces={40} />
+            <CardGrid min={10} max="min(92vw, 30rem)">
+              {duoPortrait.scores.map((s) => (
+                <Card
+                  key={s.id}
+                  glow={s.id === duoPortrait.winnerId ? 'accent' : undefined}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', alignItems: 'center', textAlign: 'center' }}
+                >
+                  <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{s.nickname}</span>
+                  <span style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--gold)' }}>{s.total}</span>
+                  <span style={{ fontSize: '0.95rem', opacity: 0.8 }}>punti</span>
+                </Card>
+              ))}
+            </CardGrid>
+            <p style={{ fontSize: '1.3rem', fontWeight: 700, margin: 0 }}>
+              {duoPortrait.winnerId == null
+                ? 'Pareggio — sintonia totale 🤝'
+                : `Stasera l’ha spuntata ${duoPortrait.scores.find((s) => s.id === duoPortrait.winnerId)?.nickname ?? ''}`}
+            </p>
+            <p style={{ fontSize: '1.1rem', opacity: 0.85, margin: 0 }}>
+              Sintonia {duoPortrait.sintoniaPct}% · d’accordo {duoPortrait.agreements}/{duoPortrait.truePicks}
+            </p>
+            {duoPortrait.tiConosco.length > 0 && (
+              <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0 }}>
+                🔮 Ti conosco: {duoPortrait.tiConosco.map((t) => `${t.nickname} ${t.hits}`).join(' · ')}
+              </p>
+            )}
+            {duoPortrait.momento && (
+              <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
+                {duoPortrait.momento.emoji} {duoPortrait.momento.title} — {duoPortrait.momento.description}
+              </p>
+            )}
+            {duoPortrait.titoli.length > 0 && (
+              <CardGrid min={10} max="min(92vw, 32rem)">
+                {duoPortrait.titoli.map((t, i) => (
+                  <div
+                    key={`${t.playerId}-${i}`}
+                    style={{
+                      padding: '0.75rem 1.2rem',
+                      borderRadius: 'var(--radius-lg)',
+                      background: 'var(--gold-soft)',
+                      border: '2px solid var(--gold-line)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <p style={{ margin: 0, fontWeight: 800 }}>
+                      {t.emoji} {t.title}
+                    </p>
+                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.9rem', opacity: 0.85 }}>
+                      {t.nickname} · {t.description}
+                    </p>
+                  </div>
+                ))}
+              </CardGrid>
+            )}
+          </section>
+        )}
+
+        {speaking && speakerStartedAt != null ? (
           <div
             aria-label="Tempo trascorso"
             style={{
@@ -655,7 +899,6 @@ export default function HostApp() {
   // LOBBY: show the code + roster + a passive "waiting for the leader" line.
   return (
     <main style={screen}>
-      <MuteButton />
       <Logo size={64} payoff />
       <p style={{ opacity: 0.7, margin: 0 }}>
         Entra da <strong>{window.location.host}</strong> con il codice
@@ -711,6 +954,9 @@ export default function HostApp() {
                 {p.nickname}
                 {p.isBot && p.persona && (
                   <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{PERSONA_LABELS[p.persona]}</span>
+                )}
+                {p.role === 'pubblico' && (
+                  <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>🎟️</span>
                 )}
                 {p.connected === false && (
                   <span style={{ fontSize: '0.75rem', opacity: 0.8 }} aria-label="assente">📵</span>

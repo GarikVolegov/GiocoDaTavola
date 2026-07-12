@@ -3,6 +3,47 @@
 // after looking up the room. Type-only imports from rooms.ts keep this cycle-free.
 import type { Room, AccuseResult, InfiltratoResult } from './rooms';
 
+/**
+ * "Col merito" (4.5): the infiltrator's one active tool per round — a decoy
+ * spunto seeded into the CURRENT speaker's suggestions, subtly steering them
+ * off the strongest argument. Purely a hint text (like a Vincolo assurdo);
+ * the sabotage is the misdirection itself, not a mechanical debuff.
+ */
+export const INFILTRATO_DECOY_SPUNTI: readonly string[] = [
+  "Insisti che è 'interessante' invece che convincente",
+  'Fai una battuta invece di rispondere al punto',
+  'Cambia argomento a metà frase',
+  'Cita una statistica inventata sul momento',
+  'Fai una domanda retorica invece di argomentare',
+  "Ammetti un dubbio prima ancora di iniziare",
+];
+
+export type InfiltratoToolError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_INFILTRATOR'
+  | 'NOT_DEFENSE_PHASE'
+  | 'ALREADY_USED_THIS_ROUND'
+  | 'NO_ONE_SPEAKING';
+
+export type InfiltratoToolResult = { ok: true; room: Room; decoy: string } | { ok: false; error: InfiltratoToolError };
+
+/**
+ * The infiltrator seeds a decoy spunto into the current speaker's suggestions,
+ * once per round, only while someone is actually speaking (DEFENSE). Using it
+ * is what "acting" means for the merit-based flip credit (roundStats.ts).
+ */
+export function useInfiltratoTool(room: Room, playerId: string, rng: () => number, speakerId: string | null): InfiltratoToolResult {
+  if (playerId !== room.infiltratorId) return { ok: false, error: 'NOT_INFILTRATOR' };
+  if (room.phase !== 'DEFENSE') return { ok: false, error: 'NOT_DEFENSE_PHASE' };
+  if (room.infiltratoToolUsedThisRound) return { ok: false, error: 'ALREADY_USED_THIS_ROUND' };
+  if (!speakerId) return { ok: false, error: 'NO_ONE_SPEAKING' };
+  const decoy = INFILTRATO_DECOY_SPUNTI[Math.floor(rng() * INFILTRATO_DECOY_SPUNTI.length)];
+  room.infiltratoDecoySpunto = decoy;
+  room.infiltratoToolUsedThisRound = true;
+  room.infiltratoToolUses++;
+  return { ok: true, room, decoy };
+}
+
 /** Record (or change) an accusation: who the accuser thinks the infiltrator is. */
 export function accuse(room: Room, accuserId: string, accusedId: string): AccuseResult {
   if (room.phase !== 'ACCUSE') return { ok: false, error: 'NOT_ACCUSE_PHASE' };
@@ -17,9 +58,12 @@ export function accusedCount(room: Room): number {
   return room.accusations.size;
 }
 
-/** True once every connected human has accused (ends the ACCUSE phase early). */
+/** True once every connected human has accused (ends the ACCUSE phase early).
+ * Excludes a player who late-joined the final round (3.2). */
 export function allAccused(room: Room): boolean {
-  const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+  const humans = [...room.players.values()].filter(
+    (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+  );
   if (humans.length === 0) return false;
   return humans.every((p) => room.accusations.has(p.id));
 }
@@ -57,5 +101,6 @@ export function resolveInfiltrato(room: Room): void {
     caught,
     won: flips > 0 && !caught,
     votesAgainst: counts.get(id) ?? 0,
+    toolUses: room.infiltratoToolUses,
   };
 }

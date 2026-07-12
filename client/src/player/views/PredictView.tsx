@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { PHASE_LABELS, type KnowPair, type VoteChoice, type SwingBet } from '../../shared/events';
 import { VoteOption } from '../../shared/ui';
-import { wrap } from './layout';
+import { wrap, formatWaitingList } from './layout';
 
 interface PredictDilemma {
   text: string;
@@ -19,7 +19,12 @@ interface PredictViewProps {
   onPredict: (choice: VoteChoice) => void;
   onSwingBet: (bet: SwingBet) => void;
   onKnowGuess: (choice: VoteChoice) => void;
+  predictedCount: number;
+  playerCount: number;
+  missingPredictors: string[] | null;
   skipButton: ReactNode;
+  /** The game's final round: the swing bet pays double here (6.2, "posta doppia"). */
+  finalStakesRound: boolean;
 }
 
 // The phone's PREDICT screen. Two flavours: a private "quanto mi conosci" guess
@@ -35,7 +40,11 @@ export default function PredictView({
   onPredict,
   onSwingBet,
   onKnowGuess,
+  predictedCount,
+  playerCount,
+  missingPredictors,
   skipButton,
+  finalStakesRound,
 }: PredictViewProps) {
   if (knowPair) {
     return (
@@ -68,6 +77,7 @@ export default function PredictView({
               label={dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
               selected={knowGuess === letter}
               onClick={() => onKnowGuess(letter)}
+              centered
             />
           ))}
         </div>
@@ -108,6 +118,7 @@ export default function PredictView({
             label={dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
             selected={predicted === letter}
             onClick={() => onPredict(letter)}
+            centered
           />
         ))}
       </div>
@@ -118,11 +129,21 @@ export default function PredictView({
       ) : (
         <p style={{ opacity: 0.7, margin: 0 }}>Scegli chi pensi convincerà di più.</p>
       )}
+      <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
+        {missingPredictors && missingPredictors.length > 0
+          ? `Aspettiamo ${formatWaitingList(missingPredictors)}…`
+          : `Hanno pronosticato ${predictedCount}/${playerCount}`}
+      </p>
       <div
         role="group"
         aria-label="La tua scommessa sul ribaltone"
         style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', width: 'min(90vw, 22rem)' }}
       >
+        {finalStakesRound && (
+          <p style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0, color: 'var(--gold)' }}>
+            🔥 Ultimo round — posta doppia!
+          </p>
+        )}
         <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0.5rem 0 0' }}>🎰 Ci sarà un ribaltone?</p>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
           {(
@@ -143,6 +164,11 @@ export default function PredictView({
             />
           ))}
         </div>
+        {swingBet && (
+          <p style={{ opacity: 0.8, margin: 0, fontSize: '0.95rem' }}>
+            Hai scommesso: la maggioranza <strong>{swingBet === 'regge' ? 'regge' : 'ribalta'}</strong>.
+          </p>
+        )}
       </div>
       {skipButton}
     </main>

@@ -19,7 +19,7 @@ export default function Hero({ onCreate, onJoin }: HeroProps) {
         <circle cx={100} cy={120} r={12} fill="currentColor" />
       </svg>
       <section className={styles.hero}>
-        <div>
+        <div className={styles.copy}>
           <p className={styles.eyebrow}>Party game dal vivo · 3–8 amici</p>
           <h1 className={styles.title}>
             Scegli un lato.<br />

@@ -19,7 +19,7 @@ export interface PlayerStats {
   defendedCount: number;
   /**
    * Live audience reactions received while this player was the current speaker
-   * (DEFENSE / DUEL_ARGUE). Optional + only set once non-zero, so a player who
+   * (DEFENSE / DUO_ARGUE). Optional + only set once non-zero, so a player who
    * was never reacted to keeps the base shape.
    */
   reactionsReceived?: number;
@@ -54,6 +54,19 @@ export interface PlayerStats {
    * conosci" round. Optional + only set once non-zero.
    */
   knowCorrect?: number;
+  /**
+   * Rounds this player was the first to cast a vote (VOTE_1 or VOTE_2). Feeds
+   * the jolly "Il Fulmine" award. Optional + only set once non-zero.
+   */
+  firstToVoteCount?: number;
+  /**
+   * The BEST (closest to 50/50) final-vote balance across this player's own
+   * submitted dilemmas that got played this game — min(A,B)/total, so 0.5 is a
+   * perfect split and 0 is unanimous. Feeds the "Spacca la stanza" award
+   * (5.2): rewards writing controversial, well-balanced dilemmas over safe
+   * ones. Optional + only set once a submitted dilemma of theirs was played.
+   */
+  authoredBestBalance?: number;
 }
 
 /** The fun end-of-game superlatives (persuasion-themed). */
@@ -69,7 +82,13 @@ export type AwardId =
   | 'voltagabbana'
   | 'sensitivo'
   | 'autore'
-  | 'telepate';
+  | 'spaccalastanza'
+  | 'telepate'
+  // Jolly pool (2.5): each goes to an otherwise empty-handed player, one apiece
+  // — never competed for like the awards above. See computeAwards's jolly pass.
+  | 'fulmine'
+  | 'sfinge'
+  | 'partecipante';
 
 /** An award and who won it. Only awards with a real winner are ever returned. */
 export interface Award {
@@ -97,7 +116,9 @@ export function ensureStats(room: Room, id: string): PlayerStats {
  * mind) are omitted. Ungated — RoomStore.publicAwards applies the FINAL_AWARDS gate.
  */
 export function computeAwards(room: Room): Award[] {
-  const entries = [...room.stats.entries()]; // insertion order == join order
+  // Bots never compete for an award — these are social superlatives about the
+  // actual party, not a game they can "win" (insertion order == join order).
+  const entries = [...room.stats.entries()].filter(([id]) => room.players.get(id)?.isBot !== true);
   const winnerBy = (
     score: (s: PlayerStats) => number,
     eligible: (s: PlayerStats) => boolean,
@@ -146,9 +167,34 @@ export function computeAwards(room: Room): Award[] {
     { id: 'autore', title: "L'Autore", emoji: '✍️',
       description: 'Il suo dilemma ha fatto cambiare più idee.',
       winner: winnerBy((s) => s.authoredSwing ?? 0, (s) => (s.authoredSwing ?? 0) > 0) },
+    { id: 'spaccalastanza', title: 'Spacca la Stanza', emoji: '🎯',
+      description: 'Il suo dilemma ha diviso il gruppo quasi a metà.',
+      winner: winnerBy((s) => s.authoredBestBalance ?? 0, (s) => (s.authoredBestBalance ?? 0) > 0) },
     { id: 'telepate', title: 'Il Telepate', emoji: '🔮',
       description: 'Ha indovinato più spesso come avevano votato gli amici.',
       winner: winnerBy((s) => s.knowCorrect ?? 0, (s) => (s.knowCorrect ?? 0) > 0) },
   ];
-  return defs.filter((d): d is Award => d.winner !== null);
+  const main = defs.filter((d): d is Award => d.winner !== null);
+
+  // Jolly pool (2.5, "nessuno a mani vuote"): every player who played at least
+  // one round but won none of the awards above gets exactly one consolation
+  // superlative — never competed for, just a true thing about THEIR own game.
+  const alreadyWon = new Set(main.map((a) => a.winner.id));
+  const jolly: Award[] = [];
+  for (const [id, s] of entries) {
+    if (s.rounds === 0 || alreadyWon.has(id)) continue;
+    const nickname = room.players.get(id)?.nickname ?? '';
+    const winner = { id, nickname };
+    if ((s.firstToVoteCount ?? 0) > 0) {
+      jolly.push({ id: 'fulmine', title: 'Il Fulmine', emoji: '⚡',
+        description: 'Il primo a votare, più spesso di chiunque altro.', winner });
+    } else if (s.changedCount === 0) {
+      jolly.push({ id: 'sfinge', title: 'La Sfinge', emoji: '🗿',
+        description: 'Impassibile: non ha mai cambiato idea.', winner });
+    } else {
+      jolly.push({ id: 'partecipante', title: 'Il Partecipante', emoji: '⭐',
+        description: "C'era, ha votato, ha fatto la sua parte.", winner });
+    }
+  }
+  return [...main, ...jolly];
 }

@@ -11,3 +11,12 @@ export const wrap: CSSProperties = {
   padding: 'var(--space-5)',
   gap: '1rem',
 };
+
+/** "Marco" / "Marco e Giulia" / "Marco, Giulia e Luca" — a short, friendly
+ * waiting-on list; never used for more than a handful of names (MAX_PLAYERS
+ * is 8), so no truncation logic is needed yet. */
+export function formatWaitingList(names: string[]): string {
+  if (names.length === 0) return '';
+  if (names.length === 1) return names[0];
+  return `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`;
+}

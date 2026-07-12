@@ -3,7 +3,17 @@ import {
   type GamePhase,
   PHASE_DURATIONS_MS,
   nextPercorsoPhase,
+  nextPhase,
 } from '../phases';
+
+describe('UNANIMOUS_REVEAL (voto unanime salta il dibattito)', () => {
+  it('è un breve beat celebrativo a timer (~4.5s)', () => {
+    expect(PHASE_DURATIONS_MS.UNANIMOUS_REVEAL).toBe(4_500);
+  });
+  it('non è nella sequenza pura: nextPhase la lascia invariata (inserita da advancePhase)', () => {
+    expect(nextPhase('UNANIMOUS_REVEAL', 2, 6)).toEqual({ phase: 'UNANIMOUS_REVEAL', dilemmaIndex: 2 });
+  });
+});
 
 describe('PHASE_DURATIONS_MS — fasi Percorso', () => {
   it('TAPPA_INTRO ha un timer (carta annuncio auto-avanzante)', () => {

@@ -1,8 +1,16 @@
 // In-memory store of game rooms. The server is authoritative; rooms live here
 // only for the lifetime of the process (no DB).
 
-import { Deck, dilemmasForRegister, loadDilemmas, type Dilemma, type ContentRegister, type Tappa } from './deck';
+import { Deck, dilemmasForRegister, loadDilemmas, filterByMood, type Dilemma, type ContentRegister, type Tappa, type Mood } from './deck';
 import * as knowRound from './knowRound';
+import * as groupMind from './groupMind';
+import type { GroupMindQuestion, GroupMindOutcome } from './groupMind';
+import * as writeRound from './writeRound';
+import type { WritePrompt, PublicWrittenAnswer, WriteRevealAnswer } from './writeRound';
+import * as twists from './twists';
+import type { Twist, Caos } from './twists';
+import * as rosterDilemmas from './rosterDilemmas';
+import type { NamedMoment } from './namedMoments';
 import * as infiltrato from './infiltrato';
 import * as predictions from './predictions';
 import * as speakerVote from './speakerVote';
@@ -15,12 +23,22 @@ import * as roundStats from './roundStats';
 import * as botVotes from './botVotes';
 import * as defenseSetup from './defenseSetup';
 import * as dilemmaPlan from './dilemmaPlan';
+import * as absurdConstraints from './absurdConstraints';
+import { countGiocatori, rulesForGiocatoriCount } from './ruleset';
 import {
   type GamePhase,
+  type PhaseTransition,
   PHASE_DURATIONS_MS,
+  SOFT_TIMEOUT_THRESHOLD,
+  SOFT_TIMEOUT_MS,
+  DUO_TURN_MIN_MS,
+  DEFENSE_MAX_MS_NORMALE,
+  DEFENSE_MAX_MS_LUNGA,
   nextPhase,
-  nextDuelPhase,
+  nextDuoPhase,
   nextPercorsoPhase,
+  nextStoriaPhase,
+  actForIndex,
 } from './phases';
 import {
   buildPercorsoPlan,
@@ -29,17 +47,44 @@ import {
   N_TAPPE,
   type Durata,
 } from './percorso';
+import {
+  buildStoriaPlan,
+  decisionForRound,
+  pickEpilogo,
+  countDecisionsA,
+  validateStory,
+  loadStories,
+  type Story,
+  type StoryScene,
+} from './storie';
+import { tally } from './voteCount';
 import { computeAwards as computeAwardsFor, type Award, type PlayerStats } from './awards';
 import { computeBlindSpot, type BlindSpot } from './blindspots';
+import { computePodium, type PodiumEntry } from './podium';
 import {
-  duelPlayers,
-  duelAgreed,
-  recordDuelResult,
-  duelReveal,
-  duelTurn,
-  duelResult,
-  duelSummary,
-} from './duel';
+  buildDuoActPlan,
+  expandActs,
+  duoPlayers,
+  submitDuoSync,
+  duoSyncComplete as isDuoSyncComplete,
+  duoWaver as duoWaverRate,
+  duoWaverComplete as isDuoWaverComplete,
+  duoRepickComplete as isDuoRepickComplete,
+  assignInvertedSides,
+  assignAdvocate,
+  recordSyncRound,
+  recordDuoReveal,
+  recordRoundOutcome,
+  computeRepickFlipped,
+  duoSyncReveal,
+  duoTurn,
+  duoRoundResult,
+  duoPortrait,
+  duoActState,
+  duoAdvocateId,
+  type DuoPoints,
+  type DuoMoment,
+} from './duo';
 
 // Re-export the phase state machine so existing importers (tests, index.ts)
 // keep importing GamePhase / PHASE_DURATIONS_MS / nextPhase / … from './rooms'.
@@ -47,15 +92,28 @@ export * from './phases';
 // Re-export the percorso planning helpers (TAPPE, buildPercorsoPlan, …) so
 // index.ts can surface tappe metadata + counts without a separate import path.
 export * from './percorso';
+// Re-export the storie helpers + types (loadStories, storieCatalog, Story, …) so
+// index.ts can surface the story catalog without a separate import path.
+export * from './storie';
 // Re-export the scoring types so consumers keep importing them from './rooms'.
 export type { Award, AwardId, PlayerStats } from './awards';
 export type { BlindSpot, BlindSpotId } from './blindspots';
+export type { PodiumEntry } from './podium';
 
 const CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const CODE_LENGTH = 4;
 
-/** Max players allowed in a single room (in-person party game). */
-export const MAX_PLAYERS = 8;
+/**
+ * Max "giocatori" (the debating core: votes + can be picked as a defender).
+ * Beyond this, new joiners get the 'pubblico' role (3.1) — same QR, same
+ * vote/react/bet/speaker-vote, but never selected to defend. Keeps the
+ * on-stage cast small while the room itself scales much further.
+ * Canonical home is ruleset.ts (3.6); re-exported here for backward compat.
+ */
+export { MAX_GIOCATORI } from './ruleset';
+
+/** Max players allowed in a single room overall (giocatori + pubblico). */
+export const MAX_PLAYERS = 24;
 
 /** Max nickname length — truncated (not rejected) for a forgiving UX. */
 export const NICKNAME_MAX = 24;
@@ -68,7 +126,32 @@ export const DILEMMA_COUNT_OPTIONS = [3, 5, 7] as const;
 export type DilemmaCount = (typeof DILEMMA_COUNT_OPTIONS)[number];
 
 /** Content registers the host can pick (mirror of deck.ts ContentRegister). */
-export const CONTENT_REGISTERS = ['vita', 'business', 'misto'] as const;
+export const CONTENT_REGISTERS = ['vita', 'business', 'carriera', 'misto'] as const;
+
+/** The evening's mood the leader can pick (2.2, mirror of deck.ts Mood). */
+export const MOODS = ['leggera', 'mista', 'profonda'] as const;
+function isMood(v: string): v is Mood {
+  return (MOODS as readonly string[]).includes(v);
+}
+
+/**
+ * Promote this round's late-joiners (3.2) to 'giocatore' — cap (MAX_GIOCATORI)
+ * permitting — then clear the set regardless, since by the next round they're
+ * no longer "late for this round" either way. Never promotes in duello (a
+ * fixed 2-player mode; a late joiner there is a spectator for good).
+ */
+function promoteLateJoiners(room: Room): void {
+  if (room.mode !== 'duello') {
+    for (const id of room.lateJoiners) {
+      const player = room.players.get(id);
+      if (!player) continue;
+      if (!rulesForGiocatoriCount(countGiocatori(room.players.values())).isPubblicoCapped) {
+        delete player.role;
+      }
+    }
+  }
+  room.lateJoiners.clear();
+}
 
 /**
  * Behaviour-based bot personalities (Fase B). The persona doesn't pick a *side*
@@ -89,7 +172,7 @@ function isContentRegister(v: string): v is ContentRegister {
 
 /**
  * The fixed allowlist of live audience-reaction emojis a phone may send during
- * DEFENSE / DUEL_ARGUE. A small set keeps the host's "swarm" readable and the
+ * DEFENSE / DUO_ARGUE. A small set keeps the host's "swarm" readable and the
  * input un-spoofable (anything else is rejected).
  */
 export const REACTIONS = ['👏', '🔥', '🤯', '😂', '🤔'] as const;
@@ -108,7 +191,13 @@ function isGameMode(v: string): v is GameMode {
   return v === 'gruppo' || v === 'duello';
 }
 
-
+/**
+ * A player's participation role (3.1). 'pubblico' still votes, swing-bets,
+ * reacts, and votes the best speaker — everything a 'giocatore' does EXCEPT
+ * ever being picked as a defender or raising a hand to intervene. Absent
+ * (the common case, ≤ MAX_GIOCATORI in the room) means 'giocatore'.
+ */
+export type PlayerRole = 'giocatore' | 'pubblico';
 
 export interface Player {
   /** Stable, public per-player id (NOT the socket id and NOT the reconnect
@@ -133,6 +222,8 @@ export interface Player {
    * Absent = anonymous (the default). Used only to attribute saved awards.
    */
   clerkUserId?: string;
+  /** 'pubblico' when this player joined past MAX_GIOCATORI; absent = 'giocatore'. */
+  role?: PlayerRole;
 }
 
 /**
@@ -191,14 +282,21 @@ export interface Room {
   leaderId: string | null;
   /** Players currently in the lobby, keyed by player id. */
   players: Map<string, Player>;
+  /**
+   * Secret reconnect token -> player id, mirroring index.ts's in-memory `tokens`
+   * map so a crash-recovery snapshot can rehydrate it (the module-level map
+   * itself is never persisted). Never sent to any client — same secrecy as the
+   * token itself, which only ever reaches its own owner via `player:joined`.
+   */
+  tokens: Map<string, string>;
   /** Current phase of the game state machine. */
   phase: GamePhase;
   /** Number of dilemmas chosen at start; null until the game starts. In percorso it equals the planned ascent's length. */
   dilemmaCount: number | null;
   /** Content register chosen at start; null until the game starts (and always null in percorso). */
   register: ContentRegister | null;
-  /** Session format: 'classic' (3/5/7) or 'percorso' (themed ascent). Default 'classic'. */
-  format: 'classic' | 'percorso';
+  /** Session format: 'classic' (3/5/7), 'percorso' (themed ascent) or 'storia' (narrative). Default 'classic'. */
+  format: 'classic' | 'percorso' | 'storia';
   /** Percorso: the tappa the host chose to start from (1..4); null in classic. */
   startTappa: Tappa | null;
   /** Percorso: the duration preset chosen at start; null in classic. */
@@ -213,6 +311,26 @@ export interface Room {
   tappaDilemmas: number;
   /** Percorso: rounds in the current tappa whose leading side flipped (recap accumulator). Aggregate only. */
   tappaSwings: number;
+  /** Storia: the chosen story (metadata + epiloghi); null unless format==='storia'. */
+  story: Story | null;
+  /** Storia: the chosen story's id; null in classic/percorso. */
+  storyId: string | null;
+  /** Storia: parallel to plannedDilemmas — the scene (narration + consequences) of each bivio. */
+  plannedScenes: StoryScene[];
+  /** Storia: parallel to plannedDilemmas — the 0-based act index of each bivio. */
+  plannedActs: number[];
+  /** Storia: the group's resolved decision per closed crossroads (drives the epilogue + recap). */
+  storyDecisions: VoteChoice[];
+  /** Storia: the narration prose of the current scene (SCENE_INTRO); null otherwise. */
+  currentSceneNarration: string | null;
+  /** Storia: the consequence prose of the current scene (SCENE_CONSEQUENCE); null otherwise. */
+  currentSceneConsequence: string | null;
+  /** Storia: the group's decision for the current scene (A/B); null until SCENE_CONSEQUENCE. */
+  currentDecision: VoteChoice | null;
+  /** Storia: the resolved variant ending (STORY_EPILOGUE); null otherwise. */
+  currentEpilogo: string | null;
+  /** Storia: the 0-based act index currently in play; null in classic/percorso. */
+  currentAct: number | null;
   /** Which dilemma (1-based) is being played; 0 before the first reveal. */
   dilemmaIndex: number;
   /** Epoch ms when the current phase auto-advances; null if it has no timer. */
@@ -231,6 +349,19 @@ export interface Room {
   dilemmaAuthors: Map<string, string>;
   /** The shuffled player-submitted dilemmas still to play, drawn (in order) BEFORE the deck. Built at `startGame`. */
   submittedQueue: Dilemma[];
+  /** Dilemma ids to exclude from the NEXT deck build — populated by rematch()
+   * from the just-finished game's plannedDilemmas, consumed and cleared by
+   * startGame(). Empty outside a rematch flow. */
+  excludeDilemmaIds: Set<string>;
+  /**
+   * Ids of players who joined mid-round, this round (3.2, "late-join di prima
+   * classe"): they're 'pubblico' for the remainder of THIS round and excluded
+   * from its allVoted-style early-advance gates (they may not have even seen
+   * the prompt yet), then promoted to 'giocatore' — cap permitting — and
+   * cleared on entry to the next DILEMMA_REVEAL. Never populated in duello
+   * (fixed 2-player mode; a late joiner there just stays Pubblico forever).
+   */
+  lateJoiners: Set<string>;
   /**
    * The 1-based dilemma index chosen at start to be the surprise "Avvocato del
    * Diavolo" round, where defenders argue the side they did NOT vote. null when
@@ -246,10 +377,41 @@ export interface Room {
   knowTargets: Map<string, string>;
   /** Quanto mi conosci: guesser id -> their secret guess of the target's first vote. */
   knowGuesses: Map<string, VoteChoice>;
+  /** "La Mente del Gruppo" (4.1): the current breather round's question; null outside GROUP_MIND/GROUP_MIND_REVEAL. */
+  groupMindQuestion: GroupMindQuestion | null;
+  /** Ids of group-mind questions already asked this game (no repeats). */
+  usedGroupMindIds: Set<string>;
+  /** Each player's own secret answer to the current group-mind question. */
+  groupMindAnswers: Map<string, VoteChoice>;
+  /** Each player's secret guess of the room's majority answer. */
+  groupMindGuesses: Map<string, VoteChoice>;
+  /** "In Altre Parole" (4.2): the current breather round's prompt; null outside WRITE/WRITE_VOTE/WRITE_REVEAL. */
+  writePrompt: WritePrompt | null;
+  /** Ids of write prompts already asked this game (no repeats). */
+  usedWritePromptIds: Set<string>;
+  /** Each player's own written answer this round, keyed by player id. */
+  writeAnswers: Map<string, string>;
+  /** This round's frozen shuffled voting order (player ids), set on WRITE_VOTE entry. */
+  writeOrder: string[];
+  /** Each voter's secret pick of their favorite OTHER answer (voter id -> the answer's author id). */
+  writeVotes: Map<string, string>;
   /** "L'Infiltrato": the secret infiltrator's player id, or null when not enabled. */
   infiltratorId: string | null;
-  /** Rounds the infiltrator overturned the group (minority → majority). */
+  /** Rounds the infiltrator overturned the group AND actively used their tool
+   * that round (4.5, "col merito" — a passive lucky flip earns nothing). */
   infiltratorFlips: number;
+  /** Whether the infiltrator has used their once-per-round sabotage tool this
+   * round (4.5); resets on DILEMMA_REVEAL. */
+  infiltratoToolUsedThisRound: boolean;
+  /** The decoy spunto seeded into the CURRENT speaker's spunti this turn, if
+   * the infiltrator just used their tool; null otherwise. Cleared each turn. */
+  infiltratoDecoySpunto: string | null;
+  /** How many rounds the infiltrator used their tool this game (the FINAL_AWARDS "replay"). */
+  infiltratoToolUses: number;
+  /** "Momenti nominati" (5.5): every titled moment detected across the game
+   * (plebiscito, testa a testa, ribaltone, tripla persuasione) — "I momenti
+   * della serata", shown before the awards at FINAL_AWARDS. */
+  namedMoments: NamedMoment[];
   /** End-game accusation votes: accuser id -> accused id (ACCUSE phase). */
   accusations: Map<string, string>;
   /** Resolved infiltrator outcome, computed on entry to FINAL_AWARDS; null otherwise. */
@@ -284,6 +446,27 @@ export interface Room {
    * votes; only these chosen identities are ever made public.
    */
   defenders: Defender[];
+  /**
+   * This round's silly performance constraint for the defenders ("Vincoli
+   * assurdi", 2.3) — drawn fresh on entry to DEFENSE (~1/3 of rounds); null the
+   * rest of the time. Purely theatrical: never changes debate mechanics.
+   */
+  absurdConstraint: string | null;
+  /** The leader's "caos" dial (4.3): how often a dilemma round draws a surprise
+   * mechanical twist. Chosen at startGame, defaults to 'basso'. */
+  caos: Caos;
+  /** The 1-based dilemma rounds (classic/percorso, gruppo mode) that draw a
+   * twist at DEFENSE, precomputed at startGame from the caos dial. */
+  twistRoundIndices: Set<number>;
+  /** This round's surprise mechanical twist ("difesa lampo", …) — drawn fresh
+   * on entry to DEFENSE when this round was planned for one; null otherwise. */
+  currentTwist: Twist | null;
+  /**
+   * DEFENSE's per-turn safety cap in ms (3.3), chosen at startGame — normally
+   * DEFENSE_MAX_MS_NORMALE (90s); DEFENSE_MAX_MS_LUNGA (180s) when the leader
+   * opts into "serata lunga". Read by armTurn instead of a fixed constant.
+   */
+  defenseMaxMs: number;
   /** Which defender (0-based) is currently speaking during DEFENSE. */
   defenseTurnIndex: number;
   /**
@@ -322,18 +505,58 @@ export interface Room {
   botSeq: number;
   /** Game mode: 'gruppo' (classic) or 'duello' (2-player). Default 'gruppo'. */
   mode: GameMode;
-  /** Which duel argue turn (0-based) is speaking during DUEL_ARGUE. */
-  duelTurnIndex: number;
-  /** Duel score: persuasions per player id (times they flipped the other). */
-  duelScore: Map<string, number>;
-  /** Duel: how many rounds the two players already agreed (no duel needed). */
-  duelAgreements: number;
+  // --- "Percorso in 2" (the rebuilt duello). All duo fields are Map/array/
+  // plain values on purpose: the crash-restore snapshot round-trips Maps but
+  // NOT Sets, so a Set here would silently lose state on revival.
+  /** Parallel to plannedDilemmas — the act (1|2|3) of each planned dilemma. */
+  duoPlannedActs: number[];
+  /** Atto I: each player's secret prediction of the PARTNER's pick. Secret
+   * until DUO_SYNC_REVEAL; cleared each round. */
+  duoPredictions: Map<string, VoteChoice>;
+  /** Assigned debate sides this round: both players in Atto II (parti
+   * invertite), only the advocate in the Atto III agreement twist. */
+  duoAssignedSides: Map<string, VoteChoice>;
+  /** Ordered arguer ids for this round's DUO_ARGUE (2 in Atto II, 1 in the twist). */
+  duoSpeakers: string[];
+  /** Which duo argue turn (0-based) is speaking during DUO_ARGUE. */
+  duoTurnIndex: number;
+  /** Secret "ti ha fatto vacillare?" ratings, rater id -> 0|1|2. Secret until
+   * DUO_ROUND_RESULT; cleared each round. */
+  duoWaverRatings: Map<string, 0 | 1 | 2>;
+  /** Alternation counter for the duo tie-breaks (who flips side on equal picks,
+   * who plays devil's advocate). Grows monotonically across the game. */
+  duoFairness: number;
+  /** Whether this Atto III round took the agreement twist (devil's advocate). */
+  duoAdvocacy: boolean;
+  /** Whether the listener flipped at DUO_REPICK (computed leaving the phase). */
+  duoRepickFlipped: boolean;
+  /** Percorso in 2 score counters per player id (drives the portrait verdict). */
+  duoScore: Map<string, DuoPoints>;
+  /** How many dilemmas had a true first pick from both (Atti I+III) — the
+   * sintonia % denominator. */
+  duoTruePicks: number;
+  /** How many of those true first picks agreed — the sintonia % numerator. */
+  duoFirstPickAgreements: number;
+  /** Duo highlights accumulated across the game ("il momento della serata"). */
+  duoMoments: DuoMoment[];
   /**
    * Last time (epoch ms) each player sent a live reaction, keyed by player id —
    * used only to rate-limit the reaction stream. Reset never needed (stale
    * entries are harmless); pruned with the player on leave.
    */
   lastReactionAt: Map<string, number>;
+  /**
+   * Emoji -> count for the CURRENT speaker's turn only (DEFENSE/INTERVENTI/
+   * DUO_ARGUE), reset when a turn starts (armTurn). Live/in-progress —
+   * `lastTurnApplause` is the frozen snapshot for the turn that just ended.
+   */
+  turnReactionTally: Partial<Record<Reaction, number>>;
+  /**
+   * The just-finished speaker's applause tally ("applausometro"), captured the
+   * moment their turn ends; null before the first turn ends or if it drew no
+   * reactions. Shown for a few seconds before the next turn's UI takes over.
+   */
+  lastTurnApplause: { speakerId: string; nickname: string; tally: Partial<Record<Reaction, number>> } | null;
   /**
    * Secret predictions for the current round, keyed by player id: which side each
    * player thinks will hold the majority AFTER the defenses (PREDICT phase). Like
@@ -378,7 +601,9 @@ export type StartGameError =
   | 'WRONG_PLAYER_COUNT'
   | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
+  | 'INVALID_MOOD'
   | 'INVALID_PERCORSO'
+  | 'INVALID_STORIA'
   | 'INFILTRATO_NEEDS_PLAYERS'
   | 'SQUADRE_NEEDS_PLAYERS'
   | 'ALREADY_STARTED';
@@ -386,6 +611,9 @@ export type StartGameError =
 export type StartGameResult =
   | { ok: true; room: Room }
   | { ok: false; error: StartGameError };
+
+export type RematchError = 'ROOM_NOT_FOUND' | 'NOT_FINISHED';
+export type RematchResult = { ok: true; room: Room } | { ok: false; error: RematchError };
 
 /** Minimum humans required to enable "L'Infiltrato" (enough to hide + accuse). */
 export const MIN_INFILTRATO_HUMANS = 4;
@@ -429,6 +657,35 @@ export interface PercorsoView {
   tappaSwings: number;
 }
 
+/**
+ * Secret-safe storia view broadcast to host/phones. All prose is public and the
+ * `decision` is the already-public aggregate majority — no individual vote leaks.
+ * The host reads the narration aloud (TTS) from this; phones mirror it as text.
+ */
+export interface StoriaView {
+  storyId: string;
+  title: string;
+  protagonist: string;
+  emoji: string;
+  /** Opening prose (the setting) — shown/spoken at STORY_INTRO. */
+  premessa: string;
+  /** Title of the act the current scene belongs to (badge on SCENE_INTRO); null otherwise. */
+  actTitle: string | null;
+  /** Narrative prose before the current crossroads — shown/spoken at SCENE_INTRO. */
+  sceneNarration: string | null;
+  /** 1-based index of the crossroads in play (0 before the first). */
+  sceneIndex: number;
+  totalScenes: number;
+  /** The side the group chose this scene (A/B) — shown/spoken at SCENE_CONSEQUENCE. */
+  decision: VoteChoice | null;
+  /** Consequence prose for the group's choice — shown/spoken at SCENE_CONSEQUENCE. */
+  consequence: string | null;
+  /** The variant ending — shown/spoken at STORY_EPILOGUE; null otherwise. */
+  epilogo: string | null;
+  /** Running count of A-decisions (aggregate; drives the epilogue + a mini-indicator). */
+  decisionsA: number;
+}
+
 /** Public reveal of the infiltrator outcome at FINAL_AWARDS (null in normal games). */
 export interface InfiltratoResult {
   infiltratorId: string;
@@ -441,9 +698,11 @@ export interface InfiltratoResult {
   won: boolean;
   /** How many accusation votes the infiltrator received. */
   votesAgainst: number;
+  /** How many rounds the infiltrator used their sabotage tool (4.5, "il replay delle sue mosse"). */
+  toolUses: number;
 }
 
-export type AddBotError = 'ROOM_NOT_FOUND' | 'ROOM_FULL' | 'ALREADY_STARTED';
+export type AddBotError = 'ROOM_NOT_FOUND' | 'ROOM_FULL' | 'NOT_ROUND_BOUNDARY';
 
 export type AddBotResult =
   | { ok: true; player: Player }
@@ -454,6 +713,12 @@ export type AdvancePhaseError = 'ROOM_NOT_FOUND' | 'NO_NEXT_PHASE';
 export type AdvancePhaseResult =
   | { ok: true; room: Room }
   | { ok: false; error: AdvancePhaseError };
+
+export type SkipDilemmaError = 'ROOM_NOT_FOUND' | 'NOT_SKIPPABLE_PHASE' | 'NOT_CLASSIC';
+
+export type SkipDilemmaResult =
+  | { ok: true; room: Room }
+  | { ok: false; error: SkipDilemmaError };
 
 export type VoteError =
   | 'ROOM_NOT_FOUND'
@@ -476,7 +741,14 @@ export type ReactResult =
   | { ok: true; emoji: Reaction }
   | { ok: false; error: ReactError };
 
-export type RaiseHandError = 'ROOM_NOT_FOUND' | 'NOT_RAISE_PHASE' | 'NOT_IN_ROOM' | 'IS_SPEAKER';
+export type RaiseHandError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_RAISE_PHASE'
+  | 'NOT_IN_ROOM'
+  | 'IS_SPEAKER'
+  | 'QUEUE_FULL'
+  | 'PUBBLICO_NEVER_DEFENDS'
+  | 'INTERVENTI_DISABLED_THIS_ROUND';
 export type RaiseHandResult =
   | { ok: true; room: Room; raised: boolean }
   | { ok: false; error: RaiseHandError };
@@ -611,6 +883,10 @@ export interface DefenseImpact {
  */
 export interface PublicSwing extends SwingResult {
   attribution: DefenseImpact[];
+  /** True when the leading side itself changed (a tie counts as its own
+   * "side", so A→tie or tie→A both flip) — the stronger of the two
+   * "ribaltone" triggers (the other being switched >= 2). */
+  leadFlipped: boolean;
 }
 
 /**
@@ -631,6 +907,122 @@ export function generateRoomCode(): string {
   return code;
 }
 
+/** A fresh Room with every field at its LOBBY default. The single source of
+ * truth `create()` builds from; also the template `normalizeRestoredRoom`
+ * backfills a stale snapshot against (see there). */
+function emptyRoom(code: string, createdAt: number): Room {
+  return {
+    code,
+    createdAt,
+    leaderId: null,
+    players: new Map(),
+    tokens: new Map(),
+    phase: 'LOBBY',
+    dilemmaCount: null,
+    register: null,
+    format: 'classic',
+    startTappa: null,
+    durata: null,
+    plannedDilemmas: [],
+    plannedTappe: [],
+    currentTappa: null,
+    tappaDilemmas: 0,
+    tappaSwings: 0,
+    story: null,
+    storyId: null,
+    plannedScenes: [],
+    plannedActs: [],
+    storyDecisions: [],
+    currentSceneNarration: null,
+    currentSceneConsequence: null,
+    currentDecision: null,
+    currentEpilogo: null,
+    currentAct: null,
+    dilemmaIndex: 0,
+    phaseExpiresAt: null,
+    deck: null,
+    currentDilemma: null,
+    submittedDilemmas: [],
+    dilemmaAuthors: new Map(),
+    submittedQueue: [],
+    excludeDilemmaIds: new Set(),
+    lateJoiners: new Set(),
+    devilRoundIndex: null,
+    knowRoundIndex: null,
+    knowTargets: new Map(),
+    knowGuesses: new Map(),
+    groupMindQuestion: null,
+    usedGroupMindIds: new Set(),
+    groupMindAnswers: new Map(),
+    groupMindGuesses: new Map(),
+    writePrompt: null,
+    usedWritePromptIds: new Set(),
+    writeAnswers: new Map(),
+    writeOrder: [],
+    writeVotes: new Map(),
+    infiltratorId: null,
+    infiltratorFlips: 0,
+    infiltratoToolUsedThisRound: false,
+    infiltratoDecoySpunto: null,
+    infiltratoToolUses: 0,
+    namedMoments: [],
+    accusations: new Map(),
+    infiltratoResult: null,
+    teams: new Map(),
+    votes: new Map(),
+    votes1: new Map(),
+    confirmedVote2: new Set(),
+    defenders: [],
+    absurdConstraint: null,
+    caos: 'assente',
+    twistRoundIndices: new Set(),
+    currentTwist: null,
+    defenseMaxMs: DEFENSE_MAX_MS_NORMALE,
+    defenseTurnIndex: 0,
+    defenseArgument: null,
+    raisedHands: [],
+    interventiQueue: [],
+    interventiIndex: 0,
+    turnMinEndsAt: null,
+    turnStartedAt: null,
+    stats: new Map(),
+    botSeq: 0,
+    mode: 'gruppo',
+    duoPlannedActs: [],
+    duoPredictions: new Map(),
+    duoAssignedSides: new Map(),
+    duoSpeakers: [],
+    duoTurnIndex: 0,
+    duoWaverRatings: new Map(),
+    duoFairness: 0,
+    duoAdvocacy: false,
+    duoRepickFlipped: false,
+    duoScore: new Map(),
+    duoTruePicks: 0,
+    duoFirstPickAgreements: 0,
+    duoMoments: [],
+    lastReactionAt: new Map(),
+    turnReactionTally: {},
+    lastTurnApplause: null,
+    predictions: new Map(),
+    swingBets: new Map(),
+    speakerVotes: new Map(),
+    defenseCounts: new Map(),
+  };
+}
+
+/**
+ * Backfill any field ABSENT from a deserialized snapshot (the schema keeps
+ * growing — a field added after the snapshot was written is simply missing
+ * from its JSON, not `undefined`-valued) with a fresh LOBBY default, so a
+ * later unguarded `.size`/`.get` on it never crashes the process. A field
+ * that IS present — even a falsy one like `0` or `[]` — always wins over the
+ * default; only a truly missing key is backfilled.
+ */
+function normalizeRestoredRoom(room: Room): Room {
+  return { ...emptyRoom(room.code, room.createdAt), ...room };
+}
+
 export class RoomStore {
   private readonly rooms = new Map<string, Room>();
 
@@ -643,6 +1035,9 @@ export class RoomStore {
     private readonly makeDeck: (register: ContentRegister) => Deck =
       (register) => new Deck(dilemmasForRegister(loadDilemmas(), register)),
     private readonly rng: () => number = Math.random,
+    // Injectable so tests can supply a small deterministic story catalog instead
+    // of reading server/data/stories.json.
+    private readonly loadStoriesFn: () => Story[] = loadStories,
   ) {}
 
   /** Compute the auto-advance expiry for a phase, or null if it has no timer. */
@@ -661,39 +1056,96 @@ export class RoomStore {
 
 
 
+  /** Reset the per-round duo state and draw the round's PLANNED dilemma (the
+   * escalating classic plan, player submissions included — never the raw deck
+   * unless the plan somehow ran dry). */
+  private startDuoRound(room: Room, dilemmaIndex: number): void {
+    room.currentDilemma = room.plannedDilemmas[dilemmaIndex - 1] ?? room.deck?.draw() ?? null;
+    // Roster templates (5.3) read a fresh random name every reveal, duo included.
+    if (room.currentDilemma?.roster) {
+      const nicknames = [...room.players.values()].filter((p) => !p.isBot).map((p) => p.nickname);
+      room.currentDilemma = rosterDilemmas.resolveRosterDilemma(room.currentDilemma, nicknames, this.rng);
+    }
+    room.votes.clear();
+    room.votes1.clear();
+    room.confirmedVote2.clear();
+    room.duoPredictions.clear();
+    room.duoAssignedSides = new Map();
+    room.duoSpeakers = [];
+    room.duoTurnIndex = 0;
+    room.duoWaverRatings.clear();
+    room.duoAdvocacy = false;
+    room.duoRepickFlipped = false;
+    room.turnMinEndsAt = null;
+    room.turnStartedAt = null;
+  }
+
+  /** Arm one DUO_ARGUE speaking turn (count-up start + "Ho finito" floor). */
+  private armDuoTurn(room: Room): void {
+    room.turnStartedAt = this.now();
+    room.turnMinEndsAt = this.now() + DUO_TURN_MIN_MS;
+  }
+
   /**
-   * Advance the 1v1 duel state machine one step (the duello analogue of the group
-   * logic in advancePhase). DUEL_ARGUE runs one timed turn per player (mirror of
-   * DEFENSE); DUEL_REVEAL branches on whether the two picks agree; entering a new
-   * round (DUEL_PICK) draws a dilemma and clears the picks; DUEL_REPICK snapshots
-   * the first pick; DUEL_RESULT records the round's outcome.
+   * Advance the Percorso in 2 state machine one step (the duello analogue of the
+   * group logic in advancePhase). DUO_ARGUE runs one timed turn per planned
+   * speaker; entering it assigns the debate sides (inverted in Atto II, own
+   * sides or the devil's-advocate twist in Atto III); leaving DUO_REPICK
+   * computes the flip flag the pure transition branches on; every reveal/result
+   * entry folds the round into the score counters.
    */
-  private advanceDuelPhase(room: Room): AdvancePhaseResult {
-    if (room.phase === 'DUEL_ARGUE' && room.duelTurnIndex < duelPlayers(room).length - 1) {
-      room.duelTurnIndex++;
-      room.phaseExpiresAt = this.expiryFor('DUEL_ARGUE');
+  private advanceDuoPhase(room: Room): AdvancePhaseResult {
+    if (room.phase === 'DUO_ARGUE' && room.duoTurnIndex < room.duoSpeakers.length - 1) {
+      room.duoTurnIndex++;
+      room.phaseExpiresAt = this.expiryFor('DUO_ARGUE');
+      this.armDuoTurn(room);
       return { ok: true, room };
     }
-    const agreed = room.phase === 'DUEL_REVEAL' ? duelAgreed(room) : false;
-    const t = nextDuelPhase(room.phase, room.dilemmaIndex, room.dilemmaCount ?? 0, agreed);
+    if (room.phase === 'DUO_REPICK') {
+      room.duoRepickFlipped = computeRepickFlipped(room);
+    }
+    const t = nextDuoPhase(room.phase, room.dilemmaIndex, room.duoPlannedActs, {
+      advocacy: room.duoAdvocacy,
+      flipped: room.duoRepickFlipped,
+    });
+    const newRound = t.dilemmaIndex !== room.dilemmaIndex;
     room.phase = t.phase;
     room.dilemmaIndex = t.dilemmaIndex;
     room.phaseExpiresAt = this.expiryFor(t.phase);
-    if (t.phase === 'DUEL_PICK') {
-      room.currentDilemma = room.deck?.draw() ?? null;
-      room.votes.clear();
-      room.votes1.clear();
-      room.duelTurnIndex = 0;
+    if (newRound) this.startDuoRound(room, t.dilemmaIndex);
+    if (t.phase === 'DUO_SYNC_REVEAL') recordSyncRound(room);
+    if (t.phase === 'DUO_REVEAL') recordDuoReveal(room);
+    if (t.phase === 'DUO_ARGUE') {
+      // Arriving from DUO_SIDE_PICK (act 2) or DUO_REVEAL (act 3).
+      if (actForIndex(room.duoPlannedActs, room.dilemmaIndex) === 2) {
+        assignInvertedSides(room);
+      } else {
+        const [a, b] = duoPlayers(room);
+        const va = a ? room.votes.get(a.id) : undefined;
+        const vb = b ? room.votes.get(b.id) : undefined;
+        if (va != null && va === vb) {
+          assignAdvocate(room);
+        } else {
+          room.duoAssignedSides = new Map();
+          room.duoSpeakers = [a, b].filter((p): p is Player => p != null).map((p) => p.id);
+          room.duoTurnIndex = 0;
+          room.duoAdvocacy = false;
+        }
+      }
+      this.armDuoTurn(room);
     }
-    if (t.phase === 'DUEL_REPICK') {
+    if (t.phase === 'DUO_WAVER') {
+      room.duoWaverRatings.clear();
+      room.turnMinEndsAt = null;
+      room.turnStartedAt = null;
+    }
+    if (t.phase === 'DUO_REPICK') {
       room.votes1 = new Map(room.votes);
+      room.confirmedVote2 = new Set();
+      room.turnMinEndsAt = null;
+      room.turnStartedAt = null;
     }
-    if (t.phase === 'DUEL_RESULT') {
-      // Agreed path skips DUEL_REPICK, so votes1 was never snapshotted — take it
-      // now so recordDuelResult sees first==second (no flips) and counts the agree.
-      if (room.votes1.size === 0) room.votes1 = new Map(room.votes);
-      recordDuelResult(room);
-    }
+    if (t.phase === 'DUO_ROUND_RESULT') recordRoundOutcome(room);
     return { ok: true, room };
   }
 
@@ -703,63 +1155,117 @@ export class RoomStore {
     while (this.rooms.has(code)) {
       code = this.genCode();
     }
-    const room: Room = {
-      code,
-      createdAt: this.now(),
-      leaderId: null,
-      players: new Map(),
-      phase: 'LOBBY',
-      dilemmaCount: null,
-      register: null,
-      format: 'classic',
-      startTappa: null,
-      durata: null,
-      plannedDilemmas: [],
-      plannedTappe: [],
-      currentTappa: null,
-      tappaDilemmas: 0,
-      tappaSwings: 0,
-      dilemmaIndex: 0,
-      phaseExpiresAt: null,
-      deck: null,
-      currentDilemma: null,
-      submittedDilemmas: [],
-      dilemmaAuthors: new Map(),
-      submittedQueue: [],
-      devilRoundIndex: null,
-      knowRoundIndex: null,
-      knowTargets: new Map(),
-      knowGuesses: new Map(),
-      infiltratorId: null,
-      infiltratorFlips: 0,
-      accusations: new Map(),
-      infiltratoResult: null,
-      teams: new Map(),
-      votes: new Map(),
-      votes1: new Map(),
-      confirmedVote2: new Set(),
-      defenders: [],
-      defenseTurnIndex: 0,
-      defenseArgument: null,
-      raisedHands: [],
-      interventiQueue: [],
-      interventiIndex: 0,
-      turnMinEndsAt: null,
-      turnStartedAt: null,
-      stats: new Map(),
-      botSeq: 0,
-      mode: 'gruppo',
-      duelTurnIndex: 0,
-      duelScore: new Map(),
-      duelAgreements: 0,
-      lastReactionAt: new Map(),
-      predictions: new Map(),
-      swingBets: new Map(),
-      speakerVotes: new Map(),
-      defenseCounts: new Map(),
-    };
+    const room = emptyRoom(code, this.now());
     this.rooms.set(code, room);
     return room;
+  }
+
+  /**
+   * Return a finished room (FINAL_AWARDS/DUO_PORTRAIT) to LOBBY with the same
+   * code/leader/roster, remembering this game's dilemmas so the next
+   * startGame's deck excludes them. Resets every round-scoped field `create()`
+   * initializes except code/createdAt/leaderId/players (those must survive).
+   */
+  rematch(code: string): RematchResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.phase !== 'FINAL_AWARDS' && room.phase !== 'DUO_PORTRAIT') {
+      return { ok: false, error: 'NOT_FINISHED' };
+    }
+    for (const d of room.plannedDilemmas) room.excludeDilemmaIds.add(d.id);
+    // 5.2 "mai scartati in silenzio": a player-submitted dilemma that didn't
+    // make it into THIS game (the group wrote more than the round count)
+    // survives into the next one instead of being silently wiped — only the
+    // ones actually played are dropped.
+    const playedIds = new Set(room.plannedDilemmas.map((d) => d.id));
+    room.phase = 'LOBBY';
+    room.dilemmaCount = null;
+    room.register = null;
+    room.format = 'classic';
+    room.startTappa = null;
+    room.durata = null;
+    room.plannedDilemmas = [];
+    room.plannedTappe = [];
+    room.currentTappa = null;
+    room.tappaDilemmas = 0;
+    room.tappaSwings = 0;
+    room.story = null;
+    room.storyId = null;
+    room.plannedScenes = [];
+    room.plannedActs = [];
+    room.storyDecisions = [];
+    room.currentSceneNarration = null;
+    room.currentSceneConsequence = null;
+    room.currentDecision = null;
+    room.currentEpilogo = null;
+    room.currentAct = null;
+    room.dilemmaIndex = 0;
+    room.phaseExpiresAt = null;
+    room.deck = null;
+    room.currentDilemma = null;
+    room.submittedDilemmas = room.submittedDilemmas.filter((d) => !playedIds.has(d.id));
+    for (const id of playedIds) room.dilemmaAuthors.delete(id);
+    room.submittedQueue = [];
+    room.devilRoundIndex = null;
+    room.knowRoundIndex = null;
+    room.knowTargets = new Map();
+    room.knowGuesses = new Map();
+    room.groupMindQuestion = null;
+    room.usedGroupMindIds = new Set();
+    room.groupMindAnswers = new Map();
+    room.groupMindGuesses = new Map();
+    room.writePrompt = null;
+    room.usedWritePromptIds = new Set();
+    room.writeAnswers = new Map();
+    room.writeOrder = [];
+    room.writeVotes = new Map();
+    room.infiltratorId = null;
+    room.infiltratorFlips = 0;
+    room.infiltratoToolUsedThisRound = false;
+    room.infiltratoDecoySpunto = null;
+    room.infiltratoToolUses = 0;
+    room.namedMoments = [];
+    room.accusations = new Map();
+    room.infiltratoResult = null;
+    room.teams = new Map();
+    room.votes = new Map();
+    room.votes1 = new Map();
+    room.confirmedVote2 = new Set();
+    room.defenders = [];
+    room.absurdConstraint = null;
+    room.caos = 'assente';
+    room.twistRoundIndices = new Set();
+    room.currentTwist = null;
+    room.lateJoiners = new Set();
+    room.defenseTurnIndex = 0;
+    room.defenseArgument = null;
+    room.raisedHands = [];
+    room.interventiQueue = [];
+    room.interventiIndex = 0;
+    room.turnMinEndsAt = null;
+    room.turnStartedAt = null;
+    room.stats = new Map();
+    room.duoPlannedActs = [];
+    room.duoPredictions = new Map();
+    room.duoAssignedSides = new Map();
+    room.duoSpeakers = [];
+    room.duoTurnIndex = 0;
+    room.duoWaverRatings = new Map();
+    room.duoFairness = 0;
+    room.duoAdvocacy = false;
+    room.duoRepickFlipped = false;
+    room.duoScore = new Map();
+    room.duoTruePicks = 0;
+    room.duoFirstPickAgreements = 0;
+    room.duoMoments = [];
+    room.lastReactionAt = new Map();
+    room.turnReactionTally = {};
+    room.lastTurnApplause = null;
+    room.predictions = new Map();
+    room.swingBets = new Map();
+    room.speakerVotes = new Map();
+    room.defenseCounts = new Map();
+    return { ok: true, room };
   }
 
   /**
@@ -776,16 +1282,39 @@ export class RoomStore {
     infiltrato: boolean = false,
     squadre: boolean = false,
     percorso?: { startTappa: number; durata: string },
+    storia?: { storyId: string },
+    mood: string = 'mista',
+    delicatoOptIn: boolean = false,
+    serataLunga: boolean = false,
+    caos: string = 'assente',
+    /** 5.1: dilemma ids the leader's OWN device has already seen (across
+     * separate games, from localStorage) — merged with the room's own
+     * rematch exclusion. Ignored outside classic format. */
+    deviceSeenIds: string[] = [],
   ): StartGameResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
     if (room.phase !== 'LOBBY') return { ok: false, error: 'ALREADY_STARTED' };
+    // "Storia": a curated narrative tale. Like percorso it's a group experience
+    // whose content + length come from a plan validated up front; the surprise
+    // meta-games are disabled so the authored story stays coherent.
+    const useStoria = storia != null;
+    let chosenStory: Story | null = null;
+    let storiaPlan: { dilemmas: Dilemma[]; scenes: StoryScene[]; acts: number[] } | null = null;
     // "Percorso": the long themed ascent. Its dilemma count + content come from a
     // plan we build (and validate) up front, before mutating any room state. It is
     // a group experience, so it always runs in gruppo mode.
-    const usePercorso = percorso != null;
+    const usePercorso = percorso != null && !useStoria;
     let plan: { dilemmas: Dilemma[]; tappe: number[] } | null = null;
-    if (usePercorso) {
+    if (useStoria) {
+      mode = 'gruppo';
+      chosenStory = this.loadStoriesFn().find((s) => s.id === storia.storyId) ?? null;
+      if (!chosenStory || validateStory(chosenStory).length > 0) {
+        return { ok: false, error: 'INVALID_STORIA' };
+      }
+      storiaPlan = buildStoriaPlan(chosenStory);
+      if (storiaPlan.dilemmas.length === 0) return { ok: false, error: 'INVALID_STORIA' };
+    } else if (usePercorso && percorso) {
       mode = 'gruppo';
       if (
         !Number.isInteger(percorso.startTappa) ||
@@ -800,6 +1329,7 @@ export class RoomStore {
     } else {
       if (!isDilemmaCount(dilemmaCount)) return { ok: false, error: 'INVALID_DILEMMA_COUNT' };
       if (!isContentRegister(register)) return { ok: false, error: 'INVALID_REGISTER' };
+      if (!isMood(mood)) return { ok: false, error: 'INVALID_MOOD' };
     }
     if (!isGameMode(mode)) return { ok: false, error: 'INVALID_REGISTER' };
     const humans = [...room.players.values()].filter((p) => !p.isBot);
@@ -815,12 +1345,13 @@ export class RoomStore {
       if (humanCount < 1) return { ok: false, error: 'NO_HUMAN_PLAYERS' };
     }
     // "L'Infiltrato" needs gruppo + enough humans to hide among and to accuse.
-    const useInfiltrato = infiltrato && mode === 'gruppo';
+    // Disabled in storia: the surprise twists would derail the authored narrative.
+    const useInfiltrato = infiltrato && mode === 'gruppo' && !useStoria;
     if (useInfiltrato && humanCount < MIN_INFILTRATO_HUMANS) {
       return { ok: false, error: 'INFILTRATO_NEEDS_PLAYERS' };
     }
-    // "Squadre" needs gruppo + enough players for two teams.
-    const useSquadre = squadre && mode === 'gruppo';
+    // "Squadre" needs gruppo + enough players for two teams. Also off in storia.
+    const useSquadre = squadre && mode === 'gruppo' && !useStoria;
     if (useSquadre && room.players.size < MIN_SQUADRE_PLAYERS) {
       return { ok: false, error: 'SQUADRE_NEEDS_PLAYERS' };
     }
@@ -828,6 +1359,10 @@ export class RoomStore {
     // Assign a secret infiltrator (a random human) when enabled; reset the role state.
     room.infiltratorId = useInfiltrato ? humans[Math.floor(this.rng() * humans.length)].id : null;
     room.infiltratorFlips = 0;
+    room.infiltratoToolUsedThisRound = false;
+    room.infiltratoDecoySpunto = null;
+    room.infiltratoToolUses = 0;
+    room.namedMoments = [];
     room.accusations = new Map();
     room.infiltratoResult = null;
     // Split players into two teams (alternating by join order) when enabled.
@@ -839,6 +1374,7 @@ export class RoomStore {
     }
 
     room.mode = mode;
+    room.defenseMaxMs = serataLunga ? DEFENSE_MAX_MS_LUNGA : DEFENSE_MAX_MS_NORMALE;
     room.dilemmaIndex = 0;
     room.phase = 'PHASE_INTRO';
     room.phaseExpiresAt = this.expiryFor('PHASE_INTRO');
@@ -846,7 +1382,34 @@ export class RoomStore {
     room.currentTappa = null;
     room.tappaDilemmas = 0;
     room.tappaSwings = 0;
-    if (usePercorso && plan) {
+    // Reset storia runtime state up front (only the storia branch repopulates it).
+    room.story = null;
+    room.storyId = null;
+    room.plannedScenes = [];
+    room.plannedActs = [];
+    room.storyDecisions = [];
+    room.currentSceneNarration = null;
+    room.currentSceneConsequence = null;
+    room.currentDecision = null;
+    room.currentEpilogo = null;
+    room.currentAct = null;
+    if (useStoria && storiaPlan && chosenStory) {
+      // Storia: the authored narrative drives everything; the bivi are the plan,
+      // the parallel scenes carry the prose, no register/deck/submitted dilemmas.
+      room.format = 'storia';
+      room.story = chosenStory;
+      room.storyId = chosenStory.id;
+      room.plannedDilemmas = storiaPlan.dilemmas;
+      room.plannedScenes = storiaPlan.scenes;
+      room.plannedActs = storiaPlan.acts;
+      room.dilemmaCount = storiaPlan.dilemmas.length;
+      room.register = null;
+      room.deck = null;
+      room.submittedQueue = [];
+      room.startTappa = null;
+      room.durata = null;
+      room.plannedTappe = [];
+    } else if (usePercorso && plan && percorso) {
       // Percorso: the precomputed ascent drives everything; no register/deck and
       // (for now) no player-submitted dilemmas — the climb is the curated content.
       room.format = 'percorso';
@@ -867,23 +1430,107 @@ export class RoomStore {
       // Validated above in this same (classic) branch via isContentRegister.
       room.register = register as ContentRegister;
       room.deck = this.makeDeck(register as ContentRegister);
+      // A rematch remembers the just-finished game's dilemmas so they don't
+      // repeat here; consumed once (cleared immediately) so a THIRD game
+      // doesn't keep excluding a game from two rematches ago. Merged with the
+      // leader's own device memory (5.1, "già-visto") — dilemmas their phone
+      // has seen across separate games, so a recurring group avoids déjà-vu
+      // even without a rematch.
+      const excludeIds = new Set([...room.excludeDilemmaIds, ...deviceSeenIds]);
+      room.excludeDilemmaIds = new Set();
+      // Mood (2.2) narrows the pool by complexity tier; the delicate-theme
+      // opt-in additionally excludes flagged 'power' dilemmas unless the
+      // leader explicitly asked for them. Validated above via isMood.
+      const cards = room.deck.cards;
+      const moodEligible = filterByMood(cards, mood as Mood, delicatoOptIn);
+      // Roster templates (5.3) read differently every time (a fresh random
+      // name), so "già visto" exclusion never applies to them — they're
+      // exempt from ever being filtered out here.
+      const fresh = moodEligible.filter((d) => d.roster || !excludeIds.has(d.id));
+      // Never let exclusion empty the pool outright (a huge device history) —
+      // a shorter or repeated game beats a broken one.
+      const eligible = fresh.length > 0 ? fresh : moodEligible;
+      // Only rebuild when something was actually excluded — an unfiltered
+      // rebuild would replace the deck's own injected rng with the default
+      // Math.random, silently breaking draw-order determinism in tests.
+      if (eligible.length < cards.length) room.deck = new Deck(eligible);
       // Precompute the ordered sequence: submitted dilemmas first, then the deck,
       // finally escalating by complexity (alto → max → power) over the game.
-      room.plannedDilemmas = dilemmaPlan.buildClassicPlan(room.deck, room.submittedDilemmas, dilemmaCount, this.rng);
-      room.dilemmaCount = room.plannedDilemmas.length || dilemmaCount;
+      // The duello plays MORE dilemmas than the leader's 3/5/7 wire value: the
+      // three duo acts expand it (4/7/10) — escalation then lands the spiciest
+      // dilemmas in Atto III for free.
+      const targetCount =
+        mode === 'duello'
+          ? buildDuoActPlan(dilemmaCount).reduce((a, b) => a + b, 0)
+          : dilemmaCount;
+      room.plannedDilemmas = dilemmaPlan.buildClassicPlan(room.deck, room.submittedDilemmas, targetCount, this.rng);
+      room.dilemmaCount = room.plannedDilemmas.length || targetCount;
       room.submittedQueue = []; // baked into plannedDilemmas
     }
-    // Pick the surprise "Avvocato del Diavolo" round up front (group mode only).
+    // Percorso in 2: expand the act plan alongside the planned dilemmas,
+    // trimmed when the deck could not fill the duo total.
+    if (mode === 'duello') {
+      let acts = expandActs(buildDuoActPlan(dilemmaCount));
+      if (room.plannedDilemmas.length > 0 && room.plannedDilemmas.length < acts.length) {
+        acts = acts.slice(0, room.plannedDilemmas.length);
+      }
+      room.duoPlannedActs = acts;
+      room.dilemmaCount = acts.length;
+    } else {
+      room.duoPlannedActs = [];
+    }
+    // Pick the surprise "Avvocato del Diavolo" round up front (group mode only;
+    // never in storia, where the curated narrative must stay intact).
     const totalRounds = room.dilemmaCount ?? 0;
-    room.devilRoundIndex = mode === 'gruppo' ? devilAdvocate.pickDevilRound(totalRounds, this.rng) : null;
+    const allowTwists = mode === 'gruppo' && !useStoria;
+    room.devilRoundIndex = allowTwists ? devilAdvocate.pickDevilRound(totalRounds) : null;
     // …and (longer games only) a "Quanto mi conosci" round, distinct from the devil one.
-    room.knowRoundIndex = mode === 'gruppo' ? knowRound.pickKnowRound(totalRounds, room.devilRoundIndex, this.rng) : null;
+    room.knowRoundIndex = allowTwists ? knowRound.pickKnowRound(totalRounds, room.devilRoundIndex, this.rng) : null;
+    // …and, per the leader's "caos" dial (4.3), a subset of rounds that draw a
+    // surprise mechanical twist at DEFENSE (difesa lampo, niente interventi, …).
+    room.caos = twists.isCaos(caos) ? caos : 'assente';
+    room.twistRoundIndices = allowTwists ? twists.planTwistRounds(totalRounds, room.caos, this.rng) : new Set();
+    room.currentTwist = null;
     room.stats = new Map();
     room.defenseCounts = new Map();
-    room.duelScore = new Map();
-    room.duelAgreements = 0;
-    room.duelTurnIndex = 0;
+    room.duoPredictions = new Map();
+    room.duoAssignedSides = new Map();
+    room.duoSpeakers = [];
+    room.duoTurnIndex = 0;
+    room.duoWaverRatings = new Map();
+    room.duoFairness = 0;
+    room.duoAdvocacy = false;
+    room.duoRepickFlipped = false;
+    room.duoScore = new Map();
+    room.duoTruePicks = 0;
+    room.duoFirstPickAgreements = 0;
+    room.duoMoments = [];
     return { ok: true, room };
+  }
+
+  /**
+   * The leader's "Scarta dilemma": discard the current dilemma while it can
+   * still be discarded — DILEMMA_REVEAL or an open VOTE_1 (once the split is
+   * revealed the round is committed). Classic format only (percorso/storia
+   * have no deck to redraw from; the duel runs its own machine). Reuses the
+   * UNANIMOUS_REVEAL exit of advancePhase — the room is put in that phase
+   * synthetically (never broadcast) so the replace-or-advance side effects
+   * live in exactly one place.
+   */
+  skipDilemma(code: string): SkipDilemmaResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.format !== 'classic' || room.mode === 'duello') {
+      return { ok: false, error: 'NOT_CLASSIC' };
+    }
+    if (room.phase !== 'DILEMMA_REVEAL' && room.phase !== 'VOTE_1') {
+      return { ok: false, error: 'NOT_SKIPPABLE_PHASE' };
+    }
+    room.phase = 'UNANIMOUS_REVEAL';
+    const advanced = this.advancePhase(code);
+    // Can't actually fail (the synthetic phase is never LOBBY/FINAL_*); the
+    // fallback only narrows the error union for the caller.
+    return advanced.ok ? advanced : { ok: false, error: 'NOT_SKIPPABLE_PHASE' };
   }
 
   /**
@@ -895,12 +1542,16 @@ export class RoomStore {
   advancePhase(code: string): AdvancePhaseResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase === 'LOBBY' || room.phase === 'FINAL_AWARDS' || room.phase === 'FINAL_DUEL') {
+    if (
+      room.phase === 'LOBBY' ||
+      room.phase === 'FINAL_AWARDS' ||
+      room.phase === 'DUO_PORTRAIT'
+    ) {
       return { ok: false, error: 'NO_NEXT_PHASE' };
     }
 
-    // The 1v1 duel runs its own state machine, separate from the group sequence.
-    if (room.mode === 'duello') return this.advanceDuelPhase(room);
+    // The Percorso in 2 runs its own state machine, separate from the group sequence.
+    if (room.mode === 'duello') return this.advanceDuoPhase(room);
 
     // "L'Infiltrato": the end-game accusation leads into FINAL_AWARDS, resolving
     // whether the infiltrator was caught and whether they won.
@@ -913,12 +1564,18 @@ export class RoomStore {
 
     // A finished INTERVENTI mini-turn: walk the frozen queue, then resume the
     // defenders (next defender or fall through to VOTE_2). Per-defender interventi.
+    let applauseSnapshotted = false;
     if (room.phase === 'INTERVENTI') {
       if (room.interventiIndex < room.interventiQueue.length - 1) {
+        defenseTurns.snapshotApplause(room);
         room.interventiIndex++;
         defenseSetup.armTurn(room, this.now());
         return { ok: true, room };
       }
+      // Snapshot the last intervenor's applause BEFORE clearing the queue —
+      // currentSpeakerId reads it to know who was just speaking.
+      defenseTurns.snapshotApplause(room);
+      applauseSnapshotted = true;
       room.interventiQueue = [];
       room.interventiIndex = 0;
       if (room.defenseTurnIndex < room.defenders.length - 1) {
@@ -937,6 +1594,7 @@ export class RoomStore {
     // interventi first; else advance to the next defender; else fall through to
     // VOTE_2 via the normal transition below.
     if (room.phase === 'DEFENSE' && room.raisedHands.length > 0) {
+      defenseTurns.snapshotApplause(room);
       room.phase = 'INTERVENTI';
       room.interventiQueue = [...room.raisedHands];
       room.interventiIndex = 0;
@@ -945,20 +1603,82 @@ export class RoomStore {
       return { ok: true, room };
     }
     if (room.phase === 'DEFENSE' && room.defenseTurnIndex < room.defenders.length - 1) {
+      defenseTurns.snapshotApplause(room);
       room.defenseTurnIndex++;
       room.raisedHands = [];
       room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
       defenseSetup.armTurn(room, this.now());
       return { ok: true, room };
     }
+    // The last defender's turn ended with no raised hands (falls through to
+    // VOTE_2 below) — snapshot it, unless the INTERVENTI branch above already
+    // did (that snapshot belongs to the last intervenor, not this defender).
+    if (room.phase === 'DEFENSE' && !applauseSnapshotted) {
+      defenseTurns.snapshotApplause(room);
+    }
 
     // Percorso threads the same per-dilemma sequence through chapter cards/recaps;
-    // classic uses the flat loop. Both share the detours below.
-    const step = (phase: GamePhase, idx: number) =>
-      room.format === 'percorso'
+    // storia wraps each bivio in narrative cards; classic uses the flat loop, with
+    // an all-active breather round detouring in every 2nd dilemma (4.1/4.2) —
+    // alternating "La Mente del Gruppo" and "In Altre Parole" so the SAME
+    // checkpoint cadence doesn't double the number of inserted rounds. Handled
+    // here (not inside the pure nextPhase) so its existing unit tests stay
+    // untouched, mirroring how ACCUSE is inserted below rather than in the
+    // pure sequence functions.
+    const step = (phase: GamePhase, idx: number): PhaseTransition => {
+      if (room.format === 'classic') {
+        if (phase === 'PHASE_RESULTS' && groupMind.isGroupMindCheckpoint(idx, room.dilemmaCount ?? 0)) {
+          // Checkpoints land at idx=2,4,6,…; occurrence = idx/2 = 1,2,3,…
+          // Odd occurrences -> La Mente del Gruppo, even -> In Altre Parole.
+          const occurrence = idx / 2;
+          return occurrence % 2 === 1
+            ? { phase: 'GROUP_MIND', dilemmaIndex: idx }
+            : { phase: 'WRITE', dilemmaIndex: idx };
+        }
+        if (phase === 'GROUP_MIND') return { phase: 'GROUP_MIND_REVEAL', dilemmaIndex: idx };
+        if (phase === 'GROUP_MIND_REVEAL') return nextPhase('PHASE_RESULTS', idx, room.dilemmaCount ?? 0);
+        if (phase === 'WRITE') return { phase: 'WRITE_VOTE', dilemmaIndex: idx };
+        if (phase === 'WRITE_VOTE') return { phase: 'WRITE_REVEAL', dilemmaIndex: idx };
+        if (phase === 'WRITE_REVEAL') return nextPhase('PHASE_RESULTS', idx, room.dilemmaCount ?? 0);
+      }
+      return room.format === 'percorso'
         ? nextPercorsoPhase(phase, idx, room.plannedTappe)
-        : nextPhase(phase, idx, room.dilemmaCount ?? 0);
-    let transition = step(room.phase, room.dilemmaIndex);
+        : room.format === 'storia'
+          ? nextStoriaPhase(phase, idx, room.dilemmaCount ?? 0)
+          : nextPhase(phase, idx, room.dilemmaCount ?? 0);
+    };
+    // Backfill anyone still missing a PREDICT/GROUP_MIND action so a forced
+    // advance (soft-timeout or leader skip) doesn't just silently drop their
+    // result. A no-op once everyone has already acted (the normal early-advance path).
+    if (room.phase === 'PREDICT') predictions.applyPredictDefaults(room);
+    if (room.phase === 'GROUP_MIND') groupMind.applyGroupMindDefaults(room);
+    if (room.phase === 'WRITE') writeRound.applyWriteDefaults(room);
+    let transition: PhaseTransition;
+    if (room.phase === 'UNANIMOUS_REVEAL') {
+      // The shared "discard the current dilemma" exit (unanimous skip AND the
+      // leader's Scarta): replay the round with a fresh card at the same index,
+      // or — deck exhausted — advance as if its PHASE_RESULTS just ended (which
+      // keeps the GROUP_MIND/WRITE checkpoints and the ACCUSE detour below).
+      transition = dilemmaPlan.replaceCurrentDilemma(room)
+        ? { phase: 'DILEMMA_REVEAL', dilemmaIndex: room.dilemmaIndex }
+        : step('PHASE_RESULTS', room.dilemmaIndex);
+    } else {
+      transition = step(room.phase, room.dilemmaIndex);
+      // A 100% unanimous first vote (classic only, ≥2 actual votes, EVERYONE
+      // present having voted — a force-advance on a partial VOTE_1 must never
+      // read "only the votes in so far agree" as the whole group agreeing):
+      // nothing to debate — celebrate for a beat instead of playing out an
+      // empty round.
+      if (
+        room.phase === 'VOTE_1' &&
+        transition.phase === 'SPLIT_REVEAL' &&
+        room.format === 'classic' &&
+        voting.allVoted(room) &&
+        voting.unanimousSide(tally(room.votes)) !== null
+      ) {
+        transition = { phase: 'UNANIMOUS_REVEAL', dilemmaIndex: room.dilemmaIndex };
+      }
+    }
     // The peer "best speaker" vote needs at least two defenders to choose between;
     // with 0 or 1 it's degenerate, so skip straight to the results.
     if (transition.phase === 'SPEAKER_VOTE' && room.defenders.length < 2) {
@@ -971,6 +1691,9 @@ export class RoomStore {
     room.phase = transition.phase;
     room.dilemmaIndex = transition.dilemmaIndex;
     room.phaseExpiresAt = this.expiryFor(transition.phase);
+    // A new round starting is the round boundary (3.2): promote anyone who
+    // late-joined last round, cap permitting.
+    if (transition.phase === 'DILEMMA_REVEAL') promoteLateJoiners(room);
     // Percorso: entering a chapter card sets the upcoming tappa (the dilemma the
     // card precedes is dilemmaIndex+1) and resets the per-tappa recap counters.
     if (transition.phase === 'TAPPA_INTRO') {
@@ -982,6 +1705,33 @@ export class RoomStore {
     if (transition.phase === 'TAPPA_RECAP') {
       room.currentTappa = (room.plannedTappe[transition.dilemmaIndex - 1] ?? room.currentTappa) as Tappa | null;
     }
+    // Storia: entering a scene card sets the narration + current act (the scene
+    // is the one whose bivio is about to be revealed: dilemmaIndex is 0-based here).
+    if (transition.phase === 'SCENE_INTRO') {
+      room.currentSceneNarration = room.plannedScenes[transition.dilemmaIndex]?.narration ?? null;
+      room.currentAct = room.plannedActs[transition.dilemmaIndex] ?? null;
+      room.currentSceneConsequence = null;
+      room.currentDecision = null;
+    }
+    // Storia: the consequence card resolves the group's decision for the just-
+    // closed bivio from the second-vote majority (tie → first-vote lead → A) and
+    // shows the matching branch text. Aggregate only — no individual vote leaks.
+    if (transition.phase === 'SCENE_CONSEQUENCE') {
+      const scene = room.plannedScenes[transition.dilemmaIndex - 1];
+      const decision = decisionForRound(tally(room.votes), tally(room.votes1));
+      room.currentDecision = decision;
+      room.currentSceneConsequence = scene
+        ? decision === 'A'
+          ? scene.consequenceA
+          : scene.consequenceB
+        : null;
+      room.storyDecisions.push(decision);
+    }
+    // Storia: the epilogue is the variant ending keyed on how many bivi the group
+    // resolved toward A across the whole tale.
+    if (transition.phase === 'STORY_EPILOGUE' && room.story) {
+      room.currentEpilogo = pickEpilogo(room.story.epiloghi, countDecisionsA(room.storyDecisions));
+    }
     // Entering a new dilemma reveal draws the next (non-repeating) dilemma and
     // resets the round's secret votes so each dilemma starts from a clean tally.
     if (transition.phase === 'DILEMMA_REVEAL') {
@@ -989,6 +1739,9 @@ export class RoomStore {
         // The ascent is precomputed: walk it by index, and track the live tappa.
         room.currentDilemma = room.plannedDilemmas[transition.dilemmaIndex - 1] ?? null;
         room.currentTappa = (room.plannedTappe[transition.dilemmaIndex - 1] ?? null) as Tappa | null;
+      } else if (room.format === 'storia') {
+        // The tale is precomputed: walk the bivi by index (no deck / tappa).
+        room.currentDilemma = room.plannedDilemmas[transition.dilemmaIndex - 1] ?? null;
       } else {
         // Classic: walk the precomputed complexity-escalating plan; fall back to
         // the deck only if (for any reason) the plan is empty.
@@ -997,6 +1750,12 @@ export class RoomStore {
           room.submittedQueue.shift() ??
           room.deck?.draw() ??
           null;
+      }
+      // "Contenuto combinatorio sul roster" (5.3): a template dilemma gets a
+      // fresh random player's name every time it's revealed.
+      if (room.currentDilemma?.roster) {
+        const nicknames = [...room.players.values()].filter((p) => !p.isBot).map((p) => p.nickname);
+        room.currentDilemma = rosterDilemmas.resolveRosterDilemma(room.currentDilemma, nicknames, this.rng);
       }
       room.votes.clear();
       room.votes1.clear();
@@ -1010,15 +1769,49 @@ export class RoomStore {
       room.interventiQueue = [];
       room.interventiIndex = 0;
       room.turnMinEndsAt = null;
+      room.groupMindQuestion = null;
+      room.writePrompt = null;
+      room.currentTwist = null;
+      room.infiltratoToolUsedThisRound = false;
+      room.infiltratoDecoySpunto = null;
     }
     // Entering PREDICT in the "Quanto mi conosci" round assigns the guessing ring.
     if (transition.phase === 'PREDICT' && knowRound.isKnowRound(room)) {
       knowRound.assignKnowTargets(room);
     }
+    // Entering GROUP_MIND (4.1): draw a fresh question, reset this round's
+    // answers/guesses, and have bots answer immediately so they never block it.
+    if (transition.phase === 'GROUP_MIND') {
+      room.groupMindQuestion = groupMind.pickGroupMindQuestion(room.usedGroupMindIds, this.rng);
+      if (room.groupMindQuestion) room.usedGroupMindIds.add(room.groupMindQuestion.id);
+      room.groupMindAnswers = new Map();
+      room.groupMindGuesses = new Map();
+      groupMind.castBotGroupMind(room, this.rng);
+    }
+    // Entering WRITE (4.2): draw a fresh prompt, reset this round's answers,
+    // and have bots write immediately so they never block it.
+    if (transition.phase === 'WRITE') {
+      room.writePrompt = writeRound.pickWritePrompt(room.usedWritePromptIds, this.rng);
+      if (room.writePrompt) room.usedWritePromptIds.add(room.writePrompt.id);
+      room.writeAnswers = new Map();
+      room.writeOrder = [];
+      room.writeVotes = new Map();
+      writeRound.castBotWrite(room, this.rng);
+    }
+    // Entering WRITE_VOTE: freeze the anonymized shuffled order, then bots vote.
+    if (transition.phase === 'WRITE_VOTE') {
+      writeRound.freezeWriteOrder(room, this.rng);
+      room.writeVotes = new Map();
+      writeRound.castBotWriteVote(room, this.rng);
+    }
     // Entering DEFENSE picks the defenders from this round's votes and starts at
-    // the first turn (the per-turn timer was set by expiryFor above).
+    // the first turn (the per-turn timer was set by expiryFor above). The
+    // surprise twist (4.3), if this round was planned for one, is drawn first —
+    // selectDefenders/armTurn below both read room.currentTwist.
     if (transition.phase === 'DEFENSE') {
+      room.currentTwist = twists.isTwistRound(room) ? twists.pickTwist(this.rng) : null;
       room.defenders = defenseSetup.selectDefenders(room, this.rng);
+      room.absurdConstraint = absurdConstraints.pickAbsurdConstraint(this.rng);
       room.defenseTurnIndex = 0;
       room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
       room.raisedHands = [];
@@ -1056,6 +1849,83 @@ export class RoomStore {
   }
 
   /**
+   * Arm a one-time soft deadline for a self-paced voting phase (VOTE_1/
+   * VOTE_2/PREDICT/SPEAKER_VOTE) once ~70% of the players it's waiting on
+   * have acted, so one distracted holdout can't freeze it forever — the
+   * existing schedulePhase/advanceAndBroadcast timer machinery (index.ts)
+   * then forces it through exactly like any timed phase. No-ops if the phase
+   * already has a deadline (a real timer, or an already-armed soft one),
+   * isn't one of these four, or nobody is actually missing.
+   */
+  maybeArmSoftTimeout(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room || room.phaseExpiresAt != null) return false;
+    let total = 0;
+    let acted = 0;
+    // Every branch excludes a THIS-round late-joiner (3.2), mirroring each
+    // phase's own real completion gate (allVoted/allPredicted/allSwingBet,
+    // speakerVote/groupMind/writeRound's presentXxx helpers) — they may not
+    // have even seen the prompt yet, so their absence must never count
+    // against the 70% threshold.
+    if (room.phase === 'VOTE_1' || room.phase === 'VOTE_2') {
+      const present = [...room.players.values()].filter(
+        (p) => p.connected !== false && !room.lateJoiners.has(p.id),
+      );
+      total = present.length;
+      acted =
+        room.phase === 'VOTE_2'
+          ? present.filter((p) => room.confirmedVote2.has(p.id)).length
+          : present.filter((p) => room.votes.has(p.id)).length;
+    } else if (room.phase === 'PREDICT') {
+      const humans = [...room.players.values()].filter(
+        (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+      );
+      const know = knowRound.isKnowRound(room);
+      total = humans.length;
+      acted = humans.filter(
+        (p) =>
+          room.predictions.has(p.id) &&
+          room.swingBets.has(p.id) &&
+          (!know || !room.knowTargets.has(p.id) || room.knowGuesses.has(p.id)),
+      ).length;
+    } else if (room.phase === 'SPEAKER_VOTE') {
+      const humans = [...room.players.values()].filter(
+        (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+      );
+      total = humans.length;
+      acted = humans.filter((p) => room.speakerVotes.has(p.id)).length;
+    } else if (room.phase === 'GROUP_MIND') {
+      const humans = [...room.players.values()].filter(
+        (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+      );
+      total = humans.length;
+      acted = humans.filter((p) => room.groupMindAnswers.has(p.id) && room.groupMindGuesses.has(p.id)).length;
+    } else if (room.phase === 'WRITE') {
+      const humans = [...room.players.values()].filter(
+        (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+      );
+      total = humans.length;
+      acted = humans.filter((p) => room.writeAnswers.has(p.id)).length;
+    } else if (room.phase === 'WRITE_VOTE') {
+      const humans = [...room.players.values()].filter(
+        (p) =>
+          !p.isBot &&
+          p.connected !== false &&
+          !room.lateJoiners.has(p.id) &&
+          room.writeOrder.filter((id) => id !== p.id).length > 0,
+      );
+      total = humans.length;
+      acted = humans.filter((p) => room.writeVotes.has(p.id)).length;
+    } else {
+      return false;
+    }
+    if (total === 0 || acted === total) return false;
+    if (acted / total < SOFT_TIMEOUT_THRESHOLD) return false;
+    room.phaseExpiresAt = this.now() + SOFT_TIMEOUT_MS;
+    return true;
+  }
+
+  /**
    * Record (or change) a player's secret vote for the current dilemma. The vote
    * is overwritable until the phase ends, so re-voting just replaces the choice.
    * Votes never leave the server individually — only aggregate counts do.
@@ -1066,9 +1936,9 @@ export class RoomStore {
     return voting.vote(room, playerId, choice);
   }
 
-  /** The id of the player currently speaking (defender in DEFENSE, arguer in DUEL_ARGUE), or null. */
+  /** The id of the player currently speaking (defender in DEFENSE, arguer in DUO_ARGUE), or null. */
   /**
-   * Record a live audience reaction from a phone during DEFENSE / DUEL_ARGUE. The
+   * Record a live audience reaction from a phone during DEFENSE / DUO_ARGUE. The
    * reaction is attributed to whoever is currently speaking (the defender/arguer),
    * accumulating their `reactionsReceived` for the end-game "Beniamino" award.
    * Rate-limited per player (anti-spam) and restricted to the emoji allowlist.
@@ -1157,12 +2027,120 @@ export class RoomStore {
   }
 
   /**
+   * How many connected humans have finished PREDICT (prediction + swing bet +,
+   * in the know round, their guess) and who's still missing something, by
+   * nickname only. Null outside PREDICT.
+   */
+  predictProgress(code: string): { done: number; total: number; missingNicknames: string[] } | null {
+    const room = this.rooms.get(code);
+    return room ? predictions.predictProgress(room) : null;
+  }
+
+  /** Single source of truth for "has everyone finished PREDICT?" (ends it early). */
+  predictPhaseComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? predictions.predictPhaseComplete(room) : false;
+  }
+
+  /**
    * Each bettor's own swing-bet outcome for the just-finished round, for the
    * private `player:swingBetResult` emit at PHASE_RESULTS.
    */
   swingBetResults(code: string): SwingBetOutcome[] {
     const room = this.rooms.get(code);
     return room ? predictions.swingBetResults(room) : [];
+  }
+
+  /**
+   * Record (or change) a player's own answer + majority prediction during
+   * GROUP_MIND ("La Mente del Gruppo", 4.1), in one combined submission.
+   */
+  groupMindSubmit(code: string, playerId: string, answer: string, guess: string): groupMind.GroupMindSubmitResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    return groupMind.submitGroupMind(room, playerId, answer, guess);
+  }
+
+  /** Single source of truth for "has everyone finished GROUP_MIND?" (ends it early). */
+  groupMindPhaseComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? groupMind.groupMindPhaseComplete(room) : false;
+  }
+
+  /** How many connected humans have finished GROUP_MIND and who's still missing it, by nickname. Null outside GROUP_MIND. */
+  groupMindProgress(code: string): { done: number; total: number; missingNicknames: string[] } | null {
+    const room = this.rooms.get(code);
+    return room ? groupMind.groupMindProgress(room) : null;
+  }
+
+  /** The aggregate A/B split + correct-guesser count, gated to GROUP_MIND_REVEAL (null otherwise). */
+  publicGroupMindTally(code: string): { A: number; B: number; correctGuessers: number } | null {
+    const room = this.rooms.get(code);
+    return room ? groupMind.publicGroupMindTally(room) : null;
+  }
+
+  /** Each guesser's own outcome for the just-finished group-mind round, for the private `player:groupMindResult` emit. */
+  groupMindResults(code: string): GroupMindOutcome[] {
+    const room = this.rooms.get(code);
+    return room ? groupMind.groupMindResults(room) : [];
+  }
+
+  /** Record (or change) a player's own written answer during WRITE ("In Altre Parole", 4.2). */
+  submitWrite(code: string, playerId: string, text: string): writeRound.WriteSubmitResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    return writeRound.submitWrite(room, playerId, text);
+  }
+
+  /** Single source of truth for "has everyone finished WRITE?" (ends it early). */
+  writePhaseComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? writeRound.writePhaseComplete(room) : false;
+  }
+
+  /** How many connected humans have written and who's still missing it, by nickname. Null outside WRITE. */
+  writeProgress(code: string): { done: number; total: number; missingNicknames: string[] } | null {
+    const room = this.rooms.get(code);
+    return room ? writeRound.writeProgress(room) : null;
+  }
+
+  /** The anonymized answer list (same for everyone), gated to WRITE_VOTE. */
+  publicWrittenAnswers(code: string): PublicWrittenAnswer[] | null {
+    const room = this.rooms.get(code);
+    return room ? writeRound.publicWrittenAnswers(room) : null;
+  }
+
+  /** This player's own answer's opaque token this round, so the client can
+   * filter its own entry out of the vote list without comparing real ids. */
+  myWrittenAnswerToken(code: string, playerId: string): string | null {
+    const room = this.rooms.get(code);
+    return room ? writeRound.myWrittenAnswerToken(room, playerId) : null;
+  }
+
+  /** Record (or change) a player's secret vote for their favorite OTHER answer
+   * during WRITE_VOTE. `votedForToken` is the opaque token from publicWrittenAnswers. */
+  writeVote(code: string, voterId: string, votedForToken: string): writeRound.WriteVoteResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    return writeRound.writeVote(room, voterId, votedForToken);
+  }
+
+  /** Single source of truth for "has everyone finished WRITE_VOTE?" (ends it early). */
+  writeVotePhaseComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? writeRound.writeVotePhaseComplete(room) : false;
+  }
+
+  /** How many connected humans have voted and who's still missing it, by nickname. Null outside WRITE_VOTE. */
+  writeVoteProgress(code: string): { done: number; total: number; missingNicknames: string[] } | null {
+    const room = this.rooms.get(code);
+    return room ? writeRound.writeVoteProgress(room) : null;
+  }
+
+  /** Each answer with its author + vote count, gated to WRITE_REVEAL. */
+  writeRevealResults(code: string): WriteRevealAnswer[] | null {
+    const room = this.rooms.get(code);
+    return room ? writeRound.writeRevealResults(room) : null;
   }
 
   /** A fresh shuffled copy of `arr` using the injectable rng (Fisher–Yates). */
@@ -1262,6 +2240,26 @@ export class RoomStore {
   }
 
   /**
+   * "I momenti della serata" (5.5): every named moment detected across the
+   * game, only at FINAL_AWARDS (shown before the awards); null otherwise.
+   */
+  publicNamedMoments(code: string): NamedMoment[] | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'FINAL_AWARDS') return null;
+    return room.namedMoments;
+  }
+
+  /**
+   * The infiltrator seeds a decoy spunto into the current speaker's
+   * suggestions (4.5), once per round, only while someone is speaking.
+   */
+  useInfiltratoTool(code: string, playerId: string): infiltrato.InfiltratoToolResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    return infiltrato.useInfiltratoTool(room, playerId, this.rng, defenseTurns.currentSpeakerId(room));
+  }
+
+  /**
    * Public "Squadre" state: each player's team + the running team scores (sum of
    * members' persuasion). null when teams are off. Teams are public by design.
    */
@@ -1340,6 +2338,36 @@ export class RoomStore {
     return room ? voting.publicSplit(room) : null;
   }
 
+  /** The unanimous side + count during UNANIMOUS_REVEAL; otherwise null. */
+  publicUnanimous(code: string): { side: VoteChoice; count: number } | null {
+    const room = this.rooms.get(code);
+    return room ? voting.publicUnanimous(room) : null;
+  }
+
+  /** The nickname of whoever wrote the current dilemma, revealed only at
+   * PHASE_RESULTS; null otherwise, or if it was a deck (non-authored) dilemma. */
+  currentDilemmaAuthor(code: string): string | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'PHASE_RESULTS' || !room.currentDilemma) return null;
+    const authorId = room.dilemmaAuthors.get(room.currentDilemma.id);
+    if (!authorId) return null;
+    return room.players.get(authorId)?.nickname ?? null;
+  }
+
+  /** The just-finished speaker's applause tally ("applausometro"); null before
+   * any turn has ended this round, or if it drew no reactions. Ungated by
+   * phase — still worth showing into the very start of the next turn. */
+  lastTurnApplause(code: string): Room['lastTurnApplause'] {
+    return this.rooms.get(code)?.lastTurnApplause ?? null;
+  }
+
+  /** Nicknames of connected players still missing their vote/confirmation
+   * this voting phase; null outside one. Never reveals which choice. */
+  missingVoters(code: string): string[] | null {
+    const room = this.rooms.get(code);
+    return room ? voting.missingVoters(room) : null;
+  }
+
   /**
    * The secret-safe percorso view for the host/phones: the chosen start + duration,
    * the live tappa, overall progress, and per-tappa totals/done — plus the current
@@ -1373,6 +2401,34 @@ export class RoomStore {
   }
 
   /**
+   * The secret-safe storia view for the host/phones: the protagonist + setting,
+   * the current scene's narration/act, the resolved consequence + decision, and
+   * the epilogue — all public prose plus the already-public aggregate decision.
+   * Never any individual vote. null when the room isn't a storia.
+   */
+  publicStoria(code: string): StoriaView | null {
+    const room = this.rooms.get(code);
+    if (!room || room.format !== 'storia' || !room.story) return null;
+    const actIdx = room.currentAct;
+    const actTitle = actIdx != null ? (room.story.acts[actIdx]?.title ?? null) : null;
+    return {
+      storyId: room.story.id,
+      title: room.story.title,
+      protagonist: room.story.protagonist,
+      emoji: room.story.emoji,
+      premessa: room.story.premessa,
+      actTitle,
+      sceneNarration: room.currentSceneNarration,
+      sceneIndex: room.dilemmaIndex,
+      totalScenes: room.dilemmaCount ?? room.plannedDilemmas.length,
+      decision: room.currentDecision,
+      consequence: room.currentSceneConsequence,
+      epilogo: room.currentEpilogo,
+      decisionsA: countDecisionsA(room.storyDecisions),
+    };
+  }
+
+  /**
    * Whether the round in play is the surprise "Avvocato del Diavolo" round, but
    * revealed only once defenses begin (DEFENSE → PHASE_RESULTS) so it can't skew
    * the first vote or the prediction. false everywhere else.
@@ -1380,6 +2436,27 @@ export class RoomStore {
   publicDevilRound(code: string): boolean {
     const room = this.rooms.get(code);
     return room ? devilAdvocate.publicDevilRound(room) : false;
+  }
+
+  /** Whether the round in play is the game's FINAL round, where the swing bet
+   * pays double (6.2, "posta doppia") — not a secret twist, so always visible. */
+  publicFinalStakes(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? predictions.isFinalRound(room) : false;
+  }
+
+  /** This round's absurd defense constraint (2.3), public during DEFENSE/
+   * INTERVENTI; null otherwise, or if this round drew none. */
+  publicAbsurdConstraint(code: string): string | null {
+    const room = this.rooms.get(code);
+    return room ? absurdConstraints.publicAbsurdConstraint(room) : null;
+  }
+
+  /** This round's surprise mechanical twist (4.3), public during DEFENSE/
+   * INTERVENTI; null otherwise, or if this round drew none. */
+  publicTwist(code: string): Twist | null {
+    const room = this.rooms.get(code);
+    return room ? twists.publicTwist(room) : null;
   }
 
   /**
@@ -1394,42 +2471,71 @@ export class RoomStore {
     return room ? defenseTurns.publicDefense(room, this.now()) : null;
   }
 
-  /**
-   * Public duel reveal (only DUEL_REVEAL, null otherwise): both players' picks +
-   * whether they agreed. The picks are intentionally public here — that's the
-   * point of the reveal; no other state leaks.
-   */
-  publicDuelReveal(code: string) {
+  /** Atto I combined submit: own secret pick + prediction of the partner's. */
+  duoSync(code: string, playerId: string, own: VoteChoice, predict: VoteChoice): boolean {
     const room = this.rooms.get(code);
-    return room ? duelReveal(room) : null;
+    return room ? submitDuoSync(room, playerId, own, predict) : false;
   }
 
-  /**
-   * Public duel argue turn (only DUEL_ARGUE, null otherwise): who is arguing now
-   * (the current player + their picked side) and the turn progress.
-   */
-  publicDuelTurn(code: string) {
+  /** True once both players submitted pick+prediction (early-advance gate). */
+  duoSyncComplete(code: string): boolean {
     const room = this.rooms.get(code);
-    return room ? duelTurn(room) : null;
+    return room ? isDuoSyncComplete(room) : false;
   }
 
-  /**
-   * Public duel result (only DUEL_RESULT, null otherwise): whether they agreed,
-   * and—if not—who convinced whom (a player whose re-pick changed was convinced
-   * by the other). Derived from votes1 (first pick) vs votes (re-pick).
-   */
-  publicDuelResult(code: string) {
+  /** Record a secret "ti ha fatto vacillare?" rating during DUO_WAVER. */
+  duoWaver(code: string, playerId: string, rating: 0 | 1 | 2): boolean {
     const room = this.rooms.get(code);
-    return room ? duelResult(room) : null;
+    return room ? duoWaverRate(room, playerId, rating) : false;
   }
 
-  /**
-   * Public duel summary (only FINAL_DUEL, null otherwise): each player's total
-   * persuasions and how many rounds the two agreed.
-   */
-  publicDuelSummary(code: string) {
+  /** True once every expected rater rated (early-advance gate for DUO_WAVER). */
+  duoWaverComplete(code: string): boolean {
     const room = this.rooms.get(code);
-    return room ? duelSummary(room) : null;
+    return room ? isDuoWaverComplete(room) : false;
+  }
+
+  /** True once everyone who re-picks confirmed (early-advance for DUO_REPICK). */
+  duoRepickComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? isDuoRepickComplete(room) : false;
+  }
+
+  /** Public Atto I reveal (only DUO_SYNC_REVEAL): picks + prediction hits. */
+  publicDuoSyncReveal(code: string) {
+    const room = this.rooms.get(code);
+    return room ? duoSyncReveal(room) : null;
+  }
+
+  /** Public duo argue turn (only DUO_ARGUE): speaker, assigned side, floor. */
+  publicDuoTurn(code: string) {
+    const room = this.rooms.get(code);
+    return room ? duoTurn(room, this.now()) : null;
+  }
+
+  /** Public duo round outcome (only DUO_ROUND_RESULT): act-shaped points. */
+  publicDuoRoundResult(code: string) {
+    const room = this.rooms.get(code);
+    return room ? duoRoundResult(room) : null;
+  }
+
+  /** Public couple portrait (only DUO_PORTRAIT): the finale's whole payload. */
+  publicDuoPortrait(code: string) {
+    const room = this.rooms.get(code);
+    return room ? duoPortrait(room) : null;
+  }
+
+  /** Structural duo act progress (in-game duello phases only; never secret). */
+  publicDuoActState(code: string) {
+    const room = this.rooms.get(code);
+    if (!room || room.mode !== 'duello' || room.phase === 'LOBBY') return null;
+    return duoActState(room);
+  }
+
+  /** The current twist round's devil's advocate id (public while it plays out). */
+  publicDuoAdvocateId(code: string) {
+    const room = this.rooms.get(code);
+    return room ? duoAdvocateId(room) : null;
   }
 
   /**
@@ -1491,6 +2597,16 @@ export class RoomStore {
     const room = this.rooms.get(code);
     if (!room || room.phase !== 'FINAL_AWARDS') return null;
     return this.computeAwards(code);
+  }
+
+  /**
+   * The end-of-game podium (full "Punti Serata" ranking, best first), only at
+   * FINAL_AWARDS (null otherwise) — mirrors publicAwards's gate.
+   */
+  publicPodium(code: string): PodiumEntry[] | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'FINAL_AWARDS') return null;
+    return computePodium(room);
   }
 
   /**
@@ -1577,7 +2693,21 @@ export class RoomStore {
 
     if (room.players.size >= MAX_PLAYERS) return { ok: false, error: 'ROOM_FULL' };
 
-    const player: Player = { id: playerId, nickname: name };
+    let player: Player;
+    if (room.phase !== 'LOBBY') {
+      // Late-join di prima classe (3.2): mid-round, ALWAYS Pubblico for now
+      // (regardless of the giocatori cap) — excluded from this round's
+      // allVoted-style gates, then promoted (cap permitting) at the next
+      // DILEMMA_REVEAL. Guard: never promoted in duello (see promoteLateJoiners).
+      player = { id: playerId, nickname: name, role: 'pubblico' };
+      room.lateJoiners.add(playerId);
+    } else {
+      // Beyond MAX_GIOCATORI, new joiners get the 'pubblico' role (3.1): same
+      // QR, same vote/react/bet/speaker-vote, but never picked as a defender.
+      player = rulesForGiocatoriCount(countGiocatori(room.players.values())).isPubblicoCapped
+        ? { id: playerId, nickname: name, role: 'pubblico' }
+        : { id: playerId, nickname: name };
+    }
     room.players.set(playerId, player);
     return { ok: true, player };
   }
@@ -1607,22 +2737,28 @@ export class RoomStore {
     }
     const removed = room.players.delete(playerId);
     if (removed && room.leaderId === playerId) {
-      const nextHuman = [...room.players.values()].find((p) => !p.isBot);
-      room.leaderId = nextHuman ? nextHuman.id : null;
+      const humans = [...room.players.values()].filter((p) => !p.isBot);
+      const nextLeader = humans.find((p) => p.connected !== false) ?? humans[0];
+      room.leaderId = nextLeader ? nextLeader.id : null;
     }
     return removed;
   }
 
   /**
-   * Add a server-driven bot to a room's lobby (Fase B). Bots count toward the
-   * roster (and MAX_PLAYERS) but have no socket; the server casts their votes.
-   * Only allowed in the LOBBY. A persona may be forced (tests); otherwise it
-   * round-robins through BOT_PERSONAS for variety.
+   * Add a server-driven bot to a room's roster (Fase B). Bots count toward
+   * the roster (and MAX_PLAYERS) but have no socket; the server casts their
+   * votes. Allowed in the LOBBY, or mid-game at a round boundary (3.5,
+   * PHASE_RESULTS — nothing is actively in progress there) so the leader can
+   * reintegrate a drop-out without waiting for the whole game to end. A
+   * persona may be forced (tests); otherwise it round-robins through
+   * BOT_PERSONAS for variety.
    */
   addBot(code: string, persona?: BotPersona): AddBotResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    if (room.phase !== 'LOBBY') return { ok: false, error: 'ALREADY_STARTED' };
+    if (room.phase !== 'LOBBY' && room.phase !== 'PHASE_RESULTS') {
+      return { ok: false, error: 'NOT_ROUND_BOUNDARY' };
+    }
     if (room.players.size >= MAX_PLAYERS) return { ok: false, error: 'ROOM_FULL' };
     const seq = room.botSeq++;
     const player: Player = {
@@ -1663,6 +2799,15 @@ export class RoomStore {
     return this.rooms.get(code)?.leaderId === playerId;
   }
 
+  /**
+   * Mirror a freshly-issued reconnect token onto the room, so it round-trips
+   * with the crash-recovery snapshot (index.ts's own in-memory `tokens` map
+   * does not survive a restart on its own). No-op for an unknown room.
+   */
+  registerToken(code: string, token: string, playerId: string): void {
+    this.rooms.get(code)?.tokens.set(token, playerId);
+  }
+
   get(code: string): Room | undefined {
     return this.rooms.get(code);
   }
@@ -1676,9 +2821,22 @@ export class RoomStore {
     return this.rooms.delete(code);
   }
 
-  /** Reinsert a room (e.g. one rebuilt from a snapshot at boot). */
+  /**
+   * Reinsert a room rebuilt from a crash-recovery snapshot at boot. No socket
+   * survives a restart, so every human is marked disconnected (bots are
+   * untouched — they have no socket to lose and connectedHumanCount ignores
+   * them anyway): without this, a room nobody reconnects to would never trip
+   * connectedHumanCount === 0 and would sit in memory forever instead of being
+   * caught by the abandoned-room sweep. Reconnecting phones still get their
+   * generous 5-minute window via that sweep, not the tight 45s live-disconnect
+   * grace period (which would evict everyone before they notice the restart).
+   */
   restore(room: Room): void {
-    this.rooms.set(room.code, room);
+    const normalized = normalizeRestoredRoom(room);
+    for (const p of normalized.players.values()) {
+      if (!p.isBot) p.connected = false;
+    }
+    this.rooms.set(normalized.code, normalized);
   }
 
   /** Codes of all rooms currently in memory (for periodic snapshotting). */

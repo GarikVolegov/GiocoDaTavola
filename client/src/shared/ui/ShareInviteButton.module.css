@@ -1,0 +1,21 @@
+.wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+.feedback {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+.rawLink {
+  margin: 0;
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  user-select: text;
+  word-break: break-all;
+  text-align: center;
+  opacity: 0.8;
+}

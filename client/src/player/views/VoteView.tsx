@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { PHASE_LABELS, type VoteChoice } from '../../shared/events';
 import { Button, VoteOption, Alert } from '../../shared/ui';
-import { wrap } from './layout';
+import { wrap, formatWaitingList } from './layout';
 
-type VotePhase = 'VOTE_1' | 'VOTE_2' | 'DUEL_PICK' | 'DUEL_REPICK';
+type VotePhase = 'VOTE_1' | 'VOTE_2' | 'DUO_SIDE_PICK' | 'DUO_PICK' | 'DUO_REPICK';
 
 interface VoteDilemma {
   text: string;
@@ -19,8 +19,11 @@ interface VoteViewProps {
   voteError: string | null;
   onVote: (choice: VoteChoice) => void;
   onConfirm: () => void;
+  confirmed: boolean;
+  votedCount: number;
   confirmedCount: number;
   playerCount: number;
+  missingVoters: string[] | null;
   skipButton: ReactNode;
 }
 
@@ -34,20 +37,27 @@ export default function VoteView({
   voteError,
   onVote,
   onConfirm,
+  confirmed,
+  votedCount,
   confirmedCount,
   playerCount,
+  missingVoters,
   skipButton,
 }: VoteViewProps) {
-  // VOTE_2 / DUEL_REPICK keep the player's first choice as the default they can
+  // VOTE_2 / DUO_REPICK keep the player's first choice as the default they can
   // keep or change; the sub-line nudges them per phase.
   const subtitle =
     phase === 'VOTE_2'
       ? 'Hai sentito le difese: confermi o cambi idea?'
-      : phase === 'DUEL_PICK'
-        ? 'Scegli la tua posizione.'
-        : phase === 'DUEL_REPICK'
-          ? 'Ti ha convinto? Conferma o cambia.'
-          : null;
+      : phase === 'DUO_SIDE_PICK'
+        ? 'Scegli il lato che ti convince davvero. Poi… si vedrà chi difende cosa.'
+        : phase === 'DUO_PICK'
+          ? 'Il duello vero: scegli la tua posizione.'
+          : phase === 'DUO_REPICK'
+            ? "Ti ha fatto vacillare l'arringa? Conferma o cambia."
+            : null;
+  const isCastPhase = phase === 'VOTE_1' || phase === 'DUO_SIDE_PICK' || phase === 'DUO_PICK';
+  const isConfirmPhase = phase === 'VOTE_2' || phase === 'DUO_REPICK';
   return (
     <main style={wrap}>
       <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
@@ -78,6 +88,7 @@ export default function VoteView({
             label={dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
             selected={vote === letter}
             onClick={() => onVote(letter)}
+            centered
           />
         ))}
       </div>
@@ -90,16 +101,39 @@ export default function VoteView({
       ) : (
         <p style={{ opacity: 0.7, margin: 0 }}>Tocca A o B per votare.</p>
       )}
-      {phase === 'VOTE_2' && (
-        <>
-          <Button variant="primary" onClick={onConfirm} style={{ marginTop: '0.25rem' }}>
-            Confermo ✓
-          </Button>
-          <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
-            Confermati {confirmedCount}/{playerCount} · si va avanti quando tutti confermano
+      {isCastPhase &&
+        (missingVoters && missingVoters.length > 0 ? (
+          <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
+            Aspettiamo {formatWaitingList(missingVoters)}…
           </p>
-        </>
-      )}
+        ) : (
+          <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
+            Hanno votato {votedCount}/{playerCount}
+          </p>
+        ))}
+      {isConfirmPhase &&
+        (confirmed ? (
+          <>
+            <p style={{ fontWeight: 800, margin: '0.25rem 0 0', fontSize: '1.05rem' }}>
+              ✓ Hai confermato
+            </p>
+            <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
+              {missingVoters && missingVoters.length > 0
+                ? `Aspettiamo ${formatWaitingList(missingVoters)}…`
+                : `Aspettiamo gli altri… ${confirmedCount}/${playerCount}`}
+            </p>
+          </>
+        ) : (
+          <>
+            <Button variant="primary" onClick={onConfirm} style={{ marginTop: '0.25rem' }}>
+              Confermo ✓
+            </Button>
+            <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
+              Conferma per proseguire — si va avanti quando confermano tutti ({confirmedCount}/
+              {playerCount})
+            </p>
+          </>
+        ))}
       {skipButton}
     </main>
   );

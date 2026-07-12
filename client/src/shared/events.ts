@@ -20,6 +20,13 @@ export const SocketEvents = {
   LeaderStartError: 'leader:startError',
   /** Leader force-advances the state machine, skipping the current countdown. */
   LeaderAdvancePhase: 'leader:advancePhase',
+  /** Leader discards the current dilemma (DILEMMA_REVEAL / open VOTE_1): a fresh
+   * card replays the same round. Classic format only. */
+  LeaderSkipDilemma: 'leader:skipDilemma',
+  /** Server tells everyone the leader discarded the dilemma (toast + sting). */
+  RoomDilemmaSkipped: 'room:dilemmaSkipped',
+  /** Leader returns a finished room to LOBBY for a rematch (same roster/code). */
+  LeaderRematch: 'leader:rematch',
   /** Leader adds a server-driven bot to fill a seat. */
   LeaderAddBot: 'leader:addBot',
   /** Leader removes a bot by id. */
@@ -36,14 +43,28 @@ export const SocketEvents = {
   PlayerVoteError: 'player:voteError',
   /** Player explicitly confirms their (pre-filled) second vote (VOTE_2). */
   PlayerConfirmVote: 'player:confirmVote',
-  /** Player taps a live audience reaction (DEFENSE / INTERVENTI / DUEL_ARGUE). */
+  /** Player taps a live audience reaction (DEFENSE / INTERVENTI / DUO_ARGUE). */
   PlayerReact: 'player:react',
+  /** Percorso in 2 (Atto I): own secret pick + prediction of the partner's, in one move. */
+  PlayerDuoSync: 'player:duoSync',
+  /** Server confirms the player's own pick+prediction back to them only. */
+  PlayerDuoSynced: 'player:duoSynced',
+  /** Server rejects the duo sync (wrong phase, not a player, bad choice). */
+  PlayerDuoSyncError: 'player:duoSyncError',
+  /** Percorso in 2: the listener secretly rates the arringa ("ti ha fatto vacillare?"). */
+  PlayerDuoWaver: 'player:duoWaver',
+  /** Server confirms the player's rating back to them only. */
+  PlayerDuoWavered: 'player:duoWavered',
+  /** Server rejects the rating (wrong phase, you are the advocate, out of range). */
+  PlayerDuoWaverError: 'player:duoWaverError',
   /** Server re-broadcasts a single reaction emoji to everyone (the swarm on every screen). */
   RoomReaction: 'room:reaction',
   /** Player raises/lowers their hand during a defender's turn (DEFENSE). */
   PlayerRaiseHand: 'player:raiseHand',
   /** Server confirms the player's current raised-hand state back to them only. */
   PlayerHandRaised: 'player:handRaised',
+  /** Server rejects the hand-raise (wrong phase, not in room, you're the speaker, queue full). */
+  PlayerRaiseHandError: 'player:raiseHandError',
   /** Current speaker (defender/intervenor) signals they are done (after the minimum). */
   PlayerFinishTurn: 'player:finishTurn',
   /** Server rejects the finish (too early / not the speaker / wrong phase). */
@@ -64,6 +85,30 @@ export const SocketEvents = {
   PlayerSwingBetError: 'player:swingBetError',
   /** Server privately tells a bettor whether they were right (at PHASE_RESULTS). */
   PlayerSwingBetResult: 'player:swingBetResult',
+  /** Player answers + predicts the group's majority in one go (GROUP_MIND, 4.1). */
+  PlayerGroupMind: 'player:groupMind',
+  /** Server confirms the player's own answer + guess back to them only. */
+  PlayerGroupMindSubmitted: 'player:groupMindSubmitted',
+  /** Server rejects the submission (wrong phase, not in room, bad choice). */
+  PlayerGroupMindError: 'player:groupMindError',
+  /** Server privately tells a player whether their majority guess was right (at GROUP_MIND_REVEAL). */
+  PlayerGroupMindResult: 'player:groupMindResult',
+  /** Player submits their own written answer to the round's prompt (WRITE, 4.2). */
+  PlayerWrite: 'player:write',
+  /** Server confirms the player's current answer back to them only. */
+  PlayerWriteSubmitted: 'player:writeSubmitted',
+  /** Server rejects the answer (wrong phase, not in room, empty/too long). */
+  PlayerWriteError: 'player:writeError',
+  /** Player votes for their favorite OTHER written answer (WRITE_VOTE, 4.2). */
+  PlayerWriteVote: 'player:writeVote',
+  /** Server confirms the player's current vote back to them only. */
+  PlayerWriteVoted: 'player:writeVoted',
+  /** Server rejects the vote (wrong phase, not in room, self-vote, unknown target). */
+  PlayerWriteVoteError: 'player:writeVoteError',
+  /** Server privately tells this player their own answer's opaque token on
+   * entering WRITE_VOTE (or reconnecting into it), so the client can filter
+   * its own entry out of the anonymized list. */
+  PlayerMyWriteToken: 'player:myWriteToken',
   /** Player writes their own dilemma in the LOBBY (max 2/player). */
   PlayerSubmitDilemma: 'player:submitDilemma',
   /** Server confirms the player's submission back to them only (with their count). */
@@ -80,6 +125,10 @@ export const SocketEvents = {
   PlayerKnowGuessResult: 'player:knowGuessResult',
   /** Server privately tells a player they are the infiltrator (at game start). */
   PlayerInfiltratoRole: 'player:infiltratoRole',
+  /** The infiltrator seeds a decoy spunto into the current speaker's suggestions (4.5). */
+  PlayerInfiltratoTool: 'player:infiltratoTool',
+  /** Server rejects the tool use (not the infiltrator, wrong phase, already used, nobody speaking). */
+  PlayerInfiltratoToolError: 'player:infiltratoToolError',
   /** Player accuses who they think the infiltrator is (ACCUSE phase). */
   PlayerAccuse: 'player:accuse',
   /** Server confirms the player's current accusation back to them only. */
@@ -116,7 +165,7 @@ export const FORMAT_DILEMMA_COUNT: Record<SessionFormat, number> = {
 };
 
 /** Content registers (mirror server deck.ts / rooms.ts). */
-export const CONTENT_REGISTERS = ['vita', 'business', 'misto'] as const;
+export const CONTENT_REGISTERS = ['vita', 'business', 'carriera', 'misto'] as const;
 export type ContentRegister = (typeof CONTENT_REGISTERS)[number];
 
 /** Behaviour-based bot personalities (mirror of the server's `BotPersona`). */
@@ -142,6 +191,7 @@ export const FORMAT_LABELS: Record<SessionFormat, { nome: string; durata: string
 export const REGISTER_LABELS: Record<ContentRegister, string> = {
   vita: 'Vita',
   business: 'Business pro',
+  carriera: 'Carriera',
   misto: 'Misto',
 };
 
@@ -230,8 +280,39 @@ export type GameMode = (typeof GAME_MODES)[number];
 /** Host-facing labels for the game modes. */
 export const MODE_LABELS: Record<GameMode, { nome: string; descr: string }> = {
   gruppo: { nome: 'Gruppo', descr: '3–8 giocatori' },
-  duello: { nome: '1v1 Duello', descr: '2 giocatori' },
+  duello: { nome: 'Percorso in 2', descr: 'in coppia · 2 giocatori' },
 };
+
+/** The evening's mood (2.2, mirror of the server's deck.ts `Mood`). */
+export const MOODS = ['leggera', 'mista', 'profonda'] as const;
+export type Mood = (typeof MOODS)[number];
+
+/** Setup-screen labels for each mood. */
+export const MOOD_LABELS: Record<Mood, { nome: string; descr: string }> = {
+  leggera: { nome: '😂 Leggera', descr: 'niente temi estremi' },
+  mista: { nome: '🎭 Mista', descr: 'un po’ di tutto' },
+  profonda: { nome: '🌊 Profonda', descr: 'si va a fondo' },
+};
+
+/** The leader's "caos" dial (4.3): how often a dilemma round draws a surprise
+ * mechanical twist at DEFENSE. Mirror of the server's twists.ts `Caos`. */
+export const CAOS_LEVELS = ['assente', 'basso', 'alto'] as const;
+export type Caos = (typeof CAOS_LEVELS)[number];
+
+/** Setup-screen labels for each caos level. */
+export const CAOS_LABELS: Record<Caos, { nome: string; descr: string }> = {
+  assente: { nome: '😌 Assente', descr: 'partita classica' },
+  basso: { nome: '🎲 Basso', descr: 'qualche sorpresa' },
+  alto: { nome: '🌪️ Alto', descr: 'twist quasi ogni round' },
+};
+
+/** A surprise mechanical twist drawn for a dilemma round (4.3), mirror of the
+ * server's twists.ts `Twist`. */
+export interface Twist {
+  id: 'difesa-lampo' | 'interventi-vietati' | 'doppio-difensore';
+  label: string;
+  description: string;
+}
 
 /** The game's objective, stated to players (persuasion framing). */
 export const OBJECTIVE =
@@ -254,24 +335,46 @@ export type GamePhase =
   | 'DILEMMA_REVEAL'
   | 'VOTE_1'
   | 'SPLIT_REVEAL'
+  // 100% unanimous first vote: short celebratory beat replacing the whole
+  // debate; the dilemma is then swapped for a fresh one at the same index
+  // (mirror server phases.ts).
+  | 'UNANIMOUS_REVEAL'
   | 'PREDICT'
   | 'DEFENSE'
   | 'INTERVENTI'
   | 'VOTE_2'
   | 'SPEAKER_VOTE'
   | 'PHASE_RESULTS'
+  // "La Mente del Gruppo" breather round (4.1, mirror server phases.ts).
+  | 'GROUP_MIND'
+  | 'GROUP_MIND_REVEAL'
+  // "In Altre Parole" write+vote breather round (4.2, mirror server phases.ts).
+  | 'WRITE'
+  | 'WRITE_VOTE'
+  | 'WRITE_REVEAL'
   // "Percorso" mode chapter framing (mirror server phases.ts).
   | 'TAPPA_INTRO'
   | 'TAPPA_RECAP'
+  // "Storie" mode narrative framing (mirror server phases.ts).
+  | 'STORY_INTRO'
+  | 'SCENE_INTRO'
+  | 'SCENE_CONSEQUENCE'
+  | 'STORY_EPILOGUE'
   | 'ACCUSE'
   | 'FINAL_AWARDS'
-  // 1v1 "Duello" mode phases (mirror server rooms.ts).
-  | 'DUEL_PICK'
-  | 'DUEL_REVEAL'
-  | 'DUEL_ARGUE'
-  | 'DUEL_REPICK'
-  | 'DUEL_RESULT'
-  | 'FINAL_DUEL';
+  // "Percorso in 2" (the rebuilt duello, mirror server phases.ts): three fixed
+  // acts (Sintonia / A parti invertite / Schierati) + the couple portrait.
+  | 'DUO_ACT_INTRO'
+  | 'DUO_PICK_PREDICT'
+  | 'DUO_SYNC_REVEAL'
+  | 'DUO_SIDE_PICK'
+  | 'DUO_ARGUE'
+  | 'DUO_WAVER'
+  | 'DUO_ROUND_RESULT'
+  | 'DUO_PICK'
+  | 'DUO_REVEAL'
+  | 'DUO_REPICK'
+  | 'DUO_PORTRAIT';
 
 export interface PlayerJoinPayload {
   code: string;
@@ -279,6 +382,9 @@ export interface PlayerJoinPayload {
   /** Secret reconnect token from a previous session (localStorage); reclaims the seat. */
   token?: string;
 }
+
+/** A player's participation role (3.1, mirror of the server's PlayerRole). */
+export type PlayerRole = 'giocatore' | 'pubblico';
 
 /** Public, non-secret player info safe to show on host + all phones. */
 export interface PublicPlayer {
@@ -290,6 +396,8 @@ export interface PublicPlayer {
   persona?: BotPersona;
   /** Connection state: absent/true = present; false = temporarily away (grace period). */
   connected?: boolean;
+  /** 'pubblico' when this player joined past the giocatori cap; absent = 'giocatore'. */
+  role?: PlayerRole;
 }
 
 export interface RemoveBotPayload {
@@ -321,16 +429,18 @@ export const JOIN_ERROR_MESSAGES: Record<JoinError, string> = {
 };
 
 export interface StartGamePayload {
-  /** Session format: 'classic' (3/5/7, default) or 'percorso' (themed ascent). */
-  format?: 'classic' | 'percorso';
-  /** Classic: number of dilemmas. Ignored (and may be omitted) in percorso. */
+  /** Session format: 'classic' (3/5/7, default), 'percorso' (ascent) or 'storia' (narrative). */
+  format?: 'classic' | 'percorso' | 'storia';
+  /** Classic: number of dilemmas. Ignored (and may be omitted) in percorso/storia. */
   dilemmaCount?: number;
-  /** Classic: content register. Ignored (and may be omitted) in percorso. */
+  /** Classic: content register. Ignored (and may be omitted) in percorso/storia. */
   register?: ContentRegister;
   /** Percorso: tappa to start the ascent from (1..4). */
   startTappa?: number;
   /** Percorso: duration preset. */
   durata?: Durata;
+  /** Storia: the chosen story id. */
+  storyId?: string;
   /** Game mode; defaults to 'gruppo' server-side when omitted (always gruppo in percorso). */
   mode?: GameMode;
   /** Enable "L'Infiltrato" (gruppo + ≥4 humans); defaults off. */
@@ -361,14 +471,17 @@ export interface InfiltratoResult {
   caught: boolean;
   won: boolean;
   votesAgainst: number;
+  /** How many rounds the infiltrator used their sabotage tool (4.5, "il replay delle sue mosse"). */
+  toolUses: number;
 }
 
 /** Public dilemma shown on the shared screen: the prompt + its two options. */
-/** Debate-complexity tier (mirror server deck.ts): alto < max < power. */
-export type Complessita = 'alto' | 'max' | 'power';
+/** Debate-complexity tier (mirror server deck.ts): sorbetto < alto < max < power. */
+export type Complessita = 'sorbetto' | 'alto' | 'max' | 'power';
 
 /** Host/phone badge labels for each complexity tier. */
 export const COMPLESSITA_LABELS: Record<Complessita, string> = {
+  sorbetto: '🍧 Sorbetto',
   alto: '◆ Alto',
   max: '◆◆ Max',
   power: '◆◆◆ Power',
@@ -458,6 +571,9 @@ export interface DefenseImpact {
 /** Public results view (PHASE_RESULTS): the swing + per-defender attribution. */
 export interface PublicSwing extends SwingResult {
   attribution: DefenseImpact[];
+  /** True when the leading side itself changed (the stronger of the two
+   * "ribaltone" triggers, the other being switched >= 2). */
+  leadFlipped: boolean;
 }
 
 /** The fun end-of-game superlatives (mirror of the server's `AwardId`). */
@@ -473,7 +589,12 @@ export type AwardId =
   | 'voltagabbana'
   | 'sensitivo'
   | 'autore'
-  | 'telepate';
+  | 'spaccalastanza'
+  | 'telepate'
+  // Jolly pool (2.5): each goes to an otherwise empty-handed player.
+  | 'fulmine'
+  | 'sfinge'
+  | 'partecipante';
 
 /** Payload of the `room:reaction` broadcast: a single allowlisted emoji. */
 export interface RoomReactionPayload {
@@ -489,32 +610,123 @@ export interface Award {
   winner: PublicPlayer;
 }
 
-/** Duel reveal (DUEL_REVEAL): both players' picks + whether they agreed. */
-export interface DuelReveal {
-  picks: Array<{ id: string; nickname: string; choice: VoteChoice }>;
-  agreed: boolean;
+/** One row of the final "Punti Serata" ranking (rank 1..3 stand on the podium). */
+export interface PodiumEntry {
+  player: PublicPlayer;
+  points: number;
+  rank: number;
 }
 
-/** Duel argue turn (DUEL_ARGUE): who is arguing now + turn progress. */
-export interface DuelTurn {
-  speaker: { id: string; nickname: string; side: VoteChoice } | null;
+/** "Momenti nominati" (5.5, mirror of the server's `NamedMomentKind`). */
+export type NamedMomentKind = 'plebiscito' | 'paritario' | 'ribaltone' | 'triplaPersuasione';
+
+/** A titled, detected moment from one round — "I momenti della serata". */
+export interface NamedMoment {
+  kind: NamedMomentKind;
+  dilemmaIndex: number;
+  title: string;
+  description: string;
+  emoji: string;
+  playerId?: string;
+  playerNickname?: string;
+}
+
+/** Percorso in 2: which act is in play and the position within it (never secret). */
+export interface DuoActState {
+  act: number;
+  roundInAct: number;
+  roundsInAct: number;
+  totalActs: number;
+}
+
+/** Display metadata for the three duo acts (act-intro cards, host badges). */
+export const DUO_ACT_META: Record<number, { emoji: string; nome: string; sottotitolo: string }> = {
+  1: {
+    emoji: '🔮',
+    nome: 'Atto I — Sintonia',
+    sottotitolo: 'Scegli il tuo lato e prevedi quello di chi hai davanti.',
+  },
+  2: {
+    emoji: '🎭',
+    nome: 'Atto II — A parti invertite',
+    sottotitolo: 'Il gioco vi assegna i lati: difendi quello che non è tuo.',
+  },
+  3: {
+    emoji: '⚔️',
+    nome: 'Atto III — Schierati',
+    sottotitolo: 'Il duello vero: convinci, o lasciati convincere.',
+  },
+};
+
+/** Atto I reveal (DUO_SYNC_REVEAL): both picks + prediction hits + sintonia counters. */
+export interface DuoSyncReveal {
+  picks: Array<{ id: string; nickname: string; choice: VoteChoice }>;
+  predictions: Array<{ id: string; nickname: string; predicted: VoteChoice; correct: boolean }>;
+  agreed: boolean;
+  agreements: number;
+  truePicks: number;
+}
+
+/** Duo argue turn (DUO_ARGUE): who argues now, on which (possibly assigned) side. */
+export interface DuoTurn {
+  speaker: {
+    id: string;
+    nickname: string;
+    side: VoteChoice;
+    /** Atto II: arguing a side that is not their pick. */
+    inverted: boolean;
+    /** Atto III twist: the designated devil's advocate. */
+    advocate: boolean;
+  } | null;
+  listenerId: string | null;
   turn: number;
   totalTurns: number;
+  minEndsAt: number | null;
+  canFinish: boolean;
+  startedAt: number | null;
 }
 
-/** Duel round result (DUEL_RESULT): agreement, or who convinced whom. */
-export interface DuelResult {
-  agreed: boolean;
+/** Duo round outcome (DUO_ROUND_RESULT): act-shaped points + running totals. */
+export interface DuoRoundResult {
+  act: number;
+  advocacy: boolean;
+  vacillare: Array<{ id: string; nickname: string; received: 0 | 1 | 2 }>;
   convinced: Array<{
     persuader: { id: string; nickname: string };
     convinced: { id: string; nickname: string };
+    ribaltone: boolean;
   }>;
+  scores: Array<{ id: string; nickname: string; total: number }>;
 }
 
-/** Duel end summary (FINAL_DUEL): per-player persuasions + agreements count. */
-export interface DuelSummary {
-  scores: Array<{ id: string; nickname: string; persuasions: number }>;
+/** A duo highlight surfaced in the portrait ("il momento della serata"). */
+export interface DuoMomentView {
+  emoji: string;
+  title: string;
+  description: string;
+  playerId?: string;
+}
+
+/** One of the two playful titles each player earns at the portrait. */
+export interface DuoTitle {
+  playerId: string;
+  nickname: string;
+  emoji: string;
+  title: string;
+  description: string;
+}
+
+/** The couple portrait (DUO_PORTRAIT): the finale's whole payload. */
+export interface DuoPortrait {
+  sintoniaPct: number;
   agreements: number;
+  truePicks: number;
+  tiConosco: Array<{ id: string; nickname: string; hits: number }>;
+  scores: Array<{ id: string; nickname: string; total: number }>;
+  /** The playful micro-verdict's winner; null on a perfect tie. */
+  winnerId: string | null;
+  momento: DuoMomentView | null;
+  titoli: DuoTitle[];
 }
 
 /** Per-tappa progress within a percorso (mirror server PercorsoTappaProgress). */
@@ -536,17 +748,67 @@ export interface PercorsoView {
   tappaSwings: number;
 }
 
+// ---------------------------------------------------------------------------
+// "Storie" mode — narrative tales with debated crossroads (mirror server
+// storie.ts). The host reads the prose aloud (TTS); phones mirror it as text.
+// ---------------------------------------------------------------------------
+
+/** Narrative sub-flavors (all stories are sci-fi-framed). Mirror server STORY_GENRES. */
+export const STORY_GENRES = ['avventura', 'scifi', 'giallo', 'dramma'] as const;
+export type StoryGenre = (typeof STORY_GENRES)[number];
+
+/** Host-facing label for each sci-fi sub-flavor. */
+export const STORY_GENRE_LABELS: Record<StoryGenre, string> = {
+  avventura: 'Sopravvivenza',
+  scifi: 'Distopia / IA',
+  giallo: 'Mistero',
+  dramma: 'Dramma umano',
+};
+
+/** A lightweight story-catalog entry for the leader's picker (mirror server StoriaCatalogItem). */
+export interface StoriaCatalogItem {
+  id: string;
+  title: string;
+  genre: StoryGenre;
+  emoji: string;
+  hook: string;
+  durataStimaMin: number;
+  /** Number of crossroads (debate rounds) in the story. */
+  scene: number;
+}
+
+/** Secret-safe storia view (mirror server StoriaView); null in classic/percorso. */
+export interface StoriaView {
+  storyId: string;
+  title: string;
+  protagonist: string;
+  emoji: string;
+  premessa: string;
+  actTitle: string | null;
+  sceneNarration: string | null;
+  sceneIndex: number;
+  totalScenes: number;
+  decision: VoteChoice | null;
+  consequence: string | null;
+  epilogo: string | null;
+  decisionsA: number;
+}
+
 export interface GameStatePayload {
   phase: GamePhase;
   dilemmaCount: number | null;
   /** Content register chosen at start; null in the lobby (and always null in percorso). */
   register: ContentRegister | null;
   /** Session format of the room. */
-  format: 'classic' | 'percorso';
+  format: 'classic' | 'percorso' | 'storia';
   /** Percorso view (progress + tappe), or null in classic / before start. */
   percorso: PercorsoView | null;
   /** Available dilemmas per tappa — static setup data for the percorso estimate. */
   tappaCounts: TappaCounts;
+  /** Storia narrative view (prose + progress), or null in classic/percorso. */
+  storia: StoriaView | null;
+  /** The story catalog — static setup data for the storia picker. */
+  storieCatalog: StoriaCatalogItem[];
   /** Which dilemma (1-based) is in play; 0 before the first reveal. */
   dilemmaIndex: number;
   /** Epoch ms when the phase auto-advances; null if it has no timer. */
@@ -561,10 +823,22 @@ export interface GameStatePayload {
   /** How many players have confirmed their second vote (VOTE_2). Aggregate only. */
   confirmedCount: number;
   /**
+   * Nicknames of connected players still missing their vote/confirmation
+   * this voting phase (VOTE_1/VOTE_2/DUO_SIDE_PICK/DUO_PICK/DUO_REPICK); null otherwise.
+   * Never reveals which choice — presence only.
+   */
+  missingVoters: string[] | null;
+  /**
    * How many players have made a secret prediction this round (PREDICT phase).
    * Aggregate count only — never who predicted what.
    */
   predictedCount: number;
+  /**
+   * Nicknames of connected humans still missing a PREDICT-phase action
+   * (prediction, swing bet, or — in the know round — their guess); null
+   * outside PREDICT.
+   */
+  missingPredictors: string[] | null;
   /**
    * How many players have placed a secret swing bet this round (PREDICT phase).
    * Aggregate count only — never who bet what.
@@ -580,6 +854,9 @@ export interface GameStatePayload {
   accusedCount: number;
   /** "L'Infiltrato": the reveal at FINAL_AWARDS (who, won/caught); null otherwise. */
   infiltratoResult: InfiltratoResult | null;
+  /** "L'Infiltrato col merito" (4.5): whether the once-per-round sabotage tool
+   * has already been used this round — public, doesn't reveal who. */
+  infiltratoToolUsed: boolean;
   /** "Squadre": team assignments + running scores; null when teams are off. */
   teams: TeamState | null;
   /**
@@ -595,34 +872,100 @@ export interface GameStatePayload {
    */
   split: VoteSplit | null;
   /**
+   * The unanimous side + how many voted it, shown only in UNANIMOUS_REVEAL;
+   * null otherwise. Aggregate only, no identities.
+   */
+  unanimous: { side: VoteChoice; count: number } | null;
+  /**
    * Who is speaking + turn progress, shown only in DEFENSE; null otherwise.
    * Only the chosen defenders' identities/side are public.
    */
   defense: DefenseState | null;
+  /**
+   * The just-finished speaker's applause tally ("applausometro"); null before
+   * any turn has ended this round, or if it drew no reactions.
+   */
+  lastTurnApplause: { speakerId: string; nickname: string; tally: Partial<Record<Reaction, number>> } | null;
   /**
    * True in the surprise "Avvocato del Diavolo" round (defenders argue the side
    * they did NOT vote). Revealed only from DEFENSE on; false otherwise.
    */
   isDevilRound: boolean;
   /**
+   * True in the game's FINAL round, where the swing bet pays double (6.2,
+   * "posta doppia") — not a secret twist, always visible.
+   */
+  finalStakesRound: boolean;
+  /**
+   * This round's silly performance constraint for the defenders, public
+   * during DEFENSE/INTERVENTI; null otherwise, or if this round drew none.
+   */
+  absurdConstraint: string | null;
+  /**
+   * This round's surprise mechanical twist (4.3), public during DEFENSE/
+   * INTERVENTI; null otherwise, or if this round drew none.
+   */
+  twist: Twist | null;
+  /** The room's caos dial (4.3), chosen at start. */
+  caos: Caos;
+  /**
    * The swing + per-defender attribution, shown only in PHASE_RESULTS; null
    * otherwise. Aggregate counts only — never who voted what.
    */
   swing: PublicSwing | null;
+  /** The current dilemma's author nickname, shown only at PHASE_RESULTS; null otherwise. */
+  dilemmaAuthor: string | null;
   /** The end-of-game awards, shown only in FINAL_AWARDS; null otherwise. */
   awards: Award[] | null;
+  /** "I momenti della serata" (5.5): every titled moment across the game,
+   * shown before the awards, only in FINAL_AWARDS; null otherwise. */
+  namedMoments: NamedMoment[] | null;
+  /** The final "Punti Serata" podium/ranking, best first, only in FINAL_AWARDS; null otherwise. */
+  podium: PodiumEntry[] | null;
   /** Game mode of the room; 'gruppo' until/unless a duel is started. */
   mode: GameMode;
   /** The leader-player's id (drives the game); null until a leader exists. */
   leaderId: string | null;
-  /** Duel: both picks + agreement, shown only in DUEL_REVEAL; null otherwise. */
-  duelReveal: DuelReveal | null;
-  /** Duel: current arguer + turn, shown only in DUEL_ARGUE; null otherwise. */
-  duelTurn: DuelTurn | null;
-  /** Duel: round outcome, shown only in DUEL_RESULT; null otherwise. */
-  duelResult: DuelResult | null;
-  /** Duel: end summary, shown only in FINAL_DUEL; null otherwise. */
-  duelSummary: DuelSummary | null;
+  /** Percorso in 2: act progress (in-game duello only; null otherwise). */
+  duoAct: DuoActState | null;
+  /** The twist round's devil's advocate id, public only while it plays out. */
+  duoAdvocateId: string | null;
+  /** How many players submitted their Atto I pick+prediction (aggregate only). */
+  duoSyncedCount: number;
+  /** How many "ti ha fatto vacillare?" ratings are in (aggregate only). */
+  duoWaverCount: number;
+  /** Atto I reveal, shown only in DUO_SYNC_REVEAL; null otherwise. */
+  duoSyncReveal: DuoSyncReveal | null;
+  /** Current arringa turn, shown only in DUO_ARGUE; null otherwise. */
+  duoTurn: DuoTurn | null;
+  /** Round outcome, shown only in DUO_ROUND_RESULT; null otherwise. */
+  duoRoundResult: DuoRoundResult | null;
+  /** The couple portrait, shown only in DUO_PORTRAIT; null otherwise. */
+  duoPortrait: DuoPortrait | null;
+  /** "La Mente del Gruppo" (4.1): the current question; null outside GROUP_MIND/GROUP_MIND_REVEAL. */
+  groupMindQuestion: GroupMindQuestion | null;
+  /** Who's still missing their answer+guess this round; null outside GROUP_MIND. */
+  groupMindProgress: { done: number; total: number; missingNicknames: string[] } | null;
+  /** The aggregate A/B split + correct-guesser count, shown only in GROUP_MIND_REVEAL; null otherwise. */
+  groupMindTally: { A: number; B: number; correctGuessers: number } | null;
+  /** "In Altre Parole" (4.2): the current prompt; null outside WRITE/WRITE_VOTE/WRITE_REVEAL. */
+  writePrompt: WritePrompt | null;
+  /** Who's still missing their written answer this round; null outside WRITE. */
+  writeProgress: { done: number; total: number; missingNicknames: string[] } | null;
+  /** The anonymized answer list (own entry included — filter it out client-side), shown only in WRITE_VOTE; null otherwise. */
+  writtenAnswers: PublicWrittenAnswer[] | null;
+  /** Who's still missing their vote this round; null outside WRITE_VOTE. */
+  writeVoteProgress: { done: number; total: number; missingNicknames: string[] } | null;
+  /** Each answer with its author + vote count, shown only in WRITE_REVEAL; null otherwise. */
+  writeReveal: WriteRevealAnswer[] | null;
+}
+
+/** "La Mente del Gruppo" (4.1): a short A/B question everyone answers + predicts. */
+export interface GroupMindQuestion {
+  id: string;
+  prompt: string;
+  optionA: string;
+  optionB: string;
 }
 
 /** Which side a player secretly votes for. */
@@ -707,6 +1050,76 @@ export interface PlayerPredictionResultPayload {
 
 export type PredictError = 'ROOM_NOT_FOUND' | 'NOT_PREDICT_PHASE' | 'NOT_IN_ROOM' | 'INVALID_CHOICE';
 
+export interface PlayerGroupMindPayload {
+  answer: VoteChoice;
+  guess: VoteChoice;
+}
+
+export interface PlayerGroupMindSubmittedPayload {
+  answer: VoteChoice;
+  guess: VoteChoice;
+}
+
+/** Private per-player outcome at GROUP_MIND_REVEAL (mirror of the server's `GroupMindOutcome`). */
+export interface PlayerGroupMindResultPayload {
+  guess: VoteChoice;
+  /** The room's majority answer, or null on a tie. */
+  actual: VoteChoice | null;
+  correct: boolean;
+}
+
+export type GroupMindError = 'ROOM_NOT_FOUND' | 'NOT_GROUP_MIND_PHASE' | 'NOT_IN_ROOM' | 'INVALID_CHOICE';
+
+/** "In Altre Parole" (4.2): a short free-text prompt everyone answers. */
+export interface WritePrompt {
+  id: string;
+  text: string;
+}
+
+/** One anonymized written answer in the round's frozen shuffled order. `id` is
+ * the author's player id — filter out your own to avoid voting for yourself. */
+export interface PublicWrittenAnswer {
+  id: string;
+  text: string;
+}
+
+/** One answer with its author + vote count, revealed only at WRITE_REVEAL. */
+export interface WriteRevealAnswer {
+  id: string;
+  text: string;
+  authorNickname: string;
+  votes: number;
+}
+
+export interface PlayerWritePayload {
+  text: string;
+}
+
+export interface PlayerWriteSubmittedPayload {
+  text: string;
+}
+
+export type WriteError = 'ROOM_NOT_FOUND' | 'NOT_WRITE_PHASE' | 'NOT_IN_ROOM' | 'EMPTY' | 'TOO_LONG';
+
+export interface PlayerWriteVotePayload {
+  /** Opaque per-round token (an answer's position in writeOrder) — never a
+   * real player id, or the public roster would de-anonymize the vote. */
+  votedForToken: string;
+}
+
+export interface PlayerWriteVotedPayload {
+  votedForToken: string;
+}
+
+/** Privately sent once entering WRITE_VOTE (and on reconnect): this player's
+ * own answer's opaque token, so the client can filter its own entry out of
+ * the anonymized list without ever learning another author's real id. */
+export interface PlayerMyWriteTokenPayload {
+  token: string;
+}
+
+export type WriteVoteError = 'ROOM_NOT_FOUND' | 'NOT_WRITE_VOTE_PHASE' | 'NOT_IN_ROOM' | 'SELF_VOTE' | 'INVALID_TARGET';
+
 export interface PlayerPredictErrorPayload {
   error: PredictError;
 }
@@ -774,6 +1187,32 @@ export const SUBMIT_DILEMMA_ERROR_MESSAGES: Record<SubmitDilemmaError, string> =
   LIMIT_REACHED: 'Hai già aggiunto il massimo dei dilemmi',
 };
 
+export type RaiseHandError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_RAISE_PHASE'
+  | 'NOT_IN_ROOM'
+  | 'IS_SPEAKER'
+  | 'QUEUE_FULL'
+  | 'PUBBLICO_NEVER_DEFENDS'
+  | 'INTERVENTI_DISABLED_THIS_ROUND';
+
+export interface PlayerRaiseHandErrorPayload {
+  error: RaiseHandError;
+}
+
+/** User-facing (Italian) messages for hand-raise errors. Only QUEUE_FULL is
+ * normally reachable (the raise button is only shown when the phase/turn
+ * already make the others valid) — the rest are defensive fallbacks. */
+export const RAISE_HAND_ERROR_MESSAGES: Record<RaiseHandError, string> = {
+  ROOM_NOT_FOUND: 'Stanza non trovata',
+  NOT_RAISE_PHASE: 'Non è il momento di alzare la mano',
+  NOT_IN_ROOM: 'Non sei in questa stanza',
+  IS_SPEAKER: 'Stai già parlando tu',
+  QUEUE_FULL: 'Coda piena — reagisci! 👏',
+  PUBBLICO_NEVER_DEFENDS: 'Il Pubblico segue, non interviene 🎟️',
+  INTERVENTI_DISABLED_THIS_ROUND: 'Niente interventi in questo round 🤐',
+};
+
 /** A guesser→target pair, shown publicly during the "Quanto mi conosci" round. */
 export interface KnowPair {
   guesserId: string;
@@ -809,6 +1248,27 @@ export interface PlayerKnowGuessErrorPayload {
 export interface PlayerInfiltratoRolePayload {
   mission: string;
 }
+
+export type InfiltratoToolError =
+  | 'ROOM_NOT_FOUND'
+  | 'NOT_INFILTRATOR'
+  | 'NOT_DEFENSE_PHASE'
+  | 'ALREADY_USED_THIS_ROUND'
+  | 'NO_ONE_SPEAKING';
+
+export interface PlayerInfiltratoToolErrorPayload {
+  error: InfiltratoToolError;
+}
+
+/** User-facing (Italian) messages for infiltrato-tool errors. Mostly defensive
+ * fallbacks — the button is only shown when the phase/turn already make sense. */
+export const INFILTRATO_TOOL_ERROR_MESSAGES: Record<InfiltratoToolError, string> = {
+  ROOM_NOT_FOUND: 'Stanza non trovata',
+  NOT_INFILTRATOR: 'Non sei tu la spia',
+  NOT_DEFENSE_PHASE: 'Non è il momento di agire',
+  ALREADY_USED_THIS_ROUND: 'Hai già agito in questo round',
+  NO_ONE_SPEAKING: 'Nessuno sta parlando ora',
+};
 
 export interface PlayerAccusePayload {
   accusedId: string;
@@ -860,6 +1320,15 @@ export const VOTE_ERROR_MESSAGES: Record<VoteError, string> = {
   INVALID_CHOICE: 'Scelta non valida',
 };
 
+/**
+ * How many seconds of SPLIT_REVEAL, at the END of its countdown, are the
+ * actual reveal window — the seconds before that (server total minus this)
+ * are a "3-2-1" suspense beat with the split withheld. Must mirror the
+ * server's PHASE_DURATIONS_MS.SPLIT_REVEAL (currently 9s = 3s suspense + 6s
+ * reveal, this constant being that 6s).
+ */
+export const SPLIT_REVEAL_WINDOW_S = 6;
+
 /** User-facing (Italian) short label for each phase, shown on the host. */
 export const PHASE_LABELS: Record<GamePhase, string> = {
   LOBBY: 'In attesa',
@@ -867,22 +1336,37 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   DILEMMA_REVEAL: 'Il dilemma',
   VOTE_1: 'Primo voto',
   SPLIT_REVEAL: 'Come si è diviso il gruppo',
+  UNANIMOUS_REVEAL: "Tutti d'accordo!",
   PREDICT: 'Pronostico',
   DEFENSE: 'Le difese',
   INTERVENTI: 'Interventi',
   VOTE_2: 'Secondo voto',
-  SPEAKER_VOTE: 'Miglior oratore',
+  SPEAKER_VOTE: "Chi ti ha strappato l'applauso",
   PHASE_RESULTS: 'Risultati',
+  GROUP_MIND: 'La mente del gruppo',
+  GROUP_MIND_REVEAL: 'Chi legge il gruppo',
+  WRITE: 'In altre parole',
+  WRITE_VOTE: 'Votate la risposta migliore',
+  WRITE_REVEAL: 'Chi ha scritto cosa',
   TAPPA_INTRO: 'Nuova tappa',
   TAPPA_RECAP: 'Fine tappa',
+  STORY_INTRO: 'La storia',
+  SCENE_INTRO: 'La scena',
+  SCENE_CONSEQUENCE: 'Cosa succede',
+  STORY_EPILOGUE: 'Epilogo',
   ACCUSE: "Chi era l'infiltrato?",
   FINAL_AWARDS: 'Premi finali',
-  DUEL_PICK: 'Scegliete',
-  DUEL_REVEAL: 'Rivelazione',
-  DUEL_ARGUE: 'Duello',
-  DUEL_REPICK: 'Si ri-sceglie',
-  DUEL_RESULT: 'Esito',
-  FINAL_DUEL: 'Risultato finale',
+  DUO_ACT_INTRO: 'Nuovo atto',
+  DUO_PICK_PREDICT: 'Scegli e prevedi',
+  DUO_SYNC_REVEAL: 'Sintonia',
+  DUO_SIDE_PICK: 'Da che parte stai?',
+  DUO_ARGUE: 'Arringa',
+  DUO_WAVER: 'Ti ha fatto vacillare?',
+  DUO_ROUND_RESULT: 'Esito del round',
+  DUO_PICK: 'Schierati',
+  DUO_REVEAL: 'Rivelazione',
+  DUO_REPICK: 'Confermi o cambi?',
+  DUO_PORTRAIT: 'Ritratto di coppia',
 };
 
 export type StartGameError =
@@ -892,6 +1376,8 @@ export type StartGameError =
   | 'WRONG_PLAYER_COUNT'
   | 'INVALID_DILEMMA_COUNT'
   | 'INVALID_REGISTER'
+  | 'INVALID_PERCORSO'
+  | 'INVALID_STORIA'
   | 'INFILTRATO_NEEDS_PLAYERS'
   | 'SQUADRE_NEEDS_PLAYERS'
   | 'ALREADY_STARTED';
@@ -905,9 +1391,11 @@ export const START_ERROR_MESSAGES: Record<StartGameError, string> = {
   ROOM_NOT_FOUND: 'Stanza non trovata',
   NOT_ENOUGH_PLAYERS: 'Servono almeno 3 partecipanti (anche bot)',
   NO_HUMAN_PLAYERS: 'Serve almeno una persona in carne e ossa',
-  WRONG_PLAYER_COUNT: 'Il 1v1 richiede esattamente 2 giocatori',
+  WRONG_PLAYER_COUNT: 'Il Percorso in 2 richiede esattamente 2 giocatori',
   INVALID_DILEMMA_COUNT: 'Numero di dilemmi non valido',
   INVALID_REGISTER: 'Registro non valido',
+  INVALID_PERCORSO: 'Configurazione del percorso non valida',
+  INVALID_STORIA: 'Storia non valida',
   INFILTRATO_NEEDS_PLAYERS: "L'Infiltrato richiede almeno 4 persone",
   SQUADRE_NEEDS_PLAYERS: 'Le Squadre richiedono almeno 4 giocatori',
   ALREADY_STARTED: 'La partita è già iniziata',

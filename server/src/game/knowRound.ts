@@ -68,7 +68,11 @@ export function knowGuessResults(room: Room): KnowGuessOutcome[] {
 export function assignKnowTargets(room: Room): void {
   room.knowTargets.clear();
   room.knowGuesses.clear();
-  const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+  // A player who late-joined THIS round (3.2) is excluded — they just
+  // arrived and shouldn't be forced into a guessing ring, nor block it.
+  const humans = [...room.players.values()].filter(
+    (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+  );
   if (humans.length < 2) return;
   for (let i = 0; i < humans.length; i++) {
     room.knowTargets.set(humans[i].id, humans[(i + 1) % humans.length].id);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Deck, loadDilemmas, dilemmasForRegister, dilemmasForTappa, type Dilemma } from '../deck';
+import { Deck, loadDilemmas, dilemmasForRegister, dilemmasForTappa, filterByMood, type Dilemma } from '../deck';
 
 // A small fixed deck for exercising draw behavior without depending on the
 // real data file.
@@ -8,6 +8,19 @@ const fixture: Dilemma[] = [
   { id: 'b', text: 'B?', optionA: 'b1', optionB: 'b2', register: 'business', spuntiA: ['x', 'y'], spuntiB: ['x', 'y'] },
   { id: 'c', text: 'C?', optionA: 'c1', optionB: 'c2', register: 'vita', spuntiA: ['x', 'y'], spuntiB: ['x', 'y'] },
 ];
+
+describe('Deck.putBack', () => {
+  it('returns cards to the deck so they can be drawn again', () => {
+    const deck = new Deck(fixture, () => 0);
+    const first = deck.draw()!;
+    expect(deck.remainingCount).toBe(2);
+    deck.putBack([first]);
+    expect(deck.remainingCount).toBe(3);
+    const drawnIds = [deck.draw()!.id, deck.draw()!.id, deck.draw()!.id];
+    expect(drawnIds).toContain(first.id);
+    expect(deck.draw()).toBeNull();
+  });
+});
 
 describe('loadDilemmas (server/data/dilemmas.json)', () => {
   it('loads at least 20 dilemmas', () => {
@@ -26,6 +39,25 @@ describe('loadDilemmas (server/data/dilemmas.json)', () => {
     const dilemmas = loadDilemmas();
     const ids = new Set(dilemmas.map((d) => d.id));
     expect(ids.size).toBe(dilemmas.length);
+  });
+
+  it('every roster-template dilemma (5.3) actually embeds the {nome} placeholder', () => {
+    const rosterDilemmas = loadDilemmas().filter((d) => d.roster);
+    expect(rosterDilemmas.length).toBeGreaterThan(0);
+    for (const d of rosterDilemmas) {
+      expect(d.text.includes('{nome}') || d.optionA.includes('{nome}') || d.optionB.includes('{nome}')).toBe(true);
+    }
+  });
+
+  it('every famiglia (5.4, near-duplicate grouping) has at least 2 members — a group of 1 is a data mistake', () => {
+    const counts = new Map<string, number>();
+    for (const d of loadDilemmas()) {
+      if (d.famiglia) counts.set(d.famiglia, (counts.get(d.famiglia) ?? 0) + 1);
+    }
+    expect(counts.size).toBeGreaterThan(0);
+    for (const [famiglia, count] of counts) {
+      expect(count, `famiglia "${famiglia}" has only ${count} member(s)`).toBeGreaterThanOrEqual(2);
+    }
   });
 });
 
@@ -108,8 +140,20 @@ describe('dilemmasForRegister', () => {
     expect(dilemmasForRegister(all, 'business').length).toBeGreaterThanOrEqual(8);
   });
 
-  it('ogni dilemma è taggato vita o business', () => {
-    expect(all.every((d) => d.register === 'vita' || d.register === 'business')).toBe(true);
+  it('ogni dilemma è taggato vita, business o carriera', () => {
+    expect(
+      all.every((d) => d.register === 'vita' || d.register === 'business' || d.register === 'carriera'),
+    ).toBe(true);
+  });
+
+  it('carriera restituisce solo i dilemmi taggati carriera, e ce ne sono abbastanza', () => {
+    const car = dilemmasForRegister(all, 'carriera');
+    expect(car.length).toBeGreaterThanOrEqual(10);
+    expect(car.every((d) => d.register === 'carriera')).toBe(true);
+  });
+
+  it('carriera ha contenuto sufficiente per una serata lunga in ampiezza (5.6: 40+)', () => {
+    expect(dilemmasForRegister(all, 'carriera').length).toBeGreaterThanOrEqual(40);
   });
 });
 
@@ -202,19 +246,66 @@ describe('contenuti Percorso (tappe)', () => {
 describe('classificazione complessità (alto < max < power)', () => {
   const all = loadDilemmas();
 
-  it('ogni dilemma ha una complessità valida (pavimento alto, niente banali)', () => {
+  it('ogni dilemma ha una complessità valida (incl. il tier "sorbetto" leggero)', () => {
     for (const d of all) {
-      expect(['alto', 'max', 'power']).toContain(d.complessita);
+      expect(['sorbetto', 'alto', 'max', 'power']).toContain(d.complessita);
     }
   });
 
-  it('il deck copre tutti e tre i livelli di complessità', () => {
-    expect(new Set(all.map((d) => d.complessita))).toEqual(new Set(['alto', 'max', 'power']));
+  it('il deck copre tutti e quattro i livelli di complessità', () => {
+    expect(new Set(all.map((d) => d.complessita))).toEqual(new Set(['sorbetto', 'alto', 'max', 'power']));
   });
 
   it('le tappe profonde sono più complesse: tappa 4 è sempre power, tappa 3 mai alto', () => {
     expect(all.filter((d) => d.tappa === 4).every((d) => d.complessita === 'power')).toBe(true);
     expect(all.filter((d) => d.tappa === 3).every((d) => d.complessita !== 'alto')).toBe(true);
+  });
+
+  it('almeno un dilemma power è marcato "delicato" (tema pesante, opt-in)', () => {
+    expect(all.some((d) => d.complessita === 'power' && d.delicato === true)).toBe(true);
+  });
+
+  it("business ha un'escalation reale: copre anche l'apertura 'sorbetto' e il picco 'power' (5.6), non solo alto/max", () => {
+    const biz = all.filter((d) => d.register === 'business');
+    expect(biz.some((d) => d.complessita === 'sorbetto')).toBe(true);
+    expect(biz.some((d) => d.complessita === 'power')).toBe(true);
+  });
+
+  it("carriera ha un'escalation reale: copre anche l'apertura 'sorbetto' e il picco 'power' (5.6), non solo alto/max", () => {
+    const car = all.filter((d) => d.register === 'carriera');
+    expect(car.some((d) => d.complessita === 'sorbetto')).toBe(true);
+    expect(car.some((d) => d.complessita === 'power')).toBe(true);
+  });
+});
+
+describe('filterByMood', () => {
+  const pool: Dilemma[] = [
+    { id: 's1', text: 's1', optionA: 'A', optionB: 'B', register: 'vita', complessita: 'sorbetto', spuntiA: [], spuntiB: [] },
+    { id: 'a1', text: 'a1', optionA: 'A', optionB: 'B', register: 'vita', complessita: 'alto', spuntiA: [], spuntiB: [] },
+    { id: 'm1', text: 'm1', optionA: 'A', optionB: 'B', register: 'vita', complessita: 'max', spuntiA: [], spuntiB: [] },
+    { id: 'p1', text: 'p1', optionA: 'A', optionB: 'B', register: 'vita', complessita: 'power', spuntiA: [], spuntiB: [] },
+    { id: 'pd1', text: 'pd1', optionA: 'A', optionB: 'B', register: 'vita', complessita: 'power', delicato: true, spuntiA: [], spuntiB: [] },
+  ];
+
+  it("'mista' keeps everything except delicate content by default", () => {
+    expect(filterByMood(pool, 'mista', false).map((d) => d.id)).toEqual(['s1', 'a1', 'm1', 'p1']);
+  });
+
+  it("'mista' with delicatoOptIn includes the delicate dilemma too", () => {
+    expect(filterByMood(pool, 'mista', true).map((d) => d.id)).toEqual(['s1', 'a1', 'm1', 'p1', 'pd1']);
+  });
+
+  it("'leggera' excludes every 'power' dilemma, delicate or not", () => {
+    expect(filterByMood(pool, 'leggera', true).map((d) => d.id)).toEqual(['s1', 'a1', 'm1']);
+  });
+
+  it("'profonda' excludes the sorbetto warm-up tier", () => {
+    expect(filterByMood(pool, 'profonda', false).map((d) => d.id)).toEqual(['a1', 'm1', 'p1']);
+  });
+
+  it('delicate content is always excluded unless explicitly opted in, in any mood', () => {
+    expect(filterByMood(pool, 'profonda', false).some((d) => d.delicato)).toBe(false);
+    expect(filterByMood(pool, 'profonda', true).some((d) => d.delicato)).toBe(true);
   });
 });
 

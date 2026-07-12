@@ -1,0 +1,56 @@
+/* Full-screen tap-to-enable-audio overlay for /host. Sits above everything (incl. the
+   room-code chip and mute button) and disappears once the audio is unlocked. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  cursor: pointer;
+  background: color-mix(in srgb, var(--bg, #0b1020) 78%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: gate-in 0.2s ease both;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-8);
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+.icon {
+  font-size: clamp(2.5rem, 8vw, 4rem);
+  line-height: 1;
+  animation: gate-pulse 1.6s ease-in-out infinite;
+}
+.text {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: clamp(1.3rem, 3.5vw, 2rem);
+}
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+@keyframes gate-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+@keyframes gate-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.overlay:focus-visible {
+  outline: 3px solid var(--accent, currentColor);
+  outline-offset: -6px;
+}

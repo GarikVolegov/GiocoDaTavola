@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { PHASE_LABELS, type DefenseState, type Reaction } from '../../shared/events';
+import { PHASE_LABELS, type DefenseState, type Reaction, type Twist } from '../../shared/events';
 import { formatMSS } from '../../shared/time';
 import ReactionSwarm from '../../shared/ReactionSwarm';
 import ReactionBar from './ReactionBar';
@@ -12,17 +12,34 @@ interface DefenseDilemma {
   optionB: string;
 }
 
+interface Applause {
+  speakerId: string;
+  nickname: string;
+  tally: Partial<Record<Reaction, number>>;
+}
+
 interface DefenseViewProps {
   phase: 'DEFENSE' | 'INTERVENTI';
   defense: DefenseState | null;
   dilemma: DefenseDilemma | null | undefined;
   isDevilRound: boolean;
+  absurdConstraint: string | null;
+  twist: Twist | null;
+  /** 3.1: Pubblico never intervenes — the raise-hand affordance is hidden for them. */
+  isPubblico: boolean;
+  /** 4.5: only this phone sees the sabotage button — nobody else knows who the infiltrator is. */
+  isInfiltrator: boolean;
+  infiltratoToolUsed: boolean;
+  infiltratoToolError: string | null;
+  onUseInfiltratoTool: () => void;
   playerId: string | null;
   handRaised: boolean;
+  raiseHandError: string | null;
   canFinishNow: boolean;
   minRemaining: number | null;
   remaining: number | null;
   speakerElapsed: number | null;
+  lastTurnApplause: Applause | null;
   onFinish: () => void;
   onToggleHand: () => void;
   onReact: (emoji: Reaction) => void;
@@ -36,12 +53,21 @@ export default function DefenseView({
   defense: d,
   dilemma,
   isDevilRound,
+  absurdConstraint,
+  twist,
+  isPubblico,
+  isInfiltrator,
+  infiltratoToolUsed,
+  infiltratoToolError,
+  onUseInfiltratoTool,
   playerId,
   handRaised,
+  raiseHandError,
   canFinishNow,
   minRemaining,
   remaining,
   speakerElapsed,
+  lastTurnApplause,
   onFinish,
   onToggleHand,
   onReact,
@@ -59,17 +85,31 @@ export default function DefenseView({
   const finishButton = (
     <>
       <Button variant="primary" size="lg" onClick={onFinish} disabled={!canFinishNow}>
-        {canFinishNow ? 'Ho finito ▶' : `Ho finito tra ${minRemaining ?? ''}s`}
+        Ho finito ▶
       </Button>
-      {remaining != null && (
-        <p style={{ fontSize: '0.85rem', opacity: 0.6, margin: 0 }}>max {remaining}s</p>
-      )}
+      {canFinishNow
+        ? remaining != null && (
+            <p style={{ fontSize: '0.85rem', opacity: 0.6, margin: 0 }}>max {remaining}s</p>
+          )
+        : (
+            <p style={{ fontSize: '0.85rem', opacity: 0.6, margin: 0 }}>
+              Parla ancora {minRemaining ?? ''}s prima di poter passare
+            </p>
+          )}
     </>
   );
 
   return (
     <main style={wrap}>
       <ReactionSwarm />
+      {lastTurnApplause && (
+        <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, opacity: 0.9 }}>
+          {lastTurnApplause.nickname}:{' '}
+          {Object.entries(lastTurnApplause.tally)
+            .map(([emoji, count]) => `${emoji}×${count}`)
+            .join(' ')}
+        </p>
+      )}
       <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
 
       {myTurn ? (
@@ -103,12 +143,22 @@ export default function DefenseView({
                   {sideOption ? `: ${sideOption}` : ''}
                 </p>
               )}
+              {absurdConstraint && (
+                <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem', color: 'var(--gold)' }}>
+                  🎭 Vincolo: {absurdConstraint}
+                </p>
+              )}
+              {twist && (
+                <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem', color: 'var(--gold)' }}>
+                  {twist.label}: {twist.description}
+                </p>
+              )}
               {d?.spunti && d.spunti.length > 0 && (
-                <div style={{ width: 'min(90vw, 22rem)', textAlign: 'left' }}>
+                <div style={{ width: 'min(90vw, 22rem)', textAlign: 'center' }}>
                   <p style={{ fontSize: '0.9rem', fontWeight: 700, opacity: 0.8, margin: '0 0 0.3rem' }}>
                     Spunti per te:
                   </p>
-                  <ul style={{ margin: 0, paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
                     {d.spunti.map((s, i) => (
                       <li key={`${i}-${s}`} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{s}</li>
                     ))}
@@ -138,6 +188,16 @@ export default function DefenseView({
               🎭 Round Avvocato del Diavolo — difende il contrario!
             </p>
           )}
+          {phase === 'DEFENSE' && absurdConstraint && (
+            <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--gold)' }}>
+              🎭 Vincolo: {absurdConstraint}
+            </p>
+          )}
+          {phase === 'DEFENSE' && twist && (
+            <p style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--gold)' }}>
+              {twist.label}: {twist.description}
+            </p>
+          )}
           <p style={{ fontSize: '1.3rem', margin: 0 }}>
             {phase === 'INTERVENTI' ? (
               <>Interviene <strong>{d?.intervenor?.nickname ?? '…'}</strong> 🙋</>
@@ -146,7 +206,21 @@ export default function DefenseView({
             )}
           </p>
 
-          {phase === 'DEFENSE' && d?.speakerId != null && (
+          {phase === 'DEFENSE' && speaker && (
+            <>
+              {dilemma && (
+                <p style={{ fontSize: '0.95rem', opacity: 0.75, margin: 0, maxWidth: '22rem' }}>
+                  {dilemma.text}
+                </p>
+              )}
+              <p style={{ fontSize: '1rem', opacity: 0.9, margin: 0 }}>
+                Sta difendendo <strong>{speaker.side}</strong>
+                {sideOption ? `: ${sideOption}` : ''}
+              </p>
+            </>
+          )}
+
+          {phase === 'DEFENSE' && d?.speakerId != null && !isPubblico && twist?.id !== 'interventi-vietati' && (
             <button
               type="button"
               onClick={onToggleHand}
@@ -165,10 +239,49 @@ export default function DefenseView({
               {handRaised ? '✋ Abbassa la mano' : '✋ Alza la mano'}
             </button>
           )}
+          {phase === 'DEFENSE' && d?.speakerId != null && !isPubblico && twist?.id !== 'interventi-vietati' && (
+            <p style={{ fontSize: '0.9rem', opacity: 0.7, margin: 0 }}>
+              {raiseHandError
+                ? raiseHandError
+                : handRaised
+                  ? '✋ Mano alzata — potrai intervenire dopo le difese'
+                  : 'Alza la mano per intervenire dopo'}
+            </p>
+          )}
           {phase === 'INTERVENTI' && myQueuePos >= 0 && (
             <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0 }}>
               Sei in coda: {myQueuePos + 1}º
             </p>
+          )}
+
+          {phase === 'DEFENSE' && isInfiltrator && d?.speakerId != null && (
+            <>
+              <button
+                type="button"
+                onClick={onUseInfiltratoTool}
+                disabled={infiltratoToolUsed}
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  padding: '0.6rem 1.1rem',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '2px solid var(--gold)',
+                  background: infiltratoToolUsed ? 'transparent' : 'var(--gold-soft)',
+                  color: 'inherit',
+                  cursor: infiltratoToolUsed ? 'default' : 'pointer',
+                  opacity: infiltratoToolUsed ? 0.5 : 1,
+                }}
+              >
+                🕵️ Semina un dubbio
+              </button>
+              <p style={{ fontSize: '0.85rem', opacity: 0.7, margin: 0 }}>
+                {infiltratoToolError
+                  ? infiltratoToolError
+                  : infiltratoToolUsed
+                    ? 'Dubbio seminato per questo round.'
+                    : 'Aggiunge un consiglio-esca ai suoi spunti — una volta per round.'}
+              </p>
+            </>
           )}
 
           <ReactionBar onReact={onReact} />

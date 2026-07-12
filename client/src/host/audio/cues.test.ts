@@ -3,14 +3,26 @@ import { sfxForTransition, shouldWarnAt, handRaised, type CueGame } from './cues
 
 const game = (over: Partial<CueGame> = {}): CueGame => ({
   swing: null,
-  duelResult: null,
+  duoRoundResult: null,
   ...over,
 });
 
 describe('sfxForTransition', () => {
   it('plays a reveal chime when votes are revealed', () => {
     expect(sfxForTransition('VOTE_1', 'SPLIT_REVEAL', game())).toBe('reveal');
-    expect(sfxForTransition('DILEMMA_REVEAL', 'DUEL_REVEAL', game())).toBe('reveal');
+  });
+
+  it('plays a reveal chime on the Percorso in 2 sync/true reveals', () => {
+    expect(sfxForTransition('DUO_PICK_PREDICT', 'DUO_SYNC_REVEAL', game())).toBe('reveal');
+    expect(sfxForTransition('DUO_PICK', 'DUO_REVEAL', game())).toBe('reveal');
+  });
+
+  it('plays the unanimous fanfare entering UNANIMOUS_REVEAL', () => {
+    expect(sfxForTransition('VOTE_1', 'UNANIMOUS_REVEAL', game())).toBe('unanimous');
+  });
+
+  it('stays quiet on a same-phase re-entry (a discard from DILEMMA_REVEAL) — the "discard" sting itself is owned by useSfxCues, not this pure mapping', () => {
+    expect(sfxForTransition('DILEMMA_REVEAL', 'DILEMMA_REVEAL', game())).toBeNull();
   });
 
   it('plays a dramatic swing sting when the majority actually flipped', () => {
@@ -26,21 +38,44 @@ describe('sfxForTransition', () => {
     expect(sfxForTransition('INTERVENTI', 'PHASE_RESULTS', game({ swing: null }))).toBe('reveal');
   });
 
-  it('plays a win fanfare when a duel round convinced someone', () => {
+  it('plays the swing sting for a single switch that flips the lead (a real ribaltone)', () => {
     expect(
-      sfxForTransition('DUEL_ARGUE', 'DUEL_RESULT', game({ duelResult: { convinced: [{}] } })),
+      sfxForTransition('INTERVENTI', 'PHASE_RESULTS', game({ swing: { switched: 1, leadFlipped: true } })),
+    ).toBe('swing');
+  });
+
+  it('plays only a reveal for a single switch that does not flip the lead (not a ribaltone)', () => {
+    expect(
+      sfxForTransition('INTERVENTI', 'PHASE_RESULTS', game({ swing: { switched: 1, leadFlipped: false } })),
+    ).toBe('reveal');
+  });
+
+  it('plays a win fanfare when a duo round scored a persuasion or a waver', () => {
+    expect(
+      sfxForTransition('DUO_ARGUE', 'DUO_ROUND_RESULT', game({ duoRoundResult: { convinced: [{}], vacillare: [] } })),
+    ).toBe('win');
+    expect(
+      sfxForTransition(
+        'DUO_ARGUE',
+        'DUO_ROUND_RESULT',
+        game({ duoRoundResult: { convinced: [], vacillare: [{ received: 1 }] } }),
+      ),
     ).toBe('win');
   });
 
-  it('plays only a reveal for a duel that ended in agreement', () => {
+  it('plays only a reveal for a duo round where nobody budged', () => {
     expect(
-      sfxForTransition('DUEL_ARGUE', 'DUEL_RESULT', game({ duelResult: { convinced: [] } })),
+      sfxForTransition(
+        'DUO_ARGUE',
+        'DUO_ROUND_RESULT',
+        game({ duoRoundResult: { convinced: [], vacillare: [{ received: 0 }] } }),
+      ),
     ).toBe('reveal');
   });
 
   it('plays a celebratory arpeggio at the finale', () => {
     expect(sfxForTransition('PHASE_RESULTS', 'FINAL_AWARDS', game())).toBe('awards');
-    expect(sfxForTransition('DUEL_RESULT', 'FINAL_DUEL', game())).toBe('awards');
+    expect(sfxForTransition('DUO_ROUND_RESULT', 'DUO_PORTRAIT', game())).toBe('awards');
   });
 
   it('is silent for ordinary, non-event transitions', () => {

@@ -6,7 +6,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 /** Content register: 'misto' is a filter meaning "any". */
-export type ContentRegister = 'vita' | 'business' | 'misto';
+export type ContentRegister = 'vita' | 'business' | 'carriera' | 'misto';
 
 /**
  * A 1-based "tappa" (life chapter / depth level) for the "Percorso" mode. Higher
@@ -17,14 +17,15 @@ export type Tappa = 1 | 2 | 3 | 4;
 
 /**
  * Cross-cutting debate-complexity tier (a universal difficulty ladder, present on
- * every dilemma — classic and percorso). Ascending: 'alto' (real, accessible
- * stakes) < 'max' (heavy personal/relational stakes) < 'power' (existential /
- * moral / taboo). The deck has no banal entries: the floor is 'alto'.
+ * every dilemma — classic and percorso). Ascending: 'sorbetto' (light/absurd,
+ * low-stakes, high-friction fun — the "permesso di ridere" warm-up tier) <
+ * 'alto' (real, accessible stakes) < 'max' (heavy personal/relational stakes) <
+ * 'power' (existential / moral / taboo).
  */
-export type Complessita = 'alto' | 'max' | 'power';
+export type Complessita = 'sorbetto' | 'alto' | 'max' | 'power';
 
 /** Ascending rank of a complexity tier (for ordering an escalation). */
-export const COMPLESSITA_RANK: Record<Complessita, number> = { alto: 0, max: 1, power: 2 };
+export const COMPLESSITA_RANK: Record<Complessita, number> = { sorbetto: -1, alto: 0, max: 1, power: 2 };
 
 export interface Dilemma {
   id: string;
@@ -32,11 +33,40 @@ export interface Dilemma {
   optionA: string;
   optionB: string;
   /** Which content register this dilemma belongs to. */
-  register: 'vita' | 'business';
+  register: 'vita' | 'business' | 'carriera';
   /** Percorso chapter/level (1..4); absent ⇒ classic-only dilemma. */
   tappa?: Tappa;
   /** Debate-complexity tier (alto < max < power). Present on every curated dilemma. */
   complessita?: Complessita;
+  /**
+   * Flags an especially heavy theme (euthanasia, grief, ...) among the 'power'
+   * dilemmas. Excluded from the classic draw by default; the leader must
+   * opt in (2.2's "tema delicato" toggle) to make it eligible.
+   */
+  delicato?: boolean;
+  /**
+   * "Contenuto combinatorio sul roster" (5.3): a template whose text/options
+   * embed a `{nome}` placeholder, filled in with a random player's nickname
+   * on each DILEMMA_REVEAL (rosterDilemmas.ts) — the same template reads
+   * differently every game, so it's exempt from the "già visto" exclusion
+   * (deviceSeenIds/excludeDilemmaIds) and never truly gets "consumed".
+   */
+  roster?: boolean;
+  /**
+   * "Igiene del pool" (5.4): groups near-duplicate dilemmas (same premise,
+   * different wording) so at most one member plays in a single game —
+   * dilemmaPlan.ts's buildClassicPlan enforces it. Absent ⇒ not part of any
+   * family (the common case).
+   */
+  famiglia?: string;
+  /**
+   * "Igiene del pool" (5.4): the content author's expectation of how the vote
+   * splits — 'equilibrato' invites real debate; 'sbilanciato' tends toward a
+   * near-unanimous vote (still worth keeping around, just not back to back —
+   * dilemmaPlan.ts's pacing spaces them out so they don't "uccidere il
+   * round" two in a row). Absent ⇒ no signal either way.
+   */
+  bilanciamento?: 'equilibrato' | 'sbilanciato';
   /** 2–3 talking points for someone defending side A (optionA). */
   spuntiA: string[];
   /** 2–3 talking points for someone defending side B (optionB). */
@@ -47,6 +77,25 @@ export interface Dilemma {
 export function dilemmasForRegister(all: Dilemma[], register: ContentRegister): Dilemma[] {
   if (register === 'misto') return all;
   return all.filter((d) => d.register === register);
+}
+
+/**
+ * The evening's mood (2.2's setup selector): 'leggera' keeps things sorbetto +
+ * alto (no existential 'power' stakes); 'mista' (default) is the full mix;
+ * 'profonda' skips the sorbetto warm-up tier and leans into max/power.
+ */
+export type Mood = 'leggera' | 'mista' | 'profonda';
+
+/**
+ * Filter a dilemma pool by mood, then by the delicate-theme opt-in (excluding
+ * `delicato` dilemmas unless the leader explicitly opted in). Applied before
+ * drawing, so the pacing pass (dilemmaPlan.ts) only ever sees eligible cards.
+ */
+export function filterByMood(pool: Dilemma[], mood: Mood, delicatoOptIn: boolean): Dilemma[] {
+  const withoutDelicate = delicatoOptIn ? pool : pool.filter((d) => !d.delicato);
+  if (mood === 'leggera') return withoutDelicate.filter((d) => (d.complessita ?? 'alto') !== 'power');
+  if (mood === 'profonda') return withoutDelicate.filter((d) => (d.complessita ?? 'alto') !== 'sorbetto');
+  return withoutDelicate;
 }
 
 /**
@@ -98,5 +147,11 @@ export class Deck {
     const index = Math.floor(this.rng() * this.remaining.length);
     const [picked] = this.remaining.splice(index, 1);
     return picked;
+  }
+
+  /** Return drawn-but-unused cards to the deck (e.g. set-asides from a
+   * mid-game replacement draw) so they stay available for later draws. */
+  putBack(dilemmas: Dilemma[]): void {
+    this.remaining.push(...dilemmas);
   }
 }

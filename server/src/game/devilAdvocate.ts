@@ -23,11 +23,14 @@ export function publicDevilRound(room: Room): boolean {
 }
 
 /**
- * Pick the surprise "Avvocato del Diavolo" round: a random 1-based dilemma index in
- * [2..dilemmaCount] (never the first round, so the group learns the normal flow
- * first). null when there are fewer than 2 dilemmas.
+ * Pick the surprise "Avvocato del Diavolo" round: always the PENULTIMATE dilemma
+ * (6.2, "struttura a 3 atti") — the twist now lands at a fixed beat right before the
+ * finale, so the energy builds by design and not just by luck of the draw. Never the
+ * first round (so the group learns the normal flow first) and never the last (that
+ * beat is reserved for the finale's own "posta doppia" swing bet) — needs at least 3
+ * rounds; null otherwise.
  */
-export function pickDevilRound(dilemmaCount: number, rng: () => number): number | null {
-  if (dilemmaCount < 2) return null;
-  return 2 + Math.floor(rng() * (dilemmaCount - 1));
+export function pickDevilRound(dilemmaCount: number): number | null {
+  if (dilemmaCount < 3) return null;
+  return dilemmaCount - 1;
 }

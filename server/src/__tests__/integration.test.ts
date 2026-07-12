@@ -109,6 +109,44 @@ describe('socket integration', () => {
     expect((splitState as Record<string, unknown>).votes).toBeUndefined();
   }, 15000);
 
+  it('duello Atto I over sockets: duoSync early-advances into the sync reveal', async () => {
+    const leader = await connect();
+    const leaderJoinedP = once<JoinedPayload>(leader, 'player:joined');
+    leader.emit('player:createRoom', { nickname: 'Ann' });
+    const { code } = await leaderJoinedP;
+
+    const bob = await connect();
+    const bobJoinedP = once<JoinedPayload>(bob, 'player:joined');
+    bob.emit('player:join', { code, nickname: 'Bob' });
+    await bobJoinedP;
+
+    const introP = waitForPhase(leader, 'PHASE_INTRO');
+    leader.emit('leader:startGame', { dilemmaCount: 3, register: 'misto', mode: 'duello' });
+    await introP;
+
+    // Skip the timed intro cards: PHASE_INTRO -> DUO_ACT_INTRO -> DUO_PICK_PREDICT.
+    const actIntroP = waitForPhase(leader, 'DUO_ACT_INTRO');
+    leader.emit('leader:advancePhase');
+    await actIntroP;
+    const pickP = waitForPhase(leader, 'DUO_PICK_PREDICT');
+    leader.emit('leader:advancePhase');
+    const pickState = (await pickP) as GameState & { duoSyncReveal: unknown };
+    expect(pickState.duoSyncReveal).toBeNull(); // secret until the reveal
+
+    // Both submit pick+prediction -> the phase early-advances to the reveal.
+    const revealP = waitForPhase(leader, 'DUO_SYNC_REVEAL');
+    const syncedP = once<{ own: string; predict: string }>(leader, 'player:duoSynced');
+    leader.emit('player:duoSync', { own: 'A', predict: 'B' });
+    const synced = await syncedP;
+    expect(synced).toEqual({ own: 'A', predict: 'B' });
+    bob.emit('player:duoSync', { own: 'B', predict: 'B' });
+    const revealState = (await revealP) as GameState & {
+      duoSyncReveal: { agreed: boolean; picks: unknown[]; predictions: unknown[] } | null;
+    };
+    expect(revealState.duoSyncReveal?.agreed).toBe(false);
+    expect(revealState.duoSyncReveal?.picks).toHaveLength(2);
+  }, 15000);
+
   it('reclaims the same seat on reconnect with the saved token', async () => {
     const leader = await connect();
     const leaderJoinedP = once<JoinedPayload>(leader, 'player:joined');
@@ -149,4 +187,75 @@ describe('socket integration', () => {
     });
     expect(put.status).toBe(401);
   });
+});
+
+describe('scarta dilemma + voto unanime (socket)', () => {
+  interface RichState extends GameState {
+    dilemma: { id: string } | null;
+    unanimous: { side: 'A' | 'B'; count: number } | null;
+  }
+
+  async function threeInRoom() {
+    const leader = await connect();
+    const leaderJoinedP = once<JoinedPayload>(leader, 'player:joined');
+    leader.emit('player:createRoom', { nickname: 'Capo' });
+    const { code } = await leaderJoinedP;
+    const p2 = await connect();
+    const p2JoinedP = once<JoinedPayload>(p2, 'player:joined');
+    p2.emit('player:join', { code, nickname: 'Due' });
+    await p2JoinedP;
+    const p3 = await connect();
+    const p3JoinedP = once<JoinedPayload>(p3, 'player:joined');
+    p3.emit('player:join', { code, nickname: 'Tre' });
+    await p3JoinedP;
+    return { leader, p2, p3, code };
+  }
+
+  it("leader:skipDilemma rimpiazza il dilemma e notifica tutti con room:dilemmaSkipped", async () => {
+    const { leader, p2 } = await threeInRoom();
+    const introP = waitForPhase(leader, 'PHASE_INTRO');
+    leader.emit('leader:startGame', { dilemmaCount: 3, register: 'misto', mode: 'gruppo' });
+    await introP;
+    const revealP = waitForPhase(leader, 'DILEMMA_REVEAL');
+    leader.emit('leader:advancePhase');
+    const firstReveal = (await revealP) as RichState;
+    const firstId = firstReveal.dilemma?.id;
+    expect(firstId).toBeTruthy();
+
+    const skippedP = once(p2, 'room:dilemmaSkipped'); // arriva anche ai non-leader
+    const secondRevealP = new Promise<RichState>((resolve) => {
+      const handler = (s: RichState) => {
+        if (s.phase === 'DILEMMA_REVEAL' && s.dilemma && s.dilemma.id !== firstId) {
+          leader.off('game:state', handler);
+          resolve(s);
+        }
+      };
+      leader.on('game:state', handler);
+    });
+    leader.emit('leader:skipDilemma');
+    await skippedP;
+    const secondReveal = await secondRevealP;
+    expect(secondReveal.dilemma!.id).not.toBe(firstId);
+  }, 15000);
+
+  it('un VOTE_1 unanime porta a UNANIMOUS_REVEAL con il solo aggregato (side+count)', async () => {
+    const { leader, p2, p3 } = await threeInRoom();
+    const introP = waitForPhase(leader, 'PHASE_INTRO');
+    leader.emit('leader:startGame', { dilemmaCount: 3, register: 'misto', mode: 'gruppo' });
+    await introP;
+    const revealP = waitForPhase(leader, 'DILEMMA_REVEAL');
+    leader.emit('leader:advancePhase');
+    await revealP;
+    const voteP = waitForPhase(leader, 'VOTE_1');
+    leader.emit('leader:advancePhase');
+    await voteP;
+
+    const unanimousP = waitForPhase(p2, 'UNANIMOUS_REVEAL');
+    leader.emit('player:vote', { choice: 'B' });
+    p2.emit('player:vote', { choice: 'B' });
+    p3.emit('player:vote', { choice: 'B' });
+    const state = (await unanimousP) as RichState;
+    expect(state.unanimous).toEqual({ side: 'B', count: 3 });
+    expect((state as Record<string, unknown>).votes).toBeUndefined(); // mai identità
+  }, 15000);
 });

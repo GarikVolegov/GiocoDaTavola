@@ -1,7 +1,12 @@
 // The game's phase state machine: the phase enum, per-phase timer durations, and
-// the pure transition functions for the group game and the 1v1 duel. Extracted
+// the pure transition functions for the group game and the Percorso in 2. Extracted
 // from rooms.ts so the (stateless, heavily-tested) state machine lives on its
 // own; RoomStore imports from here and re-exports for backward compatibility.
+
+// DEFENSE_COPPIE_THRESHOLD's canonical home is ruleset.ts (3.6, the N-dependent
+// rules module) — re-exported here since it's conceptually a phase-timing knob
+// and defenseSetup.ts already imports its phase constants from this file.
+export { DEFENSE_COPPIE_THRESHOLD } from './ruleset';
 
 /**
  * Phases of a game. The state machine runs:
@@ -22,21 +27,61 @@ export type GamePhase =
   | 'VOTE_2'
   | 'SPEAKER_VOTE'
   | 'PHASE_RESULTS'
+  // "La Mente del Gruppo" (4.1): a short, all-active breather dropped between
+  // dilemmas (every 2nd, classic format only) — no defense/spotlight, just a
+  // parallel commit->reveal. GROUP_MIND is self-paced (everyone answers +
+  // predicts the group's majority); GROUP_MIND_REVEAL is a brief fixed-timer
+  // aggregate reveal. Inserted by rooms.ts's advancePhase, not the pure
+  // per-mode sequences below (mirrors how ACCUSE is inserted for the group loop).
+  | 'GROUP_MIND'
+  | 'GROUP_MIND_REVEAL'
+  // "In Altre Parole" (4.2): the write+vote breather — alternates with
+  // GROUP_MIND at the same 2-dilemma checkpoints (classic format only).
+  // Everyone writes a short answer to the same prompt (WRITE, self-paced);
+  // then votes anonymously for their favorite among the others' answers
+  // (WRITE_VOTE, self-paced); WRITE_REVEAL shows each answer with its author
+  // + vote count. Inserted the same way as GROUP_MIND, not in the pure
+  // per-mode sequences below.
+  | 'WRITE'
+  | 'WRITE_VOTE'
+  | 'WRITE_REVEAL'
   // "Percorso" mode: the chapter card shown entering a new tappa, and the
   // end-of-tappa recap/pause (handled by nextPercorsoPhase, not nextPhase).
   | 'TAPPA_INTRO'
   | 'TAPPA_RECAP'
+  // "Storie" mode: narrative cards framing each crossroads (handled by
+  // nextStoriaPhase). The protagonist/setting intro, the prose before a bivio,
+  // the consequence of the group's choice, and the variant ending. All
+  // leader-paced (no timer): the host narrates and taps "Continua ▶".
+  | 'STORY_INTRO'
+  | 'SCENE_INTRO'
+  | 'SCENE_CONSEQUENCE'
+  | 'STORY_EPILOGUE'
+  // 100% unanimous first vote (classic only): a short celebratory beat replacing
+  // the whole debate — the round's dilemma is then swapped for a fresh one at the
+  // same index. Inserted by advancePhase, not the pure sequence (like ACCUSE).
+  | 'UNANIMOUS_REVEAL'
   // "L'Infiltrato" end-game accusation, inserted before FINAL_AWARDS only when a
   // room has an infiltrator (handled in advancePhase, not the pure sequence).
   | 'ACCUSE'
   | 'FINAL_AWARDS'
-  // 1v1 "Duello" mode phases (run instead of the group sequence when mode==='duello').
-  | 'DUEL_PICK'
-  | 'DUEL_REVEAL'
-  | 'DUEL_ARGUE'
-  | 'DUEL_REPICK'
-  | 'DUEL_RESULT'
-  | 'FINAL_DUEL';
+  // "Percorso in 2" (the rebuilt duello): three fixed acts + the couple portrait.
+  // DUO_ACT_INTRO frames each act (like TAPPA_INTRO). Atto I plays
+  // DUO_PICK_PREDICT → DUO_SYNC_REVEAL; Atto II plays DUO_SIDE_PICK → DUO_ARGUE
+  // → DUO_WAVER → DUO_ROUND_RESULT; Atto III plays DUO_PICK → DUO_REVEAL →
+  // DUO_ARGUE → DUO_REPICK → (DUO_WAVER on the no-flip advocacy twist) →
+  // DUO_ROUND_RESULT. DUO_PORTRAIT is terminal (handled by nextDuoPhase).
+  | 'DUO_ACT_INTRO'
+  | 'DUO_PICK_PREDICT'
+  | 'DUO_SYNC_REVEAL'
+  | 'DUO_SIDE_PICK'
+  | 'DUO_ARGUE'
+  | 'DUO_WAVER'
+  | 'DUO_ROUND_RESULT'
+  | 'DUO_PICK'
+  | 'DUO_REVEAL'
+  | 'DUO_REPICK'
+  | 'DUO_PORTRAIT';
 
 /**
  * Per-turn timing for the self-paced defense + interventi. A human speaker gets a
@@ -45,9 +90,30 @@ export type GamePhase =
  */
 export const DEFENSE_MIN_MS = 30_000;
 export const INTERVENTO_MIN_MS = 15_000;
-export const DEFENSE_MAX_MS = 180_000;
+/**
+ * DEFENSE's per-turn safety cap (3.3): 90s by default so a round's "stage
+ * budget" stays roughly constant regardless of group size; the leader may
+ * opt into "serata lunga" (DEFENSE_MAX_MS_LUNGA) for a slower, deeper night.
+ * Room-configurable — see Room.defenseMaxMs; this is only the default.
+ */
+export const DEFENSE_MAX_MS_NORMALE = 90_000;
+export const DEFENSE_MAX_MS_LUNGA = 180_000;
+
 export const INTERVENTI_MAX_MS = 90_000;
-export const TURN_BOT_MS = 60_000;
+export const TURN_BOT_MS = 20_000;
+
+/** Per-turn floor for a DUO_ARGUE arringa (Percorso in 2) — mirrors
+ * INTERVENTO_MIN_MS; kept separate so the two can diverge later. */
+export const DUO_TURN_MIN_MS = 15_000;
+
+/**
+ * Self-paced phases (VOTE_1/VOTE_2/PREDICT/SPEAKER_VOTE) have no fixed timer —
+ * they end once every present player has acted, or the leader skips. Once
+ * this fraction of the players a phase is waiting on have acted, a visible
+ * soft deadline kicks in so one distracted holdout can't freeze it forever.
+ */
+export const SOFT_TIMEOUT_THRESHOLD = 0.7;
+export const SOFT_TIMEOUT_MS = 50_000;
 
 /**
  * How long each phase lasts before the server auto-advances, in ms. `null`
@@ -62,37 +128,72 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   // Self-paced votes: no timer — advance once every present player has acted
   // (early-advance in index.ts), with the leader's "Salta ▶" as the only override.
   VOTE_1: null,
-  SPLIT_REVEAL: 6_000,
+  // The first 3s are a client-rendered "3-2-1" suspense beat (no split shown
+  // yet); the split itself is revealed for the remaining 6s. See
+  // SPLIT_REVEAL_SUSPENSE_MS below — client and server must agree on the split.
+  SPLIT_REVEAL: 9_000,
   PREDICT: null,
-  DEFENSE: DEFENSE_MAX_MS,
+  // Room-specific (Room.defenseMaxMs) as soon as armTurn runs on entry to
+  // DEFENSE; this is only the transient value between the phase transition
+  // and that call, never actually observed.
+  DEFENSE: DEFENSE_MAX_MS_NORMALE,
   INTERVENTI: INTERVENTI_MAX_MS,
   VOTE_2: null,
   SPEAKER_VOTE: null,
   PHASE_RESULTS: 8_000,
+  // GROUP_MIND is self-paced (ends once everyone has answered + predicted, or
+  // the leader skips); GROUP_MIND_REVEAL is a short fixed beat, like PHASE_RESULTS.
+  GROUP_MIND: null,
+  GROUP_MIND_REVEAL: 8_000,
+  // WRITE/WRITE_VOTE are self-paced (end once everyone's done, or the leader
+  // skips, with the usual soft-timeout backstop); WRITE_REVEAL is a fixed beat.
+  WRITE: null,
+  WRITE_VOTE: null,
+  WRITE_REVEAL: 10_000,
   // Percorso: the chapter card auto-advances; the end-of-tappa recap has no timer
   // so it doubles as a break — the host resumes with "Continua ▶" when ready.
   TAPPA_INTRO: 8_000,
   TAPPA_RECAP: null,
-  ACCUSE: 30_000,
+  // Storie: the narrator (leader) controls the pace of every prose card, so they
+  // never auto-advance — the host reads aloud and resumes with "Continua ▶".
+  STORY_INTRO: null,
+  SCENE_INTRO: null,
+  SCENE_CONSEQUENCE: null,
+  STORY_EPILOGUE: null,
+  // "Tutti d'accordo!" — just long enough to read the winning side and cheer.
+  UNANIMOUS_REVEAL: 4_500,
+  // "Il processo" (4.5): a proper trial, not a snap guess — 75s to discuss out
+  // loud before voting who the infiltrator is (was 30s).
+  ACCUSE: 75_000,
   FINAL_AWARDS: null,
-  DUEL_PICK: 20_000,
-  DUEL_REVEAL: 5_000,
-  DUEL_ARGUE: 45_000,
-  DUEL_REPICK: 20_000,
-  DUEL_RESULT: 8_000,
-  FINAL_DUEL: null,
+  // Percorso in 2: every input phase has a real timer + server early-advance
+  // (the group's soft-timeout quorum can never arm with only 2 players).
+  DUO_ACT_INTRO: 7_000,
+  DUO_PICK_PREDICT: 30_000,
+  DUO_SYNC_REVEAL: 8_000,
+  DUO_SIDE_PICK: 12_000,
+  DUO_ARGUE: 45_000,
+  DUO_WAVER: 15_000,
+  DUO_ROUND_RESULT: 8_000,
+  DUO_PICK: 20_000,
+  DUO_REVEAL: 6_000,
+  DUO_REPICK: 20_000,
+  DUO_PORTRAIT: null,
 };
 
 /**
  * Phases in which phones may cast/change a secret vote: the group first/second
- * votes, and the duel pick/re-pick (which reuse the same vote() path).
+ * votes, and the duo picks/re-pick (which reuse the same vote() path).
  */
 export function isVotingPhase(phase: GamePhase): boolean {
   return (
     phase === 'VOTE_1' ||
     phase === 'VOTE_2' ||
-    phase === 'DUEL_PICK' ||
-    phase === 'DUEL_REPICK'
+    // Percorso in 2: the Atto II true pick, the Atto III pick and re-pick.
+    // (DUO_PICK_PREDICT rides its own player:duoSync path instead.)
+    phase === 'DUO_SIDE_PICK' ||
+    phase === 'DUO_PICK' ||
+    phase === 'DUO_REPICK'
   );
 }
 
@@ -217,42 +318,113 @@ export function nextPercorsoPhase(
   return { phase: current, dilemmaIndex };
 }
 
-/** Ordered phases of a single 1v1 duel round. */
-const DUEL_SEQUENCE: GamePhase[] = [
-  'DUEL_PICK',
-  'DUEL_REVEAL',
-  'DUEL_ARGUE',
-  'DUEL_REPICK',
-  'DUEL_RESULT',
-];
-
 /**
- * Pure duel state-machine transition (the 1v1 analogue of nextPhase). PHASE_INTRO
- * opens the first pick; from DUEL_REVEAL we skip straight to DUEL_RESULT when the
- * two players already `agreed` (otherwise argue → repick → result); DUEL_RESULT
- * loops to the next dilemma's DUEL_PICK or ends at FINAL_DUEL. `agreed` is only
- * consulted leaving DUEL_REVEAL.
+ * Pure state-machine transition for "Storie" mode (narrative tales with debated
+ * crossroads). The per-bivio sequence (DILEMMA_REVEAL…PHASE_RESULTS) is identical
+ * to the classic game; only the narrative framing differs:
+ *  - PHASE_INTRO opens the STORY_INTRO (protagonist + setting);
+ *  - STORY_INTRO opens the first SCENE_INTRO (the prose before bivio 1);
+ *  - SCENE_INTRO opens the next bivio (incrementing the 1-based index);
+ *  - PHASE_RESULTS leads into SCENE_CONSEQUENCE (the outcome of the group's choice);
+ *  - SCENE_CONSEQUENCE opens the next scene, or — after the last bivio — the
+ *    STORY_EPILOGUE (the variant ending);
+ *  - STORY_EPILOGUE ends at FINAL_AWARDS.
+ * `total` is the number of crossroads in the story.
  */
-export function nextDuelPhase(
+export function nextStoriaPhase(
   current: GamePhase,
   dilemmaIndex: number,
-  dilemmaCount: number,
-  agreed: boolean,
+  total: number,
 ): PhaseTransition {
-  if (current === 'PHASE_INTRO') return { phase: 'DUEL_PICK', dilemmaIndex: 1 };
-  if (current === 'DUEL_REVEAL') {
-    return agreed
-      ? { phase: 'DUEL_RESULT', dilemmaIndex }
-      : { phase: 'DUEL_ARGUE', dilemmaIndex };
+  if (current === 'PHASE_INTRO') {
+    return { phase: 'STORY_INTRO', dilemmaIndex: 0 };
   }
-  if (current === 'DUEL_RESULT') {
-    return dilemmaIndex < dilemmaCount
-      ? { phase: 'DUEL_PICK', dilemmaIndex: dilemmaIndex + 1 }
-      : { phase: 'FINAL_DUEL', dilemmaIndex };
+  if (current === 'STORY_INTRO') {
+    return { phase: 'SCENE_INTRO', dilemmaIndex: 0 };
   }
-  const i = DUEL_SEQUENCE.indexOf(current);
-  if (i >= 0 && i < DUEL_SEQUENCE.length - 1) {
-    return { phase: DUEL_SEQUENCE[i + 1], dilemmaIndex };
+  if (current === 'SCENE_INTRO') {
+    return { phase: 'DILEMMA_REVEAL', dilemmaIndex: dilemmaIndex + 1 };
   }
+  if (current === 'PHASE_RESULTS') {
+    return { phase: 'SCENE_CONSEQUENCE', dilemmaIndex };
+  }
+  if (current === 'SCENE_CONSEQUENCE') {
+    return dilemmaIndex < total
+      ? { phase: 'SCENE_INTRO', dilemmaIndex }
+      : { phase: 'STORY_EPILOGUE', dilemmaIndex };
+  }
+  if (current === 'STORY_EPILOGUE') {
+    return { phase: 'FINAL_AWARDS', dilemmaIndex };
+  }
+  // In-bivio phases run exactly like the classic sequence.
+  const i = DILEMMA_SEQUENCE.indexOf(current);
+  if (i >= 0 && i < DILEMMA_SEQUENCE.length - 1) {
+    return { phase: DILEMMA_SEQUENCE[i + 1], dilemmaIndex };
+  }
+  return { phase: current, dilemmaIndex };
+}
+
+/**
+ * The act (1|2|3) of the 1-based dilemma `dilemmaIndex` in a Percorso in 2;
+ * `plannedActs[i]` is the act of dilemma i+1 (same convention as percorso's
+ * plannedTappe). 0 when out of range.
+ */
+export function actForIndex(plannedActs: number[], dilemmaIndex: number): number {
+  return plannedActs[dilemmaIndex - 1] ?? 0;
+}
+
+/** The secret-pick phase that opens a round of the given act. */
+function duoPickPhase(act: number): GamePhase {
+  return act === 1 ? 'DUO_PICK_PREDICT' : act === 2 ? 'DUO_SIDE_PICK' : 'DUO_PICK';
+}
+
+/**
+ * Pure state-machine transition for the "Percorso in 2" (rebuilt duello).
+ * Rounds run act-shaped sequences (see the GamePhase comment); ends of round
+ * either continue within the act, detour through DUO_ACT_INTRO at an act
+ * boundary (index unchanged, like TAPPA_RECAP→TAPPA_INTRO), or terminate at
+ * DUO_PORTRAIT. `flags` is only consulted leaving DUO_REPICK: on the Atto III
+ * advocacy twist a listener who did NOT flip still rates the arringa
+ * (DUO_WAVER) before the round result.
+ */
+export function nextDuoPhase(
+  current: GamePhase,
+  dilemmaIndex: number,
+  plannedActs: number[],
+  flags: { advocacy: boolean; flipped: boolean },
+): PhaseTransition {
+  const total = plannedActs.length;
+  const endOfRound = (): PhaseTransition => {
+    if (dilemmaIndex >= total) return { phase: 'DUO_PORTRAIT', dilemmaIndex };
+    const nextAct = actForIndex(plannedActs, dilemmaIndex + 1);
+    return actForIndex(plannedActs, dilemmaIndex) === nextAct
+      ? { phase: duoPickPhase(nextAct), dilemmaIndex: dilemmaIndex + 1 }
+      : { phase: 'DUO_ACT_INTRO', dilemmaIndex };
+  };
+  if (current === 'PHASE_INTRO') return { phase: 'DUO_ACT_INTRO', dilemmaIndex: 0 };
+  if (current === 'DUO_ACT_INTRO') {
+    return {
+      phase: duoPickPhase(actForIndex(plannedActs, dilemmaIndex + 1)),
+      dilemmaIndex: dilemmaIndex + 1,
+    };
+  }
+  if (current === 'DUO_PICK_PREDICT') return { phase: 'DUO_SYNC_REVEAL', dilemmaIndex };
+  if (current === 'DUO_SYNC_REVEAL') return endOfRound();
+  if (current === 'DUO_SIDE_PICK') return { phase: 'DUO_ARGUE', dilemmaIndex };
+  if (current === 'DUO_ARGUE') {
+    return actForIndex(plannedActs, dilemmaIndex) === 2
+      ? { phase: 'DUO_WAVER', dilemmaIndex }
+      : { phase: 'DUO_REPICK', dilemmaIndex };
+  }
+  if (current === 'DUO_WAVER') return { phase: 'DUO_ROUND_RESULT', dilemmaIndex };
+  if (current === 'DUO_PICK') return { phase: 'DUO_REVEAL', dilemmaIndex };
+  if (current === 'DUO_REVEAL') return { phase: 'DUO_ARGUE', dilemmaIndex };
+  if (current === 'DUO_REPICK') {
+    return flags.advocacy && !flags.flipped
+      ? { phase: 'DUO_WAVER', dilemmaIndex }
+      : { phase: 'DUO_ROUND_RESULT', dilemmaIndex };
+  }
+  if (current === 'DUO_ROUND_RESULT') return endOfRound();
+  // LOBBY and DUO_PORTRAIT have no automatic successor.
   return { phase: current, dilemmaIndex };
 }

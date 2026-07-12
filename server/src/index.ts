@@ -4,10 +4,10 @@ import { Server } from 'socket.io';
 import path from 'path';
 import fs from 'fs';
 import { randomUUID } from 'crypto';
-import { RoomStore, isVotingPhase, tappaCounts, type Room } from './game/rooms';
+import { RoomStore, isVotingPhase, tappaCounts, storieCatalog, loadStories, type Room } from './game/rooms';
 import { loadDilemmas } from './game/deck';
 import { generateBotDefense, aiDefenseEnabled } from './game/aiDefense';
-import { migrate, dbEnabled, pool } from './db';
+import { migrate, dbEnabled, getPool } from './db';
 import { saveAwards, awardsToPersist, saveGameRecords, gamesToPersist } from './persistence';
 import { validateProfileInput, loadProfile, saveProfile } from './profile';
 import { verifyClerkToken } from './clerk';
@@ -15,11 +15,25 @@ import { serializeRoom, deserializeRoom } from './game/roomSnapshot';
 import { persistSnapshot, loadAllSnapshots, deleteSnapshot } from './snapshotStore';
 import { createRateLimiter } from './rateLimit';
 
-// Load server/.env (e.g. AI_BASE_URL / AI_MODEL for self-hosted LLM defenses) if
+// Load server/.env (DATABASE_URL, CLERK_SECRET_KEY, AI_BASE_URL/AI_MODEL, …) if
 // present. Zero-dependency: uses Node's built-in env-file loader (Node 20.12+).
+// Skipped under test so the suite stays hermetic / DB-less regardless of a
+// developer's local .env (the pool is resolved lazily in ./db, so it would
+// otherwise pick up a real DATABASE_URL and hit Postgres during tests).
 const envFile = path.resolve(__dirname, '../.env');
-if (fs.existsSync(envFile)) {
+if (process.env.NODE_ENV !== 'test' && fs.existsSync(envFile)) {
   (process as NodeJS.Process & { loadEnvFile?: (p: string) => void }).loadEnvFile?.(envFile);
+}
+
+// A single room's unexpected exception (e.g. a corrupt/pre-schema snapshot
+// slipping past normalizeRestoredRoom) must never take down every OTHER live
+// room's game with it. Log and keep the process alive instead of the default
+// crash — which, on Railway, would just restart into the same bad state and
+// crash-loop. Skipped under test: vitest has its own failure reporting.
+if (process.env.NODE_ENV !== 'test') {
+  process.on('uncaughtException', (err) => {
+    console.error('[server] uncaught exception (kept alive)', err);
+  });
 }
 
 const app = express();
@@ -44,6 +58,9 @@ const joinLimiter = createRateLimiter(10, 10_000);
 // Available dilemmas per tappa, computed once at boot — surfaced to the host so
 // the percorso setup can show an accurate (capped) length estimate. Static data.
 const TAPPA_COUNTS = tappaCounts(loadDilemmas());
+// The story catalog (ids + teasers, no prose), computed once at boot — surfaced
+// to the host so the storia setup can list the available tales. Static data.
+const STORIE_CATALOG = storieCatalog(loadStories());
 // Pending auto-advance timer per room, so we can reschedule / cancel it.
 const phaseTimers = new Map<string, NodeJS.Timeout>();
 
@@ -106,17 +123,21 @@ function cancelGrace(playerId: string): void {
   }
 }
 
-// After a roster change during a vote: VOTE_1 / DUEL_PICK can complete early
+// After a roster change during a vote: the cast-style phases can complete early
 // once every present player has voted; otherwise just refresh the host's count.
-// (VOTE_2 / DUEL_REPICK always run their full timer — they start pre-filled.)
 function refreshAfterRosterChange(code: string): void {
   const room = rooms.get(code);
   if (!room) return;
-  if ((room.phase === 'VOTE_1' || room.phase === 'DUEL_PICK') && rooms.allVoted(code)) {
+  const isCastPhase =
+    room.phase === 'VOTE_1' || room.phase === 'DUO_SIDE_PICK' || room.phase === 'DUO_PICK';
+  if (isCastPhase && rooms.allVoted(code)) {
     advanceAndBroadcast(code);
   } else if (room.phase === 'VOTE_2' && rooms.allConfirmed(code)) {
     advanceAndBroadcast(code); // a leaver was the last unconfirmed -> don't block
+  } else if (room.phase === 'DUO_REPICK' && rooms.duoRepickComplete(code)) {
+    advanceAndBroadcast(code);
   } else {
+    if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
     broadcastGameState(code);
   }
 }
@@ -141,6 +162,10 @@ function gameStatePayload(room: Room) {
     format: room.format,
     percorso: rooms.publicPercorso(room.code),
     tappaCounts: TAPPA_COUNTS,
+    // Storie: the narrative view (prose + progress; null in classic/percorso) and
+    // the static story catalog for the host's setup picker. Secret-safe.
+    storia: rooms.publicStoria(room.code),
+    storieCatalog: STORIE_CATALOG,
     // The dilemma in play this round (text + the two options); null outside a
     // dilemma. Public prompt text only — no votes/identities here.
     dilemma: room.currentDilemma,
@@ -148,9 +173,17 @@ function gameStatePayload(room: Room) {
     // choice split stays secret until SPLIT_REVEAL.
     votedCount: room.votes.size,
     confirmedCount: rooms.confirmedCount(room.code),
+    // Nicknames of connected players still missing their action this voting
+    // phase (VOTE_1/VOTE_2 e le fasi duo); null otherwise. Never
+    // reveals WHICH choice — presence only.
+    missingVoters: rooms.missingVoters(room.code),
     // How many players have made a secret prediction this round (PREDICT phase).
     // Aggregate count only — never who predicted what.
     predictedCount: room.predictions.size,
+    // Nicknames of connected humans still missing a PREDICT action
+    // (prediction, swing bet, or — in the know round — their guess); null
+    // outside PREDICT.
+    missingPredictors: rooms.predictProgress(room.code)?.missingNicknames ?? null,
     // How many players have placed a secret swing bet this round (PREDICT phase).
     // Aggregate count only — never who bet what.
     swingBetCount: room.swingBets.size,
@@ -160,9 +193,29 @@ function gameStatePayload(room: Room) {
     // know round, null otherwise) + how many have guessed. Guesses stay secret.
     knowPairs: rooms.publicKnowPairs(room.code),
     knowGuessedCount: room.knowGuesses.size,
+    // "La Mente del Gruppo" (4.1): the current question (GROUP_MIND/GROUP_MIND_REVEAL,
+    // null otherwise), who's still missing their submission, and — gated to the
+    // reveal — the aggregate split + correct-guesser count. Own answers stay secret.
+    groupMindQuestion: room.groupMindQuestion,
+    groupMindProgress: rooms.groupMindProgress(room.code),
+    groupMindTally: rooms.publicGroupMindTally(room.code),
+    // "In Altre Parole" (4.2): the current prompt (WRITE/WRITE_VOTE/WRITE_REVEAL,
+    // null otherwise), who's still missing their answer/vote, the anonymized
+    // answer list (gated to WRITE_VOTE — own text stays known only to the
+    // author who wrote it), and the authored reveal (gated to WRITE_REVEAL).
+    // Individual ballots never leave the server — aggregate vote counts only.
+    writePrompt: room.writePrompt,
+    writeProgress: rooms.writeProgress(room.code),
+    writtenAnswers: rooms.publicWrittenAnswers(room.code),
+    writeVoteProgress: rooms.writeVoteProgress(room.code),
+    writeReveal: rooms.writeRevealResults(room.code),
     // "L'Infiltrato": how many have accused (ACCUSE) + the FINAL_AWARDS reveal.
     accusedCount: room.accusations.size,
     infiltratoResult: rooms.publicInfiltratoResult(room.code),
+    // "L'Infiltrato col merito" (4.5): whether the once-per-round sabotage tool
+    // has already been used this round — public (doesn't reveal WHO used it,
+    // nobody else has this ability), drives the infiltrator's own button state.
+    infiltratoToolUsed: room.infiltratoToolUsedThisRound,
     // "Squadre": team assignments + running scores; null when teams are off.
     teams: rooms.publicTeams(room.code),
     // The defenders to vote between, gated to SPEAKER_VOTE (null otherwise), plus
@@ -172,26 +225,61 @@ function gameStatePayload(room: Room) {
     // The aggregate A/B split, gated to SPLIT_REVEAL (null otherwise). Counts
     // only — never who voted what.
     split: rooms.publicSplit(room.code),
+    // The unanimous side + count, gated to UNANIMOUS_REVEAL (null otherwise).
+    // Aggregate only — never who voted what.
+    unanimous: rooms.publicUnanimous(room.code),
     // Who is defending + turn progress, gated to DEFENSE (null otherwise). Only
     // the chosen defenders' identities/side are public; no other votes leak.
     defense: rooms.publicDefense(room.code),
+    // The just-finished speaker's applause tally ("applausometro"); null
+    // before any turn has ended this round, or if it drew no reactions.
+    lastTurnApplause: rooms.lastTurnApplause(room.code),
     // Whether this is the surprise "Avvocato del Diavolo" round (defenders argue
     // the side they did NOT vote). Revealed only from DEFENSE on, so it can't
     // skew the first vote/prediction.
     isDevilRound: rooms.publicDevilRound(room.code),
+    // Whether this is the game's FINAL round, where the swing bet pays double
+    // (6.2, "posta doppia") — not a secret twist, so shown unconditionally.
+    finalStakesRound: rooms.publicFinalStakes(room.code),
+    // This round's silly performance constraint for the defenders (2.3),
+    // public during DEFENSE/INTERVENTI; null otherwise or if none was drawn.
+    absurdConstraint: rooms.publicAbsurdConstraint(room.code),
+    // This round's surprise mechanical twist (4.3: difesa lampo, niente
+    // interventi, doppio difensore, …), public during DEFENSE/INTERVENTI;
+    // null otherwise or if none was drawn. The leader's caos dial, for the host.
+    twist: rooms.publicTwist(room.code),
+    caos: room.caos,
     // The swing + per-defender attribution, gated to PHASE_RESULTS (null
     // otherwise). Aggregate counts only — never who voted what.
     swing: rooms.publicSwing(room.code),
+    // The current dilemma's author nickname, revealed only at PHASE_RESULTS
+    // (null otherwise, or for a deck dilemma nobody wrote).
+    dilemmaAuthor: rooms.currentDilemmaAuthor(room.code),
     // The end-of-game awards, gated to FINAL_AWARDS (null otherwise).
     awards: rooms.publicAwards(room.code),
-    // 1v1 duel: the room's mode + the duel views, each gated to its own phase.
+    // "I momenti della serata" (5.5): every titled moment across the game,
+    // shown before the awards, gated to FINAL_AWARDS (null otherwise).
+    namedMoments: rooms.publicNamedMoments(room.code),
+    // The final "Punti Serata" podium/ranking, gated to FINAL_AWARDS (null
+    // otherwise). Point totals only — never individual votes.
+    podium: rooms.publicPodium(room.code),
+    // Percorso in 2: the room's mode + the duo views, each gated to its own
+    // phase inside the store readers (predictions secret until the sync
+    // reveal, waver ratings secret until the round result; counts are
+    // aggregate-only like every other progress number here).
     mode: room.mode,
     // The leader-player's id, so the creator's phone shows its controls.
     leaderId: room.leaderId,
-    duelReveal: rooms.publicDuelReveal(room.code),
-    duelTurn: rooms.publicDuelTurn(room.code),
-    duelResult: rooms.publicDuelResult(room.code),
-    duelSummary: rooms.publicDuelSummary(room.code),
+    duoAct: rooms.publicDuoActState(room.code),
+    // The twist round's devil's advocate (public only while it plays out) — the
+    // phones use it to hide the re-pick/waver controls from the advocate.
+    duoAdvocateId: rooms.publicDuoAdvocateId(room.code),
+    duoSyncedCount: room.duoPredictions.size,
+    duoWaverCount: room.duoWaverRatings.size,
+    duoSyncReveal: rooms.publicDuoSyncReveal(room.code),
+    duoTurn: rooms.publicDuoTurn(room.code),
+    duoRoundResult: rooms.publicDuoRoundResult(room.code),
+    duoPortrait: rooms.publicDuoPortrait(room.code),
   };
 }
 
@@ -284,12 +372,14 @@ function leaderCodeFor(socketId: string): string | null {
   return rooms.isLeader(session.code, session.playerId) ? session.code : null;
 }
 
-// Advance the state machine one step, broadcast it, and arm the next timer.
-// Used by both timer expiry and the leader's force-advance.
-function advanceAndBroadcast(code: string): void {
-  const result = rooms.advancePhase(code);
-  if (!result.ok) return;
+// Broadcast + side effects shared by every path that lands the room on a new
+// phase: the leader's force-advance, a timer expiry, AND the leader's
+// "Scarta dilemma" (which also re-enters DILEMMA_REVEAL or can fall through
+// to FINAL_AWARDS on an exhausted deck). `hadLateJoiners` must be sampled
+// BEFORE the phase change that might promote one, by the caller.
+function broadcastAdvance(code: string, hadLateJoiners: boolean): void {
   broadcastGameState(code);
+  if (hadLateJoiners) broadcastLobby(code);
   const snapRoom = rooms.get(code);
   if (snapRoom) persistSnapshot(code, serializeRoom(snapRoom)).catch((e) => console.error('[snapshot] persist failed', e));
   if (rooms.get(code)?.phase === 'FINAL_AWARDS') emitBlindSpots(code);
@@ -318,17 +408,51 @@ function advanceAndBroadcast(code: string): void {
       }
     }
   }
-  if (room && room.phase === 'FINAL_AWARDS') {
+  if (room && room.phase === 'GROUP_MIND_REVEAL') {
+    // Privately tell each player whether their majority guess was right
+    // (mirrors the PHASE_RESULTS prediction-result pattern above).
+    for (const r of rooms.groupMindResults(code)) {
+      const sid = playerSocket.get(r.playerId);
+      if (sid) io.to(sid).emit('player:groupMindResult', { correct: r.correct, guess: r.guess, actual: r.actual });
+    }
+  }
+  if (room && room.phase === 'WRITE_VOTE') {
+    // Privately tell each writer their own answer's opaque token, so their
+    // phone can filter its own entry out of the anonymized list without ever
+    // learning another author's real id (the roster is public, so the id
+    // itself would de-anonymize the vote).
+    for (const player of room.players.values()) {
+      if (player.isBot) continue;
+      const token = rooms.myWrittenAnswerToken(code, player.id);
+      if (!token) continue;
+      const sid = playerSocket.get(player.id);
+      if (sid) io.to(sid).emit('player:myWriteToken', { token });
+    }
+  }
+  if (room && (room.phase === 'FINAL_AWARDS' || room.phase === 'DUO_PORTRAIT')) {
     saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards failed', e));
     saveGameRecords(gamesToPersist(room)).catch((e) => console.error('[db] saveGameRecords failed', e));
   }
+}
+
+// Advance the state machine one step, broadcast it, and arm the next timer.
+// Used by both timer expiry and the leader's force-advance.
+function advanceAndBroadcast(code: string): void {
+  // A pending late-joiner (3.2) may get promoted to giocatore on this very
+  // advance (the round-boundary DILEMMA_REVEAL) — re-broadcast the roster
+  // afterward so their role badge updates everywhere, not just game state.
+  const hadLateJoiners = (rooms.get(code)?.lateJoiners.size ?? 0) > 0;
+  const result = rooms.advancePhase(code);
+  if (!result.ok) return;
+  broadcastAdvance(code, hadLateJoiners);
 }
 
 app.get('/api/health', async (_req, res) => {
   // Report DB reachability too: 'disabled' when DB-less, 'ok'/'down' otherwise.
   // A down DB still returns ok:true (the game runs in-memory without it).
   let db: 'disabled' | 'ok' | 'down' = 'disabled';
-  if (dbEnabled() && pool) {
+  const pool = getPool();
+  if (pool) {
     try {
       await pool.query('SELECT 1');
       db = 'ok';
@@ -348,7 +472,8 @@ app.get('/api/me/awards', async (req, res) => {
     res.status(401).json({ error: 'unauthorized' });
     return;
   }
-  if (!dbEnabled() || !pool) {
+  const pool = getPool();
+  if (!pool) {
     res.json({ awards: [] });
     return;
   }
@@ -388,7 +513,8 @@ app.get('/api/me/dashboard', async (req, res) => {
     recentAwards: [],
     profile: { displayName: null, avatar: null },
   };
-  if (!dbEnabled() || !pool) {
+  const pool = getPool();
+  if (!pool) {
     res.json(empty);
     return;
   }
@@ -470,7 +596,7 @@ app.put('/api/me/profile', async (req, res) => {
     res.status(400).json({ error: result.error });
     return;
   }
-  if (!dbEnabled() || !pool) {
+  if (!dbEnabled()) {
     res.status(503).json({ error: 'db-unavailable' });
     return;
   }
@@ -499,6 +625,7 @@ io.on('connection', (socket) => {
     }
     rooms.setLeader(code, playerId);
     tokens.set(token, { code, playerId });
+    rooms.registerToken(code, token, playerId);
     sessions.set(socket.id, { code, playerId });
     playerSocket.set(playerId, socket.id);
     socket.join(code);
@@ -522,7 +649,7 @@ io.on('connection', (socket) => {
 
   // The leader starts the game for their room, choosing the dilemma count.
   // Gated: only the socket whose player is the room leader may start.
-  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string }) => {
+  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string; storyId?: string; mood?: string; delicatoOptIn?: boolean; serataLunga?: boolean; caos?: string; seenDilemmaIds?: string[] }) => {
     const code = leaderCodeFor(socket.id);
     if (!code) {
       socket.emit('leader:startError', { error: 'ROOM_NOT_FOUND' });
@@ -534,6 +661,15 @@ io.on('connection', (socket) => {
       payload?.format === 'percorso'
         ? { startTappa: Number(payload?.startTappa), durata: String(payload?.durata) }
         : undefined;
+    // "Storia" format carries the chosen story id; like percorso it overrides the
+    // classic count/register and always runs in gruppo mode.
+    const storia =
+      payload?.format === 'storia' ? { storyId: String(payload?.storyId ?? '') } : undefined;
+    // 5.1: the leader's own device memory of already-seen dilemmas (localStorage,
+    // sent fresh on every start). Capped + sanitized against a hostile payload.
+    const seenDilemmaIds = Array.isArray(payload?.seenDilemmaIds)
+      ? payload.seenDilemmaIds.slice(0, 1000).map((id) => String(id))
+      : [];
     const result = rooms.startGame(
       code,
       Number(payload?.dilemmaCount),
@@ -542,6 +678,12 @@ io.on('connection', (socket) => {
       Boolean(payload?.infiltrato),
       Boolean(payload?.squadre),
       percorso,
+      storia,
+      String(payload?.mood ?? 'mista'),
+      Boolean(payload?.delicatoOptIn),
+      Boolean(payload?.serataLunga),
+      String(payload?.caos ?? 'assente'),
+      seenDilemmaIds,
     );
     if (!result.ok) {
       socket.emit('leader:startError', { error: result.error });
@@ -566,6 +708,33 @@ io.on('connection', (socket) => {
     const code = leaderCodeFor(socket.id);
     if (!code) return;
     advanceAndBroadcast(code);
+  });
+
+  // The leader discards the current dilemma (DILEMMA_REVEAL or an open VOTE_1):
+  // a fresh card replays the same round, or — deck exhausted — the round just
+  // advances (which, on the game's last round, lands straight on FINAL_AWARDS).
+  // Everyone gets a room:dilemmaSkipped ping (toast + sting); broadcastAdvance
+  // covers the rest exactly like a normal advance (blind spots, awards
+  // persistence, …) so this path can't silently skip them.
+  socket.on('leader:skipDilemma', () => {
+    const code = leaderCodeFor(socket.id);
+    if (!code) return;
+    const hadLateJoiners = (rooms.get(code)?.lateJoiners.size ?? 0) > 0;
+    const result = rooms.skipDilemma(code);
+    if (!result.ok) return;
+    io.to(code).emit('room:dilemmaSkipped', {});
+    broadcastAdvance(code, hadLateJoiners);
+  });
+
+  // The leader returns a finished room to LOBBY for a rematch: same roster,
+  // code, and leader; the next game's deck skips this game's dilemmas.
+  socket.on('leader:rematch', () => {
+    const code = leaderCodeFor(socket.id);
+    if (!code) return;
+    const result = rooms.rematch(code);
+    if (!result.ok) return;
+    broadcastLobby(code);
+    broadcastGameState(code);
   });
 
   // The leader adds a bot to fill a seat (enables solo play). Bots have no
@@ -610,6 +779,7 @@ io.on('connection', (socket) => {
 
     cancelGrace(playerId); // back in time — don't drop the seat
     tokens.set(token, { code, playerId });
+    rooms.registerToken(code, token, playerId);
     sessions.set(socket.id, { code, playerId });
     playerSocket.set(playerId, socket.id);
     socket.join(code);
@@ -622,6 +792,10 @@ io.on('connection', (socket) => {
     if (room && room.phase === 'FINAL_AWARDS') {
       const tip = rooms.blindSpotFor(code, playerId);
       if (tip) socket.emit('player:blindSpot', tip);
+    }
+    if (room && room.phase === 'WRITE_VOTE') {
+      const token = rooms.myWrittenAnswerToken(code, playerId);
+      if (token) socket.emit('player:myWriteToken', { token });
     }
     broadcastLobby(code);
     if (reconnecting && room && isVotingPhase(room.phase)) broadcastGameState(code);
@@ -641,16 +815,67 @@ io.on('connection', (socket) => {
     }
     // Confirm the player's own current choice back to just them.
     socket.emit('player:voted', { choice: result.room.votes.get(playerId) });
-    // No timer on the vote phases — advance as soon as everyone present has acted.
-    // VOTE_1 / DUEL_PICK: everyone has voted. VOTE_2: changing the vote also confirms
-    // it (store), so advance once everyone has confirmed.
+    // Advance as soon as everyone present has acted. VOTE_1 and the duo picks:
+    // everyone has voted. VOTE_2 / DUO_REPICK: changing the vote also confirms
+    // it (store), so advance once everyone required has confirmed.
     const phase = result.room.phase;
-    if ((phase === 'VOTE_1' || phase === 'DUEL_PICK') && rooms.allVoted(code)) {
+    const isCastPhase = phase === 'VOTE_1' || phase === 'DUO_SIDE_PICK' || phase === 'DUO_PICK';
+    if (isCastPhase && rooms.allVoted(code)) {
       advanceAndBroadcast(code);
     } else if (phase === 'VOTE_2' && rooms.allConfirmed(code)) {
       advanceAndBroadcast(code);
+    } else if (phase === 'DUO_REPICK' && rooms.duoRepickComplete(code)) {
+      advanceAndBroadcast(code);
     } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code); // refresh the count for the host
+    }
+  });
+
+  // Percorso in 2, Atto I: a player submits their own pick AND the prediction of
+  // the partner's pick in one move. Both stay secret until DUO_SYNC_REVEAL; the
+  // phase early-advances once both players have submitted.
+  socket.on('player:duoSync', (payload: { own?: string; predict?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const own = String(payload?.own ?? '');
+    const predict = String(payload?.predict ?? '');
+    const valid =
+      (own === 'A' || own === 'B') &&
+      (predict === 'A' || predict === 'B') &&
+      rooms.duoSync(code, playerId, own, predict);
+    if (!valid) {
+      socket.emit('player:duoSyncError', { error: 'NOT_SYNC_PHASE' });
+      return;
+    }
+    socket.emit('player:duoSynced', { own, predict });
+    if (rooms.duoSyncComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code); // refresh the aggregate count
+    }
+  });
+
+  // Percorso in 2: a listener rates the arringa ("ti ha fatto vacillare?").
+  // Ratings stay secret until DUO_ROUND_RESULT; early-advance once all rated.
+  socket.on('player:duoWaver', (payload: { rating?: number }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const rating = Number(payload?.rating);
+    const valid =
+      (rating === 0 || rating === 1 || rating === 2) &&
+      rooms.duoWaver(code, playerId, rating as 0 | 1 | 2);
+    if (!valid) {
+      socket.emit('player:duoWaverError', { error: 'NOT_WAVER_PHASE' });
+      return;
+    }
+    socket.emit('player:duoWavered', { rating });
+    if (rooms.duoWaverComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code);
     }
   });
 
@@ -663,11 +888,19 @@ io.on('connection', (socket) => {
     const { code } = session;
     const result = rooms.confirmVote(code, session.playerId);
     if (!result.ok) return;
-    if (rooms.allConfirmed(code)) advanceAndBroadcast(code);
-    else broadcastGameState(code);
+    const done =
+      result.room.phase === 'DUO_REPICK'
+        ? rooms.duoRepickComplete(code) // the advocate never re-picks
+        : rooms.allConfirmed(code);
+    if (done) {
+      advanceAndBroadcast(code);
+    } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
+      broadcastGameState(code);
+    }
   });
 
-  // A player taps a live reaction during DEFENSE / DUEL_ARGUE. The store validates
+  // A player taps a live reaction during DEFENSE / DUO_ARGUE. The store validates
   // the phase/emoji and rate-limits per player, then attributes it to the current
   // speaker; we re-broadcast just the emoji as a lightweight stream the host
   // animates (no full game:state — reactions are ephemeral, never secret votes).
@@ -685,7 +918,10 @@ io.on('connection', (socket) => {
     const session = sessions.get(socket.id);
     if (!session) return;
     const result = rooms.raiseHand(session.code, session.playerId);
-    if (!result.ok) return;
+    if (!result.ok) {
+      socket.emit('player:raiseHandError', { error: result.error });
+      return;
+    }
     socket.emit('player:handRaised', { raised: result.raised });
     broadcastGameState(session.code);
   });
@@ -719,9 +955,10 @@ io.on('connection', (socket) => {
     socket.emit('player:predicted', { choice: result.room.predictions.get(playerId) });
     // End PREDICT early only once everyone has done BOTH the side prediction AND
     // the swing bet, so nobody's bet is cut off.
-    if (rooms.allPredicted(code) && rooms.allSwingBet(code)) {
+    if (rooms.predictPhaseComplete(code)) {
       advanceAndBroadcast(code);
     } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code); // refresh the predicted count for the host
     }
   });
@@ -738,10 +975,82 @@ io.on('connection', (socket) => {
       return;
     }
     socket.emit('player:swingBetted', { bet: result.room.swingBets.get(playerId) });
-    if (rooms.allPredicted(code) && rooms.allSwingBet(code)) {
+    if (rooms.predictPhaseComplete(code)) {
       advanceAndBroadcast(code);
     } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code); // refresh the swing-bet count for the host
+    }
+  });
+
+  // A player answers + predicts the group's majority in one submission during
+  // GROUP_MIND ("La Mente del Gruppo", 4.1). Like PREDICT, ends early once every
+  // present human has submitted; the per-choice answers stay secret.
+  socket.on('player:groupMind', (payload: { answer?: string; guess?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.groupMindSubmit(code, playerId, String(payload?.answer ?? ''), String(payload?.guess ?? ''));
+    if (!result.ok) {
+      socket.emit('player:groupMindError', { error: result.error });
+      return;
+    }
+    socket.emit('player:groupMindSubmitted', {
+      answer: result.room.groupMindAnswers.get(playerId),
+      guess: result.room.groupMindGuesses.get(playerId),
+    });
+    if (rooms.groupMindPhaseComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
+      broadcastGameState(code); // refresh the missing-submitters list for the host
+    }
+  });
+
+  // A player submits (or changes) their own written answer during WRITE
+  // ("In Altre Parole", 4.2). Ends early once every present human has written;
+  // the answers stay attributed-but-hidden until the anonymized WRITE_VOTE list.
+  socket.on('player:write', (payload: { text?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.submitWrite(code, playerId, String(payload?.text ?? ''));
+    if (!result.ok) {
+      socket.emit('player:writeError', { error: result.error });
+      return;
+    }
+    socket.emit('player:writeSubmitted', { text: result.room.writeAnswers.get(playerId) });
+    if (rooms.writePhaseComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
+      broadcastGameState(code); // refresh the missing-writers list for the host
+    }
+  });
+
+  // A player votes for their favorite OTHER answer during WRITE_VOTE, identified
+  // by its opaque per-round token (never a real player id — see writeRound.ts).
+  // Ends early once every present human (with a valid target) has voted; only
+  // the aggregate vote counts are ever revealed (at WRITE_REVEAL) — never who
+  // voted for what.
+  socket.on('player:writeVote', (payload: { votedForToken?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const votedForToken = String(payload?.votedForToken ?? '');
+    const result = rooms.writeVote(code, playerId, votedForToken);
+    if (!result.ok) {
+      socket.emit('player:writeVoteError', { error: result.error });
+      return;
+    }
+    // Echo back the TOKEN the client sent — never the real author id that
+    // rooms.writeVote resolved it to internally.
+    socket.emit('player:writeVoted', { votedForToken });
+    if (rooms.writeVotePhaseComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
+      broadcastGameState(code); // refresh the missing-voters list for the host
     }
   });
 
@@ -778,11 +1087,27 @@ io.on('connection', (socket) => {
       return;
     }
     socket.emit('player:knowGuessed', { choice: result.room.knowGuesses.get(playerId) });
-    if (rooms.allKnowGuessed(code)) {
+    if (rooms.predictPhaseComplete(code)) {
       advanceAndBroadcast(code);
     } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code); // refresh the guessed count
     }
+  });
+
+  // The infiltrator seeds a decoy spunto into the current speaker's suggestions
+  // (4.5), once per round, only while someone is speaking. Not gated to "the
+  // opposing side" — the store only checks phase/identity/once-per-round.
+  socket.on('player:infiltratoTool', () => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.useInfiltratoTool(code, playerId);
+    if (!result.ok) {
+      socket.emit('player:infiltratoToolError', { error: result.error });
+      return;
+    }
+    broadcastGameState(code); // refresh the public spunti + toolUsed flag for everyone
   });
 
   // A player accuses who they think the infiltrator is (ACCUSE phase). The store
@@ -821,6 +1146,7 @@ io.on('connection', (socket) => {
     if (rooms.allSpeakerVoted(code)) {
       advanceAndBroadcast(code);
     } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code);
     }
   });
@@ -835,7 +1161,7 @@ io.on('connection', (socket) => {
     if (!userId) return;
     rooms.setPlayerUser(session.code, session.playerId, userId);
     const room = rooms.get(session.code);
-    if (room && room.phase === 'FINAL_AWARDS') {
+    if (room && (room.phase === 'FINAL_AWARDS' || room.phase === 'DUO_PORTRAIT')) {
       saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards (identify) failed', e));
       saveGameRecords(gamesToPersist(room)).catch((e) => console.error('[db] saveGameRecords (identify) failed', e));
     }
@@ -890,34 +1216,55 @@ if (fs.existsSync(clientDist)) {
 }
 
 const PORT = Number(process.env.PORT) || 3000;
+
+// Migrate + restore any rooms persisted before a restart, so a crash mid-party
+// doesn't lose the game. Awaited BEFORE the server accepts connections: a
+// phone reconnecting in the first instants after boot must find its room
+// already rebuilt, not a transient ROOM_NOT_FOUND. A migrate/restore failure
+// still lets the server come up DB-less rather than never starting at all.
+async function restoreFromSnapshots(): Promise<void> {
+  if (!dbEnabled()) {
+    console.log('[db] disabled (no DATABASE_URL) — awards will not be saved');
+    return;
+  }
+  try {
+    await migrate();
+    console.log('[db] migrated');
+    const snaps = await loadAllSnapshots();
+    let restored = 0;
+    for (const { code, json } of snaps) {
+      try {
+        const room = deserializeRoom(json);
+        rooms.restore(room);
+        // The reconnect-token table lives only in memory; rehydrate it from
+        // the room's own persisted mirror (see Room.tokens) so phones can
+        // reclaim their seat instead of joining as a fresh spectator.
+        for (const [token, playerId] of room.tokens) tokens.set(token, { code, playerId });
+        schedulePhase(code); // re-arm the timer; a past expiry advances immediately
+        restored++;
+      } catch (e) {
+        console.error('[snapshot] restore failed for', code, e);
+        // Malformed JSON (truncated write, hand-edited row, …) would otherwise
+        // reload and fail identically every restart — drop it so the room is
+        // simply gone rather than crash-looping the whole server forever.
+        deleteSnapshot(code).catch((e2) => console.error('[snapshot] delete failed', e2));
+      }
+    }
+    if (restored) console.log('[snapshot] restored', restored, 'room(s) from disk');
+  } catch (err) {
+    console.error('[db] migrate failed', err);
+  }
+}
+
 // Skip auto-listen under test: integration tests import `httpServer` and call
 // listen(0) themselves on an ephemeral port. Vitest sets NODE_ENV=test.
-if (process.env.NODE_ENV !== 'test') httpServer.listen(PORT, () => {
-  console.log(`[server] listening on http://localhost:${PORT}`);
-  console.log(
-    `[server] AI bot defenses: ${aiDefenseEnabled() ? `on (${process.env.AI_MODEL || 'gemma3:4b'} @ ${process.env.AI_BASE_URL})` : 'off (templated fallback)'}`,
-  );
-  if (dbEnabled()) {
-    migrate()
-      .then(async () => {
-        console.log('[db] migrated');
-        // Rebuild any active rooms persisted before a restart so a crash mid-party
-        // doesn't lose the game; phones reconnect with their saved token.
-        const snaps = await loadAllSnapshots();
-        let restored = 0;
-        for (const { code, json } of snaps) {
-          try {
-            rooms.restore(deserializeRoom(json));
-            schedulePhase(code); // re-arm the timer; a past expiry advances immediately
-            restored++;
-          } catch (e) {
-            console.error('[snapshot] restore failed for', code, e);
-          }
-        }
-        if (restored) console.log('[snapshot] restored', restored, 'room(s) from disk');
-      })
-      .catch((err) => console.error('[db] migrate failed', err));
-  } else {
-    console.log('[db] disabled (no DATABASE_URL) — awards will not be saved');
-  }
-});
+if (process.env.NODE_ENV !== 'test') {
+  restoreFromSnapshots().finally(() => {
+    httpServer.listen(PORT, () => {
+      console.log(`[server] listening on http://localhost:${PORT}`);
+      console.log(
+        `[server] AI bot defenses: ${aiDefenseEnabled() ? `on (${process.env.AI_MODEL || 'gemma3:4b'} @ ${process.env.AI_BASE_URL})` : 'off (templated fallback)'}`,
+      );
+    });
+  });
+}
