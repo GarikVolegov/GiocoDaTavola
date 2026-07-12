@@ -111,16 +111,38 @@ export interface PublicWrittenAnswer {
 }
 
 /**
+ * The answer's opaque per-round token: its position in the frozen shuffled
+ * `writeOrder`, NOT the author's real player id. The roster (`lobby:update`)
+ * already sends every id+nickname to everyone, so exposing the real id here
+ * would let a client cross-reference and de-anonymize an answer before the
+ * vote even closes. The token means nothing outside this one round's ballot.
+ */
+function tokenFor(room: Room, authorId: string): string {
+  return String(room.writeOrder.indexOf(authorId));
+}
+
+/** Resolve a client-submitted token back to the real author id, or undefined
+ * for a stale/invalid token (out of range, or the round already moved on). */
+function authorForToken(room: Room, token: string): string | undefined {
+  const i = Number(token);
+  return Number.isInteger(i) ? room.writeOrder[i] : undefined;
+}
+
+/**
  * The anonymized answer list, in the round's frozen shuffled order — same
- * for everyone (broadcastable). `id` is the author's player id, but nothing
- * here ties it to a nickname, so it carries no visible identity to OTHER
- * players; each player already knows their OWN id, so the client filters out
- * its own entry locally (the standard party-game UX: you never vote for
- * yourself). Gated to WRITE_VOTE.
+ * for everyone (broadcastable). Gated to WRITE_VOTE.
  */
 export function publicWrittenAnswers(room: Room): PublicWrittenAnswer[] | null {
   if (room.phase !== 'WRITE_VOTE') return null;
-  return room.writeOrder.map((id) => ({ id, text: room.writeAnswers.get(id) ?? '' }));
+  return room.writeOrder.map((id) => ({ id: tokenFor(room, id), text: room.writeAnswers.get(id) ?? '' }));
+}
+
+/** This player's own answer token this round (so the client can filter its
+ * own entry out of the vote list without ever seeing another author's real
+ * id). Null if they didn't write one, or outside WRITE_VOTE. */
+export function myWrittenAnswerToken(room: Room, playerId: string): string | null {
+  if (room.phase !== 'WRITE_VOTE' || !room.writeAnswers.has(playerId)) return null;
+  return tokenFor(room, playerId);
 }
 
 /** Cast each bot's vote (random, never for itself) immediately on WRITE_VOTE entry. */
@@ -136,12 +158,15 @@ export function castBotWriteVote(room: Room, rng: () => number): void {
 export type WriteVoteError = 'ROOM_NOT_FOUND' | 'NOT_WRITE_VOTE_PHASE' | 'NOT_IN_ROOM' | 'SELF_VOTE' | 'INVALID_TARGET';
 export type WriteVoteResult = { ok: true; room: Room } | { ok: false; error: WriteVoteError };
 
-/** Record (or change) a player's secret vote for their favorite answer (never their own). */
-export function writeVote(room: Room, voterId: string, votedForId: string): WriteVoteResult {
+/** Record (or change) a player's secret vote for their favorite answer (never
+ * their own). `votedForToken` is the opaque per-round token from
+ * publicWrittenAnswers/myWrittenAnswerToken, resolved here to the real author. */
+export function writeVote(room: Room, voterId: string, votedForToken: string): WriteVoteResult {
   if (room.phase !== 'WRITE_VOTE') return { ok: false, error: 'NOT_WRITE_VOTE_PHASE' };
   if (!room.players.has(voterId)) return { ok: false, error: 'NOT_IN_ROOM' };
+  const votedForId = authorForToken(room, votedForToken);
+  if (!votedForId || !room.writeAnswers.has(votedForId)) return { ok: false, error: 'INVALID_TARGET' };
   if (voterId === votedForId) return { ok: false, error: 'SELF_VOTE' };
-  if (!room.writeAnswers.has(votedForId)) return { ok: false, error: 'INVALID_TARGET' };
   room.writeVotes.set(voterId, votedForId);
   return { ok: true, room };
 }

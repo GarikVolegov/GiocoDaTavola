@@ -92,4 +92,20 @@ describe('predictPhaseComplete — unified PREDICT advance gate', () => {
     store.join(code, 'sock-0', 'P0');
     expect(store.predictProgress(code)).toBeNull();
   });
+
+  it('predictProgress excludes a THIS-round late-joiner, mirroring allPredicted/allSwingBet — they never block or appear in the waiting list', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const code = reachPredict(store, ['A', 'A', 'B']);
+    const room = store.get(code)!;
+    room.lateJoiners.add('sock-2'); // joined mid-round, hasn't even seen PREDICT
+    store.predict(code, 'sock-0', 'A');
+    store.swingBet(code, 'sock-0', 'regge');
+    store.predict(code, 'sock-1', 'A');
+    store.swingBet(code, 'sock-1', 'regge');
+    const progress = store.predictProgress(code)!;
+    expect(progress.total).toBe(2); // sock-2 doesn't count
+    expect(progress.done).toBe(2);
+    expect(progress.missingNicknames).toEqual([]); // never "Aspettiamo P2…"
+    expect(store.predictPhaseComplete(code)).toBe(true); // can advance early
+  });
 });

@@ -15,6 +15,12 @@ const DILEMMA_FIXTURE: Dilemma[] = Array.from({ length: 10 }, (_, i) => ({
 const makeFixtureDeck = (_register: ContentRegister) => new Deck(DILEMMA_FIXTURE, () => 0);
 const makeStore = (rng: () => number) => new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, rng);
 
+// writeVote takes the opaque per-round token (an answer's position in
+// writeOrder), never the real player id — this helper looks it up for tests
+// that need to vote for a specific known author.
+const tokenOf = (store: RoomStore, code: string, authorId: string): string =>
+  String(store.get(code)!.writeOrder.indexOf(authorId));
+
 describe('pickWritePrompt', () => {
   it('never repeats an already-used id', () => {
     const used = new Set(WRITE_PROMPTS.slice(0, -1).map((p) => p.id));
@@ -72,7 +78,7 @@ describe('WRITE/WRITE_VOTE/WRITE_REVEAL — the alternating checkpoint detour', 
         const order = store.get(code)!.writeOrder;
         for (let i = 0; i < 3; i++) {
           const target = order.find((id) => id !== `sock-${i}`);
-          if (target) store.writeVote(code, `sock-${i}`, target);
+          if (target) store.writeVote(code, `sock-${i}`, tokenOf(store, code, target));
         }
       }
     }
@@ -130,7 +136,7 @@ describe('WRITE submission', () => {
 });
 
 describe('WRITE_VOTE — anonymized voting', () => {
-  it('publishes the full shuffled answer list (client filters its own), rejects self-votes and unknown targets', () => {
+  it('publishes the shuffled answer list keyed by an opaque per-round token, never the real player id', () => {
     const store = makeStore(() => 0);
     const code = reachWrite(store);
     store.submitWrite(code, 'sock-0', 'Alpha');
@@ -140,10 +146,34 @@ describe('WRITE_VOTE — anonymized voting', () => {
     store.advancePhase(code); // -> WRITE_VOTE
     const list = store.publicWrittenAnswers(code)!;
     expect(list.length).toBe(3);
-    expect(list.map((a) => a.id).sort()).toEqual(['sock-0', 'sock-1', 'sock-2']);
-    expect(store.writeVote(code, 'sock-0', 'sock-0')).toEqual({ ok: false, error: 'SELF_VOTE' });
-    expect(store.writeVote(code, 'sock-0', 'ghost')).toEqual({ ok: false, error: 'INVALID_TARGET' });
-    expect(store.writeVote(code, 'sock-0', 'sock-1')).toEqual({ ok: true, room: expect.anything() });
+    // Tokens are just "my position in writeOrder" (0..2) — never a real id.
+    expect(list.map((a) => a.id).sort()).toEqual(['0', '1', '2']);
+    expect(list.map((a) => a.id)).not.toEqual(expect.arrayContaining(['sock-0', 'sock-1', 'sock-2']));
+    expect(list.find((a) => a.text === 'Beta')?.id).toBe(tokenOf(store, code, 'sock-1'));
+  });
+
+  it("myWrittenAnswerToken lets a player find their OWN entry to filter out, without knowing anyone else's real id", () => {
+    const store = makeStore(() => 0);
+    const code = reachWrite(store);
+    store.submitWrite(code, 'sock-0', 'Alpha');
+    store.submitWrite(code, 'sock-1', 'Beta');
+    store.submitWrite(code, 'sock-2', 'Gamma');
+    expect(store.myWrittenAnswerToken(code, 'sock-0')).toBeNull(); // still WRITE
+    store.advancePhase(code); // -> WRITE_VOTE
+    expect(store.myWrittenAnswerToken(code, 'sock-0')).toBe(tokenOf(store, code, 'sock-0'));
+  });
+
+  it('rejects self-votes and unknown/stale tokens', () => {
+    const store = makeStore(() => 0);
+    const code = reachWrite(store);
+    store.submitWrite(code, 'sock-0', 'Alpha');
+    store.submitWrite(code, 'sock-1', 'Beta');
+    store.submitWrite(code, 'sock-2', 'Gamma');
+    store.advancePhase(code); // -> WRITE_VOTE
+    expect(store.writeVote(code, 'sock-0', tokenOf(store, code, 'sock-0'))).toEqual({ ok: false, error: 'SELF_VOTE' });
+    expect(store.writeVote(code, 'sock-0', 'not-a-number')).toEqual({ ok: false, error: 'INVALID_TARGET' });
+    expect(store.writeVote(code, 'sock-0', '99')).toEqual({ ok: false, error: 'INVALID_TARGET' }); // out of range
+    expect(store.writeVote(code, 'sock-0', tokenOf(store, code, 'sock-1'))).toEqual({ ok: true, room: expect.anything() });
   });
 
   it('ends WRITE_VOTE early once every present human has voted', () => {
@@ -154,10 +184,10 @@ describe('WRITE_VOTE — anonymized voting', () => {
     store.submitWrite(code, 'sock-2', 'Gamma');
     store.advancePhase(code); // -> WRITE_VOTE
     expect(store.writeVotePhaseComplete(code)).toBe(false);
-    store.writeVote(code, 'sock-0', 'sock-1');
-    store.writeVote(code, 'sock-1', 'sock-2');
+    store.writeVote(code, 'sock-0', tokenOf(store, code, 'sock-1'));
+    store.writeVote(code, 'sock-1', tokenOf(store, code, 'sock-2'));
     expect(store.writeVotePhaseComplete(code)).toBe(false);
-    store.writeVote(code, 'sock-2', 'sock-0');
+    store.writeVote(code, 'sock-2', tokenOf(store, code, 'sock-0'));
     expect(store.writeVotePhaseComplete(code)).toBe(true);
   });
 });
@@ -170,9 +200,9 @@ describe('WRITE_REVEAL', () => {
     store.submitWrite(code, 'sock-1', 'Beta');
     store.submitWrite(code, 'sock-2', 'Gamma');
     store.advancePhase(code); // -> WRITE_VOTE
-    store.writeVote(code, 'sock-0', 'sock-1');
-    store.writeVote(code, 'sock-1', 'sock-2');
-    store.writeVote(code, 'sock-2', 'sock-1');
+    store.writeVote(code, 'sock-0', tokenOf(store, code, 'sock-1'));
+    store.writeVote(code, 'sock-1', tokenOf(store, code, 'sock-2'));
+    store.writeVote(code, 'sock-2', tokenOf(store, code, 'sock-1'));
     expect(store.writeRevealResults(code)).toBeNull(); // still WRITE_VOTE
     store.advancePhase(code); // -> WRITE_REVEAL
     const results = store.writeRevealResults(code)!;

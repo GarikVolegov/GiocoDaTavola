@@ -23,7 +23,11 @@ export function recordRoundStats(room: Room): void {
     second.A > second.B ? 'A' : second.B > second.A ? 'B' : null;
   // room.votes1 is a Map, which preserves insertion order — its first key is
   // whoever cast VOTE_1 first this round (the jolly ⚡ "Il Fulmine" award).
-  const firstVoterId = room.votes1.keys().next().value;
+  // Bots always vote first (castBotFirstVotes runs on VOTE_1 entry, before any
+  // human can act), so the very first key is a bot in every bot-containing
+  // game — skip to the first HUMAN voter instead, or the award never reaches
+  // a real player.
+  const firstVoterId = [...room.votes1.keys()].find((id) => !room.players.get(id)?.isBot);
   let roundSwitched = 0;
   for (const [id, firstChoice] of room.votes1) {
     const secondChoice = room.votes.get(id);
@@ -41,10 +45,17 @@ export function recordRoundStats(room: Room): void {
     }
   }
   const netSwing: VoteTally = { A: second.A - first.A, B: second.B - first.B };
+  // netSwing[side] is a per-SIDE quantity: with 2 co-defenders on the same
+  // side ("a coppie", 7+ giocatori, or the doppio-difensore twist) it must be
+  // credited ONCE, not to each of them — else a 2-vote swing is banked as 4
+  // persuasion. defendedCount (participation) still counts for everyone who
+  // actually defended, regardless of who gets the persuasion credit.
+  const creditedSides = new Set<VoteChoice>();
   for (const d of room.defenders) {
     const s = ensureStats(room, d.id);
     s.defendedCount++;
-    if (netSwing[d.side] <= 0) continue;
+    if (netSwing[d.side] <= 0 || creditedSides.has(d.side)) continue;
+    creditedSides.add(d.side);
     s.persuasion += netSwing[d.side];
     // In the "Avvocato del Diavolo" round, also bank it as devil persuasion (a
     // subset of persuasion) for the 🎭 Il Voltagabbana award.

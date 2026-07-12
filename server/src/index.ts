@@ -25,6 +25,17 @@ if (process.env.NODE_ENV !== 'test' && fs.existsSync(envFile)) {
   (process as NodeJS.Process & { loadEnvFile?: (p: string) => void }).loadEnvFile?.(envFile);
 }
 
+// A single room's unexpected exception (e.g. a corrupt/pre-schema snapshot
+// slipping past normalizeRestoredRoom) must never take down every OTHER live
+// room's game with it. Log and keep the process alive instead of the default
+// crash — which, on Railway, would just restart into the same bad state and
+// crash-loop. Skipped under test: vitest has its own failure reporting.
+if (process.env.NODE_ENV !== 'test') {
+  process.on('uncaughtException', (err) => {
+    console.error('[server] uncaught exception (kept alive)', err);
+  });
+}
+
 const app = express();
 // Parse JSON request bodies (the profile PUT). Capped well above a resized
 // avatar data-URL (~tens of KB) but small enough to bound hostile payloads.
@@ -405,6 +416,19 @@ function broadcastAdvance(code: string, hadLateJoiners: boolean): void {
       if (sid) io.to(sid).emit('player:groupMindResult', { correct: r.correct, guess: r.guess, actual: r.actual });
     }
   }
+  if (room && room.phase === 'WRITE_VOTE') {
+    // Privately tell each writer their own answer's opaque token, so their
+    // phone can filter its own entry out of the anonymized list without ever
+    // learning another author's real id (the roster is public, so the id
+    // itself would de-anonymize the vote).
+    for (const player of room.players.values()) {
+      if (player.isBot) continue;
+      const token = rooms.myWrittenAnswerToken(code, player.id);
+      if (!token) continue;
+      const sid = playerSocket.get(player.id);
+      if (sid) io.to(sid).emit('player:myWriteToken', { token });
+    }
+  }
   if (room && (room.phase === 'FINAL_AWARDS' || room.phase === 'DUO_PORTRAIT')) {
     saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards failed', e));
     saveGameRecords(gamesToPersist(room)).catch((e) => console.error('[db] saveGameRecords failed', e));
@@ -601,6 +625,7 @@ io.on('connection', (socket) => {
     }
     rooms.setLeader(code, playerId);
     tokens.set(token, { code, playerId });
+    rooms.registerToken(code, token, playerId);
     sessions.set(socket.id, { code, playerId });
     playerSocket.set(playerId, socket.id);
     socket.join(code);
@@ -754,6 +779,7 @@ io.on('connection', (socket) => {
 
     cancelGrace(playerId); // back in time — don't drop the seat
     tokens.set(token, { code, playerId });
+    rooms.registerToken(code, token, playerId);
     sessions.set(socket.id, { code, playerId });
     playerSocket.set(playerId, socket.id);
     socket.join(code);
@@ -766,6 +792,10 @@ io.on('connection', (socket) => {
     if (room && room.phase === 'FINAL_AWARDS') {
       const tip = rooms.blindSpotFor(code, playerId);
       if (tip) socket.emit('player:blindSpot', tip);
+    }
+    if (room && room.phase === 'WRITE_VOTE') {
+      const token = rooms.myWrittenAnswerToken(code, playerId);
+      if (token) socket.emit('player:myWriteToken', { token });
     }
     broadcastLobby(code);
     if (reconnecting && room && isVotingPhase(room.phase)) broadcastGameState(code);
@@ -998,19 +1028,24 @@ io.on('connection', (socket) => {
     }
   });
 
-  // A player votes for their favorite OTHER answer during WRITE_VOTE. Ends early
-  // once every present human (with a valid target) has voted; only the aggregate
-  // vote counts are ever revealed (at WRITE_REVEAL) — never who voted for what.
-  socket.on('player:writeVote', (payload: { votedForId?: string }) => {
+  // A player votes for their favorite OTHER answer during WRITE_VOTE, identified
+  // by its opaque per-round token (never a real player id — see writeRound.ts).
+  // Ends early once every present human (with a valid target) has voted; only
+  // the aggregate vote counts are ever revealed (at WRITE_REVEAL) — never who
+  // voted for what.
+  socket.on('player:writeVote', (payload: { votedForToken?: string }) => {
     const session = sessions.get(socket.id);
     if (!session) return;
     const { code, playerId } = session;
-    const result = rooms.writeVote(code, playerId, String(payload?.votedForId ?? ''));
+    const votedForToken = String(payload?.votedForToken ?? '');
+    const result = rooms.writeVote(code, playerId, votedForToken);
     if (!result.ok) {
       socket.emit('player:writeVoteError', { error: result.error });
       return;
     }
-    socket.emit('player:writeVoted', { votedForId: result.room.writeVotes.get(playerId) });
+    // Echo back the TOKEN the client sent — never the real author id that
+    // rooms.writeVote resolved it to internally.
+    socket.emit('player:writeVoted', { votedForToken });
     if (rooms.writeVotePhaseComplete(code)) {
       advanceAndBroadcast(code);
     } else {
@@ -1181,34 +1216,55 @@ if (fs.existsSync(clientDist)) {
 }
 
 const PORT = Number(process.env.PORT) || 3000;
+
+// Migrate + restore any rooms persisted before a restart, so a crash mid-party
+// doesn't lose the game. Awaited BEFORE the server accepts connections: a
+// phone reconnecting in the first instants after boot must find its room
+// already rebuilt, not a transient ROOM_NOT_FOUND. A migrate/restore failure
+// still lets the server come up DB-less rather than never starting at all.
+async function restoreFromSnapshots(): Promise<void> {
+  if (!dbEnabled()) {
+    console.log('[db] disabled (no DATABASE_URL) — awards will not be saved');
+    return;
+  }
+  try {
+    await migrate();
+    console.log('[db] migrated');
+    const snaps = await loadAllSnapshots();
+    let restored = 0;
+    for (const { code, json } of snaps) {
+      try {
+        const room = deserializeRoom(json);
+        rooms.restore(room);
+        // The reconnect-token table lives only in memory; rehydrate it from
+        // the room's own persisted mirror (see Room.tokens) so phones can
+        // reclaim their seat instead of joining as a fresh spectator.
+        for (const [token, playerId] of room.tokens) tokens.set(token, { code, playerId });
+        schedulePhase(code); // re-arm the timer; a past expiry advances immediately
+        restored++;
+      } catch (e) {
+        console.error('[snapshot] restore failed for', code, e);
+        // Malformed JSON (truncated write, hand-edited row, …) would otherwise
+        // reload and fail identically every restart — drop it so the room is
+        // simply gone rather than crash-looping the whole server forever.
+        deleteSnapshot(code).catch((e2) => console.error('[snapshot] delete failed', e2));
+      }
+    }
+    if (restored) console.log('[snapshot] restored', restored, 'room(s) from disk');
+  } catch (err) {
+    console.error('[db] migrate failed', err);
+  }
+}
+
 // Skip auto-listen under test: integration tests import `httpServer` and call
 // listen(0) themselves on an ephemeral port. Vitest sets NODE_ENV=test.
-if (process.env.NODE_ENV !== 'test') httpServer.listen(PORT, () => {
-  console.log(`[server] listening on http://localhost:${PORT}`);
-  console.log(
-    `[server] AI bot defenses: ${aiDefenseEnabled() ? `on (${process.env.AI_MODEL || 'gemma3:4b'} @ ${process.env.AI_BASE_URL})` : 'off (templated fallback)'}`,
-  );
-  if (dbEnabled()) {
-    migrate()
-      .then(async () => {
-        console.log('[db] migrated');
-        // Rebuild any active rooms persisted before a restart so a crash mid-party
-        // doesn't lose the game; phones reconnect with their saved token.
-        const snaps = await loadAllSnapshots();
-        let restored = 0;
-        for (const { code, json } of snaps) {
-          try {
-            rooms.restore(deserializeRoom(json));
-            schedulePhase(code); // re-arm the timer; a past expiry advances immediately
-            restored++;
-          } catch (e) {
-            console.error('[snapshot] restore failed for', code, e);
-          }
-        }
-        if (restored) console.log('[snapshot] restored', restored, 'room(s) from disk');
-      })
-      .catch((err) => console.error('[db] migrate failed', err));
-  } else {
-    console.log('[db] disabled (no DATABASE_URL) — awards will not be saved');
-  }
-});
+if (process.env.NODE_ENV !== 'test') {
+  restoreFromSnapshots().finally(() => {
+    httpServer.listen(PORT, () => {
+      console.log(`[server] listening on http://localhost:${PORT}`);
+      console.log(
+        `[server] AI bot defenses: ${aiDefenseEnabled() ? `on (${process.env.AI_MODEL || 'gemma3:4b'} @ ${process.env.AI_BASE_URL})` : 'off (templated fallback)'}`,
+      );
+    });
+  });
+}

@@ -282,6 +282,13 @@ export interface Room {
   leaderId: string | null;
   /** Players currently in the lobby, keyed by player id. */
   players: Map<string, Player>;
+  /**
+   * Secret reconnect token -> player id, mirroring index.ts's in-memory `tokens`
+   * map so a crash-recovery snapshot can rehydrate it (the module-level map
+   * itself is never persisted). Never sent to any client — same secrecy as the
+   * token itself, which only ever reaches its own owner via `player:joined`.
+   */
+  tokens: Map<string, string>;
   /** Current phase of the game state machine. */
   phase: GamePhase;
   /** Number of dilemmas chosen at start; null until the game starts. In percorso it equals the planned ascent's length. */
@@ -900,6 +907,122 @@ export function generateRoomCode(): string {
   return code;
 }
 
+/** A fresh Room with every field at its LOBBY default. The single source of
+ * truth `create()` builds from; also the template `normalizeRestoredRoom`
+ * backfills a stale snapshot against (see there). */
+function emptyRoom(code: string, createdAt: number): Room {
+  return {
+    code,
+    createdAt,
+    leaderId: null,
+    players: new Map(),
+    tokens: new Map(),
+    phase: 'LOBBY',
+    dilemmaCount: null,
+    register: null,
+    format: 'classic',
+    startTappa: null,
+    durata: null,
+    plannedDilemmas: [],
+    plannedTappe: [],
+    currentTappa: null,
+    tappaDilemmas: 0,
+    tappaSwings: 0,
+    story: null,
+    storyId: null,
+    plannedScenes: [],
+    plannedActs: [],
+    storyDecisions: [],
+    currentSceneNarration: null,
+    currentSceneConsequence: null,
+    currentDecision: null,
+    currentEpilogo: null,
+    currentAct: null,
+    dilemmaIndex: 0,
+    phaseExpiresAt: null,
+    deck: null,
+    currentDilemma: null,
+    submittedDilemmas: [],
+    dilemmaAuthors: new Map(),
+    submittedQueue: [],
+    excludeDilemmaIds: new Set(),
+    lateJoiners: new Set(),
+    devilRoundIndex: null,
+    knowRoundIndex: null,
+    knowTargets: new Map(),
+    knowGuesses: new Map(),
+    groupMindQuestion: null,
+    usedGroupMindIds: new Set(),
+    groupMindAnswers: new Map(),
+    groupMindGuesses: new Map(),
+    writePrompt: null,
+    usedWritePromptIds: new Set(),
+    writeAnswers: new Map(),
+    writeOrder: [],
+    writeVotes: new Map(),
+    infiltratorId: null,
+    infiltratorFlips: 0,
+    infiltratoToolUsedThisRound: false,
+    infiltratoDecoySpunto: null,
+    infiltratoToolUses: 0,
+    namedMoments: [],
+    accusations: new Map(),
+    infiltratoResult: null,
+    teams: new Map(),
+    votes: new Map(),
+    votes1: new Map(),
+    confirmedVote2: new Set(),
+    defenders: [],
+    absurdConstraint: null,
+    caos: 'assente',
+    twistRoundIndices: new Set(),
+    currentTwist: null,
+    defenseMaxMs: DEFENSE_MAX_MS_NORMALE,
+    defenseTurnIndex: 0,
+    defenseArgument: null,
+    raisedHands: [],
+    interventiQueue: [],
+    interventiIndex: 0,
+    turnMinEndsAt: null,
+    turnStartedAt: null,
+    stats: new Map(),
+    botSeq: 0,
+    mode: 'gruppo',
+    duoPlannedActs: [],
+    duoPredictions: new Map(),
+    duoAssignedSides: new Map(),
+    duoSpeakers: [],
+    duoTurnIndex: 0,
+    duoWaverRatings: new Map(),
+    duoFairness: 0,
+    duoAdvocacy: false,
+    duoRepickFlipped: false,
+    duoScore: new Map(),
+    duoTruePicks: 0,
+    duoFirstPickAgreements: 0,
+    duoMoments: [],
+    lastReactionAt: new Map(),
+    turnReactionTally: {},
+    lastTurnApplause: null,
+    predictions: new Map(),
+    swingBets: new Map(),
+    speakerVotes: new Map(),
+    defenseCounts: new Map(),
+  };
+}
+
+/**
+ * Backfill any field ABSENT from a deserialized snapshot (the schema keeps
+ * growing — a field added after the snapshot was written is simply missing
+ * from its JSON, not `undefined`-valued) with a fresh LOBBY default, so a
+ * later unguarded `.size`/`.get` on it never crashes the process. A field
+ * that IS present — even a falsy one like `0` or `[]` — always wins over the
+ * default; only a truly missing key is backfilled.
+ */
+function normalizeRestoredRoom(room: Room): Room {
+  return { ...emptyRoom(room.code, room.createdAt), ...room };
+}
+
 export class RoomStore {
   private readonly rooms = new Map<string, Room>();
 
@@ -1032,103 +1155,7 @@ export class RoomStore {
     while (this.rooms.has(code)) {
       code = this.genCode();
     }
-    const room: Room = {
-      code,
-      createdAt: this.now(),
-      leaderId: null,
-      players: new Map(),
-      phase: 'LOBBY',
-      dilemmaCount: null,
-      register: null,
-      format: 'classic',
-      startTappa: null,
-      durata: null,
-      plannedDilemmas: [],
-      plannedTappe: [],
-      currentTappa: null,
-      tappaDilemmas: 0,
-      tappaSwings: 0,
-      story: null,
-      storyId: null,
-      plannedScenes: [],
-      plannedActs: [],
-      storyDecisions: [],
-      currentSceneNarration: null,
-      currentSceneConsequence: null,
-      currentDecision: null,
-      currentEpilogo: null,
-      currentAct: null,
-      dilemmaIndex: 0,
-      phaseExpiresAt: null,
-      deck: null,
-      currentDilemma: null,
-      submittedDilemmas: [],
-      dilemmaAuthors: new Map(),
-      submittedQueue: [],
-      excludeDilemmaIds: new Set(),
-      lateJoiners: new Set(),
-      devilRoundIndex: null,
-      knowRoundIndex: null,
-      knowTargets: new Map(),
-      knowGuesses: new Map(),
-      groupMindQuestion: null,
-      usedGroupMindIds: new Set(),
-      groupMindAnswers: new Map(),
-      groupMindGuesses: new Map(),
-      writePrompt: null,
-      usedWritePromptIds: new Set(),
-      writeAnswers: new Map(),
-      writeOrder: [],
-      writeVotes: new Map(),
-      infiltratorId: null,
-      infiltratorFlips: 0,
-      infiltratoToolUsedThisRound: false,
-      infiltratoDecoySpunto: null,
-      infiltratoToolUses: 0,
-      namedMoments: [],
-      accusations: new Map(),
-      infiltratoResult: null,
-      teams: new Map(),
-      votes: new Map(),
-      votes1: new Map(),
-      confirmedVote2: new Set(),
-      defenders: [],
-      absurdConstraint: null,
-      caos: 'assente',
-      twistRoundIndices: new Set(),
-      currentTwist: null,
-      defenseMaxMs: DEFENSE_MAX_MS_NORMALE,
-      defenseTurnIndex: 0,
-      defenseArgument: null,
-      raisedHands: [],
-      interventiQueue: [],
-      interventiIndex: 0,
-      turnMinEndsAt: null,
-      turnStartedAt: null,
-      stats: new Map(),
-      botSeq: 0,
-      mode: 'gruppo',
-      duoPlannedActs: [],
-      duoPredictions: new Map(),
-      duoAssignedSides: new Map(),
-      duoSpeakers: [],
-      duoTurnIndex: 0,
-      duoWaverRatings: new Map(),
-      duoFairness: 0,
-      duoAdvocacy: false,
-      duoRepickFlipped: false,
-      duoScore: new Map(),
-      duoTruePicks: 0,
-      duoFirstPickAgreements: 0,
-      duoMoments: [],
-      lastReactionAt: new Map(),
-      turnReactionTally: {},
-      lastTurnApplause: null,
-      predictions: new Map(),
-      swingBets: new Map(),
-      speakerVotes: new Map(),
-      defenseCounts: new Map(),
-    };
+    const room = emptyRoom(code, this.now());
     this.rooms.set(code, room);
     return room;
   }
@@ -1835,15 +1862,24 @@ export class RoomStore {
     if (!room || room.phaseExpiresAt != null) return false;
     let total = 0;
     let acted = 0;
+    // Every branch excludes a THIS-round late-joiner (3.2), mirroring each
+    // phase's own real completion gate (allVoted/allPredicted/allSwingBet,
+    // speakerVote/groupMind/writeRound's presentXxx helpers) — they may not
+    // have even seen the prompt yet, so their absence must never count
+    // against the 70% threshold.
     if (room.phase === 'VOTE_1' || room.phase === 'VOTE_2') {
-      const present = [...room.players.values()].filter((p) => p.connected !== false);
+      const present = [...room.players.values()].filter(
+        (p) => p.connected !== false && !room.lateJoiners.has(p.id),
+      );
       total = present.length;
       acted =
         room.phase === 'VOTE_2'
           ? present.filter((p) => room.confirmedVote2.has(p.id)).length
           : present.filter((p) => room.votes.has(p.id)).length;
     } else if (room.phase === 'PREDICT') {
-      const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+      const humans = [...room.players.values()].filter(
+        (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+      );
       const know = knowRound.isKnowRound(room);
       total = humans.length;
       acted = humans.filter(
@@ -1853,20 +1889,30 @@ export class RoomStore {
           (!know || !room.knowTargets.has(p.id) || room.knowGuesses.has(p.id)),
       ).length;
     } else if (room.phase === 'SPEAKER_VOTE') {
-      const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+      const humans = [...room.players.values()].filter(
+        (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+      );
       total = humans.length;
       acted = humans.filter((p) => room.speakerVotes.has(p.id)).length;
     } else if (room.phase === 'GROUP_MIND') {
-      const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+      const humans = [...room.players.values()].filter(
+        (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+      );
       total = humans.length;
       acted = humans.filter((p) => room.groupMindAnswers.has(p.id) && room.groupMindGuesses.has(p.id)).length;
     } else if (room.phase === 'WRITE') {
-      const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+      const humans = [...room.players.values()].filter(
+        (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+      );
       total = humans.length;
       acted = humans.filter((p) => room.writeAnswers.has(p.id)).length;
     } else if (room.phase === 'WRITE_VOTE') {
       const humans = [...room.players.values()].filter(
-        (p) => !p.isBot && p.connected !== false && room.writeOrder.filter((id) => id !== p.id).length > 0,
+        (p) =>
+          !p.isBot &&
+          p.connected !== false &&
+          !room.lateJoiners.has(p.id) &&
+          room.writeOrder.filter((id) => id !== p.id).length > 0,
       );
       total = humans.length;
       acted = humans.filter((p) => room.writeVotes.has(p.id)).length;
@@ -2064,11 +2110,19 @@ export class RoomStore {
     return room ? writeRound.publicWrittenAnswers(room) : null;
   }
 
-  /** Record (or change) a player's secret vote for their favorite OTHER answer during WRITE_VOTE. */
-  writeVote(code: string, voterId: string, votedForId: string): writeRound.WriteVoteResult {
+  /** This player's own answer's opaque token this round, so the client can
+   * filter its own entry out of the vote list without comparing real ids. */
+  myWrittenAnswerToken(code: string, playerId: string): string | null {
+    const room = this.rooms.get(code);
+    return room ? writeRound.myWrittenAnswerToken(room, playerId) : null;
+  }
+
+  /** Record (or change) a player's secret vote for their favorite OTHER answer
+   * during WRITE_VOTE. `votedForToken` is the opaque token from publicWrittenAnswers. */
+  writeVote(code: string, voterId: string, votedForToken: string): writeRound.WriteVoteResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
-    return writeRound.writeVote(room, voterId, votedForId);
+    return writeRound.writeVote(room, voterId, votedForToken);
   }
 
   /** Single source of truth for "has everyone finished WRITE_VOTE?" (ends it early). */
@@ -2745,6 +2799,15 @@ export class RoomStore {
     return this.rooms.get(code)?.leaderId === playerId;
   }
 
+  /**
+   * Mirror a freshly-issued reconnect token onto the room, so it round-trips
+   * with the crash-recovery snapshot (index.ts's own in-memory `tokens` map
+   * does not survive a restart on its own). No-op for an unknown room.
+   */
+  registerToken(code: string, token: string, playerId: string): void {
+    this.rooms.get(code)?.tokens.set(token, playerId);
+  }
+
   get(code: string): Room | undefined {
     return this.rooms.get(code);
   }
@@ -2758,9 +2821,22 @@ export class RoomStore {
     return this.rooms.delete(code);
   }
 
-  /** Reinsert a room (e.g. one rebuilt from a snapshot at boot). */
+  /**
+   * Reinsert a room rebuilt from a crash-recovery snapshot at boot. No socket
+   * survives a restart, so every human is marked disconnected (bots are
+   * untouched — they have no socket to lose and connectedHumanCount ignores
+   * them anyway): without this, a room nobody reconnects to would never trip
+   * connectedHumanCount === 0 and would sit in memory forever instead of being
+   * caught by the abandoned-room sweep. Reconnecting phones still get their
+   * generous 5-minute window via that sweep, not the tight 45s live-disconnect
+   * grace period (which would evict everyone before they notice the restart).
+   */
   restore(room: Room): void {
-    this.rooms.set(room.code, room);
+    const normalized = normalizeRestoredRoom(room);
+    for (const p of normalized.players.values()) {
+      if (!p.isBot) p.connected = false;
+    }
+    this.rooms.set(normalized.code, normalized);
   }
 
   /** Codes of all rooms currently in memory (for periodic snapshotting). */

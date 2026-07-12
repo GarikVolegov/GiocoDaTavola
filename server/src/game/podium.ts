@@ -33,15 +33,16 @@ export function podiumPoints(s: PlayerStats): number {
  * The full final ranking, best first: everyone STILL IN the room who played at
  * least one round (a leaver's orphan stats never rank), competition-ranked
  * (ties share a rank: 1, 1, 3). Ties keep join order (the stats map's insertion
- * order — sort is stable). Ungated — RoomStore.publicPodium applies the
- * FINAL_AWARDS gate.
+ * order — sort is stable). Bots never rank — the podium is a social superlative
+ * among the actual party, not a game they can "win". Ungated — RoomStore.publicPodium
+ * applies the FINAL_AWARDS gate.
  */
 export function computePodium(room: Room): PodiumEntry[] {
   const ranked: PodiumEntry[] = [];
   for (const [id, s] of room.stats.entries()) {
     if (s.rounds === 0) continue;
     const player = room.players.get(id);
-    if (!player) continue;
+    if (!player || player.isBot) continue;
     ranked.push({ player: { id, nickname: player.nickname }, points: podiumPoints(s), rank: 0 });
   }
   ranked.sort((a, b) => b.points - a.points);

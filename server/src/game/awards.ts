@@ -116,7 +116,9 @@ export function ensureStats(room: Room, id: string): PlayerStats {
  * mind) are omitted. Ungated — RoomStore.publicAwards applies the FINAL_AWARDS gate.
  */
 export function computeAwards(room: Room): Award[] {
-  const entries = [...room.stats.entries()]; // insertion order == join order
+  // Bots never compete for an award — these are social superlatives about the
+  // actual party, not a game they can "win" (insertion order == join order).
+  const entries = [...room.stats.entries()].filter(([id]) => room.players.get(id)?.isBot !== true);
   const winnerBy = (
     score: (s: PlayerStats) => number,
     eligible: (s: PlayerStats) => boolean,
