@@ -68,6 +68,14 @@ describe('roomSnapshot round-trip', () => {
     expect(restored.confirmedVote2.has('p0')).toBe(true);
   });
 
+  it("preserves the reconnect-token mirror (Room.tokens), so a restart doesn't strand every phone as a fresh spectator", () => {
+    const room = liveRoom();
+    room.tokens.set('secret-tok-p0', 'p0');
+    const restored = deserializeRoom(serializeRoom(room));
+    expect(restored.tokens).toBeInstanceOf(Map);
+    expect(restored.tokens.get('secret-tok-p0')).toBe('p0');
+  });
+
   it('round-trips an empty/lobby room (no deck, empty Maps)', () => {
     const store = new RoomStore();
     const { code } = store.create();

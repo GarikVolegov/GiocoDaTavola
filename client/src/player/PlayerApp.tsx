@@ -46,6 +46,7 @@ import {
   type PlayerGroupMindResultPayload,
   type PlayerWriteSubmittedPayload,
   type PlayerWriteVotedPayload,
+  type PlayerMyWriteTokenPayload,
   type PlayerInfiltratoRolePayload,
   type PlayerInfiltratoToolErrorPayload,
   type PlayerAccusedPayload,
@@ -171,7 +172,11 @@ export default function PlayerApp() {
   const [groupMindResult, setGroupMindResult] = useState<PlayerGroupMindResultPayload | null>(null);
   const [writeText, setWriteText] = useState('');
   const [writeSubmitted, setWriteSubmitted] = useState<string | null>(null);
-  const [writeVotedForId, setWriteVotedForId] = useState<string | null>(null);
+  const [writeVotedForToken, setWriteVotedForToken] = useState<string | null>(null);
+  // This player's own answer's opaque token this round (private emit on
+  // entering WRITE_VOTE / on reconnect) — used to filter our own entry out
+  // of the anonymized list without ever comparing real player ids.
+  const [myWriteToken, setMyWriteToken] = useState<string | null>(null);
   const [infiltratoRole, setInfiltratoRole] = useState<PlayerInfiltratoRolePayload | null>(null);
   const [infiltratoToolError, setInfiltratoToolError] = useState<string | null>(null);
   const [myAccusation, setMyAccusation] = useState<string | null>(null);
@@ -286,7 +291,8 @@ export default function PlayerApp() {
     };
     const onGroupMindResult = (payload: PlayerGroupMindResultPayload) => setGroupMindResult(payload);
     const onWriteSubmitted = ({ text }: PlayerWriteSubmittedPayload) => setWriteSubmitted(text);
-    const onWriteVoted = ({ votedForId }: PlayerWriteVotedPayload) => setWriteVotedForId(votedForId);
+    const onWriteVoted = ({ votedForToken }: PlayerWriteVotedPayload) => setWriteVotedForToken(votedForToken);
+    const onMyWriteToken = ({ token }: PlayerMyWriteTokenPayload) => setMyWriteToken(token);
     const onInfiltratoRole = (payload: PlayerInfiltratoRolePayload) => setInfiltratoRole(payload);
     const onInfiltratoToolError = ({ error }: PlayerInfiltratoToolErrorPayload) =>
       setInfiltratoToolError(INFILTRATO_TOOL_ERROR_MESSAGES[error] ?? 'Non puoi agire ora');
@@ -323,6 +329,7 @@ export default function PlayerApp() {
     socket.on(SocketEvents.PlayerGroupMindResult, onGroupMindResult);
     socket.on(SocketEvents.PlayerWriteSubmitted, onWriteSubmitted);
     socket.on(SocketEvents.PlayerWriteVoted, onWriteVoted);
+    socket.on(SocketEvents.PlayerMyWriteToken, onMyWriteToken);
     socket.on(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
     socket.on(SocketEvents.PlayerInfiltratoToolError, onInfiltratoToolError);
     socket.on(SocketEvents.PlayerAccused, onAccused);
@@ -380,6 +387,7 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerGroupMindResult, onGroupMindResult);
       socket.off(SocketEvents.PlayerWriteSubmitted, onWriteSubmitted);
       socket.off(SocketEvents.PlayerWriteVoted, onWriteVoted);
+      socket.off(SocketEvents.PlayerMyWriteToken, onMyWriteToken);
       socket.off(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
       socket.off(SocketEvents.PlayerInfiltratoToolError, onInfiltratoToolError);
       socket.off(SocketEvents.PlayerAccused, onAccused);
@@ -446,7 +454,8 @@ export default function PlayerApp() {
     setGroupMindResult(null);
     setWriteText('');
     setWriteSubmitted(null);
-    setWriteVotedForId(null);
+    setWriteVotedForToken(null);
+    setMyWriteToken(null);
     setInfiltratoToolError(null);
     setDuoOwn(null);
     setDuoPredict(null);
@@ -605,10 +614,10 @@ export default function PlayerApp() {
     getSocket().emit(SocketEvents.PlayerWrite, { text });
   };
 
-  const castWriteVote = (votedForId: string) => {
-    setWriteVotedForId(votedForId); // optimistic; confirmed via player:writeVoted
+  const castWriteVote = (votedForToken: string) => {
+    setWriteVotedForToken(votedForToken); // optimistic; confirmed via player:writeVoted
     buzz(25);
-    getSocket().emit(SocketEvents.PlayerWriteVote, { votedForId });
+    getSocket().emit(SocketEvents.PlayerWriteVote, { votedForToken });
   };
 
   const castSpeakerVote = (defenderId: string) => {
@@ -1145,15 +1154,17 @@ export default function PlayerApp() {
   }
 
   if (joinedCode && phase === 'WRITE_VOTE') {
-    // The server broadcasts the full anonymized list; hide our own entry so we
-    // can never vote for ourselves (the standard party-game UX).
-    const otherAnswers = (game?.writtenAnswers ?? []).filter((a) => a.id !== playerId);
+    // Each entry's `id` is an opaque per-round token, not a real player id
+    // (the roster is public, so a real id would de-anonymize the vote).
+    // myWriteToken (privately sent) is the only way to recognize — and hide —
+    // our own entry, so we can never vote for ourselves.
+    const otherAnswers = (game?.writtenAnswers ?? []).filter((a) => a.id !== myWriteToken);
     return withLeaveMenu(
       <WriteVoteView
         prompt={game?.writePrompt ?? null}
         remaining={remaining}
         answers={otherAnswers}
-        votedForId={writeVotedForId}
+        votedForToken={writeVotedForToken}
         onVote={castWriteVote}
         progress={game?.writeVoteProgress ?? null}
         skipButton={skipButton}

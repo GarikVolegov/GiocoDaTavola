@@ -1252,6 +1252,21 @@ describe('jolly awards (nessuno a mani vuote)', () => {
     expect(sock0AwardIds).toContain('persuasore');
     expect(sock0AwardIds).not.toContain('fulmine'); // already won a main award — no jolly on top
   });
+
+  it('never awards a bot, main or jolly, even with the best stats in the room', () => {
+    const store = new RoomStore();
+    const code = roomWithFullStats(store, {
+      'sock-0': { rounds: 3, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 1 },
+    });
+    const room = store.get(code)!;
+    room.players.set('bot1', { id: 'bot1', nickname: 'Bot', isBot: true });
+    // The bot outscores the human on everything: persuasion (main award) AND
+    // firstToVoteCount (jolly) — both must still go to (or skip to) a human.
+    room.stats.set('bot1', { rounds: 5, changedCount: 0, majorityCount: 0, minorityCount: 0, persuasion: 9, firstToVoteCount: 9 });
+    const awards = store.computeAwards(code);
+    expect(awards.some((a) => a.winner.id === 'bot1')).toBe(false);
+    expect(awards.find((a) => a.id === 'persuasore')?.winner.id).toBe('sock-0');
+  });
 });
 
 describe('RoomStore bots (Fase B)', () => {
@@ -2929,6 +2944,21 @@ describe('RoomStore.abandonedRooms (lifecycle)', () => {
   });
 });
 
+describe('RoomStore.registerToken (reconnect-token persistence)', () => {
+  it('records the token on the room so it round-trips with the snapshot', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p0', 'Ann');
+    store.registerToken(code, 'secret-tok', 'p0');
+    expect(store.get(code)!.tokens.get('secret-tok')).toBe('p0');
+  });
+
+  it('is a no-op for an unknown room (never throws)', () => {
+    const store = new RoomStore();
+    expect(() => store.registerToken('ZZZZ', 'tok', 'p0')).not.toThrow();
+  });
+});
+
 describe('RoomStore.restore (snapshot)', () => {
   it('reinserts a room so get/has/size see it', () => {
     const store = new RoomStore();
@@ -2939,8 +2969,67 @@ describe('RoomStore.restore (snapshot)', () => {
 
     store.restore(room);
     expect(store.has(code)).toBe(true);
-    expect(store.get(code)).toBe(room);
+    // Not `.toBe(room)`: restore() normalizes against a fresh defaults
+    // template (backfilling any field absent from an older snapshot), so the
+    // reinserted room is an equivalent copy, not the exact same reference.
+    expect(store.get(code)).toEqual(room);
     expect(store.size).toBe(1);
+  });
+
+  it('marks every human as disconnected — no live socket survives a server restart, so a snapshot with connected:true would never be reaped', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    store.join(code, 'p2', 'Bob');
+    store.addBot(code);
+    const room = store.get(code)!;
+    expect(room.players.get('p1')?.connected).not.toBe(false); // fresh join: present
+    store.delete(code);
+
+    store.restore(room);
+    expect(room.players.get('p1')?.connected).toBe(false);
+    expect(room.players.get('p2')?.connected).toBe(false);
+    expect(store.connectedHumanCount(code)).toBe(0);
+  });
+
+  it('leaves a bot untouched (bots have no socket to lose and never count toward abandonment)', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    const bot = store.addBot(code);
+    const room = store.get(code)!;
+    store.delete(code);
+
+    store.restore(room);
+    expect(bot.ok && room.players.get(bot.player.id)?.connected).not.toBe(false);
+  });
+
+  it('backfills a field ABSENT from an older snapshot (schema grew since it was written) instead of leaving it undefined for the next .size/.get to crash on', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    // Simulate a stale snapshot predating a field the schema has since grown
+    // (exactly what an old JSON blob missing a since-added key looks like
+    // after deserializeRoom: the key is simply absent from the object).
+    const stale = store.get(code)! as unknown as Record<string, unknown>;
+    delete stale.duoMoments;
+    delete stale.predictions;
+    store.delete(code);
+
+    store.restore(stale as unknown as Room);
+    const restored = store.get(code)!;
+    expect(restored.duoMoments).toEqual([]);
+    expect(restored.predictions).toBeInstanceOf(Map);
+    expect(restored.predictions.size).toBe(0);
+  });
+
+  it('never overwrites a field that IS present, even a falsy one (0 rounds, empty array)', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    const room = store.get(code)!;
+    room.dilemmaIndex = 7;
+    store.delete(code);
+
+    store.restore(room);
+    expect(store.get(code)!.dilemmaIndex).toBe(7);
   });
 });
 

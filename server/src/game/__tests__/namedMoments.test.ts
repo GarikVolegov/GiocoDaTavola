@@ -95,6 +95,24 @@ describe('detectNamedMoments (5.5, "momenti nominati")', () => {
     expect(moments.map((m) => m.kind)).not.toContain('triplaPersuasione');
   });
 
+  it('fires at most ONE tripla persuasione per side, even with 2 co-defenders on it (coppie / doppio-difensore)', () => {
+    const store = makeStore(() => 0);
+    const { code } = store.create();
+    for (let i = 0; i < 7; i++) store.join(code, `s${i}`, `P${i}`);
+    store.startGame(code, 3);
+    const room = store.get(code)!;
+    // Both defenders share side A — the side's swing is a single shared fact,
+    // not something each of them independently "pulled off".
+    room.defenders = [
+      { id: 's0', nickname: 'Ann', side: 'A' },
+      { id: 's1', nickname: 'Bob', side: 'A' },
+    ];
+    const moments = detectNamedMoments(room, { A: 4, B: 1 }, { A: 3, B: -3 });
+    const triple = moments.filter((m) => m.kind === 'triplaPersuasione');
+    expect(triple.length).toBe(1);
+    expect(triple[0].playerId).toBe('s0'); // the side's first-selected defender
+  });
+
   it('a single round can produce multiple moments at once', () => {
     const store = makeStore(() => 0);
     const { code } = store.create();

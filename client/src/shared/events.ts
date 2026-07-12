@@ -105,6 +105,10 @@ export const SocketEvents = {
   PlayerWriteVoted: 'player:writeVoted',
   /** Server rejects the vote (wrong phase, not in room, self-vote, unknown target). */
   PlayerWriteVoteError: 'player:writeVoteError',
+  /** Server privately tells this player their own answer's opaque token on
+   * entering WRITE_VOTE (or reconnecting into it), so the client can filter
+   * its own entry out of the anonymized list. */
+  PlayerMyWriteToken: 'player:myWriteToken',
   /** Player writes their own dilemma in the LOBBY (max 2/player). */
   PlayerSubmitDilemma: 'player:submitDilemma',
   /** Server confirms the player's submission back to them only (with their count). */
@@ -1098,11 +1102,20 @@ export interface PlayerWriteSubmittedPayload {
 export type WriteError = 'ROOM_NOT_FOUND' | 'NOT_WRITE_PHASE' | 'NOT_IN_ROOM' | 'EMPTY' | 'TOO_LONG';
 
 export interface PlayerWriteVotePayload {
-  votedForId: string;
+  /** Opaque per-round token (an answer's position in writeOrder) — never a
+   * real player id, or the public roster would de-anonymize the vote. */
+  votedForToken: string;
 }
 
 export interface PlayerWriteVotedPayload {
-  votedForId: string;
+  votedForToken: string;
+}
+
+/** Privately sent once entering WRITE_VOTE (and on reconnect): this player's
+ * own answer's opaque token, so the client can filter its own entry out of
+ * the anonymized list without ever learning another author's real id. */
+export interface PlayerMyWriteTokenPayload {
+  token: string;
 }
 
 export type WriteVoteError = 'ROOM_NOT_FOUND' | 'NOT_WRITE_VOTE_PHASE' | 'NOT_IN_ROOM' | 'SELF_VOTE' | 'INVALID_TARGET';

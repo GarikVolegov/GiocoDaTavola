@@ -4,7 +4,7 @@
 // the room across the whole game into "I momenti della serata", shown before
 // the awards. Pure given the round's tallies; called once per PHASE_RESULTS
 // while votes/votes1/defenders are still intact (mirrors roundStats.ts).
-import type { Room, VoteTally, Defender } from './rooms';
+import type { Room, VoteTally, Defender, VoteChoice } from './rooms';
 import { leadFlipped } from './predictions';
 
 export type NamedMomentKind = 'plebiscito' | 'paritario' | 'ribaltone' | 'triplaPersuasione';
@@ -63,9 +63,16 @@ export function detectNamedMoments(room: Room, second: VoteTally, netSwing: Vote
       emoji: '🔄',
     });
   }
+  // netSwing[side] is a per-SIDE quantity: with 2 co-defenders on the same
+  // side ("a coppie", 7+ giocatori, or the doppio-difensore twist) it's a fact
+  // about the side, not something each of them independently pulled off —
+  // credit at most one moment per side, the side's first-selected defender.
   const byPersuasion = (a: Defender, b: Defender) => (netSwing[b.side] ?? 0) - (netSwing[a.side] ?? 0);
+  const creditedSides = new Set<VoteChoice>();
   for (const d of [...room.defenders].sort(byPersuasion)) {
+    if (creditedSides.has(d.side)) continue;
     if ((netSwing[d.side] ?? 0) >= TRIPLA_THRESHOLD) {
+      creditedSides.add(d.side);
       moments.push({
         kind: 'triplaPersuasione',
         dilemmaIndex,

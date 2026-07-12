@@ -117,7 +117,9 @@ export function predictProgress(
   room: Room,
 ): { done: number; total: number; missingNicknames: string[] } | null {
   if (room.phase !== 'PREDICT') return null;
-  const humans = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+  const humans = [...room.players.values()].filter(
+    (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+  );
   const missing = humans.filter((p) => !predictActionDone(room, p.id));
   return {
     done: humans.length - missing.length,
@@ -142,18 +144,26 @@ export function predictPhaseComplete(room: Room): boolean {
  * Force a plausible default for any connected human still missing a PREDICT
  * action once the phase is forced through (soft-timeout or a leader skip):
  * the side prediction defaults to the currently-leading side (a tie -> A),
- * the swing bet defaults to "regge" (majority holds). Idempotent — a no-op
- * for anyone who already acted, so it's safe to call unconditionally on
- * every PREDICT exit.
+ * the swing bet defaults to "regge" (majority holds), and — in the "Quanto
+ * mi conosci" round — a still-missing know-guess defaults to that same
+ * leading side too (the same "no signal, guess the popular pick" heuristic;
+ * otherwise that sub-part is silently dropped while prediction/swingBet
+ * still get scored, an asymmetry with no player:knowGuessResult ever
+ * reaching that phone). Idempotent — a no-op for anyone who already acted,
+ * so it's safe to call unconditionally on every PREDICT exit.
  */
 export function applyPredictDefaults(room: Room): void {
   if (room.phase !== 'PREDICT') return;
   const t = tally(room.votes);
   const leading: VoteChoice = t.A >= t.B ? 'A' : 'B';
   const present = [...room.players.values()].filter((p) => !p.isBot && p.connected !== false);
+  const know = isKnowRound(room);
   for (const p of present) {
     if (!room.predictions.has(p.id)) room.predictions.set(p.id, leading);
     if (!room.swingBets.has(p.id)) room.swingBets.set(p.id, 'regge');
+    if (know && room.knowTargets.has(p.id) && !room.knowGuesses.has(p.id)) {
+      room.knowGuesses.set(p.id, leading);
+    }
   }
 }
 

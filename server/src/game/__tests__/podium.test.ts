@@ -87,6 +87,13 @@ describe('computePodium — la classifica finale', () => {
     room.players.delete('b');
     expect(computePodium(room).map((e) => e.player.id)).toEqual(['a']);
   });
+
+  it('esclude i bot dal podio, anche con il punteggio più alto', () => {
+    const room = roomWithStats({ a: baseStats({ rounds: 1 }) });
+    room.players.set('bot1', { id: 'bot1', nickname: 'Bot', isBot: true });
+    room.stats.set('bot1', baseStats({ rounds: 5, persuasion: 10 })); // punteggio ben più alto
+    expect(computePodium(room).map((e) => e.player.id)).toEqual(['a']);
+  });
 });
 
 describe('publicPodium — gate FINAL_AWARDS', () => {
