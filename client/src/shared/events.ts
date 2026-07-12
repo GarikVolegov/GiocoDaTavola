@@ -20,6 +20,11 @@ export const SocketEvents = {
   LeaderStartError: 'leader:startError',
   /** Leader force-advances the state machine, skipping the current countdown. */
   LeaderAdvancePhase: 'leader:advancePhase',
+  /** Leader discards the current dilemma (DILEMMA_REVEAL / open VOTE_1): a fresh
+   * card replays the same round. Classic format only. */
+  LeaderSkipDilemma: 'leader:skipDilemma',
+  /** Server tells everyone the leader discarded the dilemma (toast + sting). */
+  RoomDilemmaSkipped: 'room:dilemmaSkipped',
   /** Leader returns a finished room to LOBBY for a rematch (same roster/code). */
   LeaderRematch: 'leader:rematch',
   /** Leader adds a server-driven bot to fill a seat. */
@@ -314,6 +319,10 @@ export type GamePhase =
   | 'DILEMMA_REVEAL'
   | 'VOTE_1'
   | 'SPLIT_REVEAL'
+  // 100% unanimous first vote: short celebratory beat replacing the whole
+  // debate; the dilemma is then swapped for a fresh one at the same index
+  // (mirror server phases.ts).
+  | 'UNANIMOUS_REVEAL'
   | 'PREDICT'
   | 'DEFENSE'
   | 'INTERVENTI'
@@ -774,6 +783,11 @@ export interface GameStatePayload {
    */
   split: VoteSplit | null;
   /**
+   * The unanimous side + how many voted it, shown only in UNANIMOUS_REVEAL;
+   * null otherwise. Aggregate only, no identities.
+   */
+  unanimous: { side: VoteChoice; count: number } | null;
+  /**
    * Who is speaking + turn progress, shown only in DEFENSE; null otherwise.
    * Only the chosen defenders' identities/side are public.
    */
@@ -1216,6 +1230,7 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   DILEMMA_REVEAL: 'Il dilemma',
   VOTE_1: 'Primo voto',
   SPLIT_REVEAL: 'Come si è diviso il gruppo',
+  UNANIMOUS_REVEAL: "Tutti d'accordo!",
   PREDICT: 'Pronostico',
   DEFENSE: 'Le difese',
   INTERVENTI: 'Interventi',

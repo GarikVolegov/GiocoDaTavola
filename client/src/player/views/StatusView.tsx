@@ -238,6 +238,28 @@ export default function StatusView({
             Leggete insieme — tra poco si vota
           </p>
         </>
+      ) : phase === 'UNANIMOUS_REVEAL' ? (
+        <>
+          <p style={{ fontSize: '3rem', margin: 0 }} aria-hidden>
+            🎉
+          </p>
+          {game?.unanimous && game?.dilemma && (
+            <Card
+              glow="accent"
+              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
+            >
+              <p style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>
+                {game.unanimous.side === 'A' ? game.dilemma.optionA : game.dilemma.optionB}
+              </p>
+              <p style={{ fontSize: '0.95rem', opacity: 0.85, margin: 0 }}>
+                {game.unanimous.count} su {game.unanimous.count} dalla stessa parte
+              </p>
+            </Card>
+          )}
+          <p style={{ fontSize: '0.95rem', opacity: 0.7, margin: 0 }}>
+            Niente dibattito — nuovo dilemma in arrivo…
+          </p>
+        </>
       ) : phase === 'SPLIT_REVEAL' ? (
         remaining != null && remaining > SPLIT_REVEAL_WINDOW_S ? (
           <div

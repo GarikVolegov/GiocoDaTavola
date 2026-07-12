@@ -57,6 +57,10 @@ export type GamePhase =
   | 'SCENE_INTRO'
   | 'SCENE_CONSEQUENCE'
   | 'STORY_EPILOGUE'
+  // 100% unanimous first vote (classic only): a short celebratory beat replacing
+  // the whole debate — the round's dilemma is then swapped for a fresh one at the
+  // same index. Inserted by advancePhase, not the pure sequence (like ACCUSE).
+  | 'UNANIMOUS_REVEAL'
   // "L'Infiltrato" end-game accusation, inserted before FINAL_AWARDS only when a
   // room has an infiltrator (handled in advancePhase, not the pure sequence).
   | 'ACCUSE'
@@ -166,6 +170,8 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   SCENE_INTRO: null,
   SCENE_CONSEQUENCE: null,
   STORY_EPILOGUE: null,
+  // "Tutti d'accordo!" — just long enough to read the winning side and cheer.
+  UNANIMOUS_REVEAL: 4_500,
   // "Il processo" (4.5): a proper trial, not a snap guess — 75s to discuss out
   // loud before voting who the infiltrator is (was 30s).
   ACCUSE: 75_000,

@@ -123,6 +123,55 @@ describe('PlayerApp', () => {
     expect(screen.getByText('Montagna')).toBeInTheDocument();
   });
 
+  it('clears a cast vote when the dilemma is replaced at the SAME index (unanime/scarto)', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: null,
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Mare/ }));
+    expect(screen.getByText(/hai votato/i)).toBeInTheDocument();
+
+    // The round is discarded and replaced IN PLACE: same dilemmaIndex, a
+    // different dilemma id — first the re-reveal, then VOTE_1 reopens.
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'DILEMMA_REVEAL',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd4', text: 'Città o campagna?', optionA: 'Città', optionB: 'Campagna' },
+        votedCount: 0,
+        leaderId: null,
+      });
+    });
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        dilemma: { id: 'd4', text: 'Città o campagna?', optionA: 'Città', optionB: 'Campagna' },
+        votedCount: 0,
+        leaderId: null,
+      });
+    });
+    expect(screen.queryByText(/hai votato/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/tocca a o b per votare/i)).toBeInTheDocument();
+  });
+
   it('shows the confirm affordance at VOTE_2', () => {
     render(<PlayerApp />);
     act(() => {
@@ -2333,5 +2382,167 @@ describe('PlayerApp', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /salta/i }));
     expect(emitSpy).toHaveBeenCalledWith('leader:advancePhase');
+  });
+});
+
+describe("voto unanime + scarta dilemma", () => {
+  beforeEach(() => {
+    resetHandlers();
+    localStorage.clear();
+    vi.clearAllMocks(); // the emit spy wraps the shared fakeSocket — drop stale calls
+  });
+  afterEach(() => cleanup());
+
+  function join(leader = false) {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      if (leader) serverEmit('lobby:update', { players: [{ id: 'p1', nickname: 'Alice' }] });
+    });
+  }
+
+  it("a UNANIMOUS_REVEAL il telefono celebra l'accordo e annuncia il nuovo dilemma", () => {
+    join();
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'UNANIMOUS_REVEAL',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        format: 'classic',
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        unanimous: { side: 'B', count: 5 },
+        leaderId: null,
+      });
+    });
+    expect(screen.getByText("Tutti d'accordo!")).toBeInTheDocument();
+    expect(screen.getByText(/montagna/i)).toBeInTheDocument();
+    expect(screen.getByText(/5 su 5/)).toBeInTheDocument();
+    expect(screen.getByText(/nuovo dilemma in arrivo/i)).toBeInTheDocument();
+  });
+
+  it('il leader scarta con UN tap da DILEMMA_REVEAL (formato classic)', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    join();
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'DILEMMA_REVEAL',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: 9_999_999_999_999,
+        format: 'classic',
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: 'p1',
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /scarta dilemma/i }));
+    expect(emitSpy).toHaveBeenCalledWith('leader:skipDilemma');
+  });
+
+  it('in VOTE_1 con voti già castati serve il secondo tap di conferma', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    join();
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: 9_999_999_999_999,
+        format: 'classic',
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 2,
+        leaderId: 'p1',
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /scarta dilemma/i }));
+    expect(emitSpy).not.toHaveBeenCalledWith('leader:skipDilemma');
+    fireEvent.click(screen.getByRole('button', { name: /sicuro\? c'è già chi ha votato/i }));
+    expect(emitSpy).toHaveBeenCalledWith('leader:skipDilemma');
+  });
+
+  it('in VOTE_1 senza alcun voto basta un tap', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    join();
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: 9_999_999_999_999,
+        format: 'classic',
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: 'p1',
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /scarta dilemma/i }));
+    expect(emitSpy).toHaveBeenCalledWith('leader:skipDilemma');
+  });
+
+  it('niente bottone per i non-leader, fuori dal classic, o dopo il reveal (VOTE_2)', () => {
+    join();
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'DILEMMA_REVEAL',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: 9_999_999_999_999,
+        format: 'classic',
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: 'p2', // non sono io
+      });
+    });
+    expect(screen.queryByRole('button', { name: /scarta dilemma/i })).toBeNull();
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'DILEMMA_REVEAL',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: 9_999_999_999_999,
+        format: 'percorso',
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: 'p1',
+      });
+    });
+    expect(screen.queryByRole('button', { name: /scarta dilemma/i })).toBeNull();
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'VOTE_2',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: 9_999_999_999_999,
+        format: 'classic',
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        confirmedCount: 0,
+        leaderId: 'p1',
+      });
+    });
+    expect(screen.queryByRole('button', { name: /scarta dilemma/i })).toBeNull();
+  });
+
+  it('room:dilemmaSkipped mostra il toast a tutti', () => {
+    join();
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        format: 'classic',
+        dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: null,
+      });
+      serverEmit('room:dilemmaSkipped', {});
+    });
+    expect(screen.getByText(/il capitano ha scartato il dilemma/i)).toBeInTheDocument();
   });
 });

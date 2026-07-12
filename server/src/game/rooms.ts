@@ -663,6 +663,12 @@ export type AdvancePhaseResult =
   | { ok: true; room: Room }
   | { ok: false; error: AdvancePhaseError };
 
+export type SkipDilemmaError = 'ROOM_NOT_FOUND' | 'NOT_SKIPPABLE_PHASE' | 'NOT_CLASSIC';
+
+export type SkipDilemmaResult =
+  | { ok: true; room: Room }
+  | { ok: false; error: SkipDilemmaError };
+
 export type VoteError =
   | 'ROOM_NOT_FOUND'
   | 'NOT_VOTING_PHASE'
@@ -1333,6 +1339,31 @@ export class RoomStore {
   }
 
   /**
+   * The leader's "Scarta dilemma": discard the current dilemma while it can
+   * still be discarded — DILEMMA_REVEAL or an open VOTE_1 (once the split is
+   * revealed the round is committed). Classic format only (percorso/storia
+   * have no deck to redraw from; the duel runs its own machine). Reuses the
+   * UNANIMOUS_REVEAL exit of advancePhase — the room is put in that phase
+   * synthetically (never broadcast) so the replace-or-advance side effects
+   * live in exactly one place.
+   */
+  skipDilemma(code: string): SkipDilemmaResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.format !== 'classic' || room.mode === 'duello') {
+      return { ok: false, error: 'NOT_CLASSIC' };
+    }
+    if (room.phase !== 'DILEMMA_REVEAL' && room.phase !== 'VOTE_1') {
+      return { ok: false, error: 'NOT_SKIPPABLE_PHASE' };
+    }
+    room.phase = 'UNANIMOUS_REVEAL';
+    const advanced = this.advancePhase(code);
+    // Can't actually fail (the synthetic phase is never LOBBY/FINAL_*); the
+    // fallback only narrows the error union for the caller.
+    return advanced.ok ? advanced : { ok: false, error: 'NOT_SKIPPABLE_PHASE' };
+  }
+
+  /**
    * Advance the state machine by one step (timer expiry or host force-advance).
    * Mutates the room's phase, dilemma index, and the next auto-advance expiry.
    * LOBBY (start the game instead) and the terminal FINAL_AWARDS have no next
@@ -1448,7 +1479,32 @@ export class RoomStore {
     if (room.phase === 'PREDICT') predictions.applyPredictDefaults(room);
     if (room.phase === 'GROUP_MIND') groupMind.applyGroupMindDefaults(room);
     if (room.phase === 'WRITE') writeRound.applyWriteDefaults(room);
-    let transition = step(room.phase, room.dilemmaIndex);
+    let transition: PhaseTransition;
+    if (room.phase === 'UNANIMOUS_REVEAL') {
+      // The shared "discard the current dilemma" exit (unanimous skip AND the
+      // leader's Scarta): replay the round with a fresh card at the same index,
+      // or — deck exhausted — advance as if its PHASE_RESULTS just ended (which
+      // keeps the GROUP_MIND/WRITE checkpoints and the ACCUSE detour below).
+      transition = dilemmaPlan.replaceCurrentDilemma(room)
+        ? { phase: 'DILEMMA_REVEAL', dilemmaIndex: room.dilemmaIndex }
+        : step('PHASE_RESULTS', room.dilemmaIndex);
+    } else {
+      transition = step(room.phase, room.dilemmaIndex);
+      // A 100% unanimous first vote (classic only, ≥2 actual votes, EVERYONE
+      // present having voted — a force-advance on a partial VOTE_1 must never
+      // read "only the votes in so far agree" as the whole group agreeing):
+      // nothing to debate — celebrate for a beat instead of playing out an
+      // empty round.
+      if (
+        room.phase === 'VOTE_1' &&
+        transition.phase === 'SPLIT_REVEAL' &&
+        room.format === 'classic' &&
+        voting.allVoted(room) &&
+        voting.unanimousSide(tally(room.votes)) !== null
+      ) {
+        transition = { phase: 'UNANIMOUS_REVEAL', dilemmaIndex: room.dilemmaIndex };
+      }
+    }
     // The peer "best speaker" vote needs at least two defenders to choose between;
     // with 0 or 1 it's degenerate, so skip straight to the results.
     if (transition.phase === 'SPEAKER_VOTE' && room.defenders.length < 2) {
@@ -2079,6 +2135,12 @@ export class RoomStore {
   publicSplit(code: string): { A: number; B: number } | null {
     const room = this.rooms.get(code);
     return room ? voting.publicSplit(room) : null;
+  }
+
+  /** The unanimous side + count during UNANIMOUS_REVEAL; otherwise null. */
+  publicUnanimous(code: string): { side: VoteChoice; count: number } | null {
+    const room = this.rooms.get(code);
+    return room ? voting.publicUnanimous(room) : null;
   }
 
   /** The nickname of whoever wrote the current dilemma, revealed only at

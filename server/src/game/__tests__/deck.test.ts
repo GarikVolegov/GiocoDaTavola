@@ -9,6 +9,19 @@ const fixture: Dilemma[] = [
   { id: 'c', text: 'C?', optionA: 'c1', optionB: 'c2', register: 'vita', spuntiA: ['x', 'y'], spuntiB: ['x', 'y'] },
 ];
 
+describe('Deck.putBack', () => {
+  it('returns cards to the deck so they can be drawn again', () => {
+    const deck = new Deck(fixture, () => 0);
+    const first = deck.draw()!;
+    expect(deck.remainingCount).toBe(2);
+    deck.putBack([first]);
+    expect(deck.remainingCount).toBe(3);
+    const drawnIds = [deck.draw()!.id, deck.draw()!.id, deck.draw()!.id];
+    expect(drawnIds).toContain(first.id);
+    expect(deck.draw()).toBeNull();
+  });
+});
+
 describe('loadDilemmas (server/data/dilemmas.json)', () => {
   it('loads at least 20 dilemmas', () => {
     expect(loadDilemmas().length).toBeGreaterThanOrEqual(20);

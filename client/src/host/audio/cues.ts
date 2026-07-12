@@ -4,7 +4,7 @@
 
 import type { GamePhase } from '../../shared/events';
 
-export type SfxName = 'reveal' | 'swing' | 'win' | 'awards' | 'timerWarn' | 'handRaise';
+export type SfxName = 'reveal' | 'swing' | 'win' | 'awards' | 'timerWarn' | 'handRaise' | 'unanimous' | 'discard';
 
 /** The slice of game state cue decisions need; `GameStatePayload` satisfies it structurally. */
 export interface CueGame {
@@ -25,6 +25,9 @@ export function sfxForTransition(
     case 'DUEL_REVEAL':
     case 'DILEMMA_REVEAL':
       return 'reveal';
+    case 'UNANIMOUS_REVEAL':
+      // "Tutti d'accordo!" — the whole debate is skipped, celebrate the accord.
+      return 'unanimous';
     case 'PHASE_RESULTS':
       // 'swing' is the dramatic "ribaltone" sting — reserved for a genuine
       // ribaltone (the lead itself flipped, or 2+ voters switched), not any

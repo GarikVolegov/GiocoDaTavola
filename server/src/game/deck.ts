@@ -148,4 +148,10 @@ export class Deck {
     const [picked] = this.remaining.splice(index, 1);
     return picked;
   }
+
+  /** Return drawn-but-unused cards to the deck (e.g. set-asides from a
+   * mid-game replacement draw) so they stay available for later draws. */
+  putBack(dilemmas: Dilemma[]): void {
+    this.remaining.push(...dilemmas);
+  }
 }

@@ -92,7 +92,9 @@ describe('Dilemmi dai giocatori — play order & award', () => {
     while (store.get(code)!.currentDilemma?.id !== 'usr-sock-0-1' && g++ < 20) {
       store.advancePhase(code);
       if (store.get(code)!.phase === 'VOTE_1' || store.get(code)!.phase === 'VOTE_2') {
-        for (const id of ['sock-0', 'sock-1', 'sock-2']) store.vote(code, id, 'A');
+        // Split vote: an all-A first vote would skip + REPLACE the dilemma
+        // (UNANIMOUS_REVEAL) — and could discard the submitted one this walk hunts.
+        ['sock-0', 'sock-1', 'sock-2'].forEach((id, i) => store.vote(code, id, i === 0 ? 'A' : 'B'));
       }
     }
     expect(store.get(code)?.currentDilemma?.id).toBe('usr-sock-0-1');
@@ -130,7 +132,9 @@ describe('Dilemmi dai giocatori — play order & award', () => {
     while (store.get(code)!.currentDilemma?.id !== 'usr-sock-0-1' && g++ < 20) {
       store.advancePhase(code);
       if (store.get(code)!.phase === 'VOTE_1' || store.get(code)!.phase === 'VOTE_2') {
-        for (const id of ['sock-0', 'sock-1', 'sock-2']) store.vote(code, id, 'A');
+        // Split vote: an all-A first vote would skip + REPLACE the dilemma
+        // (UNANIMOUS_REVEAL) — and could discard the submitted one this walk hunts.
+        ['sock-0', 'sock-1', 'sock-2'].forEach((id, i) => store.vote(code, id, i === 0 ? 'A' : 'B'));
       }
     }
     g = 0;
