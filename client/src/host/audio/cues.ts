@@ -9,8 +9,11 @@ export type SfxName = 'reveal' | 'swing' | 'win' | 'awards' | 'timerWarn' | 'han
 /** The slice of game state cue decisions need; `GameStatePayload` satisfies it structurally. */
 export interface CueGame {
   swing: { switched: number; leadFlipped?: boolean } | null;
-  /** Legacy duel field (sweep-scheduled; the duo cue lands with the host migration). */
-  duelResult?: { convinced: readonly unknown[] } | null;
+  /** Percorso in 2 round outcome (DUO_ROUND_RESULT): any scoring means a 'win' sting. */
+  duoRoundResult?: {
+    convinced: readonly unknown[];
+    vacillare: readonly { received: 0 | 1 | 2 }[];
+  } | null;
 }
 
 /** The sting to play when the host moves from `prev` to `next`, or null for a quiet change. */
@@ -23,18 +26,22 @@ export function sfxForTransition(
 
   switch (next) {
     case 'SPLIT_REVEAL':
-    case 'DUEL_REVEAL':
     case 'DILEMMA_REVEAL':
+    case 'DUO_SYNC_REVEAL':
+    case 'DUO_REVEAL':
       return 'reveal';
     case 'PHASE_RESULTS':
       // 'swing' is the dramatic "ribaltone" sting — reserved for a genuine
       // ribaltone (the lead itself flipped, or 2+ voters switched), not any
       // single switch that left the majority unchanged.
       return game.swing && (game.swing.switched >= 2 || game.swing.leadFlipped) ? 'swing' : 'reveal';
-    case 'DUEL_RESULT':
-      return game.duelResult && game.duelResult.convinced.length > 0 ? 'win' : 'reveal';
+    case 'DUO_ROUND_RESULT': {
+      const r = game.duoRoundResult;
+      const scored = !!r && (r.convinced.length > 0 || r.vacillare.some((v) => v.received > 0));
+      return scored ? 'win' : 'reveal';
+    }
     case 'FINAL_AWARDS':
-    case 'FINAL_DUEL':
+    case 'DUO_PORTRAIT':
       return 'awards';
     default:
       return null;

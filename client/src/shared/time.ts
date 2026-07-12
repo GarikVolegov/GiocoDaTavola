@@ -36,9 +36,15 @@ const WAITING_PHASES: ReadonlySet<GamePhase> = new Set<GamePhase>([
   'SCENE_INTRO',
   'SCENE_CONSEQUENCE',
   'STORY_EPILOGUE',
-  'DUEL_PICK',
-  'DUEL_REPICK',
-  'DUEL_ARGUE',
+  // Percorso in 2: input phases (picks/predictions/waver ratings) and the
+  // argue turn. Reveal/result cards and the portrait stay out, same as their
+  // gruppo counterparts (SPLIT_REVEAL/PHASE_RESULTS/FINAL_AWARDS).
+  'DUO_PICK_PREDICT',
+  'DUO_SIDE_PICK',
+  'DUO_ARGUE',
+  'DUO_WAVER',
+  'DUO_PICK',
+  'DUO_REPICK',
 ]);
 
 export function isWaitingPhase(phase: GamePhase): boolean {

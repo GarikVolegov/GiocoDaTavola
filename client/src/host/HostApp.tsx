@@ -12,6 +12,7 @@ import {
   JOIN_ERROR_MESSAGES,
   SPLIT_REVEAL_WINDOW_S,
   tappaMeta,
+  DUO_ACT_META,
   type LobbyUpdatePayload,
   type GameStatePayload,
   type PlayerJoinErrorPayload,
@@ -124,9 +125,11 @@ export default function HostApp() {
   const phase = game?.phase ?? 'LOBBY';
   const remaining = useCountdown(game?.phaseExpiresAt ?? null);
   // While someone is speaking, the big timer counts UP from 0 (turn start) instead
-  // of down from the safety cap.
-  const elapsed = useElapsed(game?.defense?.startedAt ?? null);
-  const speaking = phase === 'DEFENSE' || phase === 'INTERVENTI';
+  // of down from the safety cap. DUO_ARGUE reuses the same self-paced pattern via
+  // duoTurn.startedAt (DEFENSE and DUO_ARGUE are never active at once).
+  const speakerStartedAt = game?.defense?.startedAt ?? game?.duoTurn?.startedAt ?? null;
+  const elapsed = useElapsed(speakerStartedAt);
+  const speaking = phase === 'DEFENSE' || phase === 'INTERVENTI' || phase === 'DUO_ARGUE';
   // The just-finished speaker's applause tally, shown briefly at the start of
   // the next turn (the server never clears it — the client treats it as a toast).
   const lastTurnApplause = useTransient(game?.lastTurnApplause ?? null, 3_000);
@@ -191,10 +194,12 @@ export default function HostApp() {
     const swing = game.swing;
     const awards = game.awards;
     const namedMoments = game.namedMoments;
-    const duelReveal = game.duelReveal;
-    const duelTurn = game.duelTurn;
-    const duelResult = game.duelResult;
-    const duelSummary = game.duelSummary;
+    const duoAct = game.duoAct;
+    const duoAdvocateId = game.duoAdvocateId;
+    const duoSyncReveal = game.duoSyncReveal;
+    const duoTurn = game.duoTurn;
+    const duoRoundResult = game.duoRoundResult;
+    const duoPortrait = game.duoPortrait;
     return (
       <main style={screen}>
         <ReactionSwarm />
@@ -240,6 +245,18 @@ export default function HostApp() {
               </p>
             </Card>
           );
+        })()}
+
+        {/* Percorso in 2: the act-intro card marks each of the three fixed acts. */}
+        {phase === 'DUO_ACT_INTRO' && duoAct && (() => {
+          const meta = DUO_ACT_META[duoAct.act];
+          return meta ? (
+            <Card glow="accent" style={{ maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center', alignItems: 'center' }}>
+              <span style={{ fontSize: '4rem' }}>{meta.emoji}</span>
+              <h2 style={{ fontSize: '2rem', margin: 0, fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>{meta.nome}</h2>
+              <p style={{ fontSize: '1.3rem', opacity: 0.85, margin: 0 }}>{meta.sottotitolo}</p>
+            </Card>
+          ) : null;
         })()}
 
         {/* Storie: the narrator's prose, read aloud by the host voice. Large serif. */}
@@ -296,9 +313,14 @@ export default function HostApp() {
           (phase === 'DILEMMA_REVEAL' ||
             phase === 'VOTE_1' ||
             phase === 'VOTE_2' ||
-            phase === 'DUEL_REVEAL' ||
-            phase === 'DUEL_ARGUE' ||
-            phase === 'DUEL_REPICK') && <DilemmaCard dilemma={dilemma} />}
+            phase === 'DUO_PICK_PREDICT' ||
+            phase === 'DUO_SYNC_REVEAL' ||
+            phase === 'DUO_SIDE_PICK' ||
+            phase === 'DUO_ARGUE' ||
+            phase === 'DUO_WAVER' ||
+            phase === 'DUO_PICK' ||
+            phase === 'DUO_REVEAL' ||
+            phase === 'DUO_REPICK') && <DilemmaCard dilemma={dilemma} />}
 
         {phase === 'VOTE_1' && (
           <p
@@ -584,19 +606,25 @@ export default function HostApp() {
         {phase === 'FINAL_AWARDS' && namedMoments && <NamedMomentsPanel moments={namedMoments} />}
         {phase === 'FINAL_AWARDS' && awards && <AwardsPanel awards={awards} />}
 
-        {phase === 'DUEL_PICK' && (
+        {phase === 'DUO_PICK_PREDICT' && (
+          <p aria-label="Quanti hanno scelto e previsto" style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>
+            Scegliete e prevedete in segreto ({game.duoSyncedCount}/2)
+          </p>
+        )}
+
+        {phase === 'DUO_SIDE_PICK' && (
           <p aria-label="Quanti hanno scelto" style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>
             Scegliete in segreto ({game.votedCount}/2)
           </p>
         )}
 
-        {phase === 'DUEL_REVEAL' && duelReveal && (
+        {(phase === 'DUO_SYNC_REVEAL' || phase === 'DUO_REVEAL') && duoSyncReveal && (
           <section
             aria-label="Le vostre scelte"
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}
           >
             <CardGrid min={10} max="min(92vw, 32rem)">
-              {duelReveal.picks.map((p) => {
+              {duoSyncReveal.picks.map((p) => {
                 const rgb = p.choice === 'A' ? '84,134,196' : '199,122,69';
                 return (
                   <div
@@ -622,21 +650,47 @@ export default function HostApp() {
               })}
             </CardGrid>
             <p style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>
-              {duelReveal.agreed ? '🤝 Siete d’accordo!' : '⚔️ Si va al duello!'}
+              {duoSyncReveal.agreed
+                ? phase === 'DUO_REVEAL'
+                  ? '🤝 Siete d’accordo! 🎭 Twist in arrivo…'
+                  : '🤝 Siete in sintonia!'
+                : phase === 'DUO_REVEAL'
+                  ? '⚔️ Si va al duello!'
+                  : 'Punti di vista diversi'}
             </p>
+            {phase === 'DUO_SYNC_REVEAL' &&
+              duoSyncReveal.predictions
+                .filter((p) => p.correct)
+                .map((p) => (
+                  <p key={p.id} style={{ fontSize: '1.1rem', opacity: 0.85, margin: 0 }}>
+                    🔮 <strong>{p.nickname}</strong> ci ha visto giusto (+1 «ti conosco»)
+                  </p>
+                ))}
           </section>
         )}
 
-        {phase === 'DUEL_ARGUE' && duelTurn?.speaker && (
+        {phase === 'DUO_ARGUE' && duoTurn?.speaker && (
           <section
             aria-label="Chi argomenta"
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)' }}
           >
-            <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
-              Turno {duelTurn.turn}/{duelTurn.totalTurns}
-            </p>
+            {duoTurn.speaker.advocate && (
+              <p style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: 'var(--gold)' }}>
+                🎭 Avvocato del Diavolo — difende il lato OPPOSTO al proprio voto!
+              </p>
+            )}
+            {duoTurn.speaker.inverted && !duoTurn.speaker.advocate && (
+              <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--gold)' }}>
+                🎭 A parti invertite — difende il lato che NON ha scelto
+              </p>
+            )}
+            {duoTurn.totalTurns > 1 && (
+              <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
+                Turno {duoTurn.turn}/{duoTurn.totalTurns}
+              </p>
+            )}
             <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
-              Argomenta <span style={{ color: 'var(--gold)' }}>{duelTurn.speaker.nickname}</span> 🎤
+              Argomenta <span style={{ color: 'var(--gold)' }}>{duoTurn.speaker.nickname}</span> 🎤
             </p>
             <div
               style={{
@@ -644,69 +698,133 @@ export default function HostApp() {
                 borderRadius: 'var(--radius-lg)',
                 fontSize: '1.25rem',
                 fontWeight: 700,
-                background: duelTurn.speaker.side === 'A' ? 'rgba(84,134,196,0.18)' : 'rgba(199,122,69,0.18)',
-                border: `2px solid ${duelTurn.speaker.side === 'A' ? 'rgba(84,134,196,0.5)' : 'rgba(199,122,69,0.5)'}`,
+                background: duoTurn.speaker.side === 'A' ? 'rgba(84,134,196,0.18)' : 'rgba(199,122,69,0.18)',
+                border: `2px solid ${duoTurn.speaker.side === 'A' ? 'rgba(84,134,196,0.5)' : 'rgba(199,122,69,0.5)'}`,
               }}
             >
-              Difende {duelTurn.speaker.side} ·{' '}
-              {duelTurn.speaker.side === 'A' ? dilemma?.optionA : dilemma?.optionB}
+              Difende {duoTurn.speaker.side} ·{' '}
+              {duoTurn.speaker.side === 'A' ? dilemma?.optionA : dilemma?.optionB}
             </div>
           </section>
         )}
 
-        {phase === 'DUEL_REPICK' && (
-          <p style={{ fontSize: '1.4rem', fontWeight: 600, margin: 0, opacity: 0.9 }}>
-            Ri-scegliete: vi siete convinti? 📱
+        {phase === 'DUO_WAVER' && (
+          <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
+            {duoAdvocateId
+              ? 'Chi ha ascoltato valuta in segreto: ti ha fatto vacillare?'
+              : 'Valutate in segreto: vi ha fatto vacillare?'}{' '}
+            · {game.duoWaverCount}/{duoAdvocateId ? 1 : 2}
           </p>
         )}
 
-        {phase === 'DUEL_RESULT' && duelResult && (
+        {phase === 'DUO_ROUND_RESULT' && duoRoundResult && (
           <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-2)' }}>
-            {duelResult.convinced.length > 0 && <Celebration />}
-            {duelResult.agreed ? (
-              <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
-                🤝 Eravate d’accordo
-              </p>
-            ) : duelResult.convinced.length > 0 ? (
-              duelResult.convinced.map((c) => (
+            {(duoRoundResult.convinced.length > 0 || duoRoundResult.vacillare.some((v) => v.received > 0)) && (
+              <Celebration />
+            )}
+            {duoRoundResult.convinced.length > 0 ? (
+              duoRoundResult.convinced.map((c) => (
                 <p key={c.convinced.id} style={{ fontSize: 'clamp(1.5rem, 4.5vw, 2.4rem)', fontWeight: 800, margin: 0 }}>
-                  <span style={{ color: 'var(--gold)' }}>{c.persuader.nickname}</span> ha convinto {c.convinced.nickname}! 🎯
+                  {c.ribaltone ? '🎭 Ribaltone! ' : '🎯 '}
+                  <span style={{ color: 'var(--gold)' }}>{c.persuader.nickname}</span> ha convinto{' '}
+                  {c.convinced.nickname}!
                 </p>
               ))
+            ) : duoRoundResult.vacillare.some((v) => v.received > 0) ? (
+              duoRoundResult.vacillare
+                .filter((v) => v.received > 0)
+                .map((v) => (
+                  <p key={v.id} style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: 800, margin: 0 }}>
+                    ✨ <span style={{ color: 'var(--gold)' }}>{v.nickname}</span> ha fatto vacillare (+{v.received})
+                  </p>
+                ))
             ) : (
-              <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>Teste dure! 🪨</p>
+              <p style={{ fontSize: 'clamp(1.6rem, 5vw, 2.6rem)', fontWeight: 800, margin: 0 }}>
+                Nessuno ha ceduto 🪨
+              </p>
             )}
-          </section>
-        )}
-
-        {phase === 'FINAL_DUEL' && duelSummary && (
-          <section
-            aria-label="Risultato del duello"
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}
-          >
-            <Celebration pieces={40} />
-            <CardGrid min={10} max="min(92vw, 30rem)">
-              {duelSummary.scores.map((s) => (
-                <Card
-                  key={s.id}
-                  glow="accent"
-                  style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', alignItems: 'center', textAlign: 'center' }}
-                >
-                  <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{s.nickname}</span>
-                  <span style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--gold)' }}>{s.persuasions}</span>
-                  <span style={{ fontSize: '0.95rem', opacity: 0.8 }}>
-                    {s.persuasions === 1 ? 'persuasione' : 'persuasioni'}
-                  </span>
-                </Card>
-              ))}
-            </CardGrid>
-            <p style={{ fontSize: '1.2rem', opacity: 0.85, margin: 0 }}>
-              Eravate d’accordo {duelSummary.agreements} {duelSummary.agreements === 1 ? 'volta' : 'volte'}
+            <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
+              {duoRoundResult.scores.map((s) => `${s.nickname} ${s.total}`).join(' · ')}
             </p>
           </section>
         )}
 
-        {speaking && game?.defense?.startedAt != null ? (
+        {phase === 'DUO_PICK' && (
+          <p aria-label="Quanti hanno scelto" style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>
+            Schieratevi in segreto ({game.votedCount}/2)
+          </p>
+        )}
+
+        {phase === 'DUO_REPICK' && (
+          <p style={{ fontSize: '1.4rem', fontWeight: 600, margin: 0, opacity: 0.9 }}>
+            {duoAdvocateId ? 'Chi ha ascoltato ri-sceglie: si è convinto?' : 'Ri-scegliete: vi siete convinti?'} 📱
+          </p>
+        )}
+
+        {phase === 'DUO_PORTRAIT' && duoPortrait && (
+          <section
+            aria-label="Ritratto di coppia"
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}
+          >
+            <Celebration pieces={40} />
+            <CardGrid min={10} max="min(92vw, 30rem)">
+              {duoPortrait.scores.map((s) => (
+                <Card
+                  key={s.id}
+                  glow={s.id === duoPortrait.winnerId ? 'accent' : undefined}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', alignItems: 'center', textAlign: 'center' }}
+                >
+                  <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{s.nickname}</span>
+                  <span style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--gold)' }}>{s.total}</span>
+                  <span style={{ fontSize: '0.95rem', opacity: 0.8 }}>punti</span>
+                </Card>
+              ))}
+            </CardGrid>
+            <p style={{ fontSize: '1.3rem', fontWeight: 700, margin: 0 }}>
+              {duoPortrait.winnerId == null
+                ? 'Pareggio — sintonia totale 🤝'
+                : `Stasera l’ha spuntata ${duoPortrait.scores.find((s) => s.id === duoPortrait.winnerId)?.nickname ?? ''}`}
+            </p>
+            <p style={{ fontSize: '1.1rem', opacity: 0.85, margin: 0 }}>
+              Sintonia {duoPortrait.sintoniaPct}% · d’accordo {duoPortrait.agreements}/{duoPortrait.truePicks}
+            </p>
+            {duoPortrait.tiConosco.length > 0 && (
+              <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0 }}>
+                🔮 Ti conosco: {duoPortrait.tiConosco.map((t) => `${t.nickname} ${t.hits}`).join(' · ')}
+              </p>
+            )}
+            {duoPortrait.momento && (
+              <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
+                {duoPortrait.momento.emoji} {duoPortrait.momento.title} — {duoPortrait.momento.description}
+              </p>
+            )}
+            {duoPortrait.titoli.length > 0 && (
+              <CardGrid min={10} max="min(92vw, 32rem)">
+                {duoPortrait.titoli.map((t, i) => (
+                  <div
+                    key={`${t.playerId}-${i}`}
+                    style={{
+                      padding: '0.75rem 1.2rem',
+                      borderRadius: 'var(--radius-lg)',
+                      background: 'var(--gold-soft)',
+                      border: '2px solid var(--gold-line)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <p style={{ margin: 0, fontWeight: 800 }}>
+                      {t.emoji} {t.title}
+                    </p>
+                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.9rem', opacity: 0.85 }}>
+                      {t.nickname} · {t.description}
+                    </p>
+                  </div>
+                ))}
+              </CardGrid>
+            )}
+          </section>
+        )}
+
+        {speaking && speakerStartedAt != null ? (
           <div
             aria-label="Tempo trascorso"
             style={{

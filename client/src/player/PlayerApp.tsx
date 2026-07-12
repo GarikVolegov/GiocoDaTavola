@@ -188,7 +188,7 @@ export default function PlayerApp() {
   // second actually leaves — so a stray tap never drops the player out of the room.
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   // "Salta ▶" needs a 2nd tap during a secret-vote phase (VOTE_1/VOTE_2/
-  // PREDICT/SPEAKER_VOTE/DUEL_PICK/DUEL_REPICK) so an impatient leader can't
+  // PREDICT/SPEAKER_VOTE/DUO_PICK/DUO_REPICK) so an impatient leader can't
   // silently cut off someone else's still-forming vote with one stray tap.
   const [confirmingSkip, setConfirmingSkip] = useState(false);
   // Player-written dilemmas (lobby): the draft form + how many we've added.

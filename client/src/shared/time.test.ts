@@ -38,4 +38,19 @@ describe('isWaitingPhase', () => {
     expect(isWaitingPhase('PHASE_RESULTS')).toBe(false);
     expect(isWaitingPhase('FINAL_AWARDS')).toBe(false);
   });
+  it('is true for the Percorso in 2 input/listening phases', () => {
+    expect(isWaitingPhase('DUO_PICK_PREDICT')).toBe(true);
+    expect(isWaitingPhase('DUO_SIDE_PICK')).toBe(true);
+    expect(isWaitingPhase('DUO_ARGUE')).toBe(true);
+    expect(isWaitingPhase('DUO_WAVER')).toBe(true);
+    expect(isWaitingPhase('DUO_PICK')).toBe(true);
+    expect(isWaitingPhase('DUO_REPICK')).toBe(true);
+  });
+  it('is false for the Percorso in 2 reveal/result cards and the portrait', () => {
+    expect(isWaitingPhase('DUO_ACT_INTRO')).toBe(false);
+    expect(isWaitingPhase('DUO_SYNC_REVEAL')).toBe(false);
+    expect(isWaitingPhase('DUO_REVEAL')).toBe(false);
+    expect(isWaitingPhase('DUO_ROUND_RESULT')).toBe(false);
+    expect(isWaitingPhase('DUO_PORTRAIT')).toBe(false);
+  });
 });

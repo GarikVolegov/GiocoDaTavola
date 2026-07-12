@@ -349,14 +349,6 @@ export type GamePhase =
   | 'STORY_EPILOGUE'
   | 'ACCUSE'
   | 'FINAL_AWARDS'
-  // Legacy 1v1 duel phases (server no longer emits them; kept only until the
-  // last client references migrate — removed in the final sweep).
-  | 'DUEL_PICK'
-  | 'DUEL_REVEAL'
-  | 'DUEL_ARGUE'
-  | 'DUEL_REPICK'
-  | 'DUEL_RESULT'
-  | 'FINAL_DUEL'
   // "Percorso in 2" (the rebuilt duello, mirror server phases.ts): three fixed
   // acts (Sintonia / A parti invertite / Schierati) + the couple portrait.
   | 'DUO_ACT_INTRO'
@@ -626,37 +618,6 @@ export interface NamedMoment {
   playerNickname?: string;
 }
 
-/** Duel reveal (DUEL_REVEAL): both players' picks + whether they agreed. */
-export interface DuelReveal {
-  picks: Array<{ id: string; nickname: string; choice: VoteChoice }>;
-  agreed: boolean;
-}
-
-/** Duel argue turn (DUEL_ARGUE): who is arguing now + turn progress. */
-export interface DuelTurn {
-  speaker: { id: string; nickname: string; side: VoteChoice } | null;
-  turn: number;
-  totalTurns: number;
-  minEndsAt: number | null;
-  canFinish: boolean;
-  startedAt: number | null;
-}
-
-/** Duel round result (DUEL_RESULT): agreement, or who convinced whom. */
-export interface DuelResult {
-  agreed: boolean;
-  convinced: Array<{
-    persuader: { id: string; nickname: string };
-    convinced: { id: string; nickname: string };
-  }>;
-}
-
-/** Duel end summary (FINAL_DUEL): per-player persuasions + agreements count. */
-export interface DuelSummary {
-  scores: Array<{ id: string; nickname: string; persuasions: number }>;
-  agreements: number;
-}
-
 /** Percorso in 2: which act is in play and the position within it (never secret). */
 export interface DuoActState {
   act: number;
@@ -850,7 +811,7 @@ export interface GameStatePayload {
   confirmedCount: number;
   /**
    * Nicknames of connected players still missing their vote/confirmation
-   * this voting phase (VOTE_1/VOTE_2/DUEL_PICK/DUEL_REPICK); null otherwise.
+   * this voting phase (VOTE_1/VOTE_2/DUO_SIDE_PICK/DUO_PICK/DUO_REPICK); null otherwise.
    * Never reveals which choice — presence only.
    */
   missingVoters: string[] | null;
@@ -942,11 +903,6 @@ export interface GameStatePayload {
   mode: GameMode;
   /** The leader-player's id (drives the game); null until a leader exists. */
   leaderId: string | null;
-  /** Legacy duel views: the server no longer sends them (sweep-scheduled). */
-  duelReveal?: DuelReveal | null;
-  duelTurn?: DuelTurn | null;
-  duelResult?: DuelResult | null;
-  duelSummary?: DuelSummary | null;
   /** Percorso in 2: act progress (in-game duello only; null otherwise). */
   duoAct: DuoActState | null;
   /** The twist round's devil's advocate id, public only while it plays out. */
@@ -1367,12 +1323,6 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   STORY_EPILOGUE: 'Epilogo',
   ACCUSE: "Chi era l'infiltrato?",
   FINAL_AWARDS: 'Premi finali',
-  DUEL_PICK: 'Scegliete',
-  DUEL_REVEAL: 'Rivelazione',
-  DUEL_ARGUE: 'Duello',
-  DUEL_REPICK: 'Si ri-sceglie',
-  DUEL_RESULT: 'Esito',
-  FINAL_DUEL: 'Risultato finale',
   DUO_ACT_INTRO: 'Nuovo atto',
   DUO_PICK_PREDICT: 'Scegli e prevedi',
   DUO_SYNC_REVEAL: 'Sintonia',

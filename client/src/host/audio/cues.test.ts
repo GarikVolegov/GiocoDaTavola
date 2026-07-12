@@ -3,14 +3,18 @@ import { sfxForTransition, shouldWarnAt, handRaised, type CueGame } from './cues
 
 const game = (over: Partial<CueGame> = {}): CueGame => ({
   swing: null,
-  duelResult: null,
+  duoRoundResult: null,
   ...over,
 });
 
 describe('sfxForTransition', () => {
   it('plays a reveal chime when votes are revealed', () => {
     expect(sfxForTransition('VOTE_1', 'SPLIT_REVEAL', game())).toBe('reveal');
-    expect(sfxForTransition('DILEMMA_REVEAL', 'DUEL_REVEAL', game())).toBe('reveal');
+  });
+
+  it('plays a reveal chime on the Percorso in 2 sync/true reveals', () => {
+    expect(sfxForTransition('DUO_PICK_PREDICT', 'DUO_SYNC_REVEAL', game())).toBe('reveal');
+    expect(sfxForTransition('DUO_PICK', 'DUO_REVEAL', game())).toBe('reveal');
   });
 
   it('plays a dramatic swing sting when the majority actually flipped', () => {
@@ -38,21 +42,32 @@ describe('sfxForTransition', () => {
     ).toBe('reveal');
   });
 
-  it('plays a win fanfare when a duel round convinced someone', () => {
+  it('plays a win fanfare when a duo round scored a persuasion or a waver', () => {
     expect(
-      sfxForTransition('DUEL_ARGUE', 'DUEL_RESULT', game({ duelResult: { convinced: [{}] } })),
+      sfxForTransition('DUO_ARGUE', 'DUO_ROUND_RESULT', game({ duoRoundResult: { convinced: [{}], vacillare: [] } })),
+    ).toBe('win');
+    expect(
+      sfxForTransition(
+        'DUO_ARGUE',
+        'DUO_ROUND_RESULT',
+        game({ duoRoundResult: { convinced: [], vacillare: [{ received: 1 }] } }),
+      ),
     ).toBe('win');
   });
 
-  it('plays only a reveal for a duel that ended in agreement', () => {
+  it('plays only a reveal for a duo round where nobody budged', () => {
     expect(
-      sfxForTransition('DUEL_ARGUE', 'DUEL_RESULT', game({ duelResult: { convinced: [] } })),
+      sfxForTransition(
+        'DUO_ARGUE',
+        'DUO_ROUND_RESULT',
+        game({ duoRoundResult: { convinced: [], vacillare: [{ received: 0 }] } }),
+      ),
     ).toBe('reveal');
   });
 
   it('plays a celebratory arpeggio at the finale', () => {
     expect(sfxForTransition('PHASE_RESULTS', 'FINAL_AWARDS', game())).toBe('awards');
-    expect(sfxForTransition('DUEL_RESULT', 'FINAL_DUEL', game())).toBe('awards');
+    expect(sfxForTransition('DUO_ROUND_RESULT', 'DUO_PORTRAIT', game())).toBe('awards');
   });
 
   it('is silent for ordinary, non-event transitions', () => {
