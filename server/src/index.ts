@@ -1,4 +1,5 @@
 import express from 'express';
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
@@ -33,6 +34,11 @@ if (process.env.NODE_ENV !== 'test' && fs.existsSync(envFile)) {
 if (process.env.NODE_ENV !== 'test') {
   process.on('uncaughtException', (err) => {
     console.error('[server] uncaught exception (kept alive)', err);
+  });
+  // Same keep-alive stance for promise rejections nobody awaited, but labeled
+  // truthfully (without this listener Node folds them into uncaughtException).
+  process.on('unhandledRejection', (reason) => {
+    console.error('[server] unhandled rejection (kept alive)', reason);
   });
 }
 
@@ -111,7 +117,7 @@ const SNAPSHOT_INTERVAL_MS = 15_000;
 setInterval(() => {
   for (const code of rooms.activeCodes()) {
     const room = rooms.get(code);
-    if (room) persistSnapshot(code, serializeRoom(room)).catch((e) => console.error('[snapshot] persist failed', e));
+    if (room) void persistSnapshot(code, serializeRoom(room)); // never rejects; failures open its breaker
   }
 }, SNAPSHOT_INTERVAL_MS).unref();
 
@@ -381,7 +387,7 @@ function broadcastAdvance(code: string, hadLateJoiners: boolean): void {
   broadcastGameState(code);
   if (hadLateJoiners) broadcastLobby(code);
   const snapRoom = rooms.get(code);
-  if (snapRoom) persistSnapshot(code, serializeRoom(snapRoom)).catch((e) => console.error('[snapshot] persist failed', e));
+  if (snapRoom) void persistSnapshot(code, serializeRoom(snapRoom)); // never rejects; failures open its breaker
   if (rooms.get(code)?.phase === 'FINAL_AWARDS') emitBlindSpots(code);
   schedulePhase(code);
   maybeGenerateAiDefense(code);
@@ -447,6 +453,19 @@ function advanceAndBroadcast(code: string): void {
   broadcastAdvance(code, hadLateJoiners);
 }
 
+// Express 4 does not forward an async handler's rejection to any middleware:
+// a DB-backed route whose await throws would never send a response and the
+// platform edge kills the request after ~60s (HTTP 499). Wrap the DB-backed
+// routes so a thrown query answers fast with 503 instead.
+function dbRoute(fn: (req: Request, res: Response) => Promise<void>): RequestHandler {
+  return (req, res) => {
+    void fn(req, res).catch((err: unknown) => {
+      console.error('[api]', req.method, req.path, 'failed:', err instanceof Error ? err.message : err);
+      if (!res.headersSent) res.status(503).json({ error: 'db-unavailable' });
+    });
+  };
+}
+
 app.get('/api/health', async (_req, res) => {
   // Report DB reachability too: 'disabled' when DB-less, 'ok'/'down' otherwise.
   // A down DB still returns ok:true (the game runs in-memory without it).
@@ -464,7 +483,7 @@ app.get('/api/health', async (_req, res) => {
 });
 
 // The caller's own saved awards. Bearer token (Clerk) → userId → their rows only.
-app.get('/api/me/awards', async (req, res) => {
+app.get('/api/me/awards', dbRoute(async (req, res) => {
   const header = req.header('authorization') ?? '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   const userId = await verifyClerkToken(token);
@@ -495,11 +514,11 @@ app.get('/api/me/awards', async (req, res) => {
       wonAt: r.won_at,
     })),
   });
-});
+}));
 
 // The caller's dashboard data in one round-trip: aggregate stats, recent games,
 // and a small awards preview. Same Bearer-token auth as /api/me/awards.
-app.get('/api/me/dashboard', async (req, res) => {
+app.get('/api/me/dashboard', dbRoute(async (req, res) => {
   const header = req.header('authorization') ?? '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   const userId = await verifyClerkToken(token);
@@ -567,10 +586,10 @@ app.get('/api/me/dashboard', async (req, res) => {
       wonAt: r.won_at,
     })),
   });
-});
+}));
 
 // The caller's profile (display name + avatar). Same Bearer-token auth.
-app.get('/api/me/profile', async (req, res) => {
+app.get('/api/me/profile', dbRoute(async (req, res) => {
   const header = req.header('authorization') ?? '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   const userId = await verifyClerkToken(token);
@@ -579,11 +598,11 @@ app.get('/api/me/profile', async (req, res) => {
     return;
   }
   res.json(await loadProfile(userId));
-});
+}));
 
 // Update the caller's profile. Validates (trim/cap name; preset or small raster
 // data-URL avatar) then upserts. Needs the DB; 503 when DB-less.
-app.put('/api/me/profile', async (req, res) => {
+app.put('/api/me/profile', dbRoute(async (req, res) => {
   const header = req.header('authorization') ?? '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   const userId = await verifyClerkToken(token);
@@ -602,7 +621,7 @@ app.put('/api/me/profile', async (req, res) => {
   }
   await saveProfile(userId, result.value);
   res.json(result.value);
-});
+}));
 
 io.on('connection', (socket) => {
   console.log('[server] client connected:', socket.id);
@@ -1214,6 +1233,23 @@ if (fs.existsSync(clientDist)) {
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 }
+
+// Safety net for synchronous throws / explicit next(err) in future routes.
+// Express 4 async rejections do NOT land here — dbRoute above is the real
+// guard for those. The unused-var name keeps the 4-arg signature Express
+// requires to recognize an error handler.
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  // Message only, never the inspected object: body-parser attaches the raw
+  // request body to its errors as an enumerable prop, so logging the object
+  // would let any unauthenticated caller write kilobytes of chosen text
+  // (including forged log lines) into the server logs.
+  console.error('[api] unhandled route error:', err instanceof Error ? err.message : String(err));
+  // body-parser errors carry a meaningful 4xx (400 malformed, 413 too large,
+  // 415 bad charset) — a client fault must not surface as a 5xx.
+  const maybeStatus = (err as { status?: unknown }).status;
+  const status = typeof maybeStatus === 'number' && maybeStatus >= 400 && maybeStatus < 500 ? maybeStatus : 500;
+  if (!res.headersSent) res.status(status).json({ error: status < 500 ? 'bad-request' : 'internal' });
+});
 
 const PORT = Number(process.env.PORT) || 3000;
 

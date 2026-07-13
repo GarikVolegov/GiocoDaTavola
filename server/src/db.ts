@@ -14,7 +14,18 @@ let _pool: Pool | null = null;
 export function getPool(): Pool | null {
   if (!resolved) {
     const url = process.env.DATABASE_URL;
-    _pool = url ? new Pool({ connectionString: url }) : null;
+    _pool = url
+      ? new Pool({
+          connectionString: url,
+          connectionTimeoutMillis: 5_000, // fail fast when the DB won't accept connections
+          query_timeout: 8_000, // client-side cap on any single query
+          // NOT statement_timeout: pg sends it in the startup packet, which
+          // PgBouncer-style poolers (e.g. Neon -pooler) can reject outright.
+        })
+      : null;
+    // A provider killing an idle client (Neon quota, pooler restart) emits
+    // 'error' on the pool: without a listener it's an uncaughtException.
+    _pool?.on('error', (e) => console.error('[db] idle client error:', e.message));
     resolved = true;
   }
   return _pool;
