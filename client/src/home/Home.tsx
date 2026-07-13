@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth, useUser } from '@clerk/react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Avatar, Button, Card, Logo } from '../shared/ui';
+import { fetchWithTimeout } from '../shared/api';
 import type { MyDashboard } from '../shared/events';
 import styles from './Home.module.css';
 
@@ -25,14 +26,15 @@ export default function Home() {
     void (async () => {
       try {
         const token = await getToken();
-        const res = await fetch('/api/me/dashboard', {
+        const res = await fetchWithTimeout('/api/me/dashboard', {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) throw new Error(String(res.status));
         const json = (await res.json()) as MyDashboard;
         if (!cancelled) setData(json);
       } catch {
-        if (!cancelled) setError('Impossibile caricare i tuoi dati.');
+        if (!cancelled)
+          setError('Profilo momentaneamente non disponibile. Puoi comunque creare o entrare in una partita.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -78,9 +80,9 @@ export default function Home() {
         </div>
       </section>
 
-      {error && <p className={styles.error}>{error}</p>}
-
-      {loading ? (
+      {error ? (
+        <p className={styles.error}>{error}</p>
+      ) : loading ? (
         <DashboardSkeleton />
       ) : firstTime ? (
         <Card className={styles.welcome}>

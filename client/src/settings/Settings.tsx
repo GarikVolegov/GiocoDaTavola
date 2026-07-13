@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useAuth, useUser, useClerk } from '@clerk/react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Avatar, Button, Card, Field, TextInput, Alert, Logo } from '../shared/ui';
+import { fetchWithTimeout } from '../shared/api';
 import { PRESET_AVATARS } from '../shared/avatars';
 import type { MyProfile } from '../shared/events';
 import styles from './Settings.module.css';
@@ -49,7 +50,7 @@ export default function Settings() {
     void (async () => {
       try {
         const token = await getToken();
-        const res = await fetch('/api/me/profile', {
+        const res = await fetchWithTimeout('/api/me/profile', {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) throw new Error(String(res.status));
@@ -89,7 +90,7 @@ export default function Settings() {
     setSaved(false);
     try {
       const token = await getToken();
-      const res = await fetch('/api/me/profile', {
+      const res = await fetchWithTimeout('/api/me/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
