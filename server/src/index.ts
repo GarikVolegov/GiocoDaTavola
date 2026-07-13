@@ -773,6 +773,31 @@ io.on('connection', (socket) => {
     if (rooms.removeBot(code, String(payload?.id ?? ''))) broadcastLobby(code);
   });
 
+  // The leader manually frees an OFFLINE player's seat (before the automatic
+  // grace period elapses). Rejects an online player or an unknown id. Mirrors
+  // the automatic grace-expiry path (below, on 'disconnect') so a manual
+  // removal behaves exactly like an early grace expiry: same cleanup, same
+  // roster/game-state refresh.
+  socket.on('leader:removePlayer', (payload: { id?: string }) => {
+    const code = leaderCodeFor(socket.id);
+    if (!code) return;
+    const id = String(payload?.id ?? '');
+    const wasLeader = rooms.isLeader(code, id);
+    if (!rooms.removeIfOffline(code, id)) return;
+    // Cancel the now-moot grace timer + drop the stale reconnect token, same
+    // cleanup the timer itself runs when it fires naturally (see below).
+    cancelGrace(id);
+    const tok = [...tokens].find(([, v]) => v.playerId === id)?.[0];
+    if (tok) tokens.delete(tok);
+    if (rooms.get(code) && rooms.get(code)!.players.size === 0) {
+      reapRoom(code);
+      return;
+    }
+    broadcastLobby(code);
+    if (rooms.get(code) && isVotingPhase(rooms.get(code)!.phase)) refreshAfterRosterChange(code);
+    if (wasLeader) broadcastGameState(code);
+  });
+
   // A player joins from their phone with a room code + nickname. An optional
   // `token` from a previous session reclaims the same seat (reconnection).
   socket.on('player:join', (payload: { code?: string; nickname?: string; token?: string }) => {
