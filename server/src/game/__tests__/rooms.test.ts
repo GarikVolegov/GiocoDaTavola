@@ -3705,3 +3705,45 @@ describe('skipDilemma — "Scarta dilemma" del leader', () => {
     expect(nextIds).not.toContain('d4');
   });
 });
+
+describe('RoomStore.removeIfOffline', () => {
+  it('removes only a player currently flagged offline', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    store.join(code, 'p2', 'Bob');
+    store.setConnected(code, 'p1', false);
+
+    expect(store.removeIfOffline(code, 'p1')).toBe(true);
+    expect(store.listPlayers(code)).toHaveLength(1);
+    expect(store.get(code)?.players.has('p1')).toBe(false);
+  });
+
+  it('rejects an online player', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    expect(store.removeIfOffline(code, 'p1')).toBe(false);
+    expect(store.listPlayers(code)).toHaveLength(1);
+  });
+
+  it('rejects an unknown room or player', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    expect(store.removeIfOffline('ZZZZ', 'p1')).toBe(false);
+    expect(store.removeIfOffline(code, 'ghost')).toBe(false);
+  });
+
+  it('reassigns leadership when the removed offline player was the leader', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    store.join(code, 'p1', 'Ann');
+    store.join(code, 'p2', 'Bob');
+    store.setLeader(code, 'p1');
+    store.setConnected(code, 'p1', false);
+
+    expect(store.removeIfOffline(code, 'p1')).toBe(true);
+    expect(store.get(code)?.leaderId).toBe('p2');
+  });
+});
