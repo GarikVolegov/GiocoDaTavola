@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth, Show, SignInButton } from '@clerk/react';
+import { fetchWithTimeout } from '../shared/api';
 import type { MyAward } from '../shared/events';
 
 // "I miei premi": fetches the signed-in user's saved awards from the server.
@@ -14,7 +15,7 @@ export default function Profile() {
     void (async () => {
       try {
         const token = await getToken();
-        const res = await fetch('/api/me/awards', {
+        const res = await fetchWithTimeout('/api/me/awards', {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) throw new Error(String(res.status));

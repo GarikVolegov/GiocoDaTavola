@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, lazy, Suspense, type FormEvent, type ReactNode } from 'react';
 import { getSocket } from '../shared/socket';
+import { fetchWithTimeout } from '../shared/api';
 import { useCountdown } from '../shared/useCountdown';
 import { useElapsed } from '../shared/useElapsed';
 import { useTransient } from '../shared/useTransient';
@@ -497,7 +498,7 @@ export default function PlayerApp() {
     void (async () => {
       try {
         const token = await getToken();
-        const res = await fetch('/api/me/profile', {
+        const res = await fetchWithTimeout('/api/me/profile', {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) return;

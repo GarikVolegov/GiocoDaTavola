@@ -38,4 +38,23 @@ describe('db pool resolution', () => {
     expect(dbEnabled()).toBe(true);
     expect(getPool()).not.toBeNull();
   });
+
+  it('configures fail-fast timeouts on the pool', () => {
+    // A dead/quota-exhausted DB must surface as an error in seconds, not hang
+    // a request until the platform edge kills it (~60s → HTTP 499 in prod).
+    process.env.DATABASE_URL = 'postgresql://user:pass@127.0.0.1:5432/db';
+    __resetPoolForTests();
+    const pool = getPool();
+    expect(pool).not.toBeNull();
+    expect(pool!.options.connectionTimeoutMillis).toBe(5000);
+    expect(pool!.options.query_timeout).toBe(8000);
+  });
+
+  it('registra un listener error sul pool (client idle uccisi dal provider)', () => {
+    // Neon/pooler che chiudono un client idle emettono 'error' sul pool: senza
+    // listener diventa un uncaughtException invece di una riga di log.
+    process.env.DATABASE_URL = 'postgresql://user:pass@127.0.0.1:5432/db';
+    __resetPoolForTests();
+    expect(getPool()!.listenerCount('error')).toBe(1);
+  });
 });
