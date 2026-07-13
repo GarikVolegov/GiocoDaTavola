@@ -19,7 +19,7 @@ import {
   type PublicPlayer,
   type PercorsoView,
 } from '../shared/events';
-import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel, PodiumPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip, leanFromSplit } from '../shared/ui';
+import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel, PodiumPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip, leanFromSplit, PauseOverlay } from '../shared/ui';
 import ReactionSwarm from '../shared/ReactionSwarm';
 
 const screen = {
@@ -218,6 +218,7 @@ export default function HostApp() {
     return (
       <main style={screen}>
         <ReactionSwarm />
+        {game.paused && <PauseOverlay />}
         {/* Latecomers can still join mid-game: keep the code + QR in the corner. */}
         {code && <RoomCodeChip code={code} />}
         {/* Percorso: the climb map (current tappa highlighted) sits above the phase. */}
