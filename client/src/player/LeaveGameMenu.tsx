@@ -6,20 +6,35 @@ import { useState, type CSSProperties } from 'react';
 // The actual leave is the parent's job (`onLeave`); this only gates it behind intent.
 // The leader ALSO gets a one-tap "aggiungi bot" here at a round boundary (3.5, to
 // reintegrate a drop-out) — low-risk and reversible, so no confirm step needed.
+// Two more leader-only entries (pausa, rimozione di un assente) follow the same
+// low-risk/reversible logic: no confirm step, they only ever apply to an offline
+// player or freeze the round, never eject someone who is actually playing.
 export default function LeaveGameMenu({
   onLeave,
   onAddBot,
+  onPause,
+  offlinePlayers,
+  onRemovePlayer,
 }: {
   onLeave: () => void;
   /** Present only when the leader may add a bot right now (a round boundary). */
   onAddBot?: () => void;
+  /** Present only for the leader, only when the game has started and isn't
+   * already paused (resuming happens on the full-screen PauseOverlay instead). */
+  onPause?: () => void;
+  /** Offline human players the leader may remove; present only for the
+   * leader. An empty/undefined list hides the "rimuovi" entry entirely. */
+  offlinePlayers?: { id: string; nickname: string }[];
+  onRemovePlayer?: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   const close = () => {
     setOpen(false);
     setConfirming(false);
+    setRemoving(false);
   };
 
   return (
@@ -40,37 +55,77 @@ export default function LeaveGameMenu({
           {/* tap-outside backdrop: closes the sheet without leaving */}
           <div aria-hidden="true" onClick={close} style={backdropStyle} />
           <div role="menu" style={sheetStyle}>
-            {onAddBot && (
-              <button
-                type="button"
-                onClick={() => {
-                  onAddBot();
-                  close();
-                }}
-                style={cancelStyle}
-              >
-                🤖 Aggiungi bot
-              </button>
-            )}
-            {confirming ? (
-              <button
-                type="button"
-                onClick={() => {
-                  onLeave();
-                  close();
-                }}
-                style={exitStyle}
-              >
-                Esci davvero
-              </button>
+            {removing ? (
+              <>
+                {(offlinePlayers ?? []).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      onRemovePlayer?.(p.id);
+                      setRemoving(false);
+                    }}
+                    style={cancelStyle}
+                  >
+                    ✕ {p.nickname}
+                  </button>
+                ))}
+                <button type="button" onClick={() => setRemoving(false)} style={cancelStyle}>
+                  ← Indietro
+                </button>
+              </>
             ) : (
-              <button type="button" onClick={() => setConfirming(true)} style={exitStyle}>
-                Esci dalla partita
-              </button>
+              <>
+                {onPause && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onPause();
+                      close();
+                    }}
+                    style={cancelStyle}
+                  >
+                    ⏸ Metti in pausa
+                  </button>
+                )}
+                {onRemovePlayer && offlinePlayers && offlinePlayers.length > 0 && (
+                  <button type="button" onClick={() => setRemoving(true)} style={cancelStyle}>
+                    🔌 Rimuovi chi è assente
+                  </button>
+                )}
+                {onAddBot && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAddBot();
+                      close();
+                    }}
+                    style={cancelStyle}
+                  >
+                    🤖 Aggiungi bot
+                  </button>
+                )}
+                {confirming ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onLeave();
+                      close();
+                    }}
+                    style={exitStyle}
+                  >
+                    Esci davvero
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => setConfirming(true)} style={exitStyle}>
+                    Esci dalla partita
+                  </button>
+                )}
+                <button type="button" onClick={close} style={cancelStyle}>
+                  Annulla
+                </button>
+              </>
             )}
-            <button type="button" onClick={close} style={cancelStyle}>
-              Annulla
-            </button>
           </div>
         </>
       )}
@@ -113,7 +168,7 @@ const sheetStyle: CSSProperties = {
   flexDirection: 'column',
   gap: 'var(--space-2)',
   padding: 'var(--space-3)',
-  minWidth: '11rem',
+  minWidth: '12rem',
   background: 'var(--surface)',
   border: '1px solid var(--border-strong)',
   borderRadius: 'var(--radius-md)',
