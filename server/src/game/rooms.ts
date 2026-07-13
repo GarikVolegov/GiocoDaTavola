@@ -2745,6 +2745,19 @@ export class RoomStore {
   }
 
   /**
+   * The leader's manual override: free an offline player's seat before the
+   * automatic grace period (index.ts) would. Rejects an online player (only
+   * an already-absent seat can be freed this way) or an unknown room/player.
+   * Reuses `leave()`'s cleanup so a manual removal behaves exactly like an
+   * automatic grace-expiry removal (votes, queues, leadership...).
+   */
+  removeIfOffline(code: string, playerId: string): boolean {
+    const player = this.rooms.get(code)?.players.get(playerId);
+    if (!player || player.connected !== false) return false;
+    return this.leave(code, playerId);
+  }
+
+  /**
    * Add a server-driven bot to a room's roster (Fase B). Bots count toward
    * the roster (and MAX_PLAYERS) but have no socket; the server casts their
    * votes. Allowed in the LOBBY, or mid-game at a round boundary (3.5,
