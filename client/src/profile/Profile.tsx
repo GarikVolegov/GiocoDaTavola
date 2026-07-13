@@ -36,7 +36,9 @@ export default function Profile() {
     flexDirection: 'column',
     alignItems: 'center',
     gap: 'var(--space-4)',
-    padding: 'var(--space-6) var(--space-5)',
+    // Clear the notch / home-indicator in standalone PWA on iPhone.
+    padding:
+      'max(var(--space-6), var(--safe-top)) max(var(--space-5), var(--safe-right)) max(var(--space-6), var(--safe-bottom)) max(var(--space-5), var(--safe-left))',
     color: 'var(--text)',
     fontFamily: 'var(--font-body)',
   } as const;

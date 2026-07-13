@@ -29,7 +29,9 @@ const screen = {
   justifyContent: 'center',
   minHeight: '100dvh',
   textAlign: 'center',
-  padding: 'var(--space-6)',
+  // Clear the notch / home-indicator when /host is opened standalone on a phone.
+  padding:
+    'max(var(--space-6), var(--safe-top)) max(var(--space-6), var(--safe-right)) max(var(--space-6), var(--safe-bottom)) max(var(--space-6), var(--safe-left))',
   gap: 'var(--space-5)',
 } as const;
 
