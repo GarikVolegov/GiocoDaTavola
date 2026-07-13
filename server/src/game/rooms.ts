@@ -717,13 +717,13 @@ export type AddBotResult =
   | { ok: true; player: Player }
   | { ok: false; error: AddBotError };
 
-export type AdvancePhaseError = 'ROOM_NOT_FOUND' | 'NO_NEXT_PHASE';
+export type AdvancePhaseError = 'ROOM_NOT_FOUND' | 'NO_NEXT_PHASE' | 'PAUSED';
 
 export type AdvancePhaseResult =
   | { ok: true; room: Room }
   | { ok: false; error: AdvancePhaseError };
 
-export type SkipDilemmaError = 'ROOM_NOT_FOUND' | 'NOT_SKIPPABLE_PHASE' | 'NOT_CLASSIC';
+export type SkipDilemmaError = 'ROOM_NOT_FOUND' | 'NOT_SKIPPABLE_PHASE' | 'NOT_CLASSIC' | 'PAUSED';
 
 export type SkipDilemmaResult =
   | { ok: true; room: Room }
@@ -1531,6 +1531,7 @@ export class RoomStore {
   skipDilemma(code: string): SkipDilemmaResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.paused) return { ok: false, error: 'PAUSED' };
     if (room.format !== 'classic' || room.mode === 'duello') {
       return { ok: false, error: 'NOT_CLASSIC' };
     }
@@ -1594,6 +1595,7 @@ export class RoomStore {
   advancePhase(code: string): AdvancePhaseResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.paused) return { ok: false, error: 'PAUSED' };
     if (
       room.phase === 'LOBBY' ||
       room.phase === 'FINAL_AWARDS' ||

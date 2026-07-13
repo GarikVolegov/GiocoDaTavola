@@ -3798,3 +3798,37 @@ describe('RoomStore.pauseGame / resumeGame', () => {
     expect(store.resumeGame('ZZZZ')).toBe(false);
   });
 });
+
+describe('RoomStore.advancePhase / skipDilemma while paused', () => {
+  function startedRoom(store: RoomStore, count = 3): string {
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, count);
+    return code;
+  }
+
+  it('advancePhase refuses to advance while paused, and resumes normally after resumeGame', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = startedRoom(store);
+    store.advancePhase(code); // DILEMMA_REVEAL
+    expect(store.pauseGame(code)).toBe(true);
+
+    expect(store.advancePhase(code)).toEqual({ ok: false, error: 'PAUSED' });
+    expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL'); // untouched
+
+    expect(store.resumeGame(code)).toBe(true);
+    const result = store.advancePhase(code);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.room.phase).toBe('VOTE_1');
+  });
+
+  it('skipDilemma refuses to run while paused, without corrupting the phase', () => {
+    const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
+    const code = startedRoom(store);
+    store.advancePhase(code); // DILEMMA_REVEAL (skippable)
+    expect(store.pauseGame(code)).toBe(true);
+
+    expect(store.skipDilemma(code)).toEqual({ ok: false, error: 'PAUSED' });
+    expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL'); // NOT 'UNANIMOUS_REVEAL'
+  });
+});
