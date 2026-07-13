@@ -259,3 +259,49 @@ describe('scarta dilemma + voto unanime (socket)', () => {
     expect((state as Record<string, unknown>).votes).toBeUndefined(); // mai identità
   }, 15000);
 });
+
+interface Roster {
+  players: { id: string; connected?: boolean }[];
+}
+
+// Waits for a specific roster CONDITION rather than the next raw event — the
+// join and the disconnect each trigger their own lobby:update, and which one
+// a bare `.once` catches first is a race. Mirrors `waitForPhase` above.
+function waitForRoster(sock: Socket, predicate: (r: Roster) => boolean): Promise<Roster> {
+  return new Promise((resolve) => {
+    const handler = (r: Roster) => {
+      if (predicate(r)) {
+        sock.off('lobby:update', handler);
+        resolve(r);
+      }
+    };
+    sock.on('lobby:update', handler);
+  });
+}
+
+describe('rimozione manuale di un giocatore offline (socket)', () => {
+  it('leader:removePlayer frees an offline seat for a new join', async () => {
+    const leader = await connect();
+    const leaderJoinedP = once<JoinedPayload>(leader, 'player:joined');
+    leader.emit('player:createRoom', { nickname: 'Boss' });
+    const { code } = await leaderJoinedP;
+
+    const phone = await connect();
+    const joinedP = once<JoinedPayload>(phone, 'player:joined');
+    phone.emit('player:join', { code, nickname: 'Alice' });
+    const { player } = await joinedP;
+
+    // Alice's phone drops — she's now offline (well before the 5-minute grace).
+    const offlineRosterP = waitForRoster(
+      leader,
+      (r) => r.players.find((p) => p.id === player.id)?.connected === false,
+    );
+    phone.disconnect();
+    await offlineRosterP;
+
+    // Leader manually frees her seat instead of waiting.
+    const removedRosterP = waitForRoster(leader, (r) => !r.players.find((p) => p.id === player.id));
+    leader.emit('leader:removePlayer', { id: player.id });
+    await removedRosterP;
+  }, 15000);
+});
