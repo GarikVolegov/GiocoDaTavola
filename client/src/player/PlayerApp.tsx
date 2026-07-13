@@ -56,7 +56,7 @@ import {
   RAISE_HAND_ERROR_MESSAGES,
   INFILTRATO_TOOL_ERROR_MESSAGES,
 } from '../shared/events';
-import { Card, JoinQr, Button, Field, TextInput, Alert, ShareInviteButton } from '../shared/ui';
+import { Card, JoinQr, Button, Field, TextInput, Alert, ShareInviteButton, PauseOverlay } from '../shared/ui';
 import { useHostAudio } from '../host/audio/useHostAudio';
 import { useSfxCues } from '../host/audio/useSfxCues';
 import { MuteButton } from '../host/MuteButton';
@@ -719,6 +719,10 @@ export default function PlayerApp() {
   // This phone holds the leadership when the room's leaderId matches our seat.
   const isLeader = game?.leaderId != null && game.leaderId === playerId;
 
+  // Offline human players the leader may manually remove (menu ⋮). Bots are
+  // never flagged offline (no socket to lose), so this is humans-only already.
+  const offlineHumans = players.filter((p) => !p.isBot && p.connected === false);
+
   // Musichetta + the Storie narrator voice play on the LEADER's phone ONLY, so a single
   // device carries them (no cacophony from 8 phones). The others stay silent for these
   // and just read the narration text. Unlocks on the leader's first tap (browser autoplay
@@ -797,6 +801,9 @@ export default function PlayerApp() {
   const removeBot = (id: string) => getSocket().emit(SocketEvents.LeaderRemoveBot, { id });
   const advance = () => getSocket().emit(SocketEvents.LeaderAdvancePhase);
   const rematch = () => getSocket().emit(SocketEvents.LeaderRematch);
+  const pauseGame = () => getSocket().emit(SocketEvents.LeaderPauseGame);
+  const resumeGame = () => getSocket().emit(SocketEvents.LeaderResumeGame);
+  const removePlayer = (id: string) => getSocket().emit(SocketEvents.LeaderRemovePlayer, { id });
 
   const submitDilemma = () => {
     buzz(15);
@@ -924,7 +931,18 @@ export default function PlayerApp() {
           🗑️ Il capitano ha scartato il dilemma
         </div>
       )}
-      <LeaveGameMenu onLeave={leaveRoom} onAddBot={isLeader && phase === 'PHASE_RESULTS' ? addBot : undefined} />
+      {game?.paused && <PauseOverlay onResume={isLeader ? resumeGame : undefined} />}
+      <LeaveGameMenu
+        onLeave={leaveRoom}
+        onAddBot={isLeader && phase === 'PHASE_RESULTS' ? addBot : undefined}
+        onPause={
+          isLeader && !game?.paused && phase !== 'LOBBY' && phase !== 'FINAL_AWARDS'
+            ? pauseGame
+            : undefined
+        }
+        offlinePlayers={isLeader ? offlineHumans : undefined}
+        onRemovePlayer={isLeader ? removePlayer : undefined}
+      />
     </>
   );
 

@@ -2585,6 +2585,158 @@ describe('PlayerApp', () => {
     expect(screen.queryByRole('button', { name: /aggiungi bot/i })).toBeNull();
   });
 
+  it('shows the pause overlay to everyone when the game is paused, without a resume button for a non-leader', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        paused: true,
+        leaderId: 'p2', // NOT me
+      });
+    });
+    expect(screen.getByText('Partita in pausa')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /riprendi/i })).toBeNull();
+  });
+
+  it('lets the leader resume a paused game from the overlay', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        paused: true,
+        leaderId: 'p1', // I'm the leader
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /riprendi/i }));
+    expect(emitSpy).toHaveBeenCalledWith('leader:resumeGame');
+  });
+
+  it('lets the leader pause the game via the ⋮ menu', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: 9_999_999_999_999,
+        paused: false,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: 'p1',
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Menu della partita' }));
+    fireEvent.click(screen.getByRole('button', { name: /metti in pausa/i }));
+    expect(emitSpy).toHaveBeenCalledWith('leader:pauseGame');
+  });
+
+  it('does not offer "metti in pausa" in the ⋮ menu to a non-leader', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: 9_999_999_999_999,
+        paused: false,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: 'p2', // NOT me
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Menu della partita' }));
+    expect(screen.queryByRole('button', { name: /metti in pausa/i })).toBeNull();
+  });
+
+  it('lets the leader remove an offline player from the ⋮ menu', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea', connected: false },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: 9_999_999_999_999,
+        paused: false,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: 'p1',
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Menu della partita' }));
+    fireEvent.click(screen.getByRole('button', { name: /rimuovi chi è assente/i }));
+    fireEvent.click(screen.getByRole('button', { name: /bea/i }));
+    expect(emitSpy).toHaveBeenCalledWith('leader:removePlayer', { id: 'p2' });
+  });
+
+  it('does not offer "rimuovi chi è assente" in the ⋮ menu when nobody is offline', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Alice' },
+          { id: 'p2', nickname: 'Bea' },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: 9_999_999_999_999,
+        paused: false,
+        dilemma: { text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
+        votedCount: 0,
+        leaderId: 'p1',
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Menu della partita' }));
+    expect(screen.queryByRole('button', { name: /rimuovi chi è assente/i })).toBeNull();
+  });
+
   it('requires a second tap of "Salta" during a secret-vote phase (VOTE_1)', () => {
     const emitSpy = vi.spyOn(fakeSocket, 'emit');
     render(<PlayerApp />);
