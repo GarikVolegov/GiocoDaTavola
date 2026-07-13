@@ -18,6 +18,7 @@ interface GameState {
   split: { A: number; B: number } | null;
   votedCount: number;
   leaderId: string | null;
+  paused: boolean;
 }
 
 let port: number;
@@ -303,5 +304,87 @@ describe('rimozione manuale di un giocatore offline (socket)', () => {
     const removedRosterP = waitForRoster(leader, (r) => !r.players.find((p) => p.id === player.id));
     leader.emit('leader:removePlayer', { id: player.id });
     await removedRosterP;
+  }, 15000);
+});
+
+describe('pausa e ripresa del gioco (socket)', () => {
+  it('leader:pauseGame blocks phase advancement until leader:resumeGame', async () => {
+    const leader = await connect();
+    const leaderJoinedP = once<JoinedPayload>(leader, 'player:joined');
+    leader.emit('player:createRoom', { nickname: 'Boss' });
+    const { code } = await leaderJoinedP;
+
+    const p2 = await connect();
+    const p2JoinedP = once<JoinedPayload>(p2, 'player:joined');
+    p2.emit('player:join', { code, nickname: 'P2' });
+    await p2JoinedP;
+
+    const p3 = await connect();
+    const p3JoinedP = once<JoinedPayload>(p3, 'player:joined');
+    p3.emit('player:join', { code, nickname: 'P3' });
+    await p3JoinedP;
+
+    const introP = waitForPhase(leader, 'PHASE_INTRO');
+    leader.emit('leader:startGame', { dilemmaCount: 3, register: 'misto', mode: 'gruppo' });
+    await introP;
+
+    const revealP = waitForPhase(leader, 'DILEMMA_REVEAL');
+    leader.emit('leader:advancePhase');
+    await revealP;
+
+    const voteP = waitForPhase(leader, 'VOTE_1');
+    leader.emit('leader:advancePhase');
+    await voteP;
+
+    // Pause.
+    const pausedP = new Promise<GameState>((resolve) => {
+      const h = (s: GameState) => {
+        if (s.paused) {
+          leader.off('game:state', h);
+          resolve(s);
+        }
+      };
+      leader.on('game:state', h);
+    });
+    leader.emit('leader:pauseGame');
+    const pausedState = await pausedP;
+    expect(pausedState.phase).toBe('VOTE_1');
+
+    // Force-advance is normally instant; while paused it must have no effect.
+    // The emit happens INSIDE the executor, after the listener is armed —
+    // emitting after awaiting the promise would race the server's reply.
+    const stalled = await new Promise<boolean>((resolve) => {
+      const h = (s: GameState) => {
+        if (s.phase === 'SPLIT_REVEAL') {
+          leader.off('game:state', h);
+          clearTimeout(timer);
+          resolve(false); // it DID advance — the guard failed
+        }
+      };
+      leader.on('game:state', h);
+      const timer = setTimeout(() => {
+        leader.off('game:state', h);
+        resolve(true); // no advance within the window — the guard held
+      }, 500);
+      leader.emit('leader:advancePhase');
+    });
+    expect(stalled).toBe(true);
+
+    // Resume, then the SAME force-advance works again.
+    const resumedP = new Promise<GameState>((resolve) => {
+      const h = (s: GameState) => {
+        if (!s.paused) {
+          leader.off('game:state', h);
+          resolve(s);
+        }
+      };
+      leader.on('game:state', h);
+    });
+    leader.emit('leader:resumeGame');
+    await resumedP;
+
+    const splitP = waitForPhase(leader, 'SPLIT_REVEAL');
+    leader.emit('leader:advancePhase');
+    await splitP; // resolves once SPLIT_REVEAL actually arrives
   }, 15000);
 });

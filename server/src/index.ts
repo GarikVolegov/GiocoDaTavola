@@ -165,6 +165,7 @@ function gameStatePayload(room: Room) {
     register: room.register,
     dilemmaIndex: room.dilemmaIndex,
     phaseExpiresAt: room.phaseExpiresAt,
+    paused: room.paused,
     // Session format + percorso view (null in classic). Secret-safe: progress and
     // tappa metadata only, never an individual vote. tappaCounts is static setup data.
     format: room.format,
@@ -796,6 +797,29 @@ io.on('connection', (socket) => {
     broadcastLobby(code);
     if (rooms.get(code) && isVotingPhase(rooms.get(code)!.phase)) refreshAfterRosterChange(code);
     if (wasLeader) broadcastGameState(code);
+  });
+
+  // The leader pauses the game: freezes the current phase's countdown
+  // indefinitely. RoomStore.advancePhase/skipDilemma both refuse to run
+  // while paused, so nothing advances — timer, force-advance, a completed
+  // vote — until leader:resumeGame. No-op outside an active round or if
+  // already paused.
+  socket.on('leader:pauseGame', () => {
+    const code = leaderCodeFor(socket.id);
+    if (!code) return;
+    if (!rooms.pauseGame(code)) return;
+    clearPhaseTimer(code);
+    broadcastGameState(code);
+  });
+
+  // The leader resumes a paused game: restores the frozen countdown from
+  // where it left off.
+  socket.on('leader:resumeGame', () => {
+    const code = leaderCodeFor(socket.id);
+    if (!code) return;
+    if (!rooms.resumeGame(code)) return;
+    schedulePhase(code);
+    broadcastGameState(code);
   });
 
   // A player joins from their phone with a room code + nickname. An optional
