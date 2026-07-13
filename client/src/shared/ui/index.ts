@@ -19,3 +19,4 @@ export { JoinQr } from './JoinQr';
 export { RoomCodeChip } from './RoomCodeChip';
 export { ShareInviteButton } from './ShareInviteButton';
 export { BivioBackdrop, leanFromSplit } from './BivioBackdrop';
+export { PauseOverlay } from './PauseOverlay';
