@@ -31,6 +31,14 @@ export const SocketEvents = {
   LeaderAddBot: 'leader:addBot',
   /** Leader removes a bot by id. */
   LeaderRemoveBot: 'leader:removeBot',
+  /** Leader frees an OFFLINE human player's seat (manual override, before
+   * the automatic grace period elapses). No-op if the target is online. */
+  LeaderRemovePlayer: 'leader:removePlayer',
+  /** Leader pauses the game: freezes the countdown indefinitely, nothing
+   * advances until leader:resumeGame. */
+  LeaderPauseGame: 'leader:pauseGame',
+  /** Leader resumes a paused game, restoring the frozen countdown. */
+  LeaderResumeGame: 'leader:resumeGame',
   /** Server broadcasts the current game phase to everyone in the room. */
   GameState: 'game:state',
   /** Player casts (or changes) a secret A/B vote from their phone. */
@@ -813,6 +821,9 @@ export interface GameStatePayload {
   dilemmaIndex: number;
   /** Epoch ms when the phase auto-advances; null if it has no timer. */
   phaseExpiresAt: number | null;
+  /** True while the leader has paused the game; no phase advances until they
+   * resume. The countdown (phaseExpiresAt) is null while paused. */
+  paused: boolean;
   /** The dilemma in play this round; null outside a dilemma round. */
   dilemma: PublicDilemma | null;
   /**
