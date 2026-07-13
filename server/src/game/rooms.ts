@@ -2828,8 +2828,9 @@ export class RoomStore {
    * them anyway): without this, a room nobody reconnects to would never trip
    * connectedHumanCount === 0 and would sit in memory forever instead of being
    * caught by the abandoned-room sweep. Reconnecting phones still get their
-   * generous 5-minute window via that sweep, not the tight 45s live-disconnect
-   * grace period (which would evict everyone before they notice the restart).
+   * generous 30-minute window via that sweep, not the tighter 5-minute live-
+   * disconnect grace period (which would evict everyone before they notice
+   * the restart).
    */
   restore(room: Room): void {
     const normalized = normalizeRestoredRoom(room);

@@ -88,12 +88,14 @@ const playerSocket = new Map<string, string>();
 const graceTimers = new Map<string, NodeJS.Timeout>();
 
 // How long a disconnected phone keeps its seat + secret vote before removal.
-const RECONNECT_GRACE_MS = 45_000;
+// 5 minutes covers a real short break (bagno, telefonata, la porta), not just
+// a screen-lock blip.
+const RECONNECT_GRACE_MS = 5 * 60_000;
 
 // Safety-net sweep: reap rooms abandoned (no connected humans) for well over the
 // reconnect grace window, in case a per-player grace path missed one (e.g. a
 // bots-only leftover). Skips rooms that still have a pending grace (reconnectable).
-const ABANDONED_ROOM_MAX_IDLE_MS = 5 * 60_000; // 5 min, >> RECONNECT_GRACE_MS
+const ABANDONED_ROOM_MAX_IDLE_MS = 30 * 60_000; // 30 min, >> RECONNECT_GRACE_MS
 const ABANDONED_SWEEP_INTERVAL_MS = 60_000;
 
 function hasPendingGrace(code: string): boolean {
