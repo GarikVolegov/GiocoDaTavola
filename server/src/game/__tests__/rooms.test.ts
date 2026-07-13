@@ -3747,3 +3747,54 @@ describe('RoomStore.removeIfOffline', () => {
     expect(store.get(code)?.leaderId).toBe('p2');
   });
 });
+
+describe('RoomStore.pauseGame / resumeGame', () => {
+  function startedRoom(store: RoomStore, count = 3): string {
+    const { code } = store.create();
+    for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
+    store.startGame(code, count);
+    return code;
+  }
+
+  it('freezes the countdown and restores it on resume, preserving the remaining time', () => {
+    let now = 10_000;
+    const store = new RoomStore(generateRoomCode, () => now);
+    const code = startedRoom(store); // PHASE_INTRO
+    const expiresAtPause = 10_000 + PHASE_DURATIONS_MS.PHASE_INTRO!;
+    now = 12_000; // 2s elapsed since PHASE_INTRO started
+
+    expect(store.pauseGame(code)).toBe(true);
+    const paused = store.get(code)!;
+    expect(paused.paused).toBe(true);
+    expect(paused.phaseExpiresAt).toBeNull();
+    expect(paused.pausedRemainingMs).toBe(expiresAtPause - 12_000);
+
+    now = 60_000; // however long the pause lasts is irrelevant
+    expect(store.resumeGame(code)).toBe(true);
+    const resumed = store.get(code)!;
+    expect(resumed.paused).toBe(false);
+    expect(resumed.pausedRemainingMs).toBeNull();
+    expect(resumed.phaseExpiresAt).toBe(60_000 + (expiresAtPause - 12_000));
+  });
+
+  it('rejects pausing in LOBBY, FINAL_AWARDS, or DUO_PORTRAIT', () => {
+    const store = new RoomStore();
+    const { code } = store.create();
+    expect(store.pauseGame(code)).toBe(false); // LOBBY
+  });
+
+  it('rejects pausing twice, and rejects resuming when not paused', () => {
+    const store = new RoomStore(generateRoomCode, () => 0);
+    const code = startedRoom(store);
+    expect(store.pauseGame(code)).toBe(true);
+    expect(store.pauseGame(code)).toBe(false); // already paused
+    expect(store.resumeGame(code)).toBe(true);
+    expect(store.resumeGame(code)).toBe(false); // not paused anymore
+  });
+
+  it('rejects an unknown room', () => {
+    const store = new RoomStore();
+    expect(store.pauseGame('ZZZZ')).toBe(false);
+    expect(store.resumeGame('ZZZZ')).toBe(false);
+  });
+});
