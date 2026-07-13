@@ -335,6 +335,15 @@ export interface Room {
   dilemmaIndex: number;
   /** Epoch ms when the current phase auto-advances; null if it has no timer. */
   phaseExpiresAt: number | null;
+  /** True while the leader has explicitly paused the game (menu ⋮ "Metti in
+   * pausa"): no phase transition runs (advancePhase/skipDilemma both refuse)
+   * until resumeGame(); phaseExpiresAt is frozen (null) while paused so the
+   * client countdown simply disappears. */
+  paused: boolean;
+  /** How much time was left on the current phase's countdown when paused;
+   * null if the phase had no active timer. Restored into phaseExpiresAt by
+   * resumeGame(). Meaningless while `paused` is false. */
+  pausedRemainingMs: number | null;
   /** The deck for this game; created at start, drawn once per DILEMMA_REVEAL. */
   deck: Deck | null;
   /** The dilemma in play this round; null in the lobby/intro and after the game. */
@@ -940,6 +949,8 @@ function emptyRoom(code: string, createdAt: number): Room {
     currentAct: null,
     dilemmaIndex: 0,
     phaseExpiresAt: null,
+    paused: false,
+    pausedRemainingMs: null,
     deck: null,
     currentDilemma: null,
     submittedDilemmas: [],
@@ -1531,6 +1542,47 @@ export class RoomStore {
     // Can't actually fail (the synthetic phase is never LOBBY/FINAL_*); the
     // fallback only narrows the error union for the caller.
     return advanced.ok ? advanced : { ok: false, error: 'NOT_SKIPPABLE_PHASE' };
+  }
+
+  /**
+   * Freeze the current phase's countdown indefinitely (the leader's explicit
+   * pause, distinct from a per-player disconnect). No-op outside an active
+   * round (LOBBY/FINAL_AWARDS/DUO_PORTRAIT have nothing to stop) or if
+   * already paused. `advancePhase`/`skipDilemma` both refuse to run while
+   * `paused` is true, so no phase transition — timer, force-advance, or a
+   * completed vote — lands until `resumeGame`, no matter what triggers it.
+   */
+  pauseGame(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (
+      !room ||
+      room.paused ||
+      room.phase === 'LOBBY' ||
+      room.phase === 'FINAL_AWARDS' ||
+      room.phase === 'DUO_PORTRAIT'
+    ) {
+      return false;
+    }
+    room.pausedRemainingMs =
+      room.phaseExpiresAt != null ? Math.max(0, room.phaseExpiresAt - this.now()) : null;
+    room.phaseExpiresAt = null;
+    room.paused = true;
+    return true;
+  }
+
+  /**
+   * Resume a paused game: restores the frozen countdown from where it left
+   * off (index.ts reschedules the actual timer against the new expiry).
+   * No-op if not currently paused.
+   */
+  resumeGame(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room || !room.paused) return false;
+    room.phaseExpiresAt =
+      room.pausedRemainingMs != null ? this.now() + room.pausedRemainingMs : null;
+    room.paused = false;
+    room.pausedRemainingMs = null;
+    return true;
   }
 
   /**
