@@ -8,7 +8,10 @@ export const wrap: CSSProperties = {
   justifyContent: 'center',
   minHeight: '100dvh',
   textAlign: 'center',
-  padding: 'var(--space-5)',
+  // Pad by at least space-5, but grow to clear the notch / home-indicator when
+  // the app runs standalone from the iPhone home screen (env insets).
+  padding:
+    'max(var(--space-5), var(--safe-top)) max(var(--space-5), var(--safe-right)) max(var(--space-5), var(--safe-bottom)) max(var(--space-5), var(--safe-left))',
   gap: '1rem',
 };
 
