@@ -11,7 +11,7 @@ export const wrap: CSSProperties = {
   // Pad by at least space-5, but grow to clear the notch / home-indicator when
   // the app runs standalone from the iPhone home screen (env insets).
   padding:
-    'max(var(--space-5), var(--safe-top)) max(var(--space-5), var(--safe-right)) max(var(--space-5), var(--safe-bottom)) max(var(--space-5), var(--safe-left))',
+    'max(var(--space-5), env(safe-area-inset-top, 0px)) max(var(--space-5), env(safe-area-inset-right, 0px)) max(var(--space-5), env(safe-area-inset-bottom, 0px)) max(var(--space-5), env(safe-area-inset-left, 0px))',
   gap: '1rem',
 };
 
