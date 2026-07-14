@@ -36,12 +36,15 @@ export function DilemmaCard({ dilemma }: { dilemma: PublicDilemma }) {
   );
 }
 
-/** The aggregate A/B split as a proportional bar + counts (SPLIT_REVEAL). */
+/** The aggregate A/B split as a proportional bar + counts (SPLIT_REVEAL).
+ * Sized to fill its PARENT (not the raw viewport) so it stays contained when
+ * nested in a narrower card, e.g. the phone's GROUP_MIND_REVEAL — a hardcoded
+ * `92vw` here previously overflowed that card's own (narrower) width. */
 export function SplitBar({ split }: { split: VoteSplit }) {
   const total = split.A + split.B || 1;
   const pctA = Math.round((split.A / total) * 100);
   return (
-    <div style={{ width: 'min(92vw, 40rem)' }}>
+    <div style={{ width: '100%', maxWidth: '40rem' }}>
       <div style={{ display: 'flex', height: '2.5rem', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
         <div style={{ width: `${pctA}%`, background: 'rgba(84,134,196,0.6)' }} />
         <div style={{ width: `${100 - pctA}%`, background: 'rgba(199,122,69,0.6)' }} />
