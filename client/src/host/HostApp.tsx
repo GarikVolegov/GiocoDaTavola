@@ -31,7 +31,7 @@ const screen = {
   textAlign: 'center',
   // Clear the notch / home-indicator when /host is opened standalone on a phone.
   padding:
-    'max(var(--space-6), var(--safe-top)) max(var(--space-6), var(--safe-right)) max(var(--space-6), var(--safe-bottom)) max(var(--space-6), var(--safe-left))',
+    'max(var(--space-6), env(safe-area-inset-top, 0px)) max(var(--space-6), env(safe-area-inset-right, 0px)) max(var(--space-6), env(safe-area-inset-bottom, 0px)) max(var(--space-6), env(safe-area-inset-left, 0px))',
   gap: 'var(--space-5)',
 } as const;
 

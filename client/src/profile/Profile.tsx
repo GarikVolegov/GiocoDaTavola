@@ -38,7 +38,7 @@ export default function Profile() {
     gap: 'var(--space-4)',
     // Clear the notch / home-indicator in standalone PWA on iPhone.
     padding:
-      'max(var(--space-6), var(--safe-top)) max(var(--space-5), var(--safe-right)) max(var(--space-6), var(--safe-bottom)) max(var(--space-5), var(--safe-left))',
+      'max(var(--space-6), env(safe-area-inset-top, 0px)) max(var(--space-5), env(safe-area-inset-right, 0px)) max(var(--space-6), env(safe-area-inset-bottom, 0px)) max(var(--space-5), env(safe-area-inset-left, 0px))',
     color: 'var(--text)',
     fontFamily: 'var(--font-body)',
   } as const;

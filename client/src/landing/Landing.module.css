@@ -19,8 +19,8 @@
   display: flex; align-items: center; justify-content: center; gap: var(--space-5);
   max-width: 1080px; margin: 0 auto;
   /* grow the top pad to clear the notch when installed as a standalone PWA */
-  padding: max(var(--space-5), var(--safe-top)) max(var(--space-5), var(--safe-right))
-    var(--space-5) max(var(--space-5), var(--safe-left));
+  padding: max(var(--space-5), env(safe-area-inset-top, 0px)) max(var(--space-5), env(safe-area-inset-right, 0px))
+    var(--space-5) max(var(--space-5), env(safe-area-inset-left, 0px));
   backdrop-filter: blur(10px);
   background: color-mix(in srgb, var(--bg) 72%, transparent);
   border-bottom: 1px solid var(--border); }

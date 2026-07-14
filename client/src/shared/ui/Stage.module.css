@@ -9,12 +9,12 @@
 }
 /* padding grows to clear the iPhone notch / home-indicator in standalone PWA. */
 .player {
-  padding: max(var(--space-5), var(--safe-top)) max(var(--space-5), var(--safe-right))
-    max(var(--space-5), var(--safe-bottom)) max(var(--space-5), var(--safe-left));
+  padding: max(var(--space-5), env(safe-area-inset-top, 0px)) max(var(--space-5), env(safe-area-inset-right, 0px))
+    max(var(--space-5), env(safe-area-inset-bottom, 0px)) max(var(--space-5), env(safe-area-inset-left, 0px));
   gap: var(--space-4);
 }
 .host {
-  padding: max(var(--space-6), var(--safe-top)) max(var(--space-6), var(--safe-right))
-    max(var(--space-6), var(--safe-bottom)) max(var(--space-6), var(--safe-left));
+  padding: max(var(--space-6), env(safe-area-inset-top, 0px)) max(var(--space-6), env(safe-area-inset-right, 0px))
+    max(var(--space-6), env(safe-area-inset-bottom, 0px)) max(var(--space-6), env(safe-area-inset-left, 0px));
   gap: var(--space-5);
 }
