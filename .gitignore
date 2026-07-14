@@ -12,3 +12,6 @@ coverage/
 # Superpowers brainstorm mockups
 .superpowers/
 .worktrees/
+
+# Local MCP server config (may hold API keys)
+.mcp.json

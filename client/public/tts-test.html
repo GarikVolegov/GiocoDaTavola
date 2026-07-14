@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Test voce narratore (TTS) — SCHIERATI</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: -apple-system, system-ui, sans-serif;
+        background: #0f1a2e;
+        color: #f4f1ea;
+        padding: 16px;
+        line-height: 1.4;
+      }
+      h1 { font-size: 1.2rem; margin: 0 0 4px; }
+      p.sub { margin: 0 0 16px; color: #9fb0c8; font-size: 0.85rem; }
+      button {
+        display: block;
+        width: 100%;
+        margin: 8px 0;
+        padding: 16px;
+        font-size: 1rem;
+        font-weight: 600;
+        text-align: left;
+        border: 1px solid #2b3b58;
+        border-radius: 12px;
+        background: #182843;
+        color: #f4f1ea;
+      }
+      button:active { background: #243a5e; }
+      button small { display: block; font-weight: 400; color: #9fb0c8; margin-top: 4px; }
+      #env { font-size: 0.8rem; color: #9fb0c8; margin: 12px 0; white-space: pre-wrap; }
+      #log {
+        margin-top: 16px;
+        padding: 12px;
+        background: #060d1a;
+        border-radius: 10px;
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 0.78rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+        min-height: 160px;
+      }
+      .clear { background: #3a1f1f; border-color: #5a2b2b; }
+    </style>
+  </head>
+  <body>
+    <h1>🎙️ Test voce narratore</h1>
+    <p class="sub">
+      Apri questa pagina sul telefono del LEADER (iPhone). Tocca i test in ordine 1→4 e
+      annota per ognuno: <b>si sente la voce?</b> e cosa scrive il log sotto.
+    </p>
+
+    <button id="t1">
+      1) Parla SUBITO (dentro il tap)
+      <small>nessuno sblocco, voce di default, frase corta</small>
+    </button>
+    <button id="t2">
+      2) Sblocca + parla SUBITO
+      <small>priming (come l'app) + speak nello stesso tap</small>
+    </button>
+    <button id="t3">
+      3) Sblocca ora, parla tra 1s (FUORI dal tap)
+      <small>imita il percorso reale: la narrazione parte da un effetto, non dal tap</small>
+    </button>
+    <button id="t4">
+      4) Esatto come l'app (chunk + keepalive + voce IT)
+      <small>replica fedele di narrator.ts speak(), differito di 1s</small>
+    </button>
+
+    <button id="clear" class="clear">🧹 Pulisci log</button>
+
+    <div id="env"></div>
+    <div id="log"></div>
+
+    <script>
+      (function () {
+        var synth = window.speechSynthesis;
+        var logEl = document.getElementById('log');
+        var envEl = document.getElementById('env');
+
+        function log() {
+          var msg = Array.prototype.join.call(arguments, ' ');
+          var t = new Date().toISOString().substr(11, 12);
+          logEl.textContent += '[' + t + '] ' + msg + '\n';
+          logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function voiceNames() {
+          if (!synth) return '(no speechSynthesis)';
+          var vs = synth.getVoices();
+          var it = vs.filter(function (v) {
+            return v.lang && v.lang.toLowerCase().indexOf('it') === 0;
+          });
+          return (
+            vs.length +
+            ' voci totali, ' +
+            it.length +
+            ' italiane: ' +
+            it
+              .map(function (v) {
+                return v.name + (v.localService ? '(local)' : '(remote)');
+              })
+              .join(', ')
+          );
+        }
+
+        function refreshEnv() {
+          envEl.textContent =
+            'speechSynthesis presente: ' +
+            (synth ? 'SI' : 'NO') +
+            '\nUA: ' +
+            navigator.userAgent +
+            '\nVoci: ' +
+            voiceNames() +
+            '\nstato: speaking=' +
+            (synth ? synth.speaking : '?') +
+            ' pending=' +
+            (synth ? synth.pending : '?') +
+            ' paused=' +
+            (synth ? synth.paused : '?');
+        }
+        refreshEnv();
+        if (synth && typeof synth.addEventListener === 'function') {
+          synth.addEventListener('voiceschanged', function () {
+            log('event voiceschanged → ' + voiceNames());
+            refreshEnv();
+          });
+        }
+
+        // Pick the most natural Italian voice (mirrors narrator.ts pickBestItalianVoice).
+        function pickItalian() {
+          if (!synth) return null;
+          var italian = synth.getVoices().filter(function (v) {
+            return v.lang && v.lang.toLowerCase().indexOf('it') === 0;
+          });
+          if (!italian.length) return null;
+          function score(v) {
+            var n = (v.name || '').toLowerCase();
+            var s = 0;
+            if (n.indexOf('siri') >= 0) s += 8;
+            if (/enhanced|premium|neural|natural/.test(n)) s += 6;
+            if (n.indexOf('google') >= 0) s += 3;
+            if (/alice|federica|luca|paola|emma/.test(n)) s += 2;
+            if ((v.lang || '').toLowerCase() === 'it-it') s += 1;
+            if (v.localService) s += 1;
+            return s;
+          }
+          return italian.slice().sort(function (a, b) {
+            return score(b) - score(a);
+          })[0];
+        }
+
+        // Speak one utterance, wiring every lifecycle event into the log.
+        function speakOne(label, text, opts) {
+          opts = opts || {};
+          if (!synth) {
+            log(label + ': NO speechSynthesis');
+            return;
+          }
+          var u = new SpeechSynthesisUtterance(text);
+          u.lang = 'it-IT';
+          u.rate = opts.rate || 0.98;
+          u.pitch = 1;
+          u.volume = opts.volume == null ? 1 : opts.volume;
+          if (opts.voice) u.voice = opts.voice;
+          u.onstart = function () {
+            log(label + ': onstart ✅ (la voce dovrebbe partire ORA)');
+          };
+          u.onend = function () {
+            log(label + ': onend ✅');
+            refreshEnv();
+          };
+          u.onerror = function (e) {
+            log(label + ': onerror ❌ code=' + (e && e.error ? e.error : '?'));
+            refreshEnv();
+          };
+          log(label + ': speak() chiamato (voce=' + (u.voice ? u.voice.name : 'default') + ')');
+          synth.speak(u);
+          refreshEnv();
+        }
+
+        // narrator.ts-style priming inside a gesture.
+        function prime(volume) {
+          if (!synth) return;
+          try {
+            if (synth.paused) synth.resume();
+            var u = new SpeechSynthesisUtterance(' ');
+            u.volume = volume == null ? 0 : volume;
+            u.lang = 'it-IT';
+            u.onstart = function () { log('priming: onstart'); };
+            u.onend = function () { log('priming: onend'); };
+            u.onerror = function (e) {
+              log('priming: onerror code=' + (e && e.error ? e.error : '?'));
+            };
+            synth.speak(u);
+            log('priming: speak(" ") vol=' + (volume == null ? 0 : volume) + ' chiamato');
+          } catch (err) {
+            log('priming: EXCEPTION ' + err);
+          }
+        }
+
+        document.getElementById('t1').addEventListener('click', function () {
+          log('--- TEST 1: parla subito, nessuno sblocco ---');
+          speakOne('T1', 'Test uno. Mi senti?', { volume: 1 });
+        });
+
+        document.getElementById('t2').addEventListener('click', function () {
+          log('--- TEST 2: sblocca + parla subito ---');
+          if (synth && (synth.speaking || synth.pending)) synth.cancel();
+          prime(0);
+          speakOne('T2', 'Test due, dopo lo sblocco. Mi senti?', { volume: 1 });
+        });
+
+        document.getElementById('t3').addEventListener('click', function () {
+          log('--- TEST 3: sblocca ORA, parla tra 1s (fuori dal tap) ---');
+          if (synth && (synth.speaking || synth.pending)) synth.cancel();
+          prime(0);
+          setTimeout(function () {
+            log('T3: setTimeout scaduto, ora parlo (NON sono in un gesto utente)');
+            speakOne('T3', 'Test tre, differito di un secondo. Mi senti?', { volume: 1 });
+          }, 1000);
+        });
+
+        document.getElementById('t4').addEventListener('click', function () {
+          log('--- TEST 4: esatto come app (chunk+keepalive+voce IT), differito 1s ---');
+          if (synth && (synth.speaking || synth.pending)) synth.cancel();
+          prime(0);
+          setTimeout(function () {
+            if (!synth) { log('T4: no synth'); return; }
+            var voice = pickItalian();
+            log('T4: voce scelta = ' + (voice ? voice.name : 'default'));
+            var chunks = [
+              'Test quattro.',
+              'Questa è una frase più lunga, divisa in pezzi come fa il narratore del gioco.',
+              'Se senti questa parte, anche le frasi lunghe funzionano.',
+            ];
+            var keepAlive = setInterval(function () {
+              if (synth.speaking && !synth.paused) {
+                synth.pause();
+                synth.resume();
+                log('T4: keepalive pause()/resume()');
+              }
+            }, 3000);
+            var i = 0;
+            function next() {
+              if (i >= chunks.length) {
+                clearInterval(keepAlive);
+                log('T4: tutti i chunk finiti ✅');
+                return;
+              }
+              var u = new SpeechSynthesisUtterance(chunks[i]);
+              u.lang = 'it-IT';
+              u.rate = 0.98;
+              u.pitch = 1;
+              if (voice) u.voice = voice;
+              u.onstart = function () { log('T4 chunk ' + i + ': onstart ✅'); };
+              u.onend = function () {
+                log('T4 chunk ' + i + ': onend ✅');
+                i += 1;
+                next();
+              };
+              u.onerror = function (e) {
+                log('T4 chunk ' + i + ': onerror ❌ code=' + (e && e.error ? e.error : '?'));
+                clearInterval(keepAlive);
+              };
+              synth.speak(u);
+            }
+            next();
+          }, 1000);
+        });
+
+        document.getElementById('clear').addEventListener('click', function () {
+          logEl.textContent = '';
+          refreshEnv();
+        });
+      })();
+    </script>
+  </body>
+</html>
