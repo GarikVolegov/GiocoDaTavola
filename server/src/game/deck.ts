@@ -71,6 +71,27 @@ export interface Dilemma {
   spuntiA: string[];
   /** 2–3 talking points for someone defending side B (optionB). */
   spuntiB: string[];
+  /**
+   * "Insegnamento per il Mondo Reale": modello mentale, evidenza psicologica o
+   * spunto pratico che collega il dilemma alle scelte autentiche di vita e lavoro.
+   */
+  lezioneReale?: string;
+}
+
+/**
+ * Assicura che ogni dilemma abbia un insegnamento per il mondo reale,
+ * sintetizzandone uno specifico per il registro se non esplicitamente presente.
+ */
+export function ensureLezioneReale(d: Dilemma): string {
+  if (d.lezioneReale && d.lezioneReale.trim().length > 0) return d.lezioneReale;
+
+  if (d.register === 'business') {
+    return 'Nel business: ogni compromesso immediato tra velocità e integrità crea un debito invisibile ad alto tasso di interesse. I migliori leader non cercano la risposta perfetta, ma gestiscono il rischio del secondo ordine.';
+  }
+  if (d.register === 'carriera') {
+    return 'Nel lavoro: la sicurezza apparente ha spesso il costo nascosto di un tetto al proprio potenziale. Chi sa cambiare idea davanti a nuove evidenze impara il doppio di chi difende l’inerzia.';
+  }
+  return 'Nella vita reale: il rimpianto per un’opportunità mancata brucia molto più a lungo del disagio di un tentativo fallito. Ascoltare chi dissente è l’unico modo per superare i propri punti ciechi.';
 }
 
 /** Dilemmas matching a register; 'misto' returns the whole pool. */
@@ -113,7 +134,11 @@ export function dilemmasForTappa(all: Dilemma[], tappa: Tappa): Dilemma[] {
  */
 export function loadDilemmas(): Dilemma[] {
   const file = join(__dirname, '..', '..', 'data', 'dilemmas.json');
-  return JSON.parse(readFileSync(file, 'utf-8')) as Dilemma[];
+  const list = JSON.parse(readFileSync(file, 'utf-8')) as Dilemma[];
+  return list.map((d) => ({
+    ...d,
+    lezioneReale: ensureLezioneReale(d),
+  }));
 }
 
 /**

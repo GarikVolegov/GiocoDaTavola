@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
-import { PodiumPanel } from './PublicViews';
-import type { PodiumEntry } from '../events';
+import { PodiumPanel, ResultsPanel, AwardsPanel } from './PublicViews';
+import type { PodiumEntry, PublicSwing, PublicDilemma, Award } from '../events';
 
 afterEach(cleanup);
 
@@ -56,3 +56,43 @@ describe('PodiumPanel', () => {
     expect(container.innerHTML).toBe('');
   });
 });
+
+describe('ResultsPanel with Real-World Insight', () => {
+  it('mostra la pillola di saggezza dell’Oracolo se presente nel dilemma', () => {
+    const swing: PublicSwing = {
+      switched: 1,
+      leadFlipped: false,
+      attribution: [],
+    };
+    const dilemma: PublicDilemma = {
+      id: 'd01',
+      text: 'Test dilemma',
+      optionA: 'A',
+      optionB: 'B',
+      lezioneReale: 'La prudenza non deve trasformarsi in paralisi.',
+    };
+
+    render(<ResultsPanel swing={swing} dilemma={dilemma} />);
+    expect(screen.getByTestId('oracolo-lezione')).toBeInTheDocument();
+    expect(screen.getByText(/L’Oracolo della Realtà/i)).toBeInTheDocument();
+    expect(screen.getByText(/"La prudenza non deve trasformarsi in paralisi."/i)).toBeInTheDocument();
+  });
+});
+
+describe('AwardsPanel with Real-World Archetype Badges', () => {
+  it('mostra il badge dell’archetipo reale per gli award', () => {
+    const awards: Award[] = [
+      {
+        id: 'persuasore',
+        title: 'Il Persuasore',
+        emoji: '🏆',
+        description: 'Ha convinto tutti.',
+        winner: { id: 'p1', nickname: 'Marco' },
+      },
+    ];
+
+    render(<AwardsPanel awards={awards} />);
+    expect(screen.getByText(/Il Catalizzatore d’Impatto/i)).toBeInTheDocument();
+  });
+});
+

@@ -9,6 +9,7 @@ import { BivioBackdrop } from './shared/ui';
 const Landing = lazy(() => import('./landing/Landing'));
 const HostApp = lazy(() => import('./host/HostApp'));
 const PlayerApp = lazy(() => import('./player/PlayerApp'));
+const PassAndPlayApp = lazy(() => import('./passAndPlay/PassAndPlayApp'));
 const Profile = lazy(() => import('./profile/Profile'));
 const Home = lazy(() => import('./home/Home'));
 const Settings = lazy(() => import('./settings/Settings'));
@@ -29,12 +30,13 @@ export default function App() {
       <BrowserRouter>
         <Suspense fallback={null}>
           <Routes>
-            <Route path="/" element={<RootRoute />} />
-            <Route path="/casa" element={<Home />} />
+            <Route path="/" element={<><BivioBackdrop variant="landing" /><RootRoute /></>} />
+            <Route path="/casa" element={<><BivioBackdrop variant="dashboard" /><Home /></>} />
             <Route path="/host" element={<><ConnectionBanner /><BivioBackdrop variant="host" /><HostApp /></>} />
             <Route path="/join" element={<><ConnectionBanner /><BivioBackdrop variant="player" /><PlayerApp /></>} />
-            <Route path="/profilo" element={<Profile />} />
-            <Route path="/impostazioni" element={<Settings />} />
+            <Route path="/passa" element={<><BivioBackdrop variant="player" /><PassAndPlayApp /></>} />
+            <Route path="/profilo" element={<><BivioBackdrop variant="dashboard" /><Profile /></>} />
+            <Route path="/impostazioni" element={<><BivioBackdrop variant="dashboard" /><Settings /></>} />
           </Routes>
         </Suspense>
       </BrowserRouter>

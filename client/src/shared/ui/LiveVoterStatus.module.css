@@ -1,0 +1,82 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  animation: fadeIn var(--dur-med) var(--ease) forwards;
+}
+
+.countLabel {
+  font-size: clamp(1.2rem, 2.2vw, 1.6rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text);
+}
+
+.highlightCount {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.orbGrid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  max-width: 32rem;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: rgba(14, 20, 42, 0.55);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.orb {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  transition: all var(--dur-fast) var(--ease-spring);
+  position: relative;
+}
+
+.orbVoted {
+  border-color: var(--gold);
+  background: radial-gradient(circle at 35% 35%, #fff2b2, var(--gold));
+  box-shadow: 0 0 14px rgba(229, 193, 88, 0.7), 0 0 4px #ffffff;
+  animation: orbPulse 1.8s infinite ease-in-out;
+  transform: scale(1.1);
+}
+
+.orbPending {
+  opacity: 0.45;
+}
+
+@keyframes orbPulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(229, 193, 88, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(229, 193, 88, 0.95), 0 0 6px #fff;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

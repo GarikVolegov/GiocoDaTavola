@@ -15,6 +15,9 @@ export default function Awards() {
           </div>
         ))}
       </div>
+      <p style={{ textAlign: 'center', maxWidth: '38rem', margin: 'var(--space-4) auto 0', color: 'var(--text-muted)', fontSize: '1rem', lineHeight: 1.55 }}>
+        💡 <strong>L’Oracolo della Realtà</strong>: a fine partita non ricevi solo un trofeo, ma scopri il tuo <strong>Archetipo Decisionale</strong> per il mondo vero (<em>Il Catalizzatore d’Impatto, La Roccia dei Principi, L’Equilibrista Strategico</em>).
+      </p>
     </div>
   );
 }

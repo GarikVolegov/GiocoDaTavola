@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { PHASE_LABELS, type DuoTurn, type Reaction } from '../../shared/events';
 import { formatMSS } from '../../shared/time';
-import { Button } from '../../shared/ui';
+import { Button, Card } from '../../shared/ui';
 import ReactionBar from './ReactionBar';
 import { wrap } from './layout';
 
@@ -65,18 +65,31 @@ export default function DuoArgueView({
       )}
       {myTurn ? (
         <>
-          <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te! 🎤</p>
-          {roleBadge}
-          {dilemma && (
-            <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0, maxWidth: '22rem' }}>
-              {dilemma.text}
+          <Card
+            glow={speaker.advocate ? 'accent' : speaker.side === 'A' ? 'a' : 'b'}
+            style={{
+              width: 'min(90vw, 24rem)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              gap: 'var(--space-2)',
+              padding: 'var(--space-4)',
+            }}
+          >
+            <p style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Tocca a te! 🎤</p>
+            {roleBadge}
+            {dilemma && (
+              <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0, maxWidth: '22rem' }}>
+                {dilemma.text}
+              </p>
+            )}
+            <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
+              Difendi <strong>{speaker.side}</strong>
+              {sideOption ? `: ${sideOption}` : ''}
+              {speaker.inverted || speaker.advocate ? ' (non è il tuo!)' : ''}
             </p>
-          )}
-          <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
-            Difendi <strong>{speaker.side}</strong>
-            {sideOption ? `: ${sideOption}` : ''}
-            {speaker.inverted || speaker.advocate ? ' (non è il tuo!)' : ''}
-          </p>
+          </Card>
           <div
             aria-label="Tempo trascorso"
             style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}

@@ -32,7 +32,7 @@ export function JoinQr({ code, size = 168 }: JoinQrProps) {
   const img = Math.round(size * 0.28);
   return (
     <div className={styles.frame}>
-      <span className={styles.label}>Schierati</span>
+      <span className={styles.label}>NEXUS</span>
       <QRCodeSVG
         value={url}
         size={size}

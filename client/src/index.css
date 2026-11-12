@@ -51,3 +51,26 @@ h2 {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
+
+::selection {
+  background: rgba(62, 130, 252, 0.45);
+  color: #ffffff;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(7, 10, 20, 0.75);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(229, 193, 88, 0.5);
+}

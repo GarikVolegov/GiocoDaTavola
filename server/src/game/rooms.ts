@@ -58,6 +58,15 @@ import {
   type StoryScene,
 } from './storie';
 import { tally } from './voteCount';
+import {
+  getCuratedCards,
+  type PartyMode,
+  type PartyCard,
+  type FlashCard,
+  type InfiltratoCard,
+  type CoppieCard,
+  type AssurdoCard,
+} from './geminiGenerator';
 import { computeAwards as computeAwardsFor, type Award, type PlayerStats } from './awards';
 import { computeBlindSpot, type BlindSpot } from './blindspots';
 import { computePodium, type PodiumEntry } from './podium';
@@ -595,6 +604,59 @@ export interface Room {
    * lato server: è solo un conteggio, non espone voti.
    */
   defenseCounts: Map<string, number>;
+  /** Revamped 4 viral party modes ('flash' | 'infiltrato' | 'coppie' | 'assurdo'); null if classic. */
+  partyMode: PartyMode | null;
+  /** Intensity for 'coppie' mode ('complicita' | 'piccante'). */
+  partyIntensity: 'complicita' | 'piccante';
+  /** Deck of party cards drawn for this game. */
+  partyCards: PartyCard[];
+  /** Currently active party card. */
+  currentPartyCard: PartyCard | null;
+  /** Secret votes for "La Gogna" (voterId -> targetId) in assurdo mode. */
+  gognaVotes: Map<string, string>;
+  gognaTargetId: string | null;
+  gognaTargetNickname: string | null;
+  gognaVotesCount: number;
+  /** Evening theme for AI card generation (e.g. "Addio al celibato di Marco"). */
+  theme: string | null;
+  /** Result of Schierati Flash round (doxxing minority + unvoted players, unanimity, tie). */
+  flashResult: FlashResultPayload | null;
+  /** Result of Infiltrato round (unmasked role, questions comparison, caught status). */
+  infiltratoRoundResult: InfiltratoRoundResult | null;
+  /** Hot-seat couple player ids in Coppie mode when group > 2 players. */
+  hotSeatCouple: [string, string] | null;
+  /** Spectator bets in Coppie hot-seat mode: spectatorId -> 'match' | 'scoppiano'. */
+  hotSeatBets: Map<string, 'match' | 'scoppiano'>;
+  /** Running party points accumulated across the game. */
+  partyScores: Map<string, number>;
+}
+
+export interface FlashResultPayload {
+  isUnanimous: boolean;
+  isTie: boolean;
+  minoritySide: VoteChoice | null;
+  minorityNicknames: string[];
+  majorityNicknames: string[];
+  unvotedNicknames: string[];
+}
+
+export interface HotSeatPayload {
+  coupleIds: [string, string];
+  coupleNicknames: [string, string];
+  coupleMatched?: boolean;
+  correctSpectators?: string[];
+}
+
+export interface InfiltratoRoundResult {
+  round: number;
+  infiltratorId: string;
+  infiltratorNickname: string;
+  groupQuestion: string;
+  impostorQuestion: string;
+  accusedId: string | null;
+  accusedNickname: string | null;
+  caught: boolean;
+  infiltratorWon: boolean;
 }
 
 export type JoinError = 'ROOM_NOT_FOUND' | 'NICKNAME_REQUIRED' | 'ROOM_FULL';
@@ -1019,6 +1081,20 @@ function emptyRoom(code: string, createdAt: number): Room {
     swingBets: new Map(),
     speakerVotes: new Map(),
     defenseCounts: new Map(),
+    partyMode: null,
+    partyIntensity: 'complicita',
+    partyCards: [],
+    currentPartyCard: null,
+    gognaVotes: new Map(),
+    gognaTargetId: null,
+    gognaTargetNickname: null,
+    gognaVotesCount: 0,
+    theme: null,
+    flashResult: null,
+    infiltratoRoundResult: null,
+    hotSeatCouple: null,
+    hotSeatBets: new Map(),
+    partyScores: new Map(),
   };
 }
 
@@ -1276,6 +1352,20 @@ export class RoomStore {
     room.swingBets = new Map();
     room.speakerVotes = new Map();
     room.defenseCounts = new Map();
+    room.partyMode = null;
+    room.partyIntensity = 'complicita';
+    room.partyCards = [];
+    room.currentPartyCard = null;
+    room.gognaVotes = new Map();
+    room.gognaTargetId = null;
+    room.gognaTargetNickname = null;
+    room.gognaVotesCount = 0;
+    room.theme = null;
+    room.flashResult = null;
+    room.infiltratoRoundResult = null;
+    room.hotSeatCouple = null;
+    room.hotSeatBets = new Map();
+    room.partyScores = new Map();
     return { ok: true, room };
   }
 
@@ -1302,6 +1392,9 @@ export class RoomStore {
      * separate games, from localStorage) — merged with the room's own
      * rematch exclusion. Ignored outside classic format. */
     deviceSeenIds: string[] = [],
+    partyMode?: PartyMode,
+    partyIntensity?: 'complicita' | 'piccante',
+    theme?: string,
   ): StartGameResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
@@ -1337,6 +1430,9 @@ export class RoomStore {
       }
       plan = buildPercorsoPlan(this.makeDeck('misto').cards, percorso.startTappa, percorso.durata, this.rng);
       if (plan.dilemmas.length === 0) return { ok: false, error: 'INVALID_PERCORSO' };
+    } else if (partyMode) {
+      const validPartyCounts = [3, 5, 7, 10];
+      if (!validPartyCounts.includes(dilemmaCount)) return { ok: false, error: 'INVALID_DILEMMA_COUNT' };
     } else {
       if (!isDilemmaCount(dilemmaCount)) return { ok: false, error: 'INVALID_DILEMMA_COUNT' };
       if (!isContentRegister(register)) return { ok: false, error: 'INVALID_REGISTER' };
@@ -1350,6 +1446,12 @@ export class RoomStore {
       if (room.players.size !== 2 || humanCount !== 2) {
         return { ok: false, error: 'WRONG_PLAYER_COUNT' };
       }
+    } else if (partyMode === 'coppie') {
+      // "Coppie & Scintille" can be played by a single couple (2 players) or a group!
+      if (room.players.size < 2) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
+      if (humanCount < 1) return { ok: false, error: 'NO_HUMAN_PLAYERS' };
+    } else if (partyMode === 'infiltrato') {
+      if (humanCount < 3) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
     } else {
       if (room.players.size < MIN_PLAYERS_TO_START) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
       // Solo play is allowed (1 human + bots), but never a bots-only game.
@@ -1516,6 +1618,61 @@ export class RoomStore {
     room.duoTruePicks = 0;
     room.duoFirstPickAgreements = 0;
     room.duoMoments = [];
+    // Configure revamped party mode if requested
+    if (partyMode && ['flash', 'infiltrato', 'coppie', 'assurdo'].includes(partyMode)) {
+      room.partyMode = partyMode;
+      room.partyIntensity = partyIntensity === 'piccante' ? 'piccante' : 'complicita';
+      room.theme = theme?.trim() || null;
+      room.flashResult = null;
+      room.infiltratoRoundResult = null;
+      room.partyScores = new Map();
+      if (partyMode === 'infiltrato') {
+        const candidates = humans.length > 0 ? humans : [...room.players.values()].filter((p) => !p.isBot);
+        if (candidates.length > 0) {
+          room.infiltratorId = candidates[Math.floor(this.rng() * candidates.length)].id;
+        }
+      }
+      if (partyMode === 'coppie' && room.players.size > 2) {
+        if (humans.length >= 2) {
+          room.hotSeatCouple = [humans[0].id, humans[1].id];
+        }
+        room.hotSeatBets = new Map();
+      } else {
+        room.hotSeatCouple = null;
+        room.hotSeatBets = new Map();
+      }
+      if (partyMode === 'flash') room.defenseMaxMs = 15_000;
+      else if (partyMode === 'infiltrato') room.defenseMaxMs = 60_000;
+      else if (partyMode === 'coppie') room.defenseMaxMs = 30_000;
+      else if (partyMode === 'assurdo') room.defenseMaxMs = 30_000;
+      const count = dilemmaCount || 5;
+      const cards = getCuratedCards(partyMode, {
+        count,
+        intensity: room.partyIntensity,
+        rng: this.rng,
+      });
+      room.partyCards = cards;
+      room.dilemmaCount = cards.length;
+      room.currentPartyCard = null;
+      room.gognaVotes = new Map();
+      room.gognaTargetId = null;
+      room.gognaTargetNickname = null;
+      room.gognaVotesCount = 0;
+      // Party modes stay clean without surprise meta-twists overriding their dedicated flow
+      room.devilRoundIndex = null;
+      room.knowRoundIndex = null;
+      room.twistRoundIndices = new Set();
+    } else {
+      room.partyMode = null;
+      room.theme = null;
+      room.flashResult = null;
+      room.infiltratoRoundResult = null;
+      room.hotSeatCouple = null;
+      room.hotSeatBets = new Map();
+      room.partyScores = new Map();
+      room.partyCards = [];
+      room.currentPartyCard = null;
+    }
     return { ok: true, room };
   }
 
@@ -1610,65 +1767,69 @@ export class RoomStore {
     // "L'Infiltrato": the end-game accusation leads into FINAL_AWARDS, resolving
     // whether the infiltrator was caught and whether they won.
     if (room.phase === 'ACCUSE') {
-      room.phase = 'FINAL_AWARDS';
-      room.phaseExpiresAt = this.expiryFor('FINAL_AWARDS');
-      infiltrato.resolveInfiltrato(room);
-      return { ok: true, room };
+      if (room.partyMode !== 'infiltrato') {
+        room.phase = 'FINAL_AWARDS';
+        room.phaseExpiresAt = this.expiryFor('FINAL_AWARDS');
+        infiltrato.resolveInfiltrato(room);
+        return { ok: true, room };
+      }
     }
 
     // A finished INTERVENTI mini-turn: walk the frozen queue, then resume the
     // defenders (next defender or fall through to VOTE_2). Per-defender interventi.
     let applauseSnapshotted = false;
-    if (room.phase === 'INTERVENTI') {
-      if (room.interventiIndex < room.interventiQueue.length - 1) {
+    if (!room.partyMode) {
+      if (room.phase === 'INTERVENTI') {
+        if (room.interventiIndex < room.interventiQueue.length - 1) {
+          defenseTurns.snapshotApplause(room);
+          room.interventiIndex++;
+          defenseSetup.armTurn(room, this.now());
+          return { ok: true, room };
+        }
+        // Snapshot the last intervenor's applause BEFORE clearing the queue —
+        // currentSpeakerId reads it to know who was just speaking.
         defenseTurns.snapshotApplause(room);
-        room.interventiIndex++;
+        applauseSnapshotted = true;
+        room.interventiQueue = [];
+        room.interventiIndex = 0;
+        if (room.defenseTurnIndex < room.defenders.length - 1) {
+          room.phase = 'DEFENSE';
+          room.defenseTurnIndex++;
+          room.raisedHands = [];
+          room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
+          defenseSetup.armTurn(room, this.now());
+          return { ok: true, room };
+        }
+        // No defenders left: fall through to the normal DEFENSE -> VOTE_2 transition.
+        room.phase = 'DEFENSE';
+      }
+
+      // A finished DEFENSE turn: if the defender drew raised hands, run their
+      // interventi first; else advance to the next defender; else fall through to
+      // VOTE_2 via the normal transition below.
+      if (room.phase === 'DEFENSE' && room.raisedHands.length > 0) {
+        defenseTurns.snapshotApplause(room);
+        room.phase = 'INTERVENTI';
+        room.interventiQueue = [...room.raisedHands];
+        room.interventiIndex = 0;
+        room.raisedHands = [];
         defenseSetup.armTurn(room, this.now());
         return { ok: true, room };
       }
-      // Snapshot the last intervenor's applause BEFORE clearing the queue —
-      // currentSpeakerId reads it to know who was just speaking.
-      defenseTurns.snapshotApplause(room);
-      applauseSnapshotted = true;
-      room.interventiQueue = [];
-      room.interventiIndex = 0;
-      if (room.defenseTurnIndex < room.defenders.length - 1) {
-        room.phase = 'DEFENSE';
+      if (room.phase === 'DEFENSE' && room.defenseTurnIndex < room.defenders.length - 1) {
+        defenseTurns.snapshotApplause(room);
         room.defenseTurnIndex++;
         room.raisedHands = [];
         room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
         defenseSetup.armTurn(room, this.now());
         return { ok: true, room };
       }
-      // No defenders left: fall through to the normal DEFENSE -> VOTE_2 transition.
-      room.phase = 'DEFENSE';
-    }
-
-    // A finished DEFENSE turn: if the defender drew raised hands, run their
-    // interventi first; else advance to the next defender; else fall through to
-    // VOTE_2 via the normal transition below.
-    if (room.phase === 'DEFENSE' && room.raisedHands.length > 0) {
-      defenseTurns.snapshotApplause(room);
-      room.phase = 'INTERVENTI';
-      room.interventiQueue = [...room.raisedHands];
-      room.interventiIndex = 0;
-      room.raisedHands = [];
-      defenseSetup.armTurn(room, this.now());
-      return { ok: true, room };
-    }
-    if (room.phase === 'DEFENSE' && room.defenseTurnIndex < room.defenders.length - 1) {
-      defenseTurns.snapshotApplause(room);
-      room.defenseTurnIndex++;
-      room.raisedHands = [];
-      room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
-      defenseSetup.armTurn(room, this.now());
-      return { ok: true, room };
-    }
-    // The last defender's turn ended with no raised hands (falls through to
-    // VOTE_2 below) — snapshot it, unless the INTERVENTI branch above already
-    // did (that snapshot belongs to the last intervenor, not this defender).
-    if (room.phase === 'DEFENSE' && !applauseSnapshotted) {
-      defenseTurns.snapshotApplause(room);
+      // The last defender's turn ended with no raised hands (falls through to
+      // VOTE_2 below) — snapshot it, unless the INTERVENTI branch above already
+      // did (that snapshot belongs to the last intervenor, not this defender).
+      if (room.phase === 'DEFENSE' && !applauseSnapshotted) {
+        defenseTurns.snapshotApplause(room);
+      }
     }
 
     // Percorso threads the same per-dilemma sequence through chapter cards/recaps;
@@ -1680,6 +1841,42 @@ export class RoomStore {
     // untouched, mirroring how ACCUSE is inserted below rather than in the
     // pure sequence functions.
     const step = (phase: GamePhase, idx: number): PhaseTransition => {
+      if (room.partyMode) {
+        const total = room.dilemmaCount ?? 0;
+        if (room.partyMode === 'flash') {
+          if (phase === 'PHASE_INTRO') return { phase: 'DILEMMA_REVEAL', dilemmaIndex: 1 };
+          if (phase === 'DILEMMA_REVEAL') return { phase: 'VOTE_1', dilemmaIndex: idx };
+          if (phase === 'VOTE_1') return { phase: 'SPLIT_REVEAL', dilemmaIndex: idx };
+          if (phase === 'SPLIT_REVEAL') return { phase: 'DEFENSE', dilemmaIndex: idx };
+          if (phase === 'DEFENSE') {
+            return idx < total
+              ? { phase: 'DILEMMA_REVEAL', dilemmaIndex: idx + 1 }
+              : { phase: 'FINAL_AWARDS', dilemmaIndex: idx };
+          }
+        }
+        if (room.partyMode === 'infiltrato') {
+          if (phase === 'PHASE_INTRO') return { phase: 'DILEMMA_REVEAL', dilemmaIndex: 1 };
+          if (phase === 'DILEMMA_REVEAL') return { phase: 'DEFENSE', dilemmaIndex: idx };
+          if (phase === 'DEFENSE') return { phase: 'ACCUSE', dilemmaIndex: idx };
+          if (phase === 'ACCUSE') return { phase: 'SPLIT_REVEAL', dilemmaIndex: idx };
+          if (phase === 'SPLIT_REVEAL') {
+            return idx < total
+              ? { phase: 'DILEMMA_REVEAL', dilemmaIndex: idx + 1 }
+              : { phase: 'FINAL_AWARDS', dilemmaIndex: idx };
+          }
+        }
+        if (room.partyMode === 'coppie' || room.partyMode === 'assurdo') {
+          if (phase === 'PHASE_INTRO') return { phase: 'DILEMMA_REVEAL', dilemmaIndex: 1 };
+          if (phase === 'DILEMMA_REVEAL') return { phase: 'VOTE_1', dilemmaIndex: idx };
+          if (phase === 'VOTE_1') return { phase: 'SPLIT_REVEAL', dilemmaIndex: idx };
+          if (phase === 'SPLIT_REVEAL') return { phase: 'DEFENSE', dilemmaIndex: idx };
+          if (phase === 'DEFENSE') {
+            return idx < total
+              ? { phase: 'DILEMMA_REVEAL', dilemmaIndex: idx + 1 }
+              : { phase: 'FINAL_AWARDS', dilemmaIndex: idx };
+          }
+        }
+      }
       if (room.format === 'classic') {
         if (phase === 'PHASE_RESULTS' && groupMind.isGroupMindCheckpoint(idx, room.dilemmaCount ?? 0)) {
           // Checkpoints land at idx=2,4,6,…; occurrence = idx/2 = 1,2,3,…
@@ -1727,6 +1924,7 @@ export class RoomStore {
         room.phase === 'VOTE_1' &&
         transition.phase === 'SPLIT_REVEAL' &&
         room.format === 'classic' &&
+        !room.partyMode &&
         voting.allVoted(room) &&
         voting.unanimousSide(tally(room.votes)) !== null
       ) {
@@ -1739,12 +1937,34 @@ export class RoomStore {
       transition = step('SPEAKER_VOTE', transition.dilemmaIndex);
     }
     // Detour the end of an infiltrator game through the accusation phase.
-    if (transition.phase === 'FINAL_AWARDS' && room.infiltratorId) {
+    if (transition.phase === 'FINAL_AWARDS' && room.infiltratorId && !room.partyMode) {
       transition = { phase: 'ACCUSE', dilemmaIndex: transition.dilemmaIndex };
     }
     room.phase = transition.phase;
     room.dilemmaIndex = transition.dilemmaIndex;
-    room.phaseExpiresAt = this.expiryFor(transition.phase);
+    if (room.partyMode) {
+      if (transition.phase === 'DILEMMA_REVEAL') {
+        room.phaseExpiresAt = this.now() + (room.partyMode === 'flash' ? 3_000 : 5_000);
+      } else if (transition.phase === 'VOTE_1') {
+        room.phaseExpiresAt = this.now() + (room.partyMode === 'flash' ? 6_000 : 15_000);
+      } else if (transition.phase === 'SPLIT_REVEAL') {
+        room.phaseExpiresAt = this.now() + (room.partyMode === 'flash' ? 6_000 : 8_000);
+      } else if (transition.phase === 'DEFENSE') {
+        if (room.partyMode === 'infiltrato') {
+          room.phaseExpiresAt = this.now() + 60_000;
+        } else if (room.partyMode === 'flash') {
+          room.phaseExpiresAt = this.now() + 15_000;
+        } else {
+          room.phaseExpiresAt = this.now() + 20_000;
+        }
+      } else if (transition.phase === 'ACCUSE') {
+        room.phaseExpiresAt = this.now() + 20_000;
+      } else {
+        room.phaseExpiresAt = this.expiryFor(transition.phase);
+      }
+    } else {
+      room.phaseExpiresAt = this.expiryFor(transition.phase);
+    }
     // A new round starting is the round boundary (3.2): promote anyone who
     // late-joined last round, cap permitting.
     if (transition.phase === 'DILEMMA_REVEAL') promoteLateJoiners(room);
@@ -1789,7 +2009,83 @@ export class RoomStore {
     // Entering a new dilemma reveal draws the next (non-repeating) dilemma and
     // resets the round's secret votes so each dilemma starts from a clean tally.
     if (transition.phase === 'DILEMMA_REVEAL') {
-      if (room.format === 'percorso') {
+      if (room.partyMode && room.partyCards.length > 0) {
+        const cardIndex = (transition.dilemmaIndex - 1) % room.partyCards.length;
+        const card = room.partyCards[cardIndex];
+        room.currentPartyCard = card;
+        if (room.partyMode === 'flash') {
+          const fc = card as FlashCard;
+          room.currentDilemma = {
+            id: fc.id,
+            text: fc.text,
+            optionA: fc.optionA,
+            optionB: fc.optionB,
+            spuntiA: fc.spuntiA ?? [],
+            spuntiB: fc.spuntiB ?? [],
+            register: 'vita',
+            complessita: 'sorbetto',
+          };
+        } else if (room.partyMode === 'infiltrato') {
+          const ic = card as InfiltratoCard;
+          room.currentDilemma = {
+            id: ic.id,
+            text: ic.category ? `L'Infiltrato · ${ic.category}` : "L'Infiltrato: Smaschera il sospettato",
+            optionA: 'Innocente',
+            optionB: 'Sospetto',
+            spuntiA: [],
+            spuntiB: [],
+            register: 'vita',
+            complessita: 'sorbetto',
+          };
+        } else if (room.partyMode === 'coppie') {
+          const cc = card as CoppieCard;
+          room.currentDilemma = {
+            id: cc.id,
+            text: cc.prompt,
+            optionA: cc.optionA ?? (cc.cardType === 'allineamento' ? 'Lui / Opzione A' : 'Fatto!'),
+            optionB: cc.optionB ?? (cc.cardType === 'allineamento' ? 'Lei / Opzione B' : 'Penitenza! 🍺'),
+            spuntiA: [],
+            spuntiB: [],
+            register: 'vita',
+            complessita: 'sorbetto',
+          };
+        } else if (room.partyMode === 'assurdo') {
+          const ac = card as AssurdoCard;
+          room.currentDilemma = {
+            id: ac.id,
+            text: ac.prompt,
+            optionA: ac.optionA ?? (ac.cardType === 'gogna' ? 'Vota un amico' : 'Accetto (500€)'),
+            optionB: ac.optionB ?? (ac.cardType === 'gogna' ? 'Nessuno' : 'Rifiuto (Dignità)'),
+            spuntiA: [],
+            spuntiB: [],
+            register: 'vita',
+            complessita: 'sorbetto',
+          };
+        }
+        room.gognaVotes.clear();
+        room.gognaTargetId = null;
+        room.gognaTargetNickname = null;
+        room.gognaVotesCount = 0;
+        if (room.partyMode === 'infiltrato') {
+          const humans = [...room.players.values()].filter((p) => !p.isBot);
+          if (humans.length > 0) {
+            room.infiltratorId = humans[Math.floor(this.rng() * humans.length)].id;
+          }
+          room.accusations.clear();
+          room.infiltratoRoundResult = null;
+        } else if (room.partyMode === 'coppie') {
+          if (room.players.size > 2) {
+            const humans = [...room.players.values()].filter((p) => !p.isBot);
+            if (humans.length >= 2) {
+              const i1 = (transition.dilemmaIndex - 1) % humans.length;
+              const i2 = transition.dilemmaIndex % humans.length;
+              room.hotSeatCouple = [humans[i1].id, humans[i2].id];
+            }
+          }
+          room.hotSeatBets.clear();
+        }
+        room.flashResult = null;
+      } else if (room.format === 'percorso') {
         // The ascent is precomputed: walk it by index, and track the live tappa.
         room.currentDilemma = room.plannedDilemmas[transition.dilemmaIndex - 1] ?? null;
         room.currentTappa = (room.plannedTappe[transition.dilemmaIndex - 1] ?? null) as Tappa | null;
@@ -1863,18 +2159,147 @@ export class RoomStore {
     // surprise twist (4.3), if this round was planned for one, is drawn first —
     // selectDefenders/armTurn below both read room.currentTwist.
     if (transition.phase === 'DEFENSE') {
-      room.currentTwist = twists.isTwistRound(room) ? twists.pickTwist(this.rng) : null;
-      room.defenders = defenseSetup.selectDefenders(room, this.rng);
-      room.absurdConstraint = absurdConstraints.pickAbsurdConstraint(this.rng);
-      room.defenseTurnIndex = 0;
-      room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
-      room.raisedHands = [];
-      defenseSetup.armTurn(room, this.now());
+      if (room.partyMode) {
+        if (room.partyMode === 'flash') room.defenseMaxMs = 15_000;
+        else if (room.partyMode === 'infiltrato') room.defenseMaxMs = 60_000;
+        else if (room.partyMode === 'coppie') room.defenseMaxMs = 20_000;
+        else if (room.partyMode === 'assurdo') room.defenseMaxMs = 20_000;
+        room.defenders = [];
+        room.defenseTurnIndex = 0;
+        room.raisedHands = [];
+      } else {
+        room.currentTwist = twists.isTwistRound(room) ? twists.pickTwist(this.rng) : null;
+        room.defenders = defenseSetup.selectDefenders(room, this.rng);
+        room.absurdConstraint = absurdConstraints.pickAbsurdConstraint(this.rng);
+        room.defenseTurnIndex = 0;
+        room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
+        room.raisedHands = [];
+        defenseSetup.armTurn(room, this.now());
+      }
     }
     // Entering VOTE_1: bots cast their (random) first vote so the human(s) only
     // wait on themselves; the per-choice split stays secret until SPLIT_REVEAL.
     if (transition.phase === 'VOTE_1') {
       botVotes.castBotFirstVotes(room, this.rng);
+      if (room.partyMode === 'assurdo') {
+        const playerIds = [...room.players.keys()];
+        for (const p of room.players.values()) {
+          if (p.isBot && playerIds.length > 0) {
+            const target = playerIds[Math.floor(this.rng() * playerIds.length)];
+            room.gognaVotes.set(p.id, target);
+          }
+        }
+      }
+    }
+    if (transition.phase === 'SPLIT_REVEAL') {
+      if (room.partyMode === 'flash') {
+        const countA = [...room.votes.values()].filter((v) => v === 'A').length;
+        const countB = [...room.votes.values()].filter((v) => v === 'B').length;
+        const totalVotes = countA + countB;
+        const isUnanimous = totalVotes > 0 && (countA === 0 || countB === 0);
+        const isTie = totalVotes > 0 && countA === countB;
+        let minoritySide: VoteChoice | null = null;
+        if (!isUnanimous && !isTie) {
+          minoritySide = countA < countB ? 'A' : 'B';
+        }
+        const minorityNicknames: string[] = [];
+        const majorityNicknames: string[] = [];
+        const unvotedNicknames: string[] = [];
+        for (const p of room.players.values()) {
+          if (p.isBot) continue;
+          const v = room.votes.get(p.id);
+          if (!v) {
+            unvotedNicknames.push(p.nickname);
+            minorityNicknames.push(p.nickname);
+          } else if (isUnanimous) {
+            majorityNicknames.push(p.nickname);
+            minorityNicknames.push(p.nickname);
+          } else if (isTie) {
+            // Guerra civile
+          } else {
+            if (v === minoritySide) {
+              minorityNicknames.push(p.nickname);
+            } else {
+              majorityNicknames.push(p.nickname);
+            }
+          }
+        }
+        room.flashResult = {
+          isUnanimous,
+          isTie,
+          minoritySide,
+          minorityNicknames,
+          majorityNicknames,
+          unvotedNicknames,
+        };
+      } else if (room.partyMode === 'infiltrato') {
+        const tallyAccusations = new Map<string, number>();
+        for (const accusedId of room.accusations.values()) {
+          tallyAccusations.set(accusedId, (tallyAccusations.get(accusedId) ?? 0) + 1);
+        }
+        let topAccusedId: string | null = null;
+        let topAccusedCount = 0;
+        for (const [accusedId, count] of tallyAccusations.entries()) {
+          if (count > topAccusedCount) {
+            topAccusedCount = count;
+            topAccusedId = accusedId;
+          }
+        }
+        const caught = topAccusedId != null && topAccusedId === room.infiltratorId;
+        const infiltratorWon = !caught;
+        const ic = room.currentPartyCard as InfiltratoCard;
+        room.infiltratoRoundResult = {
+          round: room.dilemmaIndex,
+          infiltratorId: room.infiltratorId ?? '',
+          infiltratorNickname: room.infiltratorId ? (room.players.get(room.infiltratorId)?.nickname ?? 'Infiltrato') : 'Infiltrato',
+          groupQuestion: ic?.groupQuestion ?? '',
+          impostorQuestion: ic?.impostorQuestion ?? '',
+          accusedId: topAccusedId,
+          accusedNickname: topAccusedId ? (room.players.get(topAccusedId)?.nickname ?? null) : null,
+          caught,
+          infiltratorWon,
+        };
+        if (caught) {
+          for (const [voterId, accId] of room.accusations.entries()) {
+            if (accId === room.infiltratorId) {
+              room.partyScores.set(voterId, (room.partyScores.get(voterId) ?? 0) + 100);
+            }
+          }
+        } else if (room.infiltratorId) {
+          room.partyScores.set(room.infiltratorId, (room.partyScores.get(room.infiltratorId) ?? 0) + 200);
+        }
+      } else if (room.partyMode === 'coppie') {
+        if (room.hotSeatCouple) {
+          const [id1, id2] = room.hotSeatCouple;
+          const v1 = room.votes.get(id1);
+          const v2 = room.votes.get(id2);
+          const matched = Boolean(v1 && v2 && v1 === v2);
+          const expected = matched ? 'match' : 'scoppiano';
+          for (const [voterId, bet] of room.hotSeatBets.entries()) {
+            if (bet === expected) {
+              room.partyScores.set(voterId, (room.partyScores.get(voterId) ?? 0) + 50);
+            }
+          }
+        }
+      } else if (room.partyMode === 'assurdo') {
+        const tallyMap = new Map<string, number>();
+        for (const targetId of room.gognaVotes.values()) {
+          tallyMap.set(targetId, (tallyMap.get(targetId) ?? 0) + 1);
+        }
+        let topId: string | null = null;
+        let topCount = 0;
+        for (const [targetId, cnt] of tallyMap.entries()) {
+          if (cnt > topCount) {
+            topCount = cnt;
+            topId = targetId;
+          }
+        }
+        if (topId) {
+          room.gognaTargetId = topId;
+          room.gognaTargetNickname = room.players.get(topId)?.nickname ?? null;
+          room.gognaVotesCount = topCount;
+        }
+      }
     }
     // Entering VOTE_2: snapshot the first vote so the live re-vote can be
     // compared against it (swing). `votes` is left intact, so each player's
@@ -2293,6 +2718,127 @@ export class RoomStore {
     return room ? infiltrato.publicInfiltratoResult(room) : null;
   }
 
+  /** Record a vote for a friend in ASSURDO MA SEMPLICE ("La Gogna") mode. */
+  recordGognaVote(
+    code: string,
+    voterId: string,
+    targetId: string,
+  ): { ok: true } | { ok: false; error: string } {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.phase !== 'VOTE_1' && room.phase !== 'VOTE_2') return { ok: false, error: 'NOT_VOTE_PHASE' };
+    if (!room.players.has(voterId) || !room.players.has(targetId)) {
+      return { ok: false, error: 'INVALID_TARGET' };
+    }
+    room.gognaVotes.set(voterId, targetId);
+    if (!room.votes.has(voterId)) {
+      room.votes.set(voterId, 'A');
+    }
+    return { ok: true };
+  }
+
+  recordHotSeatBet(code: string, playerId: string, bet: 'match' | 'scoppiano'): boolean {
+    const room = this.rooms.get(code);
+    if (!room || room.partyMode !== 'coppie' || room.phase !== 'VOTE_1') return false;
+    if (room.hotSeatCouple && (room.hotSeatCouple[0] === playerId || room.hotSeatCouple[1] === playerId)) {
+      return false;
+    }
+    room.hotSeatBets.set(playerId, bet);
+    return true;
+  }
+
+  /** Public party card view for host + phones. Secret questions stay hidden until unmasked. */
+  publicPartyCard(code: string) {
+    const room = this.rooms.get(code);
+    if (!room || !room.partyMode || !room.currentPartyCard) return null;
+    const card = room.currentPartyCard;
+    if (room.partyMode === 'flash') {
+      const fc = card as FlashCard;
+      return {
+        mode: 'flash' as const,
+        cardType: 'dilemma' as const,
+        prompt: fc.text,
+        optionA: fc.optionA,
+        optionB: fc.optionB,
+        penalty: fc.penalty ?? 'Chi è in minoranza beve / fa penitenza o si difende in 15 secondi!',
+        flashResult: room.flashResult,
+      };
+    }
+    if (room.partyMode === 'infiltrato') {
+      const ic = card as InfiltratoCard;
+      const unmasked =
+        room.phase === 'SPLIT_REVEAL' || room.phase === 'FINAL_AWARDS' || room.infiltratoRoundResult != null;
+      const infiltratorPlayer = room.infiltratorId ? room.players.get(room.infiltratorId) : null;
+      return {
+        mode: 'infiltrato' as const,
+        cardType: 'dilemma' as const,
+        prompt: unmasked
+          ? `L'Infiltrato era ${infiltratorPlayer?.nickname ?? 'uno di voi'}!`
+          : 'Domanda segreta inviata sui telefoni! Rispondete ad alta voce a turno, poi 60s di dibattito.',
+        groupQuestion: unmasked ? ic.groupQuestion : undefined,
+        impostorQuestion: unmasked ? ic.impostorQuestion : undefined,
+        category: ic.category,
+        infiltratorUnmasked: unmasked,
+        infiltratorNickname: unmasked ? (infiltratorPlayer?.nickname ?? undefined) : undefined,
+        infiltratorId: unmasked ? (room.infiltratorId ?? undefined) : undefined,
+        infiltratoRoundResult: room.infiltratoRoundResult,
+      };
+    }
+    if (room.partyMode === 'coppie') {
+      const cc = card as CoppieCard;
+      let hotSeat: HotSeatPayload | null = null;
+      if (room.hotSeatCouple) {
+        const [id1, id2] = room.hotSeatCouple;
+        const nick1 = room.players.get(id1)?.nickname ?? 'P1';
+        const nick2 = room.players.get(id2)?.nickname ?? 'P2';
+        const v1 = room.votes.get(id1);
+        const v2 = room.votes.get(id2);
+        const coupleMatched = Boolean(v1 && v2 && v1 === v2);
+        const correctSpectators: string[] = [];
+        const expected = coupleMatched ? 'match' : 'scoppiano';
+        for (const [voterId, bet] of room.hotSeatBets.entries()) {
+          if (bet === expected) {
+            const n = room.players.get(voterId)?.nickname;
+            if (n) correctSpectators.push(n);
+          }
+        }
+        const isRevealed = room.phase === 'SPLIT_REVEAL' || room.phase === 'DEFENSE' || room.phase === 'FINAL_AWARDS';
+        hotSeat = {
+          coupleIds: [id1, id2],
+          coupleNicknames: [nick1, nick2],
+          coupleMatched: isRevealed ? coupleMatched : undefined,
+          correctSpectators: isRevealed ? correctSpectators : undefined,
+        };
+      }
+      return {
+        mode: 'coppie' as const,
+        cardType: cc.cardType,
+        intensity: cc.intensity,
+        prompt: cc.prompt,
+        optionA: cc.optionA,
+        optionB: cc.optionB,
+        penalty: cc.penalty,
+        hotSeat,
+      };
+    }
+    if (room.partyMode === 'assurdo') {
+      const ac = card as AssurdoCard;
+      return {
+        mode: 'assurdo' as const,
+        cardType: ac.cardType,
+        prompt: ac.prompt,
+        optionA: ac.optionA,
+        optionB: ac.optionB,
+        penalty: ac.penalty,
+        sentenza: ac.sentenza,
+        gognaTargetId: room.gognaTargetId ?? undefined,
+        gognaTargetNickname: room.gognaTargetNickname ?? undefined,
+        gognaVotes: room.gognaVotesCount || undefined,
+      };
+    }
+    return null;
+  }
+
   /**
    * "I momenti della serata" (5.5): every named moment detected across the
    * game, only at FINAL_AWARDS (shown before the awards); null otherwise.
@@ -2682,7 +3228,27 @@ export class RoomStore {
    */
   allVoted(code: string): boolean {
     const room = this.rooms.get(code);
-    return room ? voting.allVoted(room) : false;
+    if (!room) return false;
+    if (room.partyMode === 'coppie' && room.hotSeatCouple && room.players.size > 2) {
+      const [c1, c2] = room.hotSeatCouple;
+      const coupleVoted = room.votes.has(c1) && room.votes.has(c2);
+      if (!coupleVoted) return false;
+      const spectators = [...room.players.values()].filter(
+        (p) => !p.isBot && p.connected !== false && p.id !== c1 && p.id !== c2 && !room.lateJoiners.has(p.id),
+      );
+      return spectators.every((p) => room.hotSeatBets.has(p.id));
+    }
+    if (room.partyMode === 'assurdo') {
+      const card = room.currentPartyCard as AssurdoCard | null;
+      if (card?.cardType === 'gogna') {
+        const present = [...room.players.values()].filter(
+          (p) => p.connected !== false && !room.lateJoiners.has(p.id),
+        );
+        if (present.length === 0) return false;
+        return present.every((p) => room.gognaVotes.has(p.id));
+      }
+    }
+    return voting.allVoted(room);
   }
 
   /** Mark a player's (pre-filled) second vote as explicitly confirmed. VOTE_2 only. */

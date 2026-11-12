@@ -46,7 +46,7 @@ export default function Landing() {
   return (
     <main className={styles.page}>
       <nav className={styles.nav}>
-        <Logo size={26} className={styles.navLogo} />
+        <Logo size={28} payoff className={styles.navLogo} />
         <div className={styles.navLinks}>
           <a href="#come">Come si gioca</a>
           <a href="#modalita">Modalità</a>

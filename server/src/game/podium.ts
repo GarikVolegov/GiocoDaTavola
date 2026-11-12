@@ -39,11 +39,25 @@ export function podiumPoints(s: PlayerStats): number {
  */
 export function computePodium(room: Room): PodiumEntry[] {
   const ranked: PodiumEntry[] = [];
-  for (const [id, s] of room.stats.entries()) {
-    if (s.rounds === 0) continue;
-    const player = room.players.get(id);
-    if (!player || player.isBot) continue;
-    ranked.push({ player: { id, nickname: player.nickname }, points: podiumPoints(s), rank: 0 });
+  if (room.partyMode) {
+    for (const [id, player] of room.players.entries()) {
+      if (player.isBot) continue;
+      const partyPts = room.partyScores?.get(id) ?? 0;
+      const s = room.stats.get(id);
+      const classicPts = s ? podiumPoints(s) : 0;
+      ranked.push({
+        player: { id, nickname: player.nickname },
+        points: partyPts + classicPts,
+        rank: 0,
+      });
+    }
+  } else {
+    for (const [id, s] of room.stats.entries()) {
+      if (s.rounds === 0) continue;
+      const player = room.players.get(id);
+      if (!player || player.isBot) continue;
+      ranked.push({ player: { id, nickname: player.nickname }, points: podiumPoints(s), rank: 0 });
+    }
   }
   ranked.sort((a, b) => b.points - a.points);
   ranked.forEach((e, i) => {

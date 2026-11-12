@@ -2,7 +2,7 @@
 .page {
   min-height: 100vh;
   min-height: 100dvh;
-  max-width: 36rem;
+  max-width: 40rem;
   margin: 0 auto;
   /* Clear the iPhone notch / home-indicator when installed to the home screen. */
   padding: max(var(--space-5), env(safe-area-inset-top, 0px)) max(var(--space-5), env(safe-area-inset-right, 0px))
@@ -12,25 +12,30 @@
   gap: var(--space-5);
   color: var(--text);
   font-family: var(--font-body);
+  background: transparent;
 }
 
 .header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: var(--space-4);
 }
 .back {
-  background: none;
-  border: none;
-  padding: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 0.35rem 0.95rem;
   cursor: pointer;
   color: var(--gold);
   font: inherit;
   font-size: var(--text-sm);
+  font-weight: 600;
+  transition: all var(--dur-fast) var(--ease);
 }
 .back:hover {
-  text-decoration: underline;
+  background: var(--gold-soft);
+  box-shadow: var(--glow-accent);
 }
 
 .title {
@@ -46,7 +51,13 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  padding: var(--space-5);
+  padding: var(--space-6) var(--space-5);
+  background: rgba(14, 20, 42, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), var(--glass-highlight);
 }
 
 .preview {
@@ -54,6 +65,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-4);
+  padding: var(--space-2) 0;
 }
 .previewActions {
   display: flex;
@@ -82,13 +94,18 @@
   padding: var(--space-1);
   border-radius: var(--radius-pill);
   cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-spring);
+}
+.preset:hover {
+  transform: scale(1.1);
 }
 .preset:focus-visible {
   outline: none;
-  box-shadow: var(--ring-gold);
+  box-shadow: 0 0 0 2px var(--gold), var(--glow-accent);
 }
 .presetSelected {
-  box-shadow: var(--ring-gold);
+  box-shadow: 0 0 0 2.5px var(--gold), var(--glow-accent);
+  transform: scale(1.08);
 }
 
 .saved {

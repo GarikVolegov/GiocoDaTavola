@@ -22,8 +22,8 @@ describe('ShareInviteButton', () => {
     await vi.waitFor(() => expect(shareSpy).toHaveBeenCalledTimes(1));
 
     expect(shareSpy).toHaveBeenCalledWith({
-      title: 'Schierati',
-      text: 'Unisciti alla mia partita su Schierati!',
+      title: 'Nexus',
+      text: 'Unisciti alla mia partita su Nexus!',
       url: `${window.location.origin}/join?room=ABCD`,
     });
   });
@@ -43,7 +43,7 @@ describe('ShareInviteButton', () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(writeTextSpy).toHaveBeenCalledWith(
-      `Unisciti alla mia partita su Schierati!\n${window.location.origin}/join?room=ABCD`,
+      `Unisciti alla mia partita su Nexus!\n${window.location.origin}/join?room=ABCD`,
     );
     expect(screen.getByText('✓ Link copiato')).toBeInTheDocument();
 

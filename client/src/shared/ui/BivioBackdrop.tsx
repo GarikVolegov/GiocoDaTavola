@@ -1,4 +1,5 @@
 import type { VoteSplit } from '../events';
+import { Nexus3DCanvas } from '../nexus3d/Nexus3DCanvas';
 import styles from './BivioBackdrop.module.css';
 
 /**
@@ -13,28 +14,31 @@ export function leanFromSplit(split: VoteSplit): number {
 }
 
 type BivioBackdropProps = {
-  /** host = scena piena; player = scena accennata (UI di gioco leggibile). */
-  variant?: 'host' | 'player';
+  /** host = scena piena; player = scena accennata; landing = epica d'apertura; dashboard = elegante */
+  variant?: 'host' | 'player' | 'landing' | 'dashboard';
+  phase?: string;
+  isRibaltone?: boolean;
 };
 
 /**
- * Sfondo decorativo "bivio in prospettiva": due corsie a ventaglio dal basso
- * (A blu a sinistra, B terracotta a destra) + alone d'orizzonte + velo. Layer
- * fisso dietro al contenuto, aria-hidden e non interattivo. `variant` regola
- * solo l'intensità (--bivio-k). La reattività al reveal arriva dalla CSS var
- * globale --bivio-lean (default 50), impostata da HostApp.
+ * Sfondo immersivo "Nexus 3D & Bivio in prospettiva":
+ * Canvas 3D procedurale Three.js con due sentieri di luce e monoliti cosmici
+ * + velo e corsie sfumate per garantire leggibilità del testo su qualsiasi schermo.
  */
-export function BivioBackdrop({ variant = 'player' }: BivioBackdropProps) {
+export function BivioBackdrop({ variant = 'player', phase, isRibaltone }: BivioBackdropProps) {
+  const intensity = variant === 'host' ? '1' : variant === 'landing' ? '0.85' : '0.4';
   return (
     <div
       className={styles.backdrop}
       data-testid="bivio-backdrop"
       aria-hidden="true"
-      style={{ ['--bivio-k' as never]: variant === 'host' ? '1' : '0.4' }}
+      style={{ ['--bivio-k' as never]: intensity }}
     >
+      <Nexus3DCanvas variant={variant} phase={phase} isRibaltone={isRibaltone} />
       <div className={styles.laneA} />
       <div className={styles.laneB} />
       <div className={styles.veil} />
     </div>
   );
 }
+

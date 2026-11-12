@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { randomUUID } from 'crypto';
 import { RoomStore, isVotingPhase, tappaCounts, storieCatalog, loadStories, type Room } from './game/rooms';
-import { loadDilemmas } from './game/deck';
+import { loadDilemmas, dilemmasForRegister, type ContentRegister } from './game/deck';
 import { generateBotDefense, aiDefenseEnabled } from './game/aiDefense';
 import { migrate, dbEnabled, getPool } from './db';
 import { saveAwards, awardsToPersist, saveGameRecords, gamesToPersist } from './persistence';
@@ -15,6 +15,8 @@ import { verifyClerkToken } from './clerk';
 import { serializeRoom, deserializeRoom } from './game/roomSnapshot';
 import { persistSnapshot, loadAllSnapshots, deleteSnapshot } from './snapshotStore';
 import { createRateLimiter } from './rateLimit';
+import { getOrGenerateTts } from './audioTts';
+import { generatePartyCards, getCuratedCards, isGeminiAvailable, type PartyMode } from './game/geminiGenerator';
 
 // Load server/.env (DATABASE_URL, CLERK_SECRET_KEY, AI_BASE_URL/AI_MODEL, …) if
 // present. Zero-dependency: uses Node's built-in env-file loader (Node 20.12+).
@@ -289,6 +291,8 @@ function gameStatePayload(room: Room) {
     duoTurn: rooms.publicDuoTurn(room.code),
     duoRoundResult: rooms.publicDuoRoundResult(room.code),
     duoPortrait: rooms.publicDuoPortrait(room.code),
+    partyMode: room.partyMode ?? undefined,
+    partyCard: rooms.publicPartyCard(room.code),
   };
 }
 
@@ -438,6 +442,21 @@ function broadcastAdvance(code: string, hadLateJoiners: boolean): void {
       if (sid) io.to(sid).emit('player:myWriteToken', { token });
     }
   }
+  if (room && room.partyMode === 'infiltrato' && room.currentPartyCard && room.phase === 'DILEMMA_REVEAL') {
+    const card = room.currentPartyCard as { groupQuestion?: string; impostorQuestion?: string };
+    for (const player of room.players.values()) {
+      if (player.isBot) continue;
+      const sid = playerSocket.get(player.id);
+      if (!sid) continue;
+      const isInfiltrator = player.id === room.infiltratorId;
+      const question = isInfiltrator ? (card.impostorQuestion ?? '') : (card.groupQuestion ?? '');
+      io.to(sid).emit('player:secretQuestion', {
+        question,
+        isInfiltrator,
+        round: room.dilemmaIndex,
+      });
+    }
+  }
   if (room && (room.phase === 'FINAL_AWARDS' || room.phase === 'DUO_PORTRAIT')) {
     saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards failed', e));
     saveGameRecords(gamesToPersist(room)).catch((e) => console.error('[db] saveGameRecords failed', e));
@@ -483,6 +502,24 @@ app.get('/api/health', async (_req, res) => {
     }
   }
   res.json({ ok: true, db });
+});
+
+// Dynamic neural TTS narration endpoint (male Diego studio voice).
+app.get('/api/audio/tts', async (req, res) => {
+  const text = typeof req.query.text === 'string' ? req.query.text.trim() : '';
+  if (!text) {
+    res.status(400).json({ error: 'Testo mancante' });
+    return;
+  }
+  try {
+    const filePath = await getOrGenerateTts(text);
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.sendFile(filePath);
+  } catch (err) {
+    console.error('[tts] generation error:', err);
+    res.status(500).json({ error: 'Errore generazione voce narrante' });
+  }
 });
 
 // The caller's own saved awards. Bearer token (Clerk) → userId → their rows only.
@@ -626,6 +663,47 @@ app.put('/api/me/profile', dbRoute(async (req, res) => {
   res.json(result.value);
 }));
 
+const deckLimiter = createRateLimiter(20, 60_000);
+
+// Deck endpoint for Pass & Play ("Passa il Telefono", 1-device local mode).
+// Returns curated or AI-generated cards without requiring a Socket.IO room.
+app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
+  const clientIp = req.ip || 'unknown';
+  if (!deckLimiter.allow(clientIp)) {
+    res.status(429).json({ error: 'too-many-requests' });
+    return;
+  }
+
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const modeRaw = typeof body.mode === 'string' ? body.mode : 'flash';
+  const countRaw = typeof body.count === 'number' && Number.isFinite(body.count) ? Math.floor(body.count) : 5;
+  const count = Math.max(1, Math.min(15, countRaw));
+  const intensity = body.intensity === 'piccante' ? 'piccante' : 'complicita';
+  const theme = typeof body.theme === 'string' ? body.theme.trim().slice(0, 80) : undefined;
+  const registerRaw = typeof body.register === 'string' ? body.register : 'misto';
+  const register: ContentRegister =
+    registerRaw === 'vita' || registerRaw === 'business' || registerRaw === 'carriera' ? registerRaw : 'misto';
+
+  if (modeRaw === 'classico') {
+    const pool = dilemmasForRegister(loadDilemmas(), register).filter((d) => !d.delicato && !d.roster);
+    const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, count);
+    res.json({ mode: 'classico', cards: shuffled, source: 'curated' });
+    return;
+  }
+
+  const validPartyModes: PartyMode[] = ['flash', 'infiltrato', 'coppie', 'assurdo'];
+  const partyMode: PartyMode = validPartyModes.includes(modeRaw as PartyMode) ? (modeRaw as PartyMode) : 'flash';
+
+  if (theme && isGeminiAvailable()) {
+    const cards = await generatePartyCards(partyMode, { count, intensity, theme });
+    res.json({ mode: partyMode, cards, source: 'gemini' });
+    return;
+  }
+
+  const cards = getCuratedCards(partyMode, { count, intensity });
+  res.json({ mode: partyMode, cards, source: 'curated' });
+});
+
 io.on('connection', (socket) => {
   console.log('[server] client connected:', socket.id);
 
@@ -671,7 +749,7 @@ io.on('connection', (socket) => {
 
   // The leader starts the game for their room, choosing the dilemma count.
   // Gated: only the socket whose player is the room leader may start.
-  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string; storyId?: string; mood?: string; delicatoOptIn?: boolean; serataLunga?: boolean; caos?: string; seenDilemmaIds?: string[] }) => {
+  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string; storyId?: string; mood?: string; delicatoOptIn?: boolean; serataLunga?: boolean; caos?: string; seenDilemmaIds?: string[]; partyMode?: string; partyIntensity?: string; theme?: string }) => {
     const code = leaderCodeFor(socket.id);
     if (!code) {
       socket.emit('leader:startError', { error: 'ROOM_NOT_FOUND' });
@@ -692,12 +770,18 @@ io.on('connection', (socket) => {
     const seenDilemmaIds = Array.isArray(payload?.seenDilemmaIds)
       ? payload.seenDilemmaIds.slice(0, 1000).map((id) => String(id))
       : [];
+    const partyMode = payload?.partyMode && ['flash', 'infiltrato', 'coppie', 'assurdo'].includes(payload.partyMode)
+      ? (payload.partyMode as PartyMode)
+      : undefined;
+    const partyIntensity = payload?.partyIntensity === 'piccante' ? 'piccante' : 'complicita';
+    const theme = typeof payload?.theme === 'string' ? payload.theme.trim() : undefined;
+
     const result = rooms.startGame(
       code,
       Number(payload?.dilemmaCount),
       String(payload?.register ?? 'misto'),
       String(payload?.mode ?? 'gruppo'),
-      Boolean(payload?.infiltrato),
+      Boolean(payload?.infiltrato || partyMode === 'infiltrato'),
       Boolean(payload?.squadre),
       percorso,
       storia,
@@ -706,10 +790,24 @@ io.on('connection', (socket) => {
       Boolean(payload?.serataLunga),
       String(payload?.caos ?? 'assente'),
       seenDilemmaIds,
+      partyMode,
+      partyIntensity,
+      theme,
     );
     if (!result.ok) {
       socket.emit('leader:startError', { error: result.error });
       return;
+    }
+    // If Gemini is available and we're in a party mode, optionally generate fresh cards in background
+    if (partyMode && isGeminiAvailable()) {
+      generatePartyCards(partyMode, { count: Number(payload?.dilemmaCount) || 5, intensity: partyIntensity, theme })
+        .then((aiCards) => {
+          const r = rooms.get(code);
+          if (r && r.partyMode === partyMode && aiCards.length > 0) {
+            r.partyCards.splice(r.dilemmaIndex, aiCards.length, ...aiCards);
+          }
+        })
+        .catch(() => {});
     }
     // Privately tell the infiltrator their secret role + mission (only their phone).
     const infiltratorId = result.room.infiltratorId;
@@ -867,6 +965,16 @@ io.on('connection', (socket) => {
       const token = rooms.myWrittenAnswerToken(code, playerId);
       if (token) socket.emit('player:myWriteToken', { token });
     }
+    if (room && room.partyMode === 'infiltrato' && room.currentPartyCard && room.phase !== 'LOBBY') {
+      const card = room.currentPartyCard as { groupQuestion?: string; impostorQuestion?: string };
+      const isInfiltrator = playerId === room.infiltratorId;
+      const question = isInfiltrator ? (card.impostorQuestion ?? '') : (card.groupQuestion ?? '');
+      socket.emit('player:secretQuestion', {
+        question,
+        isInfiltrator,
+        round: room.dilemmaIndex,
+      });
+    }
     broadcastLobby(code);
     if (reconnecting && room && isVotingPhase(room.phase)) broadcastGameState(code);
   });
@@ -899,6 +1007,39 @@ io.on('connection', (socket) => {
     } else {
       if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
       broadcastGameState(code); // refresh the count for the host
+    }
+  });
+
+  // Player votes for a friend in ASSURDO MA SEMPLICE ("La Gogna") mode.
+  socket.on('player:gognaVote', (payload: { targetId?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const targetId = String(payload?.targetId ?? '');
+    const result = rooms.recordGognaVote(code, playerId, targetId);
+    if (!result.ok) return;
+    socket.emit('player:gognaVoted', { targetId });
+    if (rooms.allVoted(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code);
+    }
+  });
+
+  // Spectator bets on hot-seat couple in COPPIE & SCINTILLE mode ("match" or "scoppiano").
+  socket.on('player:hotSeatBet', (payload: { bet?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const bet = payload?.bet === 'match' ? 'match' : payload?.bet === 'scoppiano' ? 'scoppiano' : null;
+    if (!bet) return;
+    const ok = rooms.recordHotSeatBet(code, playerId, bet);
+    if (!ok) return;
+    socket.emit('player:hotSeatBetted', { bet });
+    if (rooms.allVoted(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code);
     }
   });
 
@@ -1231,7 +1372,22 @@ io.on('connection', (socket) => {
     if (!userId) return;
     rooms.setPlayerUser(session.code, session.playerId, userId);
     const room = rooms.get(session.code);
-    if (room && (room.phase === 'FINAL_AWARDS' || room.phase === 'DUO_PORTRAIT')) {
+    if (room && room.partyMode === 'infiltrato' && room.currentPartyCard && room.phase === 'DILEMMA_REVEAL') {
+    const card = room.currentPartyCard as { groupQuestion?: string; impostorQuestion?: string };
+    for (const player of room.players.values()) {
+      if (player.isBot) continue;
+      const sid = playerSocket.get(player.id);
+      if (!sid) continue;
+      const isInfiltrator = player.id === room.infiltratorId;
+      const question = isInfiltrator ? (card.impostorQuestion ?? '') : (card.groupQuestion ?? '');
+      io.to(sid).emit('player:secretQuestion', {
+        question,
+        isInfiltrator,
+        round: room.dilemmaIndex,
+      });
+    }
+  }
+  if (room && (room.phase === 'FINAL_AWARDS' || room.phase === 'DUO_PORTRAIT')) {
       saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards (identify) failed', e));
       saveGameRecords(gamesToPersist(room)).catch((e) => console.error('[db] saveGameRecords (identify) failed', e));
     }
@@ -1302,7 +1458,7 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (!res.headersSent) res.status(status).json({ error: status < 500 ? 'bad-request' : 'internal' });
 });
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 3001;
 
 // Migrate + restore any rooms persisted before a restart, so a crash mid-party
 // doesn't lose the game. Awaited BEFORE the server accepts connections: a

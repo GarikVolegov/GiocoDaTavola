@@ -1,10 +1,26 @@
 .card {
-  background: var(--surface);
+  position: relative;
+  background: linear-gradient(145deg, rgba(20, 27, 54, 0.72) 0%, rgba(11, 15, 30, 0.64) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-card), var(--glass-highlight);
   padding: var(--space-5);
+  transition: transform var(--dur-med) var(--ease), box-shadow var(--dur-med) var(--ease), border-color var(--dur-med) var(--ease);
 }
-.glowA { box-shadow: var(--shadow-card), var(--glow-a); }
-.glowB { box-shadow: var(--shadow-card), var(--glow-b); }
-.glowAccent { box-shadow: var(--shadow-card), var(--glow-accent); }
+
+.glowA {
+  border-color: var(--faction-a-line);
+  box-shadow: var(--shadow-card), var(--glow-a), var(--glass-highlight);
+}
+
+.glowB {
+  border-color: var(--faction-b-line);
+  box-shadow: var(--shadow-card), var(--glow-b), var(--glass-highlight);
+}
+
+.glowAccent {
+  border-color: var(--gold-line);
+  box-shadow: var(--shadow-card), var(--glow-accent), var(--glass-highlight);
+}
