@@ -1,0 +1,780 @@
+{
+  "flash": [
+    {
+      "id": "fl01",
+      "text": "Controllare il telefono del partner mentre dorme: legittima difesa o psicopatia?",
+      "optionA": "Legittima difesa",
+      "optionB": "Psicopatia pura",
+      "spuntiA": ["Se non hai nulla da nascondere non hai paura", "Meglio scoprire subito che perdere anni"],
+      "spuntiB": ["Senza fiducia la relazione è già morta", "Violare la privacy è la vera red flag"]
+    },
+    {
+      "id": "fl02",
+      "text": "Meglio un amico che ti dice sempre sì o uno che ti insulta quando sbagli?",
+      "optionA": "Sempre sì",
+      "optionB": "Mi insulta in faccia",
+      "spuntiA": ["La sera voglio supporto, non un giudice", "Gli errori li capisco già da solo"],
+      "spuntiB": ["Chi ti asseconda ti fa fare figure di merda", "L'amico vero ti sveglia a schiaffi"]
+    },
+    {
+      "id": "fl03",
+      "text": "Uscire con l'ex del tuo migliore amico dopo 2 anni: accettabile o tradimento?",
+      "optionA": "Dopo 2 anni ci sta",
+      "optionB": "Tradimento a vita",
+      "spuntiA": ["Dopo due anni ognuno ha diritto di rifarsi una vita", "L'ex non è una proprietà privata"],
+      "spuntiB": ["Il codice tra amici non ha scadenza", "Con milioni di persone proprio quella?"]
+    },
+    {
+      "id": "fl04",
+      "text": "Scopri che il partner del tuo amico lo tradisce: glielo dici o stai zitto?",
+      "optionA": "Glielo dico subito",
+      "optionB": "Fatti miei, taccio",
+      "spuntiA": ["Se non glielo dici sei complice", "Preferirei saperlo domani che tra due anni"],
+      "spuntiB": ["Alla fine fanno pace e odiano te", "Non sai mai i reali accordi tra loro"]
+    },
+    {
+      "id": "fl05",
+      "text": "Condividere la posizione GPS h24 col partner: dolcezza o controllo tossico?",
+      "optionA": "Comodo e trasparente",
+      "optionB": "Tossicità pura",
+      "spuntiA": ["Serve per sicurezza quando si torna tardi", "Se non hai niente da nascondere che cambia?"],
+      "spuntiB": ["Non sono un pacco Amazon da tracciare", "Ammazza ogni briciolo di mistero"]
+    },
+    {
+      "id": "fl06",
+      "text": "Ghostare qualcuno dopo 3 uscite andate male: diritto legittimo o mossa da infami?",
+      "optionA": "Ci sta, zero sbatti",
+      "optionB": "Da vigliacchi totali",
+      "spuntiA": ["Il silenzio è già una risposta chiarissima", "Meglio sparire che scrivere il solito papiro finto"],
+      "spuntiB": ["Bastano due righe di educazione", "Fai impazzire l'altra persona per pigrizia"]
+    },
+    {
+      "id": "fl07",
+      "text": "Mettere like alla foto in costume dell'ex mentre sei fidanzato:",
+      "optionA": "Like innocuo",
+      "optionB": "Mancanza di rispetto",
+      "spuntiA": ["È solo un doppio tap su Instagram, calmati", "Non significa voler tornare insieme"],
+      "spuntiB": ["Lo fai apposta per farti notare", "Se lo facesse il tuo partner impazziresti"]
+    },
+    {
+      "id": "fl08",
+      "text": "Trovi 200€ per terra al bar davanti a te: li tieni o chiedi di chi sono?",
+      "optionA": "Me li intasco subito",
+      "optionB": "Chiedo al barista",
+      "spuntiA": ["Chi li ha persi non li rivede comunque", "Il barista se li terrebbe lui"],
+      "spuntiB": ["Magari erano i soldi dell'affitto di qualcuno", "Non voglio soldi sporchi di sfiga"]
+    },
+    {
+      "id": "fl09",
+      "text": "Preferisci che tutti leggano le tue Note o sentano i tuoi ultimi 5 vocali?",
+      "optionA": "Leggano le Note",
+      "optionB": "Sentano i vocali",
+      "spuntiA": ["Nelle note ho solo liste della spesa e password", "I vocali alle 3 di notte sono incriminanti"],
+      "spuntiB": ["Nelle note ci sono i segreti più oscuri", "Nei vocali al massimo sparlo un po'"]
+    },
+    {
+      "id": "fl10",
+      "text": "Rimanere migliori amici col proprio ex storico: maturità o bomba a orologeria?",
+      "optionA": "Grande maturità",
+      "optionB": "Bomba a orologeria",
+      "spuntiA": ["Se è finita bene perché buttare il rapporto?", "Non tutti gli ex finiscono a coltellate"],
+      "spuntiB": ["Uno dei due spera sempre nel ritorno", "Il nuovo partner scapperà a gambe levate"]
+    },
+    {
+      "id": "fl11",
+      "text": "Al primo appuntamento si divide sempre alla romana o paga chi ha invitato?",
+      "optionA": "Sempre 50 e 50",
+      "optionB": "Paga chi invita",
+      "spuntiA": ["Parità vera fin dal giorno uno", "Così nessuno si sente in debito"],
+      "spuntiB": ["Se inviti tu fai il gesto elegante", "Dividere al centesimo ammazza il romanticismo"]
+    },
+    {
+      "id": "fl12",
+      "text": "Un amico ti chiede 100€ e dopo due mesi non ne parla: glieli chiedi?",
+      "optionA": "Glieli chiedo secco",
+      "optionB": "Lascio perdere per imbarazzo",
+      "spuntiA": ["Sono soldi miei e li ho guadagnati io", "Chi fa finta di nulla ci prova"],
+      "spuntiB": ["Non rovino un'amicizia per cento euro", "Li considero un test gratis sulla persona"]
+    },
+    {
+      "id": "fl13",
+      "text": "Dire a un amico che il suo nuovo partner è insopportabile: glielo dici?",
+      "optionA": "Glielo dico chiaro",
+      "optionB": "Fingo che mi piaccia",
+      "spuntiA": ["Prima o poi si lasciano e te ne sarà grato", "Non posso fingere per mesi"],
+      "spuntiB": ["Si incazzerà con te e ti taglierà fuori", "Tanto innamorato non ti ascolta comunque"]
+    },
+    {
+      "id": "fl14",
+      "text": "Disdire un'uscita 20 minuti prima inventando un finto mal di pancia:",
+      "optionA": "Lo faccio spesso",
+      "optionB": "Mai, è irrispettoso",
+      "spuntiA": ["Quando finisce la batteria sociale non si forza", "Meglio a casa che musone al tavolo"],
+      "spuntiB": ["La gente ha organizzato la serata attorno a te", "Dì la verità invece di fare il malato"]
+    },
+    {
+      "id": "fl15",
+      "text": "Guardare le storie di chi odi usando un profilo fake: normale o ossessione?",
+      "optionA": "Lo facciamo tutti",
+      "optionB": "Psicosi totale",
+      "spuntiA": ["La curiosità è umana e gratis", "Serve solo a farsi due risate in chat"],
+      "spuntiB": ["Dedicare tempo a chi odi è patetico", "Se hai un profilo fake sei già perso"]
+    },
+    {
+      "id": "fl16",
+      "text": "Una notte di fuoco con il/la tuo/a ex migliore amico/a: segreto per sempre o confessione?",
+      "optionA": "Nella tomba con me",
+      "optionB": "Confesso subito",
+      "spuntiA": ["Confessare serve solo a pulirsi la coscienza facendo male", "Quello che non sai non fa male"],
+      "spuntiB": ["Le bugie escono sempre al peggior momento", "Il rispetto vale più della codardia"]
+    },
+    {
+      "id": "fl17",
+      "text": "Meglio un partner ricchissimo ma noioso a letto o squattrinato ma fenomenale?",
+      "optionA": "Ricco e noioso",
+      "optionB": "Povero ma fenomenale",
+      "spuntiA": ["I soldi risolvono il 90% dello stress", "A letto si può sempre migliorare"],
+      "spuntiB": ["La noia ti porta a tradire in sei mesi", "La chimica non la compri col bonifico"]
+    },
+    {
+      "id": "fl18",
+      "text": "In vacanza di gruppo: chi ordina solo insalata deve pagare quanto chi prende bistecca e vino?",
+      "optionA": "Si divide tutto uguale",
+      "optionB": "Ognuno paga il suo",
+      "spuntiA": ["Fare i conti con la calcolatrice rovina la serata", "Oggi tocca a te, domani a me"],
+      "spuntiB": ["Non pago il tuo filetto da 40 euro", "Ognuno è responsabile di quello che ordina"]
+    },
+    {
+      "id": "fl19",
+      "text": "Mantenere le foto col proprio ex archiviate su Instagram invece di cancellarle:",
+      "optionA": "Normalissimo, è il passato",
+      "optionB": "Red flag gigante",
+      "spuntiA": ["Non puoi cancellare anni della tua vita", "L'importante è che siano archiviate"],
+      "spuntiB": ["Se le tieni lì ti manca ancora", "Il nuovo partner non merita fantasmi"]
+    },
+    {
+      "id": "fl20",
+      "text": "Un amico fa una battuta pessima in compagnia: ridi per pietà o lo lasci nel gelo?",
+      "optionA": "Rido per pietà",
+      "optionB": "Gelo totale",
+      "spuntiA": ["Salvarlo dall'imbarazzo è vera amicizia", "Una risata finta non costa nulla"],
+      "spuntiB": ["Se non soffre non impara mai", "Il gelo fa più ridere della battuta"]
+    },
+    {
+      "id": "fl21",
+      "text": "Sposarsi a 25 anni: coraggio romantico o follia totale?",
+      "optionA": "Bellissimo se è vero",
+      "optionB": "Follia prematura",
+      "spuntiA": ["Se trovi la persona giusta perché aspettare?", "Costruire tutto da giovani è magico"],
+      "spuntiB": ["A 25 anni non sai neanche chi sei", "Il divorzio prima dei 30 è dietro l'angolo"]
+    },
+    {
+      "id": "fl22",
+      "text": "In discoteca alle 3: tornare a casa a piedi da soli o dormire da uno sconosciuto?",
+      "optionA": "A piedi alle 3",
+      "optionB": "Da uno sconosciuto",
+      "spuntiA": ["Almeno dormo vivo nel mio letto", "Due passi fanno passare anche la sbronza"],
+      "spuntiB": ["È così che nascono le storie migliori", "La mattina dopo hai una colazione gratis"]
+    },
+    {
+      "id": "fl23",
+      "text": "Seguire i consigli amorosi dell'amico single cronico o dell'amico tossico fidanzato da 5 anni?",
+      "optionA": "L'amico single",
+      "optionB": "L'amico fidanzato tossico",
+      "spuntiA": ["Almeno vede le red flag da fuori", "Non è intrappolato nella sua stessa gabbia"],
+      "spuntiB": ["Sa come sopravvivere a qualunque tempesta", "Il single vuole solo compagnia al bar"]
+    },
+    {
+      "id": "fl24",
+      "text": "Cancellare subito una chat su WhatsApp prima che il partner la veda: è già tradimento?",
+      "optionA": "Sì, è tradimento",
+      "optionB": "No, è pace mentale",
+      "spuntiA": ["Se cancelli sai di essere in torto", "Nascondere è uguale a mentire"],
+      "spuntiB": ["Eviti scenate inutili per messaggi innocenti", "La privacy vale anche in coppia"]
+    },
+    {
+      "id": "fl25",
+      "text": "Mandare un messaggio all'ex alle 2 di notte da ubriaco: perdonabile o da bloccare subito?",
+      "optionA": "Succede ai migliori",
+      "optionB": "Da bloccare a vita",
+      "spuntiA": ["L'alcol parla al posto del cuore", "Domani mattina ci si pente e si ride"],
+      "spuntiB": ["Zero dignità personale", "Stai solo nutrendo il suo ego"]
+    },
+    {
+      "id": "fl26",
+      "text": "Avere un gruppo WhatsApp segreto con gli amici per sparlare di un altro del gruppo:",
+      "optionA": "Tutti ne abbiamo uno",
+      "optionB": "Infamata imperdonabile",
+      "spuntiA": ["Serve per sfogarsi senza ferire nessuno", "È una valvola di sfogo naturale"],
+      "spuntiB": ["Se c'è un gruppo su di lui, ce n'è uno su di te", "Falsità pura allo stato brado"]
+    },
+    {
+      "id": "fl27",
+      "text": "Accettare 10.000€ per non usare mai più i social per 3 anni:",
+      "optionA": "Accetto adesso",
+      "optionB": "Troppo pochi soldi",
+      "spuntiA": ["Vivo meglio e pago le vacanze", "Instagram mi ruba già la vita gratis"],
+      "spuntiB": ["Diecimila euro finiscono in pochi mesi", "Senza social oggi sei tagliato fuori dal mondo"]
+    },
+    {
+      "id": "fl28",
+      "text": "Fare pipì sotto la doccia: cosa che fanno tutti o schifezza inaccettabile?",
+      "optionA": "Lo fanno tutti",
+      "optionB": "Schifezza totale",
+      "spuntiA": ["Ci sono due tipi di persone: chi lo fa e chi mente", "Risparmi acqua e tempo"],
+      "spuntiB": ["Ci lavi i piedi lì sopra, dai", "Il water sta letteralmente a un metro"]
+    },
+    {
+      "id": "fl29",
+      "text": "Se il tuo migliore amico ti ruba la persona che ti piace durante una serata:",
+      "optionA": "Chiuso per sempre",
+      "optionB": "Se non stavamo insieme ci sta",
+      "spuntiA": ["Lealtà zero, non è un amico", "C'è un codice non scritto da rispettare"],
+      "spuntiB": ["Non era tua proprietà", "Se ha scelto lui non era destino"]
+    },
+    {
+      "id": "fl30",
+      "text": "Mentire sul proprio passato amoroso per non spaventare chi frequenti ora:",
+      "optionA": "Meglio filtrare",
+      "optionB": "Sempre verità totale",
+      "spuntiA": ["I dettagli del passato non servono a nessuno", "Ognuno ha diritto a un nuovo inizio"],
+      "spuntiB": ["Le bugie hanno le gambe corte", "Se ti accetta solo finto non ti vuole davvero"]
+    },
+    {
+      "id": "fl31",
+      "text": "Preferisci fare una figura di merda epica davanti al tuo capo o davanti ai genitori del partner?",
+      "optionA": "Davanti al capo",
+      "optionB": "Davanti ai suoceri",
+      "spuntiA": ["Il lavoro lo cambi, i suoceri restano anni", "Il capo apprezza l'umanità dopo un po'"],
+      "spuntiB": ["I suoceri ti perdonano per amore del figlio", "Il capo decide il tuo stipendio"]
+    },
+    {
+      "id": "fl32",
+      "text": "Fingere di aver letto un messaggio importante solo dalle notifiche per non rispondere:",
+      "optionA": "Arte quotidiana",
+      "optionB": "Ansia inutile, rispondo",
+      "spuntiA": ["Salva da conversazioni infinite che non vuoi fare", "Ho diritto al mio tempo"],
+      "spuntiB": ["Lasciare in sospeso crea solo più ansia", "Rispondi due parole e chiudi la pratica"]
+    }
+  ],
+  "infiltrato": [
+    {
+      "id": "inf01",
+      "groupQuestion": "Qual è il posto più strano dove hai fatto serata?",
+      "impostorQuestion": "Qual è il posto più strano dove hai dormito?",
+      "category": "serate",
+      "botAnswersGroup": ["Un parcheggio sotterraneo", "Una lavanderia", "Su una barca", "In un bosco"],
+      "botAnswersImpostor": ["In stazione", "Sul divano di un bar", "In macchina"]
+    },
+    {
+      "id": "inf02",
+      "groupQuestion": "Qual è la scusa più assurda che hai usato per pacare un'uscita all'ultimo?",
+      "impostorQuestion": "Qual è la bugia più stupida che hai detto ai tuoi genitori?",
+      "category": "scuse",
+      "botAnswersGroup": ["Mal di pancia finto", "Si è rotta la macchina", "Devo aiutare mia zia", "Febbre improvvisa"],
+      "botAnswersImpostor": ["Dormo da un amico", "Ero in biblioteca", "Batteria morta"]
+    },
+    {
+      "id": "inf03",
+      "groupQuestion": "Cosa guardi per prima cosa quando entri a casa di una persona nuova?",
+      "impostorQuestion": "Cosa controlli per prima cosa quando entri in un hotel?",
+      "category": "abitudini",
+      "botAnswersGroup": ["Il bagno", "I libri", "La pulizia del pavimento", "Il frigo"],
+      "botAnswersImpostor": ["Il materasso", "La vista dalla finestra", "Il bagno"]
+    },
+    {
+      "id": "inf04",
+      "groupQuestion": "Quale cibo odi a morte anche se piace praticamente a tutti?",
+      "impostorQuestion": "Quale cibo mangeresti tutti i giorni senza stancarti mai?",
+      "category": "gusti",
+      "botAnswersGroup": ["Le olive", "Il sushi", "La maionese", "I funghi"],
+      "botAnswersImpostor": ["La carbonara", "Il sushi", "La pizza"]
+    },
+    {
+      "id": "inf05",
+      "groupQuestion": "Qual è la cosa più costosa che hai comprato d'impulso o da ubriaco?",
+      "impostorQuestion": "Qual è il regalo più brutto che hai ricevuto?",
+      "category": "soldi",
+      "botAnswersGroup": ["Biglietto aereo", "Scarpe assurde", "Un giro di shot", "Un gadget inutile"],
+      "botAnswersImpostor": ["Un maglione gigante", "Un profumo terribile", "Una tazza"]
+    },
+    {
+      "id": "inf06",
+      "groupQuestion": "Qual è il nome della persona che non vorresti mai incontrare al supermercato?",
+      "impostorQuestion": "Chi del mondo dello spettacolo porteresti a cena stasera?",
+      "category": "persone",
+      "botAnswersGroup": ["Il mio ex", "Il mio ex prof", "Un collega", "La mia vicina"],
+      "botAnswersImpostor": ["Un attore famoso", "Un cantante", "Uno chef"]
+    },
+    {
+      "id": "inf07",
+      "groupQuestion": "Qual è la red flag immediata che ti fa chiudere un'uscita dopo 10 minuti?",
+      "impostorQuestion": "Qual è il difetto che gli altri notano subito in te?",
+      "category": "relazioni",
+      "botAnswersGroup": ["Tratta male i camerieri", "Parla solo dell'ex", "Sta sempre al telefono", "Mastica forte"],
+      "botAnswersImpostor": ["Arrivo sempre tardi", "Parlo troppo", "Sono testardo"]
+    },
+    {
+      "id": "inf08",
+      "groupQuestion": "Quanti drink ti servono per iniziare a ballare senza vergogna?",
+      "impostorQuestion": "Quante ore di sonno ti servono per funzionare davvero?",
+      "category": "numeri",
+      "botAnswersGroup": ["Tre", "Quattro", "Due", "Cinque"],
+      "botAnswersImpostor": ["Otto", "Sette", "Sei"]
+    },
+    {
+      "id": "inf09",
+      "groupQuestion": "Qual è la cosa più imbarazzante nella tua cronologia di YouTube o Google?",
+      "impostorQuestion": "Qual è l'argomento di cui parli per ore quando sei alticcio?",
+      "category": "segreti",
+      "botAnswersGroup": ["Tutorial su come baciare", "Sintomi assurdi", "Gossip trash", "Orari dei treni"],
+      "botAnswersImpostor": ["Politica", "Calcio", "Teorie complottiste"]
+    },
+    {
+      "id": "inf10",
+      "groupQuestion": "In quale città italiana non andresti mai a vivere nemmeno pagato?",
+      "impostorQuestion": "Qual è la meta della tua prossima vacanza ideale?",
+      "category": "luoghi",
+      "botAnswersGroup": ["Milano", "Roma", "Napoli", "Torino"],
+      "botAnswersImpostor": ["Roma", "Palermo", "Milano"]
+    },
+    {
+      "id": "inf11",
+      "groupQuestion": "Cosa fai sempre subito prima di andare a dormire anche se è inutile?",
+      "impostorQuestion": "Cosa fai sempre appena sveglio prima ancora del caffè?",
+      "category": "routine",
+      "botAnswersGroup": ["Controllo la porta", "Scorro TikTok", "Bevo acqua", "Metto tre sveglie"],
+      "botAnswersImpostor": ["Guardo le notifiche", "Spengo la sveglia", "Bevo acqua"]
+    },
+    {
+      "id": "inf12",
+      "groupQuestion": "Qual è il lavoro che non faresti mai nella vita nemmeno per 5.000€ al mese?",
+      "impostorQuestion": "Che lavoro sognavi di fare quando avevi 10 anni?",
+      "category": "lavoro",
+      "botAnswersGroup": ["Il becchino", "Il call center", "Il chirurgo", "Il politico"],
+      "botAnswersImpostor": ["L'astronauta", "Il calciatore", "Il veterinario"]
+    },
+    {
+      "id": "inf13",
+      "groupQuestion": "Qual è la cosa più stupida per cui hai pianto negli ultimi due anni?",
+      "impostorQuestion": "Qual è il film che ti ha fatto emozionare di più?",
+      "category": "emozioni",
+      "botAnswersGroup": ["Fame chimica finita", "Un video di cani", "Un treno perso", "Un graffio all'auto"],
+      "botAnswersImpostor": ["Il Re Leone", "Interstellar", "Titanic"]
+    },
+    {
+      "id": "inf14",
+      "groupQuestion": "Quale canzone metti a tutto volume quando pulisci casa da solo?",
+      "impostorQuestion": "Quale canzone non sopporti più perché la passano ovunque?",
+      "category": "musica",
+      "botAnswersGroup": ["Una hit anni 2000", "Reggaeton", "883", "Raffaella Carrà"],
+      "botAnswersImpostor": ["Un tormentone estivo", "Trap italiana", "Sanremo"]
+    },
+    {
+      "id": "inf15",
+      "groupQuestion": "Cosa porti sempre nello zaino o in borsa anche se non serve a nulla?",
+      "impostorQuestion": "Qual è l'oggetto più strano sul tuo comodino adesso?",
+      "category": "oggetti",
+      "botAnswersGroup": ["Fazzoletti vecchi", "Un accendino scarico", "Monetine da 1 cent", "Caricabatterie rotto"],
+      "botAnswersImpostor": ["Un bicchiere vuoto", "Cuffiette rotte", "Un libro mai aperto"]
+    },
+    {
+      "id": "inf16",
+      "groupQuestion": "A che età hai dato il tuo primo vero bacio?",
+      "impostorQuestion": "A che età hai preso la tua prima vera sbronza?",
+      "category": "eta",
+      "botAnswersGroup": ["14", "15", "13", "16"],
+      "botAnswersImpostor": ["16", "17", "15"]
+    },
+    {
+      "id": "inf17",
+      "groupQuestion": "Qual è la tua peggiore abitudine quando guidi nel traffico?",
+      "impostorQuestion": "Cosa ti fa perdere la pazienza in 3 secondi alle poste o in fila?",
+      "category": "rabbia",
+      "botAnswersGroup": ["Impreco ad alta voce", "Suono il clacson", "Canto urlando", "Cambio corsia sempre"],
+      "botAnswersImpostor": ["Chi taglia la fila", "Chi è lento", "Il telefono che squilla"]
+    },
+    {
+      "id": "inf18",
+      "groupQuestion": "Quale animale domestico non vorresti mai avere in casa?",
+      "impostorQuestion": "Che animale descrive meglio la tua personalità a letto o in festa?",
+      "category": "animali",
+      "botAnswersGroup": ["Un serpente", "Un furetto", "Un pappagallo", "Un ragno"],
+      "botAnswersImpostor": ["Un gatto", "Un cane", "Una pantera"]
+    },
+    {
+      "id": "inf19",
+      "groupQuestion": "Quanti soldi hai speso l'ultima volta che sei uscito a cena?",
+      "impostorQuestion": "Quanto paghi al massimo per un paio di scarpe?",
+      "category": "prezzi",
+      "botAnswersGroup": ["35 euro", "50 euro", "25 euro", "40 euro"],
+      "botAnswersImpostor": ["120 euro", "80 euro", "150 euro"]
+    },
+    {
+      "id": "inf20",
+      "groupQuestion": "Qual è la prima app che apri quando ti annoi sul water?",
+      "impostorQuestion": "Qual è l'app che usi per perdere ore di notte prima di dormire?",
+      "category": "app",
+      "botAnswersGroup": ["TikTok", "Instagram", "WhatsApp", "YouTube"],
+      "botAnswersImpostor": ["TikTok", "Instagram", "Netflix"]
+    }
+  ],
+  "coppie": {
+    "complicita": [
+      {
+        "id": "cc01",
+        "cardType": "allineamento",
+        "intensity": "complicita",
+        "prompt": "Al 3 indicate chi dei due chiede scusa per primo dopo una litigata.",
+        "penalty": "Non siete d'accordo! Penitenza: 1 sorso ciascuno + abbraccio di 5 secondi."
+      },
+      {
+        "id": "cc02",
+        "cardType": "verita",
+        "intensity": "complicita",
+        "prompt": "Qual è la piccola abitudine dell'altro che ti fa impazzire ma non gli dici mai?",
+        "penalty": "Se non rispondi sincero entro 10s, doppio shot!"
+      },
+      {
+        "id": "cc03",
+        "cardType": "obbligo",
+        "intensity": "complicita",
+        "prompt": "Guardatevi fissi negli occhi per 20 secondi senza ridere né distogliere lo sguardo.",
+        "penalty": "Chi ride o gira la testa per primo beve!"
+      },
+      {
+        "id": "cc04",
+        "cardType": "allineamento",
+        "intensity": "complicita",
+        "prompt": "Al 3 indicate chi dei due è più geloso ma fa finta di essere rilassato.",
+        "penalty": "Disaccordo! Chi ha detto l'altro beve un sorso."
+      },
+      {
+        "id": "cc05",
+        "cardType": "verita",
+        "intensity": "complicita",
+        "prompt": "Hai mai controllato il telefono o le visualizzazioni social dell'altro di nascosto?",
+        "penalty": "Confessione obbligatoria o mostra l'ultima ricerca Instagram!"
+      },
+      {
+        "id": "cc06",
+        "cardType": "obbligo",
+        "intensity": "complicita",
+        "prompt": "Mostra all'altro le ultime 3 persone che hai cercato su Instagram.",
+        "penalty": "Rifiuti? Penitenza doppia!"
+      },
+      {
+        "id": "cc07",
+        "cardType": "allineamento",
+        "intensity": "complicita",
+        "prompt": "Al 3 indicate chi dei due ha fatto la prima mossa peggiore o più goffa.",
+        "penalty": "Non coincide! Raccontate subito come è andata davvero."
+      },
+      {
+        "id": "cc08",
+        "cardType": "verita",
+        "intensity": "complicita",
+        "prompt": "Qual è il regalo più brutto o inutile che ti ha fatto l'altro (o un ex)?",
+        "penalty": "Senza filtri: niente bugie diplomatiche!"
+      },
+      {
+        "id": "cc09",
+        "cardType": "obbligo",
+        "intensity": "complicita",
+        "prompt": "Fai un massaggio vero alle spalle dell'altro per 30 secondi senza parlare.",
+        "penalty": "Se ti fermi prima bevi!"
+      },
+      {
+        "id": "cc10",
+        "cardType": "allineamento",
+        "intensity": "complicita",
+        "prompt": "Al 3 indicate chi dei due spende più soldi in cazzate inutili.",
+        "penalty": "Non siete d'accordo! Paghi tu il prossimo giro."
+      },
+      {
+        "id": "cc11",
+        "cardType": "verita",
+        "intensity": "complicita",
+        "prompt": "Qual è la cosa che pensavi dell'altro prima di conoscerlo bene che poi era falsissima?",
+        "penalty": "Risposta sincera entro 10 secondi!"
+      },
+      {
+        "id": "cc12",
+        "cardType": "obbligo",
+        "intensity": "complicita",
+        "prompt": "Bacia l'altro sulla guancia o sul collo tenendo le mani dietro la schiena.",
+        "penalty": "Se ti vergogni, sorso doppio!"
+      },
+      {
+        "id": "cc13",
+        "cardType": "allineamento",
+        "intensity": "complicita",
+        "prompt": "Al 3 indicate chi dei due si addormenta sempre per primo guardando un film.",
+        "penalty": "Disaccordo! Penitenza per entrambi."
+      },
+      {
+        "id": "cc14",
+        "cardType": "verita",
+        "intensity": "complicita",
+        "prompt": "C'è un messaggio che hai ricevuto questa settimana che non faresti vedere subito all'altro?",
+        "penalty": "O rispondi sì/no vero, o bevi!"
+      },
+      {
+        "id": "cc15",
+        "cardType": "obbligo",
+        "intensity": "complicita",
+        "prompt": "Imita per 15 secondi l'altro quando è arrabbiato o geloso.",
+        "penalty": "Se l'altro non ride, bevi!"
+      }
+    ],
+    "piccante": [
+      {
+        "id": "cp01",
+        "cardType": "allineamento",
+        "intensity": "piccante",
+        "prompt": "Al 3 indicate chi dei due ha le fantasie più spinte tra le lenzuola.",
+        "penalty": "Non coincide! Raccontate una fantasia ciascuno o bevete doppio."
+      },
+      {
+        "id": "cp02",
+        "cardType": "verita",
+        "intensity": "piccante",
+        "prompt": "Qual è la cosa che vorresti provare a letto ma non hai ancora avuto il coraggio di chiedere?",
+        "penalty": "Niente scuse: dillo ora o doppia penitenza!"
+      },
+      {
+        "id": "cp03",
+        "cardType": "obbligo",
+        "intensity": "piccante",
+        "prompt": "Sussurra all'orecchio dell'altro cosa gli faresti stasera appena tornate a casa.",
+        "penalty": "Se diventi rosso o rifiuti, doppio shot!"
+      },
+      {
+        "id": "cp04",
+        "cardType": "allineamento",
+        "intensity": "piccante",
+        "prompt": "Al 3 indicate chi dei due resisterebbe di meno senza sesso per un mese.",
+        "penalty": "Disaccordo! Chi ha perso beve."
+      },
+      {
+        "id": "cp05",
+        "cardType": "verita",
+        "intensity": "piccante",
+        "prompt": "Hai mai finto di raggiungere il piacere o finto che ti piacesse qualcosa a letto?",
+        "penalty": "La sincerità salva, la bugia fa bere!"
+      },
+      {
+        "id": "cp06",
+        "cardType": "obbligo",
+        "intensity": "piccante",
+        "prompt": "Bacio lento sul collo dell'altro per 10 secondi senza usare le mani.",
+        "penalty": "Obbligo o penitenza doppia!"
+      },
+      {
+        "id": "cp07",
+        "cardType": "allineamento",
+        "intensity": "piccante",
+        "prompt": "Al 3 indicate chi dei due prende quasi sempre l'iniziativa sotto le coperte.",
+        "penalty": "Non coincide! Fate pace con un bacio da 10 secondi."
+      },
+      {
+        "id": "cp08",
+        "cardType": "verita",
+        "intensity": "piccante",
+        "prompt": "Qual è il posto più assurdo o rischioso dove l'hai fatto (con o senza l'altro)?",
+        "penalty": "Racconta il posto esatto!"
+      },
+      {
+        "id": "cp09",
+        "cardType": "obbligo",
+        "intensity": "piccante",
+        "prompt": "Togliti un accessorio o un indumento a scelta, oppure bacia l'altro con passione per 10 secondi.",
+        "penalty": "Niente fughe!"
+      },
+      {
+        "id": "cp10",
+        "cardType": "allineamento",
+        "intensity": "piccante",
+        "prompt": "Al 3 indicate chi dei due è più bravo a baciare davvero.",
+        "penalty": "Disaccordo! Test immediato di 10 secondi per decidere."
+      },
+      {
+        "id": "cp11",
+        "cardType": "verita",
+        "intensity": "piccante",
+        "prompt": "Qual è la parte del corpo dell'altro che ti eccita in due secondi?",
+        "penalty": "Indicala e baciala, o bevi!"
+      },
+      {
+        "id": "cp12",
+        "cardType": "obbligo",
+        "intensity": "piccante",
+        "prompt": "Manda un messaggio piccante o ambiguo all'altro seduti uno davanti all'altro mentre vi guardate.",
+        "penalty": "Se ridi bevi!"
+      },
+      {
+        "id": "cp13",
+        "cardType": "allineamento",
+        "intensity": "piccante",
+        "prompt": "Al 3 indicate chi dei due guarderebbe volentieri un film per adulti insieme.",
+        "penalty": "Non coincide! Penitenza di coppia."
+      },
+      {
+        "id": "cp14",
+        "cardType": "verita",
+        "intensity": "piccante",
+        "prompt": "Qual è stata la cosa più trasgressiva che hai mai fatto di notte?",
+        "penalty": "Confessione istantanea!"
+      },
+      {
+        "id": "cp15",
+        "cardType": "obbligo",
+        "intensity": "piccante",
+        "prompt": "Passa un dito lento lungo il collo o il braccio dell'altro guardandolo fisso negli occhi per 15s.",
+        "penalty": "Chi cede prima fa penitenza!"
+      }
+    ]
+  },
+  "assurdo": [
+    {
+      "id": "as01",
+      "cardType": "gogna",
+      "prompt": "Se finissimo tutti in prigione stasera, chi tradirebbe gli altri dopo 5 minuti per uscire?",
+      "penalty": "Alla gogna! Il più votato beve o fa una confessione!"
+    },
+    {
+      "id": "as02",
+      "cardType": "dignita",
+      "prompt": "Accetteresti 500€ subito, ma devi mandare un vocale in cui piangi alla tua ultima chat WhatsApp?",
+      "optionA": "Accetto i 500€ 💸",
+      "optionB": "Col c***o 🙅‍♂️",
+      "penalty": "Chi è in minoranza beve! E chi ha accettato deve far vedere la chat!"
+    },
+    {
+      "id": "as03",
+      "cardType": "gogna",
+      "prompt": "Chi del gruppo scriverebbe all'ex alle 3 di notte dopo tre gin tonic?",
+      "penalty": "Il prescelto dal gruppo fa un sorso per ogni voto ricevuto!"
+    },
+    {
+      "id": "as04",
+      "cardType": "dignita",
+      "prompt": "1.000€ subito sul conto, ma per un mese tua madre legge tutte le notifiche del tuo telefono?",
+      "optionA": "Dammi i 1.000€ 🤑",
+      "optionB": "Mai nella vita 🔒",
+      "penalty": "Minoranza alla sbarra: bevi!"
+    },
+    {
+      "id": "as05",
+      "cardType": "gogna",
+      "prompt": "Chi manderebbe per sbaglio uno screenshot proprio alla persona di cui stava spettegolando?",
+      "penalty": "Il più votato beve doppio per distrazione cronica!"
+    },
+    {
+      "id": "as06",
+      "cardType": "dignita",
+      "prompt": "3.000€ adesso, ma devi mettere una storia Instagram in cui dichiari amore eterno al tuo ultimo ex?",
+      "optionA": "Pubblico subito 📱",
+      "optionB": "Tengo la dignità ✋",
+      "penalty": "Minoranza beve!"
+    },
+    {
+      "id": "as07",
+      "cardType": "gogna",
+      "prompt": "Chi sopravviverebbe meno di 48 ore in un'apocalisse zombie senza Wi-Fi né delivery?",
+      "penalty": "Il meno adatto alla vita selvaggia beve!"
+    },
+    {
+      "id": "as08",
+      "cardType": "dignita",
+      "prompt": "500€ subito, ma il tuo migliore amico legge ad alta voce le tue Note del telefono?",
+      "optionA": "Leggi pure 📝",
+      "optionB": "Brucio il telefono 🔥",
+      "penalty": "Chi è in minoranza paga pegno!"
+    },
+    {
+      "id": "as09",
+      "cardType": "gogna",
+      "prompt": "Chi si farebbe arrestare per una scommessa idiota da 20 euro alle 2 di notte?",
+      "penalty": "Il più incosciente del tavolo beve!"
+    },
+    {
+      "id": "as10",
+      "cardType": "dignita",
+      "prompt": "2.000€ subito, ma devi farti tagliare i capelli dal giocatore alla tua sinistra adesso?",
+      "optionA": "Prendi le forbici ✂️",
+      "optionB": "Scappo via 🏃",
+      "penalty": "Minoranza beve!"
+    },
+    {
+      "id": "as11",
+      "cardType": "gogna",
+      "prompt": "Chi finge di essere al verde ogni sabato sera ma ha più soldi di tutti in banca?",
+      "penalty": "Offri il prossimo giro o bevi doppio!"
+    },
+    {
+      "id": "as12",
+      "cardType": "dignita",
+      "prompt": "400€ subito, ma per tutta la settimana devi salutare qualsiasi estraneo dicendo 'Miao'?",
+      "optionA": "Miao a tutti 🐱",
+      "optionB": "No grazie 🚫",
+      "penalty": "Minoranza beve!"
+    },
+    {
+      "id": "as13",
+      "cardType": "gogna",
+      "prompt": "Chi del gruppo sparirebbe dalla discoteca senza salutare nessuno tornando a casa con uno sconosciuto?",
+      "penalty": "Il maestro della fuga ninja beve!"
+    },
+    {
+      "id": "as14",
+      "cardType": "dignita",
+      "prompt": "5.000€ sul conto, ma non puoi più usare WhatsApp né Instagram per 6 mesi interi?",
+      "optionA": "Sparisco 6 mesi 🏝️",
+      "optionB": "Impossibile 📱",
+      "penalty": "Minoranza beve!"
+    },
+    {
+      "id": "as15",
+      "cardType": "gogna",
+      "prompt": "Chi ha la cronologia di Google più inquietante se la sequestrasse la polizia stasera?",
+      "penalty": "Mostra l'ultima ricerca o bevi!"
+    },
+    {
+      "id": "as16",
+      "cardType": "dignita",
+      "prompt": "200€ subito, ma devi mangiare un cucchiaio pieno di maionese e Nutella mescolate?",
+      "optionA": "Apro la bocca 🥄",
+      "optionB": "Vomito solo al pensiero 🤢",
+      "penalty": "Minoranza beve!"
+    },
+    {
+      "id": "as17",
+      "cardType": "gogna",
+      "prompt": "Chi si innamorerebbe in 48 ore di una persona piena di red flag solo perché è bellissima?",
+      "penalty": "Il più cieco davanti alle red flag beve!"
+    },
+    {
+      "id": "as18",
+      "cardType": "dignita",
+      "prompt": "1.500€ subito, ma devi fare una videochiamata di 1 minuto al tuo capo o prof in pigiama alle 3 di notte?",
+      "optionA": "Chiamo adesso 📞",
+      "optionB": "Col cavolo 🛏️",
+      "penalty": "Minoranza beve!"
+    },
+    {
+      "id": "as19",
+      "cardType": "gogna",
+      "prompt": "Chi ci metterebbe meno di 24 ore a baciare un'altra persona dopo essere stato mollato?",
+      "penalty": "Cuore di pietra: bevi!"
+    },
+    {
+      "id": "as20",
+      "cardType": "dignita",
+      "prompt": "10.000€ subito, ma devi portare lo stesso paio di scarpe bagnate e puzzolenti per 30 giorni?",
+      "optionA": "Per 10k soffro 👟",
+      "optionB": "Che schifo, no 🤮",
+      "penalty": "Minoranza beve!"
+    }
+  ]
+}

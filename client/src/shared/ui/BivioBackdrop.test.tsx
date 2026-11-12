@@ -38,4 +38,11 @@ describe('BivioBackdrop', () => {
     render(<BivioBackdrop variant="player" />);
     expect(screen.getByTestId('bivio-backdrop').style.getPropertyValue('--bivio-k')).toBe('0.4');
   });
+
+  it('supports landing and dashboard variants', () => {
+    const { rerender } = render(<BivioBackdrop variant="landing" />);
+    expect(screen.getByTestId('bivio-backdrop').style.getPropertyValue('--bivio-k')).toBe('0.85');
+    rerender(<BivioBackdrop variant="dashboard" />);
+    expect(screen.getByTestId('bivio-backdrop').style.getPropertyValue('--bivio-k')).toBe('0.4');
+  });
 });

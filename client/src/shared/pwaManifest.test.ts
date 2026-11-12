@@ -19,9 +19,9 @@ describe('PWA install icon wiring', () => {
   describe('manifest.webmanifest', () => {
     const manifest = JSON.parse(readFileSync(clientRoot('public/manifest.webmanifest'), 'utf8'));
 
-    it('declares the SCHIERATI brand and standalone display', () => {
-      expect(manifest.name).toMatch(/SCHIERATI/);
-      expect(manifest.short_name).toBe('SCHIERATI');
+    it('declares the Nexus brand and standalone display', () => {
+      expect(manifest.name).toMatch(/Nexus/i);
+      expect(manifest.short_name).toBe('Nexus');
       expect(manifest.display).toBe('standalone');
       expect(manifest.start_url).toBe('/');
     });

@@ -3,7 +3,7 @@ import { PHASE_LABELS, type DefenseState, type Reaction, type Twist } from '../.
 import { formatMSS } from '../../shared/time';
 import ReactionSwarm from '../../shared/ReactionSwarm';
 import ReactionBar from './ReactionBar';
-import { Button } from '../../shared/ui';
+import { Button, Card } from '../../shared/ui';
 import { wrap } from './layout';
 
 interface DefenseDilemma {
@@ -125,7 +125,18 @@ export default function DefenseView({
           )}
 
           {phase === 'DEFENSE' && speaker && (
-            <>
+            <Card
+              glow={speaker.devil ? 'accent' : speaker.side === 'A' ? 'a' : 'b'}
+              style={{
+                width: 'min(90vw, 24rem)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                gap: 'var(--space-2)',
+                padding: 'var(--space-4)',
+              }}
+            >
               {dilemma && (
                 <p style={{ fontSize: '1rem', opacity: 0.8, margin: 0, maxWidth: '22rem' }}>
                   {dilemma.text}
@@ -154,7 +165,7 @@ export default function DefenseView({
                 </p>
               )}
               {d?.spunti && d.spunti.length > 0 && (
-                <div style={{ width: 'min(90vw, 22rem)', textAlign: 'center' }}>
+                <div style={{ width: '100%', textAlign: 'center', marginTop: 'var(--space-2)' }}>
                   <p style={{ fontSize: '0.9rem', fontWeight: 700, opacity: 0.8, margin: '0 0 0.3rem' }}>
                     Spunti per te:
                   </p>
@@ -165,7 +176,7 @@ export default function DefenseView({
                   </ul>
                 </div>
               )}
-            </>
+            </Card>
           )}
           {d?.startedAt != null && (
             <div
@@ -228,12 +239,14 @@ export default function DefenseView({
               style={{
                 fontSize: '1.05rem',
                 fontWeight: 700,
-                padding: '0.7rem 1.3rem',
-                borderRadius: 'var(--radius-lg)',
+                padding: '0.8rem 1.6rem',
+                borderRadius: 'var(--radius-pill)',
                 border: handRaised ? '2px solid var(--gold)' : '2px solid var(--border-strong)',
-                background: handRaised ? 'var(--gold-soft)' : 'transparent',
+                background: handRaised ? 'var(--gold-soft)' : 'rgba(255, 255, 255, 0.05)',
                 color: 'inherit',
                 cursor: 'pointer',
+                transition: 'all var(--dur-fast) var(--ease-spring)',
+                boxShadow: handRaised ? 'var(--glow-accent)' : 'none',
               }}
             >
               {handRaised ? '✋ Abbassa la mano' : '✋ Alza la mano'}

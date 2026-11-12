@@ -16,9 +16,13 @@ import {
   type PlayerGroupMindResultPayload,
 } from '../../shared/events';
 import { Card, Button, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel, PodiumPanel } from '../../shared/ui';
+import { computeRealWorldArchetype, type PlayerVoteStats } from '../../shared/realworld/archetypes';
 import { NORTHSTAR_URL } from '../../shared/northstar';
 import { pickIronicTitle, WRONG_PREDICTION_TITLES, WRONG_SWING_BET_TITLES, WRONG_KNOW_TITLES } from '../../shared/ironicTitles';
 import { wrap } from './layout';
+import { narrationFor, useIsSpeaking, unlockSpeech } from '../../host/audio/narrator';
+import { unlockAudio } from '../../host/audio/engine';
+import { getStoryAudioUrl, playStoryAudio, stopStoryAudio } from '../../host/audio/storyAudioPlayer';
 
 interface StatusViewProps {
   phase: GameStatePayload['phase'];
@@ -68,6 +72,26 @@ export default function StatusView({
   const wrongSwingBetTitle = useMemo(() => pickIronicTitle(WRONG_SWING_BET_TITLES), [swingBetResult]);
   const wrongKnowTitle = useMemo(() => pickIronicTitle(WRONG_KNOW_TITLES), [knowResult]);
   const wrongGroupMindTitle = useMemo(() => pickIronicTitle(WRONG_KNOW_TITLES), [groupMindResult]);
+
+  const personalArchetype = useMemo(() => {
+    if (phase !== 'FINAL_AWARDS') return null;
+    const myAward = game?.awards?.find((a) => a.winner.id === playerId);
+    const s: PlayerVoteStats = {
+      rounds: game?.dilemmaCount ?? 3,
+      changedCount: myAward?.id === 'banderuola' ? 3 : myAward?.id === 'roccione' ? 0 : 1,
+      majorityCount: myAward?.id === 'sintonia' ? 3 : 1,
+      minorityCount: myAward?.id === 'bastian' ? 3 : 1,
+      persuasion: myAward?.id === 'persuasore' ? 3 : 0,
+      defendedCount: 1,
+    };
+    if (blindSpot) {
+      if (blindSpot.id === 'volubile') s.changedCount = 3;
+      if (blindSpot.id === 'rigido') s.changedCount = 0;
+      if (blindSpot.id === 'conformista') s.majorityCount = 3;
+      if (blindSpot.id === 'contrarian') s.minorityCount = 3;
+    }
+    return computeRealWorldArchetype(s);
+  }, [phase, game?.awards, playerId, blindSpot, game?.dilemmaCount]);
   // Leader-paced beats (storia narration + the percorso tappa recap): the leader
   // advances; others wait. Named by nickname so the group knows WHO to nudge, and
   // reframed if that leader just dropped — leadership reassigns automatically on
@@ -82,6 +106,46 @@ export default function StatusView({
     }
     return `In attesa di ${currentLeader.nickname}…`;
   };
+
+  const isSpeaking = useIsSpeaking();
+  const narrationLine = narrationFor(phase, game?.storia ?? null, game?.dilemma ?? null);
+  const audioUrl = getStoryAudioUrl(phase, game?.storia ?? null, game?.dilemma ?? null);
+
+  const toggleSpeech = () => {
+    if (isSpeaking) {
+      stopStoryAudio();
+    } else {
+      unlockAudio();
+      unlockSpeech();
+      playStoryAudio(audioUrl, narrationLine);
+    }
+  };
+
+  const speechButton = narrationLine ? (
+    <div style={{ display: 'flex', justifyContent: 'center', margin: '0.25rem 0' }}>
+      <button
+        type="button"
+        onClick={toggleSpeech}
+        style={{
+          background: isSpeaking ? 'rgba(229, 193, 88, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+          border: `1px solid ${isSpeaking ? 'var(--gold)' : 'rgba(255, 255, 255, 0.25)'}`,
+          borderRadius: '999px',
+          padding: '0.35rem 0.9rem',
+          color: isSpeaking ? 'var(--gold)' : 'inherit',
+          fontSize: '0.85rem',
+          fontWeight: 600,
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+        }}
+        aria-label={isSpeaking ? 'Interrompi voce' : 'Ascolta la storia'}
+      >
+        {isSpeaking ? '⏹️ Ferma voce' : '🔊 Ascolta la storia'}
+      </button>
+    </div>
+  ) : null;
+
   const narratorAdvance = (label: string) =>
     isLeader ? (
       <Button variant="primary" onClick={onAdvance}>
@@ -149,6 +213,7 @@ export default function StatusView({
             <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'center' }}>
               {game.storia.premessa}
             </p>
+            {speechButton}
             {narratorAdvance('Comincia ▶')}
           </Card>
         ) : null
@@ -171,6 +236,7 @@ export default function StatusView({
                 {game.storia.sceneNarration}
               </p>
             )}
+            {speechButton}
             {narratorAdvance('Al bivio ▶')}
           </Card>
         ) : null
@@ -190,6 +256,7 @@ export default function StatusView({
                 {game.storia.consequence}
               </p>
             )}
+            {speechButton}
             {narratorAdvance('Continua ▶')}
           </Card>
         ) : null
@@ -206,6 +273,7 @@ export default function StatusView({
                 {game.storia.epilogo}
               </p>
             )}
+            {speechButton}
             {narratorAdvance('Vai ai premi ▶')}
           </Card>
         ) : null
@@ -280,7 +348,7 @@ export default function StatusView({
         )
       ) : phase === 'PHASE_RESULTS' ? (
         <>
-          {game?.swing && <ResultsPanel swing={game.swing} />}
+          {game?.swing && <ResultsPanel swing={game.swing} dilemma={game?.dilemma} />}
           {game?.dilemmaAuthor && (
             <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
               Indovinate chi l'ha scritto… ✍️ <strong>{game.dilemmaAuthor}</strong>!
@@ -416,6 +484,51 @@ export default function StatusView({
           )}
           {game?.namedMoments && <NamedMomentsPanel moments={game.namedMoments} />}
           {game?.awards && <AwardsPanel awards={game.awards} />}
+          {personalArchetype && (
+            <Card
+              glow="accent"
+              style={{
+                width: 'min(90vw, 24rem)',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-2)',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--gold)',
+                  fontWeight: 800,
+                }}
+              >
+                🌟 Il Tuo Archetipo nel Mondo Reale
+              </div>
+              <div style={{ fontSize: '2.5rem' }}>{personalArchetype.emoji}</div>
+              <h3 style={{ margin: 0, fontSize: '1.4rem' }}>{personalArchetype.title}</h3>
+              <p style={{ margin: 0, fontStyle: 'italic', opacity: 0.85, fontSize: '0.95rem' }}>
+                {personalArchetype.motto}
+              </p>
+              <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.9 }}>
+                {personalArchetype.descrizione}
+              </p>
+              <div
+                style={{
+                  marginTop: '0.3rem',
+                  padding: '0.6rem',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--gold-soft)',
+                  border: '1px solid var(--gold-line)',
+                  fontSize: '0.85rem',
+                  textAlign: 'left',
+                }}
+              >
+                💡 <strong>Lezione per la vita vera:</strong> {personalArchetype.insegnamentoReale}
+              </div>
+            </Card>
+          )}
           <Card
             glow="a"
             style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}

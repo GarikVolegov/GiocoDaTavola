@@ -7,7 +7,7 @@ interface ShareInviteButtonProps {
   code: string;
 }
 
-const SHARE_TEXT = 'Unisciti alla mia partita su Schierati!';
+const SHARE_TEXT = 'Unisciti alla mia partita su Nexus!';
 const COPIED_FEEDBACK_MS = 2000;
 
 function buildJoinUrl(code: string): string {
@@ -36,7 +36,7 @@ export function ShareInviteButton({ code }: ShareInviteButtonProps) {
   async function handleClick() {
     if (typeof navigator.share === 'function') {
       try {
-        await navigator.share({ title: 'Schierati', text: SHARE_TEXT, url });
+        await navigator.share({ title: 'Nexus', text: SHARE_TEXT, url });
         return;
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') return;

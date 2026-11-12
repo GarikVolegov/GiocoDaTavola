@@ -56,9 +56,10 @@ const RECIPES: Record<SfxName, (ctx: AudioContext, dest: AudioNode, t0: number) 
     const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5]; // C E G C E
     notes.forEach((f, i) => tone(ctx, dest, t0, { freq: f, start: i * 0.08, dur: 0.4, type: 'sine', gain: 0.14 }));
   },
-  // Soft single tick — the countdown is almost up.
+  // Dramatic heartbeat tick — countdown suspense in the final stretch.
   timerWarn: (ctx, dest, t0) => {
-    tone(ctx, dest, t0, { freq: 740, start: 0, dur: 0.09, type: 'sine', gain: 0.12 });
+    tone(ctx, dest, t0, { freq: 110, freqEnd: 55, start: 0, dur: 0.08, type: 'triangle', gain: 0.22 });
+    tone(ctx, dest, t0, { freq: 880, start: 0, dur: 0.05, type: 'sine', gain: 0.1 });
   },
   // Gentle two-tone ding — a new hand went up.
   handRaise: (ctx, dest, t0) => {
@@ -75,6 +76,22 @@ const RECIPES: Record<SfxName, (ctx: AudioContext, dest: AudioNode, t0: number) 
   // Short falling whoosh — the leader tossed the dilemma away.
   discard: (ctx, dest, t0) => {
     tone(ctx, dest, t0, { freq: 520, freqEnd: 140, start: 0, dur: 0.28, type: 'sawtooth', gain: 0.1 });
+  },
+  // Dimensional warp — deep resonant sweep + shimmer entering a new cosmic realm.
+  warp: (ctx, dest, t0) => {
+    tone(ctx, dest, t0, { freq: 85, freqEnd: 260, start: 0, dur: 0.45, type: 'sine', gain: 0.22 });
+    tone(ctx, dest, t0, { freq: 1046.5, freqEnd: 523.25, start: 0.05, dur: 0.35, type: 'triangle', gain: 0.12 });
+  },
+  // Debate clash — tense confrontation impact when entering defense or duel.
+  clash: (ctx, dest, t0) => {
+    tone(ctx, dest, t0, { freq: 130, freqEnd: 65, start: 0, dur: 0.38, type: 'triangle', gain: 0.24 });
+    tone(ctx, dest, t0, { freq: 440, freqEnd: 220, start: 0.02, dur: 0.28, type: 'sawtooth', gain: 0.14 });
+  },
+  // Real-world insight — luminous oracle chime when psychological truth is revealed.
+  insight: (ctx, dest, t0) => {
+    tone(ctx, dest, t0, { freq: 440, start: 0, dur: 0.3, type: 'sine', gain: 0.14 }); // A4
+    tone(ctx, dest, t0, { freq: 659.25, start: 0.08, dur: 0.35, type: 'sine', gain: 0.14 }); // E5
+    tone(ctx, dest, t0, { freq: 880.0, start: 0.16, dur: 0.5, type: 'triangle', gain: 0.16 }); // A5
   },
 };
 

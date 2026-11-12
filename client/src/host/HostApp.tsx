@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { getSocket } from '../shared/socket';
 import { useCountdown } from '../shared/useCountdown';
 import { useElapsed } from '../shared/useElapsed';
@@ -19,8 +19,14 @@ import {
   type PublicPlayer,
   type PercorsoView,
 } from '../shared/events';
-import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel, PodiumPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip, leanFromSplit, PauseOverlay } from '../shared/ui';
+import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel, PodiumPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip, LiveVoterStatus, leanFromSplit, PauseOverlay } from '../shared/ui';
 import ReactionSwarm from '../shared/ReactionSwarm';
+import { AudioGate } from './AudioGate';
+import { MuteButton } from './MuteButton';
+import { useHostAudio } from './audio/useHostAudio';
+import { useIsSpeaking } from './audio/narrator';
+import { useWakeLock } from '../shared/useWakeLock';
+import { playTick, playSiren, playGong, playFanfare } from './audio/synthSfx';
 
 const screen = {
   display: 'flex',
@@ -136,9 +142,12 @@ export default function HostApp() {
   // the next turn (the server never clears it — the client treats it as a toast).
   const lastTurnApplause = useTransient(game?.lastTurnApplause ?? null, 3_000);
 
-  // NB: this screen (the old "TV" mirror) is intentionally SILENT. All audio — the
-  // musichetta, the event SFX and the Storie narrator voice — now plays on the LEADER's
-  // phone (see useHostAudio in PlayerApp), so only one device makes sound.
+  // Audio director on /host: plays music, SFX and voice narration through the main
+  // screen/TV speakers when unlocked. Gated by AudioGate and MuteButton.
+  const { audioReady, activateAudio, replay, narrationLine } = useHostAudio({ enabled: true, game });
+  const isSpeaking = useIsSpeaking();
+  // Keep host screen / TV awake during the entire game
+  useWakeLock(code != null);
 
   // Sfondo "bivio": al SPLIT_REVEAL la scena pende verso il lato in testa
   // (voto AGGREGATO — i voti restano segreti, nessun aggancio durante VOTE_*).
@@ -149,15 +158,58 @@ export default function HostApp() {
     const inSuspense = remaining != null && remaining > SPLIT_REVEAL_WINDOW_S;
     const lean = phase === 'SPLIT_REVEAL' && game?.split && !inSuspense ? leanFromSplit(game.split) : 50;
     root.style.setProperty('--bivio-lean', String(lean));
+    root.setAttribute('data-phase', phase);
+
+    if (phase === 'PHASE_RESULTS' && game?.swing && (game.swing.leadFlipped || game.swing.switched >= 2)) {
+      window.dispatchEvent(new CustomEvent('nexus:shockwave'));
+    }
+
     return () => {
       root.style.setProperty('--bivio-lean', '50');
+      root.removeAttribute('data-phase');
     };
-  }, [phase, game?.split, remaining]);
+  }, [phase, game?.split, game?.swing, remaining]);
+
+  // Synth SFX cues for party modes on TV / host screen
+  const prevPhaseRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!audioReady) return;
+    const prev = prevPhaseRef.current;
+    prevPhaseRef.current = phase;
+    if (prev === phase) return;
+
+    if (phase === 'DEFENSE' && game?.partyCard?.mode === 'infiltrato') {
+      playSiren();
+    } else if (phase === 'SPLIT_REVEAL') {
+      if (game?.partyCard?.mode === 'infiltrato' && game.partyCard.infiltratoRoundResult?.caught) {
+        playFanfare();
+      } else if (game?.partyCard?.mode === 'assurdo' && game.partyCard.cardType === 'gogna') {
+        playGong();
+      } else if (game?.partyCard?.mode === 'coppie' && game.partyCard.hotSeat?.coupleMatched) {
+        playFanfare();
+      }
+    }
+  }, [phase, audioReady, game?.partyCard]);
+
+  // Tick for countdown on host during fast voting in Flash mode
+  useEffect(() => {
+    if (!audioReady) return;
+    if (
+      game?.partyCard?.mode === 'flash' &&
+      phase === 'VOTE_1' &&
+      remaining != null &&
+      remaining >= 1 &&
+      remaining <= 3
+    ) {
+      playTick();
+    }
+  }, [remaining, phase, audioReady, game?.partyCard?.mode]);
 
   // No code yet: ask for one (the leader's phone shows it after creating a room).
   if (!code) {
     return (
       <main style={screen}>
+        {!audioReady && <AudioGate onActivate={activateAudio} />}
         <Logo size={64} payoff />
         <p style={{ opacity: 0.8, margin: 0, maxWidth: '32rem' }}>
           Collega questo schermo a una partita: inserisci il codice mostrato sul telefono del leader.
@@ -215,10 +267,37 @@ export default function HostApp() {
           : `In attesa di ${currentLeader.nickname} ▶`}
       </p>
     );
+
+    const narratorStatus = narrationLine ? (
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', margin: '0.4rem 0' }}>
+        <span style={{ fontSize: '0.95rem', opacity: 0.9, color: isSpeaking ? 'var(--gold)' : 'inherit', fontWeight: isSpeaking ? 600 : 400 }}>
+          {isSpeaking ? '🎙️ Voce narrante in corso…' : '🎙️ Narrazione'}
+        </span>
+        <button
+          type="button"
+          onClick={replay}
+          style={{
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.25)',
+            borderRadius: '999px',
+            padding: '0.2rem 0.65rem',
+            color: 'inherit',
+            fontSize: '0.85rem',
+            cursor: 'pointer',
+          }}
+          aria-label="Rileggi ad alta voce"
+        >
+          🔊 Rileggi
+        </button>
+      </div>
+    ) : null;
+
     return (
       <main style={screen}>
         <ReactionSwarm />
         {game.paused && <PauseOverlay />}
+        {!audioReady && <AudioGate onActivate={activateAudio} />}
+        <MuteButton />
         {/* Latecomers can still join mid-game: keep the code + QR in the corner. */}
         {code && <RoomCodeChip code={code} />}
         {/* Percorso: the climb map (current tappa highlighted) sits above the phase. */}
@@ -283,6 +362,7 @@ export default function HostApp() {
             <h2 style={{ fontSize: '2.2rem', margin: 0, fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>{game.storia.title}</h2>
             <p style={{ fontSize: '1.2rem', opacity: 0.75, margin: 0 }}>con {game.storia.protagonist}</p>
             <p style={{ fontSize: '1.45rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.premessa}</p>
+            {narratorStatus}
             {leaderWaitCue}
           </Card>
         )}
@@ -293,6 +373,7 @@ export default function HostApp() {
               <p style={{ fontSize: '1rem', opacity: 0.6, margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{game.storia.actTitle}</p>
             )}
             <p style={{ fontSize: '1.5rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.sceneNarration}</p>
+            {narratorStatus}
             {leaderWaitCue}
           </Card>
         )}
@@ -305,6 +386,7 @@ export default function HostApp() {
               </h2>
             )}
             <p style={{ fontSize: '1.45rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.consequence}</p>
+            {narratorStatus}
             {leaderWaitCue}
           </Card>
         )}
@@ -313,6 +395,7 @@ export default function HostApp() {
           <Card glow="accent" style={{ maxWidth: '46rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', textAlign: 'center', alignItems: 'center' }}>
             <span style={{ fontSize: '3.5rem' }}>🌅</span>
             <p style={{ fontSize: '1.5rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.epilogo}</p>
+            {narratorStatus}
             {leaderWaitCue}
           </Card>
         )}
@@ -341,25 +424,321 @@ export default function HostApp() {
             phase === 'DUO_WAVER' ||
             phase === 'DUO_PICK' ||
             phase === 'DUO_REVEAL' ||
-            phase === 'DUO_REPICK') && <DilemmaCard dilemma={dilemma} />}
+            phase === 'DUO_REPICK') && (
+            <>
+              {game.partyCard && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <span style={{
+                      padding: '0.3rem 0.8rem',
+                      borderRadius: '999px',
+                      background: game.partyCard.mode === 'flash'
+                        ? 'linear-gradient(90deg, #f59e0b, #ef4444)'
+                        : game.partyCard.mode === 'infiltrato'
+                        ? 'linear-gradient(90deg, #8b5cf6, #ec4899)'
+                        : game.partyCard.mode === 'coppie'
+                        ? 'linear-gradient(90deg, #ec4899, #f43f5e)'
+                        : 'linear-gradient(90deg, #10b981, #3b82f6)',
+                      color: '#fff',
+                      fontSize: '0.95rem',
+                      fontWeight: 800,
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                    }}>
+                      {game.partyCard.mode === 'flash' && '⚡ SCHIERATI FLASH'}
+                      {game.partyCard.mode === 'infiltrato' && "🕵️ L'INFILTRATO"}
+                      {game.partyCard.mode === 'coppie' && (game.partyCard.intensity === 'piccante' ? '🔞 COPPIE PICCANTE' : '💞 COPPIE COMPLICITÀ')}
+                      {game.partyCard.mode === 'assurdo' && (game.partyCard.cardType === 'gogna' ? '👑 LA GOGNA' : '💰 PREZZO DELLA DIGNITÀ')}
+                    </span>
+                    {game.partyCard.penalty && (
+                      <span style={{ color: 'var(--gold)', fontSize: '1rem', fontWeight: 700 }}>
+                        ⚠️ {game.partyCard.penalty}
+                      </span>
+                    )}
+                  </div>
+                  {game.partyCard.mode === 'infiltrato' && (
+                    <p style={{ margin: 0, fontSize: '1.25rem', color: '#a78bfa', fontWeight: 600 }}>
+                      🤫 Ognuno ha una domanda segreta sul telefono. Rispondete a voce a turno con 1 sola parola o frase!
+                    </p>
+                  )}
+                  {game.partyCard.mode === 'assurdo' && game.partyCard.cardType === 'gogna' && (
+                    <p style={{ margin: 0, fontSize: '1.25rem', color: '#34d399', fontWeight: 600 }}>
+                      👉 Chi tra voi è il colpevole? Votate l'amico dal vostro telefono!
+                    </p>
+                  )}
+                </div>
+              )}
+              <DilemmaCard dilemma={dilemma} />
+              {(phase === 'DILEMMA_REVEAL' || phase === 'VOTE_1') && narratorStatus}
+            </>
+          )}
 
         {phase === 'VOTE_1' && (
-          <p
-            aria-label="Quanti hanno votato"
-            style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}
-          >
-            Hanno votato {game.votedCount}/{players.length}
-          </p>
+          <LiveVoterStatus
+            votedCount={game.votedCount}
+            totalCount={players.length}
+            label="Hanno votato"
+          />
         )}
 
         {phase === 'VOTE_2' && (
-          <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
-            Confermate il voto dal telefono ✓ · {game.confirmedCount}/{players.length}
-          </p>
+          <LiveVoterStatus
+            votedCount={game.confirmedCount}
+            totalCount={players.length}
+            label="Confermati"
+            confirmedMode
+          />
         )}
 
-        {phase === 'SPLIT_REVEAL' &&
-          (remaining != null && remaining > SPLIT_REVEAL_WINDOW_S ? (
+        {phase === 'SPLIT_REVEAL' && (() => {
+          // 1. Flash mode: Doxxing della minoranza visibile
+          if (game.partyCard?.mode === 'flash') {
+            const fr = game.partyCard.flashResult;
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)', width: 'min(92vw, 48rem)' }}>
+                {fr?.isUnanimous ? (
+                  <div style={{
+                    padding: '1.5rem 2.2rem',
+                    borderRadius: 'var(--radius-xl)',
+                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(239, 68, 68, 0.25) 100%)',
+                    border: '2px solid #f59e0b',
+                    boxShadow: '0 0 35px rgba(245, 158, 11, 0.4)',
+                    width: '100%',
+                    textAlign: 'center',
+                  }}>
+                    <Celebration pieces={30} />
+                    <h2 style={{ fontSize: 'clamp(2rem, 5.5vw, 3.4rem)', margin: 0, color: '#fbbf24', fontWeight: 900 }}>
+                      🍻 UNANIMITÀ!
+                    </h2>
+                    <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.8rem 0 0' }}>
+                      Troppo prevedibili: bevono tutti!
+                    </p>
+                  </div>
+                ) : fr?.isTie ? (
+                  <div style={{
+                    padding: '1.5rem 2.2rem',
+                    borderRadius: 'var(--radius-xl)',
+                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%)',
+                    border: '2px solid #ef4444',
+                    boxShadow: '0 0 35px rgba(239, 68, 68, 0.4)',
+                    width: '100%',
+                    textAlign: 'center',
+                  }}>
+                    <h2 style={{ fontSize: 'clamp(2rem, 5.5vw, 3.4rem)', margin: 0, color: '#f87171', fontWeight: 900 }}>
+                      ⚔️ GUERRA CIVILE! (50% vs 50%)
+                    </h2>
+                    <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.8rem 0 0' }}>
+                      15 secondi di insulti liberi prima di decidere chi beve!
+                    </p>
+                  </div>
+                ) : fr && fr.minorityNicknames.length > 0 ? (
+                  <div style={{
+                    padding: '1.5rem 2.2rem',
+                    borderRadius: 'var(--radius-xl)',
+                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(20, 20, 30, 0.85) 100%)',
+                    border: '2px solid #ef4444',
+                    boxShadow: '0 0 35px rgba(239, 68, 68, 0.4)',
+                    width: '100%',
+                    textAlign: 'center',
+                  }}>
+                    <div style={{ fontSize: '1.1rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#f87171', fontWeight: 800 }}>
+                      MINORANZA ALLA GOGNA
+                    </div>
+                    <h2 style={{ fontSize: 'clamp(2rem, 5.5vw, 3.2rem)', margin: '0.5rem 0', color: '#ffffff', fontWeight: 900 }}>
+                      🍺 {fr.minorityNicknames.join(', ')}!
+                    </h2>
+                    <p style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0, color: '#fbbf24' }}>
+                      Bevete e difendetevi in 15 secondi dagli attacchi del gruppo!
+                    </p>
+                    {fr.unvotedNicknames && fr.unvotedNicknames.length > 0 && (
+                      <p style={{ fontSize: '1.15rem', margin: '0.8rem 0 0', opacity: 0.9, color: '#fca5a5' }}>
+                        📵 Non hanno votato in tempo e bevono per punizione: <strong>{fr.unvotedNicknames.join(', ')}</strong>
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+                {split && <SplitBar split={split} />}
+              </div>
+            );
+          }
+
+          // 2. Infiltrato mode: Smascheramento e confronto domande
+          if (game.partyCard?.mode === 'infiltrato') {
+            const res = game.partyCard.infiltratoRoundResult;
+            if (res) {
+              return (
+                <div style={{
+                  padding: '1.8rem 2.2rem',
+                  borderRadius: 'var(--radius-xl)',
+                  background: res.caught
+                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(30, 20, 50, 0.85) 100%)'
+                    : 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(30, 20, 50, 0.85) 100%)',
+                  border: `2px solid ${res.caught ? '#10b981' : '#ef4444'}`,
+                  boxShadow: `0 0 35px ${res.caught ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+                  width: 'min(92vw, 48rem)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-3)',
+                  textAlign: 'center',
+                  alignItems: 'center',
+                }}>
+                  {res.caught && <Celebration pieces={35} />}
+                  <div style={{ fontSize: '1.2rem', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 800, color: res.caught ? '#34d399' : '#f87171' }}>
+                    {res.caught ? "🎉 L'INFILTRATO È STATO SMASCHERATO!" : "😈 BLUFF RIUSCITO! L'INFILTRATO SCAPPA!"}
+                  </div>
+                  <h2 style={{ fontSize: 'clamp(2.4rem, 5.5vw, 3.8rem)', margin: 0, fontWeight: 900, color: '#ffffff' }}>
+                    🕵️ {res.infiltratorNickname}
+                  </h2>
+                  <p style={{ fontSize: '1.45rem', fontWeight: 700, margin: 0, color: res.caught ? '#6ee7b7' : '#fca5a5' }}>
+                    {res.caught
+                      ? 'Il gruppo lo ha scoperto! (+100 pt a chi lo ha accusato)'
+                      : "Nessuno lo ha smascherato! (+200 pt all'Infiltrato)"}
+                  </p>
+
+                  <div style={{
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem',
+                    background: 'rgba(0, 0, 0, 0.45)',
+                    padding: '1.2rem',
+                    borderRadius: 'var(--radius-lg)',
+                    textAlign: 'left',
+                    marginTop: '0.5rem',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                  }}>
+                    <div>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#10b981' }}>
+                        👥 DOMANDA DEL GRUPPO:
+                      </span>
+                      <p style={{ margin: '0.2rem 0 0', fontSize: '1.25rem', fontWeight: 700, color: '#ffffff' }}>
+                        "{res.groupQuestion}"
+                      </p>
+                    </div>
+                    <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '0.65rem' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#ef4444' }}>
+                        🕵️ DOMANDA DELL'INFILTRATO:
+                      </span>
+                      <p style={{ margin: '0.2rem 0 0', fontSize: '1.25rem', fontWeight: 700, color: '#f87171' }}>
+                        "{res.impostorQuestion}"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+          }
+
+          // 3. Coppie mode: Match Hot-Seat & scommesse del gruppo
+          if (game.partyCard?.mode === 'coppie') {
+            const hs = game.partyCard.hotSeat;
+            if (hs) {
+              return (
+                <div style={{
+                  padding: '1.8rem 2.2rem',
+                  borderRadius: 'var(--radius-xl)',
+                  background: hs.coupleMatched
+                    ? 'linear-gradient(135deg, rgba(236, 72, 153, 0.25) 0%, rgba(244, 63, 94, 0.25) 100%)'
+                    : 'linear-gradient(135deg, rgba(100, 116, 139, 0.25) 0%, rgba(30, 20, 50, 0.85) 100%)',
+                  border: `2px solid ${hs.coupleMatched ? '#ec4899' : '#64748b'}`,
+                  boxShadow: `0 0 35px ${hs.coupleMatched ? 'rgba(236, 72, 153, 0.4)' : 'rgba(0, 0, 0, 0.4)'}`,
+                  width: 'min(92vw, 48rem)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-3)',
+                  textAlign: 'center',
+                  alignItems: 'center',
+                }}>
+                  {hs.coupleMatched && <Celebration pieces={35} />}
+                  <div style={{ fontSize: '1.1rem', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 800, color: '#f472b6' }}>
+                    COPPIA AL CENTRO: {hs.coupleNicknames.join(' & ')}
+                  </div>
+                  <h2 style={{ fontSize: 'clamp(2.4rem, 5.5vw, 3.6rem)', margin: 0, fontWeight: 900, color: '#ffffff' }}>
+                    {hs.coupleMatched ? '💞 MATCH PERFETTO!' : '💥 SCOPPIATI!'}
+                  </h2>
+                  <p style={{ fontSize: '1.45rem', fontWeight: 700, margin: 0, color: hs.coupleMatched ? '#fbcfe8' : '#cbd5e1' }}>
+                    {hs.coupleMatched
+                      ? 'Stessa risposta in contemporanea! Grande affinità (+100 pt)'
+                      : 'Risposte discordanti! Penitenza per la coppia!'}
+                  </p>
+
+                  {players.length > 2 && (
+                    <div style={{
+                      marginTop: '0.5rem',
+                      padding: '1rem 1.4rem',
+                      borderRadius: 'var(--radius-lg)',
+                      background: 'rgba(0, 0, 0, 0.35)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      width: '100%',
+                    }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--gold)', letterSpacing: '0.08em' }}>
+                        SCOMMESSE DEL PUBBLICO (+50 pt):
+                      </span>
+                      <p style={{ margin: '0.35rem 0 0', fontSize: '1.2rem', fontWeight: 700 }}>
+                        {hs.correctSpectators && hs.correctSpectators.length > 0
+                          ? `🎯 Hanno indovinato: ${hs.correctSpectators.join(', ')}`
+                          : '❌ Nessuno spettatore ha indovinato la scommessa!'}
+                      </p>
+                    </div>
+                  )}
+                  {split && <SplitBar split={split} />}
+                </div>
+              );
+            }
+          }
+
+          // 4. Assurdo mode: Incoronazione de La Gogna + Sentenza
+          if (game.partyCard?.mode === 'assurdo' && game.partyCard.cardType === 'gogna') {
+            return (
+              <div style={{
+                padding: '1.8rem 2.2rem',
+                borderRadius: 'var(--radius-xl)',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(20, 30, 45, 0.85) 100%)',
+                border: '2px solid #10b981',
+                boxShadow: '0 0 35px rgba(16, 185, 129, 0.4)',
+                width: 'min(92vw, 48rem)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-3)',
+                textAlign: 'center',
+                alignItems: 'center',
+              }}>
+                <div style={{ fontSize: '1.1rem', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 800, color: '#34d399' }}>
+                  LA GOGNA DEL GRUPPO
+                </div>
+                <h2 style={{ fontSize: 'clamp(2.4rem, 5.5vw, 3.6rem)', margin: 0, fontWeight: 900, color: '#ffffff' }}>
+                  👑 {game.partyCard.gognaTargetNickname || 'Il più votato'}!
+                </h2>
+                <p style={{ fontSize: '1.45rem', fontWeight: 700, margin: 0, color: '#a7f3d0' }}>
+                  Incoronato con {game.partyCard.gognaVotes ?? 'la maggioranza dei'} voti dal gruppo!
+                </p>
+
+                {game.partyCard.sentenza && (
+                  <div style={{
+                    marginTop: '0.5rem',
+                    padding: '1.1rem 1.4rem',
+                    borderRadius: 'var(--radius-lg)',
+                    background: 'rgba(0, 0, 0, 0.45)',
+                    border: '1.5px solid #10b981',
+                    width: '100%',
+                  }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', color: '#fbbf24', letterSpacing: '0.08em' }}>
+                      📜 SENTENZA DELL'APP:
+                    </div>
+                    <p style={{ margin: '0.4rem 0 0', fontSize: '1.4rem', fontWeight: 800, color: '#ffffff' }}>
+                      "{game.partyCard.sentenza}"
+                    </p>
+                    <p style={{ margin: '0.4rem 0 0', fontSize: '1.05rem', opacity: 0.85, color: '#a7f3d0' }}>
+                      Hai 15 secondi per giustificarti o bere!
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // Fallback: Classic game split reveal
+          return remaining != null && remaining > SPLIT_REVEAL_WINDOW_S ? (
             <div
               aria-label="Si scopre il gruppo tra…"
               style={{ fontSize: 'clamp(6rem, 20vw, 12rem)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
@@ -368,7 +747,8 @@ export default function HostApp() {
             </div>
           ) : (
             split && <SplitBar split={split} />
-          ))}
+          );
+        })()}
 
         {phase === 'UNANIMOUS_REVEAL' && game.unanimous && (
           <>
@@ -495,6 +875,75 @@ export default function HostApp() {
           </p>
         )}
 
+        {phase === 'DEFENSE' && (
+          game.partyCard?.mode === 'infiltrato' ? (
+            <div
+              style={{
+                maxWidth: '46rem',
+                padding: '1.4rem 2rem',
+                borderRadius: 'var(--radius-xl)',
+                background: 'linear-gradient(145deg, rgba(139, 92, 246, 0.3) 0%, rgba(30, 20, 50, 0.9) 100%)',
+                border: '2px solid #8b5cf6',
+                boxShadow: '0 0 35px rgba(139, 92, 246, 0.4)',
+                textAlign: 'center',
+                marginBottom: '1rem',
+              }}
+            >
+              <h3 style={{ margin: '0 0 0.5rem', fontSize: 'clamp(1.5rem, 4vw, 2.2rem)', color: '#c4b5fd', fontWeight: 900 }}>
+                🚨 60 SECONDI DI DIBATTITO LIBERO: CHI È L'INFILTRATO?
+              </h3>
+              <p style={{ margin: 0, fontSize: '1.25rem', opacity: 0.95, color: '#f3e8ff' }}>
+                Interrogatevi sulle risposte date a voce. Chi sta mentendo? Smascheratelo prima che scada il tempo!
+              </p>
+            </div>
+          ) : null
+        )}
+
+        {phase === 'DEFENSE' && (
+          game.partyCard?.mode === 'flash' ? (
+            <div
+              style={{
+                maxWidth: '46rem',
+                padding: '1.2rem 2rem',
+                borderRadius: 'var(--radius-xl)',
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(239, 68, 68, 0.25) 100%)',
+                border: '2px solid #f59e0b',
+                boxShadow: '0 0 30px rgba(245, 158, 11, 0.35)',
+                textAlign: 'center',
+                marginBottom: '1rem',
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: 'clamp(1.4rem, 4vw, 2rem)', color: '#fbbf24', fontWeight: 900 }}>
+                ⚡ 15 SECONDI BLITZ DEFENSE: La minoranza beve o si difende!
+              </h3>
+            </div>
+          ) : null
+        )}
+
+        {phase === 'DEFENSE' && (
+          game.partyCard?.mode === 'assurdo' && game.partyCard.cardType === 'gogna' && game.partyCard.gognaTargetNickname ? (
+            <div
+              style={{
+                maxWidth: '44rem',
+                padding: '1.2rem 2rem',
+                borderRadius: 'var(--radius-xl)',
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(20, 30, 45, 0.85) 100%)',
+                border: '2px solid #10b981',
+                boxShadow: '0 0 30px rgba(16, 185, 129, 0.35)',
+                textAlign: 'center',
+                marginBottom: '1rem',
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: 'clamp(1.4rem, 4vw, 2rem)', color: '#34d399', fontWeight: 900 }}>
+                👑 ALLA GOGNA: {game.partyCard.gognaTargetNickname}! ({game.partyCard.gognaVotes} voti dal gruppo)
+              </h3>
+              <p style={{ margin: '0.4rem 0 0', fontSize: '1.15rem', color: '#a7f3d0' }}>
+                Hai 15 secondi per giustificarti prima di bere o scontare la sentenza!
+              </p>
+            </div>
+          ) : null
+        )}
+
         {phase === 'DEFENSE' && defense && (
           defense.speaker ? (
             <section
@@ -593,7 +1042,7 @@ export default function HostApp() {
           </section>
         )}
 
-        {phase === 'PHASE_RESULTS' && swing && <ResultsPanel swing={swing} />}
+        {phase === 'PHASE_RESULTS' && swing && <ResultsPanel swing={swing} dilemma={dilemma} />}
 
         {phase === 'ACCUSE' && (
           <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
@@ -622,6 +1071,26 @@ export default function HostApp() {
                   ? 'Smascherato dal gruppo! 🎉'
                   : 'Missione fallita.'}
             </p>
+            {game.partyCard?.groupQuestion && game.partyCard?.impostorQuestion && (
+              <div
+                style={{
+                  marginTop: '0.75rem',
+                  fontSize: '1.1rem',
+                  opacity: 0.95,
+                  textAlign: 'left',
+                  background: 'rgba(0,0,0,0.3)',
+                  padding: '0.75rem',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                <p style={{ margin: '0 0 0.35rem', color: '#10b981' }}>
+                  👥 <strong>Domanda del gruppo:</strong> “{game.partyCard.groupQuestion}”
+                </p>
+                <p style={{ margin: 0, color: '#ef4444' }}>
+                  🕵️ <strong>Domanda dell'infiltrato:</strong> “{game.partyCard.impostorQuestion}”
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -886,10 +1355,21 @@ export default function HostApp() {
           <div
             aria-label="Tempo rimanente"
             style={{
-              fontSize: 'clamp(3rem, 12vw, 6rem)',
+              position: 'relative',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0.4rem 1.6rem',
+              borderRadius: 'var(--radius-xl)',
+              background: remaining <= 5 ? 'rgba(229, 193, 88, 0.12)' : 'transparent',
+              border: remaining <= 5 ? '1.5px solid var(--gold-line)' : '1px solid transparent',
+              fontSize: remaining <= 5 ? 'clamp(4rem, 15vw, 7.8rem)' : remaining <= 10 ? 'clamp(3.5rem, 14vw, 7rem)' : 'clamp(3rem, 12vw, 6rem)',
               fontWeight: 800,
               fontVariantNumeric: 'tabular-nums',
               lineHeight: 1,
+              color: remaining <= 5 ? '#ffffff' : remaining <= 10 ? 'var(--gold)' : 'var(--text)',
+              textShadow: remaining <= 5 ? '0 0 40px rgba(229, 193, 88, 0.85), 0 0 10px #ffffff' : remaining <= 10 ? '0 0 30px rgba(229, 193, 88, 0.5)' : '0 4px 16px rgba(0,0,0,0.4)',
+              transition: 'all 200ms var(--ease-spring)',
             }}
           >
             {remaining}s
@@ -902,25 +1382,56 @@ export default function HostApp() {
   // LOBBY: show the code + roster + a passive "waiting for the leader" line.
   return (
     <main style={screen}>
-      <Logo size={64} payoff />
-      <p style={{ opacity: 0.7, margin: 0 }}>
+      {!audioReady && <AudioGate onActivate={activateAudio} />}
+      <MuteButton />
+      <Logo size={68} payoff />
+      <p style={{ opacity: 0.8, margin: 0, fontSize: '1.1rem' }}>
         Entra da <strong>{window.location.host}</strong> con il codice
       </p>
       <div
         style={{
-          fontSize: 'clamp(4rem, 18vw, 9rem)',
-          fontWeight: 800,
-          letterSpacing: '0.4rem',
-          fontFamily: 'var(--font-mono)',
-          lineHeight: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 'var(--space-2)',
+          padding: 'var(--space-4) var(--space-7)',
+          borderRadius: 'var(--radius-xl)',
+          background: 'linear-gradient(145deg, rgba(22, 28, 58, 0.75) 0%, rgba(10, 14, 28, 0.75) 100%)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1.5px solid var(--gold-line)',
+          boxShadow: '0 16px 48px rgba(0, 0, 0, 0.6), var(--glow-accent)',
         }}
       >
-        {code}
+        <span
+          style={{
+            fontSize: '0.85rem',
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'var(--gold)',
+            fontWeight: 800,
+          }}
+        >
+          CODICE DELLA STANZA
+        </span>
+        <div
+          style={{
+            fontSize: 'clamp(4rem, 18vw, 8.5rem)',
+            fontWeight: 800,
+            letterSpacing: '0.45rem',
+            fontFamily: 'var(--font-mono)',
+            lineHeight: 1,
+            color: '#ffffff',
+            textShadow: '0 0 28px rgba(229, 193, 88, 0.5)',
+          }}
+        >
+          {code}
+        </div>
       </div>
 
-      <section style={{ marginTop: '0.5rem', width: 'min(90vw, 36rem)' }}>
-        <h2 style={{ fontSize: '1.25rem', margin: '0 0 0.75rem' }}>
-          Giocatori ({players.length}/8)
+      <section style={{ marginTop: '0.5rem', width: 'min(90vw, 38rem)' }}>
+        <h2 style={{ fontSize: '1.35rem', margin: '0 0 0.85rem', fontWeight: 800 }}>
+          Giocatori Connessi ({players.length}/8)
         </h2>
         {players.length === 0 ? (
           <>
@@ -946,10 +1457,16 @@ export default function HostApp() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 'var(--space-2)',
-                  padding: '0.4rem 0.9rem',
+                  padding: '0.5rem 1.1rem',
                   borderRadius: 'var(--radius-pill)',
-                  background: p.isBot ? 'var(--gold-soft)' : 'rgba(127,127,127,0.18)',
-                  fontWeight: 600,
+                  background: p.isBot
+                    ? 'rgba(229, 193, 88, 0.18)'
+                    : 'linear-gradient(135deg, rgba(62, 130, 252, 0.16) 0%, rgba(255, 255, 255, 0.06) 100%)',
+                  border: `1px solid ${p.isBot ? 'var(--gold-line)' : 'rgba(255, 255, 255, 0.14)'}`,
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
+                  fontWeight: 700,
+                  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.3)',
                   opacity: p.connected === false ? 0.5 : 1,
                 }}
               >

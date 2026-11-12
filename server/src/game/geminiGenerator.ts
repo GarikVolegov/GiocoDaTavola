@@ -1,0 +1,316 @@
+// Generator for "Schierati" Party Game using Gemini Flash.
+// Implements strict writing guidelines for viral Italian party gameplay (18-28 years old).
+
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
+import { GoogleGenAI } from '@google/genai';
+
+export type PartyMode = 'flash' | 'infiltrato' | 'coppie' | 'assurdo';
+
+export interface FlashCard {
+  id: string;
+  text: string;
+  optionA: string;
+  optionB: string;
+  spuntiA?: string[];
+  spuntiB?: string[];
+  penalty?: string;
+}
+
+export interface InfiltratoCard {
+  id: string;
+  groupQuestion: string;
+  impostorQuestion: string;
+  category?: string;
+  botAnswersGroup?: string[];
+  botAnswersImpostor?: string[];
+}
+
+export interface CoppieCard {
+  id: string;
+  cardType: 'allineamento' | 'verita' | 'obbligo';
+  intensity: 'complicita' | 'piccante';
+  prompt: string;
+  optionA?: string;
+  optionB?: string;
+  penalty?: string;
+}
+
+export interface AssurdoCard {
+  id: string;
+  cardType: 'gogna' | 'dignita';
+  prompt: string;
+  optionA?: string;
+  optionB?: string;
+  penalty?: string;
+  sentenza?: string;
+}
+
+export type PartyCard = FlashCard | InfiltratoCard | CoppieCard | AssurdoCard;
+
+export const SYSTEM_PROMPT = `Sei l'autore creativo di un party game virale per ragazzi italiani (18-28 anni). Il tuo unico obiettivo è generare domande, dilemmi, obblighi e round per il gioco "Impostore" che scatenino risate immediate, dibattiti accesi e zero noia.
+
+REGOLE TASSATIVE DI SCRITTURA (VIETATO INFRANGERLE):
+1. ZERO FILOSOFIA O ASTRAZIONE: Vietati dilemmi morali complessi, scenari fantascientifici contorti, paradossi temporali o domande che richiedono più di 3 secondi per essere capite.
+2. BREVITÀ ESTREMA: Ogni carta deve avere massimo 15-18 parole. Deve poter essere letta ad alta voce in 3 secondi in un locale rumoroso.
+3. LINGUAGGIO REALE E GIOVANILE (NON CRINGE): Usa un italiano naturale, diretto, parlato. Niente linguaggio burocratico o da libro scolastico, ma evita anche lo slang forzato da boomer. Parla di: ex, ghosting, serate, soldi, tradimenti, red flag, figure di merda, amici falsi, abitudini segrete, attrazione.
+4. POLARIZZAZIONE IMMEDIATA: Nei dilemmi "Schierati", non deve mai esserci una risposta "ovvia". Entrambe le scelte devono avere un lato imbarazzante, egoista o controverso che costringa gli amici a urlare "Ma come fai a scegliere questo?!".
+5. FORMATO JSON RIGOROSO: Rispondi esclusivamente in formato JSON valido secondo lo schema richiesto dalla modalità attiva, senza testo extra.`;
+
+interface PartyDecksData {
+  flash: FlashCard[];
+  infiltrato: InfiltratoCard[];
+  coppie: {
+    complicita: CoppieCard[];
+    piccante: CoppieCard[];
+  };
+  assurdo: AssurdoCard[];
+}
+
+let cachedDecks: PartyDecksData | null = null;
+
+export function loadCuratedDecks(): PartyDecksData {
+  if (cachedDecks) return cachedDecks;
+  const filePath = join(__dirname, '..', '..', 'data', 'party_decks.json');
+  if (existsSync(filePath)) {
+    try {
+      cachedDecks = JSON.parse(readFileSync(filePath, 'utf-8')) as PartyDecksData;
+      return cachedDecks;
+    } catch {
+      // fallback below
+    }
+  }
+  return {
+    flash: [],
+    infiltrato: [],
+    coppie: { complicita: [], piccante: [] },
+    assurdo: [],
+  };
+}
+
+export function getCuratedCards(
+  mode: PartyMode,
+  options: { count?: number; intensity?: 'complicita' | 'piccante'; rng?: () => number } = {},
+): PartyCard[] {
+  const decks = loadCuratedDecks();
+  const rng = options.rng ?? Math.random;
+  let pool: PartyCard[] = [];
+
+  if (mode === 'flash') {
+    pool = [...decks.flash];
+  } else if (mode === 'infiltrato') {
+    pool = [...decks.infiltrato];
+  } else if (mode === 'coppie') {
+    const intensity = options.intensity === 'piccante' ? 'piccante' : 'complicita';
+    pool = [...(decks.coppie[intensity] ?? decks.coppie.complicita)];
+  } else if (mode === 'assurdo') {
+    pool = [...decks.assurdo];
+  }
+
+  // Shuffle pool with rng
+  const shuffled = [...pool].sort(() => rng() - 0.5);
+  const count = options.count ?? shuffled.length;
+  return shuffled.slice(0, count);
+}
+
+export function isGeminiAvailable(): boolean {
+  return Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.AI_BASE_URL);
+}
+
+/**
+ * Generate fresh party game cards using Gemini Flash (gemini-3.8-flash) or OpenAI-compatible endpoint.
+ * Falls back transparently to curated cards on any error, timeout, or missing key.
+ */
+export async function generatePartyCards(
+  mode: PartyMode,
+  options: { count?: number; intensity?: 'complicita' | 'piccante'; theme?: string } = {},
+): Promise<PartyCard[]> {
+  const count = options.count ?? 5;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  const aiBase = process.env.AI_BASE_URL;
+
+  if (!apiKey && !aiBase) {
+    return getCuratedCards(mode, options);
+  }
+
+  const userPrompt = getUserPromptForMode(mode, count, options.intensity, options.theme);
+
+  // Strict 3.5s timeout: if Gemini Flash or network takes longer, fallback immediately to curated cards!
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('AI Generation Timeout (3.5s)')), 3500),
+  );
+
+  try {
+    const fetchAi = async (): Promise<string | null> => {
+      let rawJson: string | null = null;
+      if (apiKey) {
+        const ai = new GoogleGenAI({ apiKey });
+        const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+        const response = await ai.models.generateContent({
+          model,
+          contents: userPrompt,
+          config: {
+            systemInstruction: SYSTEM_PROMPT,
+            responseMimeType: 'application/json',
+            temperature: 1.0,
+          },
+        });
+        rawJson = response.text ?? null;
+      } else if (aiBase) {
+        const model = process.env.AI_MODEL || 'gemma3:4b';
+        const res = await fetch(`${aiBase.replace(/\/+$/, '')}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            ...(process.env.AI_API_KEY ? { authorization: `Bearer ${process.env.AI_API_KEY}` } : {}),
+          },
+          body: JSON.stringify({
+            model,
+            temperature: 0.9,
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: userPrompt },
+            ],
+          }),
+          signal: AbortSignal.timeout(3500),
+        });
+        if (res.ok) {
+          const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+          rawJson = data.choices?.[0]?.message?.content ?? null;
+        }
+      }
+      return rawJson;
+    };
+
+    const rawJson = await Promise.race([fetchAi(), timeoutPromise]);
+    if (rawJson) {
+      const parsed = parseGeneratedCards(mode, rawJson);
+      if (parsed.length > 0) return parsed;
+    }
+  } catch (err) {
+    console.warn('[geminiGenerator] AI generation error/timeout (<=3.5s), falling back to curated deck:', err instanceof Error ? err.message : err);
+  }
+
+  return getCuratedCards(mode, options);
+}
+
+function getUserPromptForMode(
+  mode: PartyMode,
+  count: number,
+  intensity?: 'complicita' | 'piccante',
+  theme?: string,
+): string {
+  let prompt = '';
+  switch (mode) {
+    case 'flash':
+      prompt = `Genera ${count} carte per la modalità "SCHIERATI FLASH".
+Ogni carta deve essere un dilemma A o B secco, quotidiano, divisivo (ex, segreti, soldi, amici, red flag).
+Massimo 12-15 parole per quesito.
+Rispondi con un JSON array di oggetti con questo schema:
+[
+  {
+    "id": "gen_fl_1",
+    "text": "Controllare il telefono del partner mentre dorme: legittima difesa o psicopatia?",
+    "optionA": "Legittima difesa",
+    "optionB": "Psicopatia pura",
+    "penalty": "Chi è in minoranza beve 1 shot o subisce penitenza!"
+  }
+]`;
+      break;
+
+    case 'infiltrato':
+      prompt = `Genera ${count} carte per la modalità "L'INFILTRATO".
+Ogni elemento deve avere:
+- "groupQuestion": domanda ricevuta dalla maggioranza (es. "Qual è il posto più strano dove hai fatto serata?")
+- "impostorQuestion": domanda simile ma con significato diverso ricevuta dall'infiltrato (es. "Qual è il posto più strano dove hai dormito?")
+- "category": breve categoria tematica.
+Rispondi con un JSON array di oggetti:
+[
+  {
+    "id": "gen_inf_1",
+    "groupQuestion": "Qual è la scusa peggiore usata per bidonare un'uscita all'ultimo?",
+    "impostorQuestion": "Qual è la bugia più stupida che hai detto ai tuoi genitori?",
+    "category": "scuse"
+  }
+]`;
+      break;
+
+    case 'coppie':
+      prompt = `Genera ${count} carte per la modalità "COPPIE & SCINTILLE" a intensità "${intensity === 'piccante' ? 'piccante (18+ sensuale, doppio senso, senza filtri)' : 'complicita (gelosia, abitudini, dinamiche di coppia)'}".
+Alterna carte di 3 tipi:
+1. "allineamento": "Al 3 indicate chi dei due..."
+2. "verita": domanda diretta scomoda sulla relazione
+3. "obbligo": sfida fisica o contatto immediato
+Rispondi con un JSON array di oggetti:
+[
+  {
+    "id": "gen_cp_1",
+    "cardType": "allineamento",
+    "intensity": "${intensity || 'complicita'}",
+    "prompt": "Al 3 indicate chi dei due chiede scusa per primo dopo una lite.",
+    "penalty": "Non siete d'accordo! 1 sorso a testa."
+  }
+]`;
+      break;
+
+    case 'assurdo':
+      prompt = `Genera ${count} carte per la modalità "ASSURDO MA SEMPLICE".
+Alterna:
+1. "gogna": dinamica "Chi del gruppo..." con "sentenza" dell'app (sfida o penitenza per il più votato)
+2. "dignita": "Prezzo della Dignità" ("Accetteresti 500€ subito se...?")
+Rispondi con un JSON array di oggetti:
+[
+  {
+    "id": "gen_as_1",
+    "cardType": "gogna",
+    "prompt": "Chi del gruppo manderebbe per sbaglio uno screenshot alla persona di cui parlava male?",
+    "penalty": "Il più votato beve!",
+    "sentenza": "Bevi un sorso per ogni voto ricevuto e hai 15 secondi per scusarti con il gruppo!"
+  },
+  {
+    "id": "gen_as_2",
+    "cardType": "dignita",
+    "prompt": "Accetteresti 500€ subito, ma devi mandare un vocale in cui piangi alla tua ultima chat WhatsApp?",
+    "optionA": "Accetto subito 💸",
+    "optionB": "Col cavolo 🙅‍♂️",
+    "penalty": "Chi è in minoranza beve!"
+  }
+]`;
+      break;
+  }
+
+  if (theme && theme.trim().length > 0) {
+    prompt += `\n\nTEMA DELLA SERATA RICHIESTO DAL GRUPPO: "${theme.trim()}". Ambientate e contestualizzate le situazioni a questo tema!`;
+  }
+
+  return prompt;
+}
+
+function parseGeneratedCards(mode: PartyMode, rawText: string): PartyCard[] {
+  let cleaned = rawText.trim();
+  // Strip Markdown fences if present
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '');
+  }
+  try {
+    const data = JSON.parse(cleaned);
+    const list = Array.isArray(data) ? data : data.items || data.cards || [];
+    return list.filter((item: Record<string, unknown>) => {
+      if (mode === 'flash') {
+        return typeof item.text === 'string' && typeof item.optionA === 'string' && typeof item.optionB === 'string';
+      }
+      if (mode === 'infiltrato') {
+        return typeof item.groupQuestion === 'string' && typeof item.impostorQuestion === 'string';
+      }
+      if (mode === 'coppie') {
+        return typeof item.prompt === 'string';
+      }
+      if (mode === 'assurdo') {
+        return typeof item.prompt === 'string';
+      }
+      return true;
+    });
+  } catch {
+    return [];
+  }
+}

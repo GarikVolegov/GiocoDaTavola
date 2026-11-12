@@ -151,6 +151,16 @@ export const SocketEvents = {
   PlayerSpeakerVoteError: 'player:speakerVoteError',
   /** Server sends each player their own private end-of-game blind-spot tip. */
   PlayerBlindSpot: 'player:blindSpot',
+  /** Server sends each player their private prompt in L'INFILTRATO party mode. */
+  PlayerSecretQuestion: 'player:secretQuestion',
+  /** Player votes for a friend in ASSURDO MA SEMPLICE ("La Gogna") mode. */
+  PlayerGognaVote: 'player:gognaVote',
+  /** Server confirms the gogna vote back to the voter. */
+  PlayerGognaVoted: 'player:gognaVoted',
+  /** Spectator bets on hot-seat couple in COPPIE & SCINTILLE mode ("match" or "scoppiano"). */
+  PlayerHotSeatBet: 'player:hotSeatBet',
+  /** Server confirms the hot-seat bet back to the spectator. */
+  PlayerHotSeatBetted: 'player:hotSeatBetted',
 } as const;
 
 /**
@@ -284,6 +294,74 @@ export const MIN_PLAYERS_TO_START = 3;
 /** Game mode (mirror of the server's `GameMode`). */
 export const GAME_MODES = ['gruppo', 'duello'] as const;
 export type GameMode = (typeof GAME_MODES)[number];
+
+/** The 4 revamped viral party modes. */
+export const PARTY_MODES = ['flash', 'infiltrato', 'coppie', 'assurdo'] as const;
+export type PartyMode = (typeof PARTY_MODES)[number];
+
+export type PartyIntensity = 'complicita' | 'piccante';
+
+export interface FlashResultPayload {
+  isUnanimous: boolean;
+  isTie: boolean;
+  minoritySide: VoteChoice | null;
+  minorityNicknames: string[];
+  majorityNicknames: string[];
+  unvotedNicknames: string[];
+}
+
+export interface HotSeatPayload {
+  coupleIds: [string, string];
+  coupleNicknames: [string, string];
+  coupleMatched?: boolean;
+  correctSpectators?: string[];
+}
+
+export interface InfiltratoRoundResult {
+  round: number;
+  infiltratorId: string;
+  infiltratorNickname: string;
+  groupQuestion: string;
+  impostorQuestion: string;
+  accusedId: string | null;
+  accusedNickname: string | null;
+  caught: boolean;
+  infiltratorWon: boolean;
+}
+
+export interface PartyCardPayload {
+  mode: PartyMode;
+  cardType?: 'allineamento' | 'verita' | 'obbligo' | 'gogna' | 'dignita' | 'dilemma';
+  intensity?: PartyIntensity;
+  prompt: string;
+  optionA?: string;
+  optionB?: string;
+  penalty?: string;
+  sentenza?: string;
+  groupQuestion?: string;
+  impostorQuestion?: string;
+  category?: string;
+  gognaTargetId?: string;
+  gognaTargetNickname?: string;
+  gognaVotes?: number;
+  infiltratorUnmasked?: boolean;
+  infiltratorNickname?: string;
+  infiltratorId?: string;
+  infiltratoRoundResult?: InfiltratoRoundResult | null;
+  flashResult?: FlashResultPayload | null;
+  hotSeat?: HotSeatPayload | null;
+  affinityScore?: number | null;
+}
+
+export interface PlayerSecretQuestionPayload {
+  question: string;
+  isInfiltrator: boolean;
+  round: number;
+}
+
+export interface PlayerGognaVotePayload {
+  targetId: string;
+}
 
 /** Host-facing labels for the game modes. */
 export const MODE_LABELS: Record<GameMode, { nome: string; descr: string }> = {
@@ -502,6 +580,8 @@ export interface PublicDilemma {
   optionB: string;
   /** Debate-complexity tier; shown as a small badge. May be absent on legacy data. */
   complessita?: Complessita;
+  /** Insegnamento per il mondo reale: spunto psicologico / pratico rivelato ai risultati. */
+  lezioneReale?: string;
 }
 
 /** Aggregate A vs B vote counts. No identities — counts only. */
@@ -969,6 +1049,10 @@ export interface GameStatePayload {
   writeVoteProgress: { done: number; total: number; missingNicknames: string[] } | null;
   /** Each answer with its author + vote count, shown only in WRITE_REVEAL; null otherwise. */
   writeReveal: WriteRevealAnswer[] | null;
+  /** Active revamped party mode (if playing in one of the 4 new formats). */
+  partyMode?: PartyMode;
+  /** Active party card metadata and mode-specific state; null if classic mode. */
+  partyCard?: PartyCardPayload | null;
 }
 
 /** "La Mente del Gruppo" (4.1): a short A/B question everyone answers + predicts. */

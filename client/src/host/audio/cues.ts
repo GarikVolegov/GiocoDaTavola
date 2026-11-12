@@ -4,7 +4,18 @@
 
 import type { GamePhase } from '../../shared/events';
 
-export type SfxName = 'reveal' | 'swing' | 'win' | 'awards' | 'timerWarn' | 'handRaise' | 'unanimous' | 'discard';
+export type SfxName =
+  | 'reveal'
+  | 'swing'
+  | 'win'
+  | 'awards'
+  | 'timerWarn'
+  | 'handRaise'
+  | 'unanimous'
+  | 'discard'
+  | 'warp'
+  | 'clash'
+  | 'insight';
 
 /** The slice of game state cue decisions need; `GameStatePayload` satisfies it structurally. */
 export interface CueGame {

@@ -55,10 +55,14 @@ import {
   type RaiseHandError,
   RAISE_HAND_ERROR_MESSAGES,
   INFILTRATO_TOOL_ERROR_MESSAGES,
+  type PartyMode,
+  type PlayerSecretQuestionPayload,
 } from '../shared/events';
+import { vibrateInfiltrator } from '../shared/haptics';
 import { Card, JoinQr, Button, Field, TextInput, Alert, ShareInviteButton, PauseOverlay } from '../shared/ui';
 import { useHostAudio } from '../host/audio/useHostAudio';
 import { useSfxCues } from '../host/audio/useSfxCues';
+import { useWakeLock } from '../shared/useWakeLock';
 import { MuteButton } from '../host/MuteButton';
 import { AudioGate } from '../host/AudioGate';
 // Lazy so jsQR (the camera decoder) only loads when a player actually opens the scanner.
@@ -180,6 +184,12 @@ export default function PlayerApp() {
   const [myWriteToken, setMyWriteToken] = useState<string | null>(null);
   const [infiltratoRole, setInfiltratoRole] = useState<PlayerInfiltratoRolePayload | null>(null);
   const [infiltratoToolError, setInfiltratoToolError] = useState<string | null>(null);
+  const [secretQuestion, setSecretQuestion] = useState<PlayerSecretQuestionPayload | null>(null);
+  const [gognaVotedTarget, setGognaVotedTarget] = useState<string | null>(null);
+  const [partyMode, setPartyMode] = useState<PartyMode | null>('flash');
+  const [partyIntensity, setPartyIntensity] = useState<'complicita' | 'piccante'>('complicita');
+  const [partyTheme, setPartyTheme] = useState('');
+  const [myHotSeatBet, setMyHotSeatBet] = useState<'match' | 'scoppiano' | null>(null);
   const [myAccusation, setMyAccusation] = useState<string | null>(null);
   const [speakerVote, setSpeakerVote] = useState<string | null>(null);
   // Percorso in 2 (Atto I): the two-part secret submission — own pick + the
@@ -295,6 +305,14 @@ export default function PlayerApp() {
     const onWriteVoted = ({ votedForToken }: PlayerWriteVotedPayload) => setWriteVotedForToken(votedForToken);
     const onMyWriteToken = ({ token }: PlayerMyWriteTokenPayload) => setMyWriteToken(token);
     const onInfiltratoRole = (payload: PlayerInfiltratoRolePayload) => setInfiltratoRole(payload);
+    const onSecretQuestion = (payload: PlayerSecretQuestionPayload) => {
+      setSecretQuestion(payload);
+      if (payload.isInfiltrator) {
+        vibrateInfiltrator();
+      }
+    };
+    const onHotSeatBetted = ({ bet }: { bet: 'match' | 'scoppiano' }) => setMyHotSeatBet(bet);
+    const onGognaVoted = ({ targetId }: { targetId: string }) => setGognaVotedTarget(targetId);
     const onInfiltratoToolError = ({ error }: PlayerInfiltratoToolErrorPayload) =>
       setInfiltratoToolError(INFILTRATO_TOOL_ERROR_MESSAGES[error] ?? 'Non puoi agire ora');
     const onAccused = ({ accusedId }: PlayerAccusedPayload) => setMyAccusation(accusedId);
@@ -332,6 +350,9 @@ export default function PlayerApp() {
     socket.on(SocketEvents.PlayerWriteVoted, onWriteVoted);
     socket.on(SocketEvents.PlayerMyWriteToken, onMyWriteToken);
     socket.on(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
+    socket.on(SocketEvents.PlayerSecretQuestion, onSecretQuestion);
+    socket.on(SocketEvents.PlayerHotSeatBetted, onHotSeatBetted);
+    socket.on(SocketEvents.PlayerGognaVoted, onGognaVoted);
     socket.on(SocketEvents.PlayerInfiltratoToolError, onInfiltratoToolError);
     socket.on(SocketEvents.PlayerAccused, onAccused);
     socket.on(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
@@ -390,6 +411,9 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerWriteVoted, onWriteVoted);
       socket.off(SocketEvents.PlayerMyWriteToken, onMyWriteToken);
       socket.off(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
+      socket.off(SocketEvents.PlayerSecretQuestion, onSecretQuestion);
+      socket.off(SocketEvents.PlayerHotSeatBetted, onHotSeatBetted);
+      socket.off(SocketEvents.PlayerGognaVoted, onGognaVoted);
       socket.off(SocketEvents.PlayerInfiltratoToolError, onInfiltratoToolError);
       socket.off(SocketEvents.PlayerAccused, onAccused);
       socket.off(SocketEvents.PlayerDilemmaSubmitted, onDilemmaSubmitted);
@@ -418,6 +442,12 @@ export default function PlayerApp() {
 
   const phase = game?.phase ?? 'LOBBY';
   const remaining = useCountdown(game?.phaseExpiresAt ?? null);
+  useEffect(() => {
+    document.documentElement.setAttribute('data-phase', phase);
+    return () => {
+      document.documentElement.removeAttribute('data-phase');
+    };
+  }, [phase]);
   // The last 5s of ANY phase timer buzz every phone once per second — mirrors
   // the host's audio timerWarn cue, which already ticks in the same window.
   useEffect(() => {
@@ -462,7 +492,16 @@ export default function PlayerApp() {
     setDuoPredict(null);
     setDuoSynced(false);
     setDuoRating(null);
-  }, [game?.dilemma?.id]);
+    setMyHotSeatBet(null);
+    setGognaVotedTarget(null);
+  }, [game?.dilemma?.id, game?.partyCard?.prompt]);
+
+  useEffect(() => {
+    if (phase === 'DILEMMA_REVEAL') {
+      setMyHotSeatBet(null);
+      setGognaVotedTarget(null);
+    }
+  }, [phase]);
 
   // The twist's DUO_WAVER arrives mid-round (same dilemmaIndex): each entry into
   // the phase starts from a fresh, unselected rating.
@@ -573,6 +612,12 @@ export default function PlayerApp() {
     setConfirmed(false); // changing the (second) vote un-confirms it
     buzz(25); // tactile confirm the tap registered
     getSocket().emit(SocketEvents.PlayerVote, { choice });
+  };
+
+  const castHotSeatBet = (bet: 'match' | 'scoppiano') => {
+    setMyHotSeatBet(bet);
+    buzz(15);
+    getSocket().emit(SocketEvents.PlayerHotSeatBet, { bet });
   };
 
   const castSwingBet = (bet: SwingBet) => {
@@ -734,6 +779,8 @@ export default function PlayerApp() {
   // above, so this only adds sound for the non-leader phones. Unlocks silently on this
   // device's own first tap; no gate UI needed since players tap constantly to play.
   useSfxCues({ enabled: joinedCode != null && !isLeader, game });
+  // Keep the phone awake while joined so narration and voting don't sleep
+  useWakeLock(joinedCode != null);
   // Every joined phone gets a mute toggle: the leader's gates behind the explicit
   // AudioGate tap (musichetta/narrator need it), everyone else just gets the corner
   // button since their stings unlock silently on the first natural tap.
@@ -783,13 +830,16 @@ export default function PlayerApp() {
       dilemmaCount: FORMAT_DILEMMA_COUNT[format],
       register,
       mode: gameMode,
-      infiltrato: gameMode === 'gruppo' && infiltratoOn,
+      infiltrato: (gameMode === 'gruppo' && infiltratoOn) || partyMode === 'infiltrato',
       squadre: gameMode === 'gruppo' && squadreOn,
       mood,
       delicatoOptIn,
       serataLunga,
       caos,
       seenDilemmaIds: getSeenDilemmaIds(), // 5.1: avoid déjà-vu across separate games on this device
+      partyMode: partyMode ?? undefined,
+      partyIntensity: partyIntensity ?? 'complicita',
+      theme: partyTheme.trim() ? partyTheme.trim() : undefined,
     });
   };
   const castAccuse = (accusedId: string) => {
@@ -999,6 +1049,14 @@ export default function PlayerApp() {
         confirmedCount={game?.confirmedCount ?? 0}
         playerCount={players.length}
         missingVoters={game?.missingVoters ?? null}
+        partyCard={game?.partyCard}
+        secretQuestion={secretQuestion}
+        gognaVotedTarget={gognaVotedTarget}
+        onGognaVote={(targetId) => getSocket().emit(SocketEvents.PlayerGognaVote, { targetId })}
+        players={players}
+        myPlayerId={playerId}
+        myHotSeatBet={myHotSeatBet}
+        onHotSeatBet={castHotSeatBet}
         skipButton={
           <>
             {discardButton}
@@ -1388,6 +1446,12 @@ export default function PlayerApp() {
             canStart={canStart}
             onStart={startGame}
             startError={startError}
+            partyMode={partyMode}
+            setPartyMode={setPartyMode}
+            partyIntensity={partyIntensity}
+            setPartyIntensity={setPartyIntensity}
+            theme={partyTheme}
+            setTheme={setPartyTheme}
           />
         ) : (
           <p style={{ opacity: 0.7, margin: 0 }}>In attesa che il leader avvii la partita…</p>

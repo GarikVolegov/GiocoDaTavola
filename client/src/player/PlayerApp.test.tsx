@@ -2350,6 +2350,7 @@ describe('PlayerApp', () => {
         leaderId: 'p1',
       });
     });
+    fireEvent.click(screen.getByRole('button', { name: /modalità classica/i }));
     fireEvent.click(screen.getByRole('button', { name: /leggera/i }));
     fireEvent.click(screen.getByText(/altre opzioni/i));
     fireEvent.click(screen.getByRole('button', { name: /temi delicati/i }));
@@ -2384,6 +2385,7 @@ describe('PlayerApp', () => {
         leaderId: 'p1',
       });
     });
+    fireEvent.click(screen.getByRole('button', { name: /modalità classica/i }));
     fireEvent.click(screen.getByText(/altre opzioni/i));
     fireEvent.click(screen.getByRole('button', { name: /serata lunga/i }));
     fireEvent.click(screen.getByRole('button', { name: /avvia partita/i }));
@@ -2417,6 +2419,7 @@ describe('PlayerApp', () => {
         leaderId: 'p1',
       });
     });
+    fireEvent.click(screen.getByRole('button', { name: /modalità classica/i }));
     fireEvent.click(screen.getByRole('button', { name: /alto.*twist quasi ogni round/i }));
     fireEvent.click(screen.getByRole('button', { name: /avvia partita/i }));
     expect(emitSpy).toHaveBeenCalledWith(
@@ -2448,6 +2451,7 @@ describe('PlayerApp', () => {
         leaderId: 'p1',
       });
     });
+    fireEvent.click(screen.getByRole('button', { name: /modalità classica/i }));
     const tipoGroup = screen.getByRole('group', { name: 'Tipo di partita' });
     fireEvent.click(within(tipoGroup).getByRole('button', { name: /1v1 duello/i }));
     fireEvent.click(screen.getByRole('button', { name: /avvia partita/i }));
@@ -2478,6 +2482,7 @@ describe('PlayerApp', () => {
         submittedCount: 2,
       });
     });
+    fireEvent.click(screen.getByRole('button', { name: /modalità classica/i }));
     expect(screen.queryByText(/non usa i 2 dilemmi/i)).toBeNull(); // Gruppo plays them: no warning
     const tipoGroup = screen.getByRole('group', { name: 'Tipo di partita' });
     fireEvent.click(within(tipoGroup).getByRole('button', { name: /percorso/i }));
@@ -2511,6 +2516,7 @@ describe('PlayerApp', () => {
         ],
       });
     });
+    fireEvent.click(screen.getByRole('button', { name: /modalità classica/i }));
     expect(screen.getByText('Mistero · Dramma umano')).toBeInTheDocument();
     expect(screen.queryByText(/racconti sci-fi/i)).toBeNull();
   });
@@ -2946,5 +2952,178 @@ describe("voto unanime + scarta dilemma", () => {
       serverEmit('room:dilemmaSkipped', {});
     });
     expect(screen.getByText(/il capitano ha scartato il dilemma/i)).toBeInTheDocument();
+  });
+});
+
+describe("Party Modes (Flash, Infiltrato, Coppie, Assurdo)", () => {
+  beforeEach(() => {
+    resetHandlers();
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
+  afterEach(() => cleanup());
+
+  function joinLeader(playerCount = 3) {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      const players = [
+        { id: 'p1', nickname: 'Alice' },
+        { id: 'p2', nickname: 'Bob' },
+        { id: 'p3', nickname: 'Carlo' },
+      ].slice(0, playerCount);
+      serverEmit('lobby:update', { players });
+      serverEmit('game:state', {
+        phase: 'LOBBY',
+        dilemmaCount: 0,
+        dilemmaIndex: 0,
+        phaseExpiresAt: null,
+        leaderId: 'p1',
+      });
+    });
+  }
+
+  it('leader starts Flash mode with custom theme', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    joinLeader(3);
+
+    expect(screen.getByRole('button', { name: /schierati flash/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/es. addio al celibato/i)).toBeInTheDocument();
+
+    const themeInput = screen.getByPlaceholderText(/es. addio al celibato/i);
+    fireEvent.change(themeInput, { target: { value: 'Festa di Laurea' } });
+
+    const startBtn = screen.getByRole('button', { name: /inizia la festa/i });
+    fireEvent.click(startBtn);
+
+    expect(emitSpy).toHaveBeenCalledWith(
+      'leader:startGame',
+      expect.objectContaining({
+        partyMode: 'flash',
+        theme: 'Festa di Laurea',
+      })
+    );
+  });
+
+  it('leader can switch to Infiltrato mode and start', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    joinLeader(3);
+
+    const infiltratoBtn = screen.getByRole('button', { name: /l'infiltrato/i });
+    fireEvent.click(infiltratoBtn);
+
+    const startBtn = screen.getByRole('button', { name: /inizia la festa/i });
+    fireEvent.click(startBtn);
+
+    expect(emitSpy).toHaveBeenCalledWith(
+      'leader:startGame',
+      expect.objectContaining({
+        partyMode: 'infiltrato',
+      })
+    );
+  });
+
+  it('leader can select Coppie and toggle Piccante 18+', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    joinLeader(3);
+
+    const coppieBtn = screen.getByRole('button', { name: /coppie & scintille/i });
+    fireEvent.click(coppieBtn);
+
+    const piccantePill = screen.getByRole('button', { name: /piccante 18\+/i });
+    fireEvent.click(piccantePill);
+
+    const startBtn = screen.getByRole('button', { name: /inizia la festa/i });
+    fireEvent.click(startBtn);
+
+    expect(emitSpy).toHaveBeenCalledWith(
+      'leader:startGame',
+      expect.objectContaining({
+        partyMode: 'coppie',
+        partyIntensity: 'piccante',
+      })
+    );
+  });
+
+  it('displays secret question during Infiltrato dilemma phase', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 5,
+        dilemmaIndex: 0,
+        phaseExpiresAt: Date.now() + 60000,
+        partyMode: 'infiltrato',
+        partyCard: {
+          mode: 'infiltrato',
+          prompt: 'Qual è il peggior vizio che hai?',
+        },
+        dilemma: {
+          id: 'inf1',
+          text: 'Qual è il peggior vizio che hai?',
+          optionA: 'Opzione A',
+          optionB: 'Opzione B',
+        },
+        votedCount: 0,
+      });
+      serverEmit('player:secretQuestion', {
+        question: 'Qual è il peggior vizio che hai?',
+        isInfiltrator: false,
+      });
+    });
+
+    expect(screen.getByText(/la tua domanda segreta/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Qual è il peggior vizio che hai?').length).toBeGreaterThan(0);
+  });
+
+  it('lets spectator bet in Coppie Hot-Seat mode', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'VOTE_1',
+        dilemmaCount: 5,
+        dilemmaIndex: 0,
+        phaseExpiresAt: Date.now() + 60000,
+        partyMode: 'coppie',
+        partyCard: {
+          mode: 'coppie',
+          hotSeat: {
+            isActor: false,
+            coupleIds: ['p2', 'p3'],
+            coupleNicknames: ['Bob', 'Carlo'],
+          },
+        },
+        dilemma: {
+          id: 'cop1',
+          text: 'Chi dei due è più geloso?',
+          optionA: 'Bob',
+          optionB: 'Carlo',
+        },
+        votedCount: 0,
+      });
+    });
+
+    expect(screen.getByText(/coppia al centro/i)).toBeInTheDocument();
+    expect(screen.getByText(/scommetti/i)).toBeInTheDocument();
+
+    const matchBtn = screen.getByRole('button', { name: /matchano/i });
+    fireEvent.click(matchBtn);
+
+    expect(emitSpy).toHaveBeenCalledWith('player:hotSeatBet', { bet: 'match' });
   });
 });

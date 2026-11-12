@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useAuth, Show, SignInButton } from '@clerk/react';
 import { fetchWithTimeout } from '../shared/api';
+import { Logo, Button } from '../shared/ui';
 import type { MyAward } from '../shared/events';
+import styles from './Profile.module.css';
 
 // "I miei premi": fetches the signed-in user's saved awards from the server.
 export default function Profile() {
@@ -30,55 +32,52 @@ export default function Profile() {
     };
   }, [isSignedIn, getToken]);
 
-  const wrap = {
-    minHeight: '100dvh',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 'var(--space-4)',
-    // Clear the notch / home-indicator in standalone PWA on iPhone.
-    padding:
-      'max(var(--space-6), env(safe-area-inset-top, 0px)) max(var(--space-5), env(safe-area-inset-right, 0px)) max(var(--space-6), env(safe-area-inset-bottom, 0px)) max(var(--space-5), env(safe-area-inset-left, 0px))',
-    color: 'var(--text)',
-    fontFamily: 'var(--font-body)',
-  } as const;
-
   return (
-    <main style={wrap}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-xl)', margin: 0 }}>
-        I miei premi
-      </h1>
+    <main className={styles.page}>
+      <div className={styles.topBar}>
+        <a href="/casa" className={styles.backBtn}>
+          ← Torna alla Dashboard
+        </a>
+        <Logo size={24} />
+      </div>
+
+      <header className={styles.header}>
+        <p className={styles.eyebrow}>SALA DEI TROFEI</p>
+        <h1 className={styles.title}>I miei premi</h1>
+      </header>
+
       <Show when="signed-out">
-        <p style={{ color: 'var(--text-muted)' }}>Accedi per vedere i premi salvati.</p>
-        <SignInButton mode="modal">
-          <button type="button" style={{ fontWeight: 700, padding: '0.7rem 1.4rem', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
-            Accedi
-          </button>
-        </SignInButton>
+        <div className={styles.emptyState}>
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>Accedi per vedere i premi salvati.</p>
+          <SignInButton mode="modal">
+            <Button variant="primary">Accedi</Button>
+          </SignInButton>
+        </div>
       </Show>
+
       <Show when="signed-in">
-        {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
-        {awards == null && !error && <p style={{ color: 'var(--text-muted)' }}>Carico…</p>}
+        {error && <p style={{ color: 'var(--danger)', textAlign: 'center' }}>{error}</p>}
+        {awards == null && !error && <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>Carico…</p>}
         {awards != null && awards.length === 0 && (
-          <p style={{ color: 'var(--text-muted)' }}>Nessun premio salvato (ancora). Gioca una partita! 🎲</p>
+          <div className={styles.emptyState}>
+            <p style={{ color: 'var(--text-muted)', margin: 0 }}>
+              Nessun premio salvato (ancora). Gioca una partita! 🎲
+            </p>
+            <a href="/join?create=1" style={{ textDecoration: 'none' }}>
+              <Button variant="primary">
+                Crea una partita
+              </Button>
+            </a>
+          </div>
         )}
         {awards != null && awards.length > 0 && (
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, width: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(14rem, 1fr))', gap: 'var(--space-4)', maxWidth: 'min(92vw, 60rem)' }}>
+          <ul className={styles.grid}>
             {awards.map((a) => (
-              <li
-                key={a.id}
-                style={{
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: 'var(--space-4)',
-                  textAlign: 'center',
-                }}
-              >
-                <div style={{ fontSize: '2rem' }}>{a.emoji}</div>
-                <div style={{ fontWeight: 700 }}>{a.title}</div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{a.description}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-faint)', marginTop: '0.3rem' }}>
+              <li key={a.id} className={styles.awardCard}>
+                <div className={styles.awardEmoji}>{a.emoji}</div>
+                <div className={styles.awardTitle}>{a.title}</div>
+                <div className={styles.awardDesc}>{a.description}</div>
+                <div className={styles.awardMeta}>
                   come {a.nickname} · {new Date(a.wonAt).toLocaleDateString('it-IT')}
                 </div>
               </li>

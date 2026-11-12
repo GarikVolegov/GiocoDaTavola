@@ -57,7 +57,7 @@ export default function Home() {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Logo size={24} />
+        <Logo size={28} payoff />
         <Avatar
           avatar={profile.avatar}
           imageUrl={user?.imageUrl}
@@ -68,7 +68,7 @@ export default function Home() {
       </header>
 
       <section className={styles.hero}>
-        <p className={styles.eyebrow}>La tua casa</p>
+        <p className={styles.eyebrow}>🌌 NEXUS · QUARTIER GENERALE</p>
         <h1 className={styles.greeting}>Ciao, {name}</h1>
         <div className={styles.cta}>
           <Button variant="primary" size="lg" onClick={() => navigate('/join?create=1')}>
@@ -76,6 +76,9 @@ export default function Home() {
           </Button>
           <Button variant="ghost" size="lg" onClick={() => navigate('/join')}>
             Partecipa
+          </Button>
+          <Button variant="ghost" size="lg" onClick={() => navigate('/passa')}>
+            📱 Passa il telefono
           </Button>
         </div>
       </section>

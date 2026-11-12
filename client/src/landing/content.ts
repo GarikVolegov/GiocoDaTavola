@@ -43,3 +43,37 @@ export const AWARDS: Award[] = [
   { emoji: '🔮', title: 'In sintonia', sub: 'Sempre con la maggioranza' },
   { emoji: '🦓', title: 'Bastian Contrario', sub: 'Sempre in minoranza' },
 ];
+
+export interface PartyModeInfo {
+  icon: string;
+  name: string;
+  tag: string;
+  desc: string;
+}
+
+export const PARTY_MODES_INFO: PartyModeInfo[] = [
+  {
+    icon: '⚡',
+    name: 'Schierati Flash',
+    tag: 'Party rapido · 3s voto',
+    desc: '3 secondi per votare, 15s blitz defense. Dilemmi istantanei e chi è in minoranza beve o fa penitenza!',
+  },
+  {
+    icon: '🕵️',
+    name: "L'Infiltrato",
+    tag: 'Social deduction · 60s dibattito',
+    desc: 'Domanda segreta inviata a tutti, tranne all’infiltrato che ne riceve una diversa. 60s per smascherarlo!',
+  },
+  {
+    icon: '🌶️',
+    name: 'Coppie & Scintille',
+    tag: 'Complicità o Piccante 18+',
+    desc: 'Allineamento cieco, verità senza filtri e sfide fisiche. Scoprite quanto vi conoscete davvero.',
+  },
+  {
+    icon: '🤡',
+    name: 'Assurdo ma Semplice',
+    tag: 'Caos & risate immediate',
+    desc: 'La Gogna ("chi di noi finisce nei guai?") e il Prezzo della Dignità ("accetteresti 500€ se...?").',
+  },
+];

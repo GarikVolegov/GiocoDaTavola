@@ -13,10 +13,10 @@ interface LogoProps {
 }
 
 /**
- * SCHIERATI lockup: the lightning-split emblem (blue vs orange faction sides cleft
- * by a white bolt — the dilemma) + the wordmark in Space Grotesk, optional serif
- * payoff. Inline SVG so it's crisp wherever the font is loaded, and it matches the
- * PWA/favicon tile 1:1. Replaces the old <img> logo.
+ * NEXUS lockup: the dual-faction prism emblem (blue vs orange sides cleft
+ * by the central nexus bolt — the dilemma) + the wordmark "NEXUS" in display font,
+ * optional serif payoff "L'Orizzonte dei Bivi". Inline SVG so it's crisp wherever
+ * loaded.
  */
 export function Logo({ size = 30, payoff = false, panel = false, className }: LogoProps) {
   const cls = [styles.lockup, panel && styles.panel, className].filter(Boolean).join(' ');
@@ -26,7 +26,7 @@ export function Logo({ size = 30, payoff = false, panel = false, className }: Lo
     <span
       className={cls}
       style={{ ['--logo-size' as never]: `${size}px` }}
-      aria-label="SCHIERATI"
+      aria-label="NEXUS · L'Orizzonte dei Bivi"
     >
       <svg className={styles.emblem} viewBox="0 0 512 512" aria-hidden="true">
         <defs>
@@ -40,8 +40,8 @@ export function Logo({ size = 30, payoff = false, panel = false, className }: Lo
         </g>
       </svg>
       <span className={styles.col}>
-        <span className={styles.word}>SCHIERATI</span>
-        {payoff && <span className={styles.pay}>il gioco dei dilemmi tra amici</span>}
+        <span className={styles.word}>NEXUS</span>
+        {payoff && <span className={styles.pay}>L’Orizzonte dei Bivi</span>}
       </span>
     </span>
   );

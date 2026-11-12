@@ -17,8 +17,29 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       proxy: {
-        '/socket.io': { target: 'http://localhost:3000', ws: true },
-        '/api': { target: 'http://localhost:3000' },
+        '/socket.io': { target: `http://localhost:${env.VITE_SERVER_PORT || process.env.PORT || '3001'}`, ws: true },
+        '/api': { target: `http://localhost:${env.VITE_SERVER_PORT || process.env.PORT || '3001'}` },
+      },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules/three')) {
+              return 'three-core';
+            }
+            if (id.includes('node_modules/@clerk')) {
+              return 'clerk-vendor';
+            }
+            if (
+              id.includes('node_modules/react') ||
+              id.includes('node_modules/react-dom') ||
+              id.includes('node_modules/react-router-dom')
+            ) {
+              return 'react-vendor';
+            }
+          },
+        },
       },
     },
   };

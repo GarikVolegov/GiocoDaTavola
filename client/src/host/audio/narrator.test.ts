@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { narrationFor, splitIntoSentences, pickBestItalianVoice } from './narrator';
-import type { StoriaView } from '../../shared/events';
+import type { PublicDilemma, StoriaView } from '../../shared/events';
 
 // A minimal stand-in for SpeechSynthesisVoice (only the fields the picker reads).
 function voice(name: string, lang: string, localService = false): SpeechSynthesisVoice {
@@ -9,7 +9,7 @@ function voice(name: string, lang: string, localService = false): SpeechSynthesi
 
 const storia: StoriaView = {
   storyId: 'prova',
-  title: 'L\'Ultima Orbita',
+  title: "L'Ultima Orbita",
   protagonist: 'Sara',
   emoji: '🛰️',
   premessa: 'La stazione gira nel vuoto.',
@@ -23,10 +23,18 @@ const storia: StoriaView = {
   decisionsA: 0,
 };
 
+const sampleDilemma: PublicDilemma = {
+  id: 'd1',
+  text: 'Cosa dici nel messaggio?',
+  optionA: 'La verità nuda',
+  optionB: 'Una versione rassicurante',
+};
+
 describe('narrationFor', () => {
-  it('STORY_INTRO legge titolo + premessa', () => {
+  it('STORY_INTRO legge titolo + protagonista + premessa', () => {
     const line = narrationFor('STORY_INTRO', storia);
-    expect(line).toContain('L\'Ultima Orbita');
+    expect(line).toContain("L'Ultima Orbita");
+    expect(line).toContain('Sara');
     expect(line).toContain('La stazione gira nel vuoto.');
   });
 
@@ -34,12 +42,48 @@ describe('narrationFor', () => {
     expect(narrationFor('SCENE_INTRO', storia)).toBe('Il Consiglio ti chiede un messaggio.');
   });
 
-  it('SCENE_CONSEQUENCE legge la conseguenza', () => {
+  it('DILEMMA_REVEAL e VOTE_1 in storia leggono il bivio con opzione A e B', () => {
+    const reveal = narrationFor('DILEMMA_REVEAL', storia, sampleDilemma);
+    expect(reveal).toBe('Al bivio: Cosa dici nel messaggio? Opzione A: La verità nuda. Opzione B: Una versione rassicurante.');
+
+    const vote1 = narrationFor('VOTE_1', storia, sampleDilemma);
+    expect(vote1).toBe('Al bivio: Cosa dici nel messaggio? Opzione A: La verità nuda. Opzione B: Una versione rassicurante.');
+  });
+
+  it('SCENE_CONSEQUENCE senza decisione legge la conseguenza pura', () => {
     expect(narrationFor('SCENE_CONSEQUENCE', { ...storia, consequence: 'Tutti tacciono.' })).toBe('Tutti tacciono.');
+  });
+
+  it('SCENE_CONSEQUENCE con decisione A annuncia la scelta e la conseguenza', () => {
+    const line = narrationFor(
+      'SCENE_CONSEQUENCE',
+      { ...storia, decision: 'A', consequence: 'La stazione trattiene il fiato.' },
+      sampleDilemma,
+    );
+    expect(line).toBe('Il gruppo ha scelto: La verità nuda. La stazione trattiene il fiato.');
+  });
+
+  it('SCENE_CONSEQUENCE con decisione B annuncia la scelta e la conseguenza', () => {
+    const line = narrationFor(
+      'SCENE_CONSEQUENCE',
+      { ...storia, decision: 'B', consequence: 'Il mattino scorre sereno.' },
+      sampleDilemma,
+    );
+    expect(line).toBe('Il gruppo ha scelto: Una versione rassicurante. Il mattino scorre sereno.');
   });
 
   it('STORY_EPILOGUE legge l\'epilogo', () => {
     expect(narrationFor('STORY_EPILOGUE', { ...storia, epilogo: 'Sopravvivete.' })).toBe('Sopravvivete.');
+  });
+
+  it('DILEMMA_REVEAL in modalità classica legge il dilemma e le opzioni', () => {
+    const line = narrationFor('DILEMMA_REVEAL', null, sampleDilemma);
+    expect(line).toBe('Dilemma: Cosa dici nel messaggio? Opzione A: La verità nuda. Opzione B: Una versione rassicurante.');
+  });
+
+  it('rispetta l\'opzione readClassicDilemmas: false', () => {
+    const line = narrationFor('DILEMMA_REVEAL', null, sampleDilemma, { readClassicDilemmas: false });
+    expect(line).toBeNull();
   });
 
   it('le fasi non narrative non producono testo', () => {
@@ -48,8 +92,9 @@ describe('narrationFor', () => {
     expect(narrationFor('FINAL_AWARDS', storia)).toBeNull();
   });
 
-  it('senza storia non produce testo', () => {
+  it('senza storia né dilemma non produce testo', () => {
     expect(narrationFor('SCENE_INTRO', null)).toBeNull();
+    expect(narrationFor('DILEMMA_REVEAL', null)).toBeNull();
   });
 
   it('un testo assente per la fase non produce nulla', () => {
@@ -98,5 +143,13 @@ describe('pickBestItalianVoice', () => {
       voice('Siri Voice 2 (Italian (Italy))', 'it-IT'),
     ]);
     expect(picked?.name).toContain('Siri');
+  });
+
+  it('preferisce voci Natural / Neural rispetto a voci standard', () => {
+    const picked = pickBestItalianVoice([
+      voice('Alice', 'it-IT'),
+      voice('Microsoft Elsa Online (Natural) - Italian (Italy)', 'it-IT'),
+    ]);
+    expect(picked?.name).toContain('Natural');
   });
 });

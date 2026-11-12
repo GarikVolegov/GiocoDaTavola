@@ -35,6 +35,13 @@ describe('loadDilemmas (server/data/dilemmas.json)', () => {
     }
   });
 
+  it('every dilemma has a non-empty lezioneReale for real-world wisdom', () => {
+    for (const d of loadDilemmas()) {
+      expect(d.lezioneReale).toBeDefined();
+      expect(d.lezioneReale?.trim().length).toBeGreaterThan(15);
+    }
+  });
+
   it('dilemma ids are unique', () => {
     const dilemmas = loadDilemmas();
     const ids = new Set(dilemmas.map((d) => d.id));

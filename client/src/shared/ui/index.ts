@@ -17,6 +17,7 @@ export { Avatar } from './Avatar';
 export { Swing } from './Swing';
 export { JoinQr } from './JoinQr';
 export { RoomCodeChip } from './RoomCodeChip';
+export { LiveVoterStatus } from './LiveVoterStatus';
 export { ShareInviteButton } from './ShareInviteButton';
 export { BivioBackdrop, leanFromSplit } from './BivioBackdrop';
 export { PauseOverlay } from './PauseOverlay';

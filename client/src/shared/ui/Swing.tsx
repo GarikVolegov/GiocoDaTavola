@@ -1,8 +1,8 @@
 import styles from './Swing.module.css';
 
 interface SwingProps {
-  /** bar width in px */
-  width?: number;
+  /** bar width in px or CSS string (e.g. '100%') */
+  width?: number | string;
   /** bar height in px */
   height?: number;
   /** percent of votes on side A (0-100); ignored when animated */
@@ -19,15 +19,16 @@ interface SwingProps {
  * mind). Use for empty/loading states or a live SPLIT_REVEAL tally.
  */
 export function Swing({ width = 220, height = 14, split = 50, labels = false, animated = false }: SwingProps) {
+  const widthVal = typeof width === 'number' ? `${width}px` : width;
   return (
-    <div className={styles.swing} style={{ ['--sw-h' as never]: `${height}px` }} aria-label="Divisione dei voti">
+    <div className={styles.swing} style={{ ['--sw-h' as never]: `${height}px`, width: widthVal }} aria-label="Divisione dei voti">
       {labels && (
         <div className={styles.ab}>
           <span className={styles.a}>A</span>
           <span className={styles.b}>B</span>
         </div>
       )}
-      <div className={styles.bar} style={{ width, height }}>
+      <div className={styles.bar} style={{ width: '100%', height }}>
         <div
           className={animated ? `${styles.fill} ${styles.anim}` : styles.fill}
           style={animated ? undefined : { width: `${split}%` }}

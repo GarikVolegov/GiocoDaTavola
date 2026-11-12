@@ -6,6 +6,13 @@
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let muted = readMuted();
+let sharedAudio: HTMLAudioElement | null = null;
+const muteListeners = new Set<(muted: boolean) => void>();
+
+export function onMuteChange(fn: (muted: boolean) => void): () => void {
+  muteListeners.add(fn);
+  return () => muteListeners.delete(fn);
+}
 
 const MUTE_KEY = 'schierati.audio.muted';
 
@@ -39,10 +46,37 @@ export function getMaster(): GainNode | null {
   return master;
 }
 
-/** Resume the context after a user gesture (browser autoplay policy). */
+/** Returns the blessed shared HTMLAudioElement for mobile fallback playback. */
+export function getSharedAudio(): HTMLAudioElement | null {
+  if (typeof window === 'undefined') return null;
+  if (!sharedAudio && typeof Audio !== 'undefined') {
+    sharedAudio = new Audio();
+  }
+  return sharedAudio;
+}
+
+/** Resume the context and prime audio element after a user gesture (browser autoplay policy). */
 export function unlockAudio(): void {
   const c = getCtx();
-  if (c && c.state === 'suspended') void c.resume();
+  if (c && c.state === 'suspended') {
+    void c.resume();
+  }
+
+  // Prime HTMLAudioElement on iOS Safari during gesture
+  if (typeof window !== 'undefined') {
+    try {
+      const a = getSharedAudio();
+      if (a && !a.src) {
+        a.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+        const p = a.play();
+        if (p && typeof p.then === 'function') {
+          p.then(() => a.pause()).catch(() => {});
+        }
+      }
+    } catch {
+      /* ignore — best effort */
+    }
+  }
 }
 
 export function isMuted(): boolean {
@@ -52,6 +86,7 @@ export function isMuted(): boolean {
 /** Mute/unmute everything (persisted). Music keeps running silently; SFX skip while muted. */
 export function setMuted(next: boolean): void {
   muted = next;
+  for (const fn of muteListeners) fn(next);
   try {
     localStorage.setItem(MUTE_KEY, next ? '1' : '0');
   } catch {
