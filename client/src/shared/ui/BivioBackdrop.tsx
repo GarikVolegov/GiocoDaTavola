@@ -1,6 +1,26 @@
+import { lazy, Suspense, useEffect, useState } from 'react';
 import type { VoteSplit } from '../events';
-import { Nexus3DCanvas } from '../nexus3d/Nexus3DCanvas';
 import styles from './BivioBackdrop.module.css';
+
+const Nexus3DCanvas = lazy(() =>
+  import('../nexus3d/Nexus3DCanvas').then((m) => ({ default: m.Nexus3DCanvas })),
+);
+
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false,
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = () => setReduced(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return reduced;
+}
 
 /**
  * Percentuale di voti sul lato A (0–100). Quando non ci sono voti ritorna 50
@@ -27,6 +47,7 @@ type BivioBackdropProps = {
  */
 export function BivioBackdrop({ variant = 'player', phase, isRibaltone }: BivioBackdropProps) {
   const intensity = variant === 'host' ? '1' : variant === 'landing' ? '0.85' : '0.4';
+  const reducedMotion = usePrefersReducedMotion();
   return (
     <div
       className={styles.backdrop}
@@ -34,7 +55,11 @@ export function BivioBackdrop({ variant = 'player', phase, isRibaltone }: BivioB
       aria-hidden="true"
       style={{ ['--bivio-k' as never]: intensity }}
     >
-      <Nexus3DCanvas variant={variant} phase={phase} isRibaltone={isRibaltone} />
+      {!reducedMotion && (
+        <Suspense fallback={null}>
+          <Nexus3DCanvas variant={variant} phase={phase} isRibaltone={isRibaltone} />
+        </Suspense>
+      )}
       <div className={styles.laneA} />
       <div className={styles.laneB} />
       <div className={styles.veil} />

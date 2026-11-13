@@ -32,11 +32,13 @@
 }
 
 .phaseTitle {
+  flex: 1;
+  min-width: 0;
   font-family: var(--font-display);
-  font-size: 0.92rem;
+  font-size: calc(0.92rem * var(--display-scale, 1));
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-display, 0.04em);
   margin: 0;
   color: var(--text);
   overflow: hidden;

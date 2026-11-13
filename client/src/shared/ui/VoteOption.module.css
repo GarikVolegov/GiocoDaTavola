@@ -145,11 +145,11 @@
 
 .label {
   font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-size: calc(1.05rem * var(--display-scale, 1));
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: var(--tracking-display, 0.03em);
-  line-height: 1.25;
+  line-height: var(--leading-display, 1.22);
   overflow-wrap: anywhere;
 }
 

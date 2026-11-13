@@ -1,11 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
-import { getOrGenerateTts } from '../audioTts';
+import { getOrGenerateTts, MAX_TTS_TEXT_LENGTH } from '../audioTts';
 
 describe('audioTts server module', () => {
   it('rifiuta stringhe vuote', async () => {
     await expect(getOrGenerateTts('')).rejects.toThrow('Empty text');
     await expect(getOrGenerateTts('   ')).rejects.toThrow('Empty text');
+  });
+
+  it('rifiuta testi oltre il limite massimo di caratteri', async () => {
+    await expect(getOrGenerateTts('a'.repeat(MAX_TTS_TEXT_LENGTH + 1))).rejects.toThrow('Text too long');
   });
 
   it('genera e memorizza nella cache un file MP3 per un testo', async () => {

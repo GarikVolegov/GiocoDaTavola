@@ -12,6 +12,7 @@ import {
   Alert,
 } from '../shared/ui';
 import { fetchWithTimeout } from '../shared/api';
+import { useOnlineStatus } from '../shared/useOnlineStatus';
 import { useIntensityTheme } from '../shared/useIntensityTheme';
 import { vibrateInfiltrator, vibrateTick } from '../shared/haptics';
 import { playFanfare, playGong, playTick } from '../host/audio/synthSfx';
@@ -54,6 +55,9 @@ import {
 import styles from './PassAndPlayApp.module.css';
 
 const STORAGE_PLAYERS_KEY = 'schierati:passPlayers';
+const STORAGE_ACTIVE_STATE_KEY = 'schierati:passActiveState';
+const STORAGE_DECK_CACHE_PREFIX = 'schierati:passDeckCache:';
+const MAX_CACHED_CARDS_PER_MODE = 60;
 
 const MODE_OPTIONS: Array<{ id: PassMode; label: string; desc: string }> = [
   { id: 'flash', label: '⚡ Flash', desc: 'Dilemmi secchi, voto segreto e dibattito lampo' },
@@ -95,12 +99,70 @@ function savePlayers(players: PassPlayer[]): void {
 }
 
 function shuffleSlice<T>(items: T[], count: number): T[] {
-  return [...items].sort(() => Math.random() - 0.5).slice(0, count);
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.slice(0, count);
+}
+
+function loadCachedDeck(mode: PassMode): PassCard[] {
+  try {
+    const raw = localStorage.getItem(`${STORAGE_DECK_CACHE_PREFIX}${mode}`);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? (parsed as PassCard[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCachedDeck(mode: PassMode, cards: PassCard[]): void {
+  try {
+    const existing = loadCachedDeck(mode);
+    const byId = new Map<string, PassCard>();
+    for (const c of [...cards, ...existing]) {
+      if (c && typeof c.id === 'string' && !byId.has(c.id)) byId.set(c.id, c);
+    }
+    localStorage.setItem(
+      `${STORAGE_DECK_CACHE_PREFIX}${mode}`,
+      JSON.stringify([...byId.values()].slice(0, MAX_CACHED_CARDS_PER_MODE)),
+    );
+  } catch {
+    // ignore storage quota errors
+  }
+}
+
+function loadActivePassState(): ReturnType<typeof createInitialPassState> | null {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_ACTIVE_STATE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ReturnType<typeof createInitialPassState>;
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      parsed.phase !== 'SETUP' &&
+      Array.isArray(parsed.players) &&
+      Array.isArray(parsed.cards) &&
+      parsed.cards.length > 0
+    ) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export default function PassAndPlayApp() {
   const navigate = useNavigate();
-  const [state, dispatch] = useReducer(passReducer, undefined, createInitialPassState);
+  const online = useOnlineStatus();
+  const [state, dispatch] = useReducer(
+    passReducer,
+    undefined,
+    () => loadActivePassState() ?? createInitialPassState(),
+  );
 
   // Setup local state
   const [selectedMode, setSelectedMode] = useState<PassMode>('flash');
@@ -219,6 +281,19 @@ export default function PassAndPlayApp() {
     savePlayers(updated);
   };
 
+  // Persist active game state across accidental reloads / mobile tab discards
+  useEffect(() => {
+    try {
+      if (state.phase === 'SETUP') {
+        sessionStorage.removeItem(STORAGE_ACTIVE_STATE_KEY);
+      } else {
+        sessionStorage.setItem(STORAGE_ACTIVE_STATE_KEY, JSON.stringify(state));
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [state]);
+
   const handleStartGame = async () => {
     const minP = minPlayersForMode(selectedMode);
     if (players.length < minP) {
@@ -229,41 +304,53 @@ export default function PassAndPlayApp() {
     setLoadingDeck(true);
 
     let cards: PassCard[] = [];
-    try {
-      const res = await fetchWithTimeout(
-        '/api/pass-and-play/deck',
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            mode: selectedMode,
-            count: roundCount,
-            intensity,
-            familiarita,
-            theme: theme.trim() || undefined,
-          }),
-        },
-        4500,
-      );
-      if (res.ok) {
-        const json = (await res.json()) as { cards?: PassCard[] };
-        if (Array.isArray(json.cards) && json.cards.length > 0) {
-          cards = json.cards;
+    if (online) {
+      try {
+        const res = await fetchWithTimeout(
+          '/api/pass-and-play/deck',
+          {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              mode: selectedMode,
+              count: roundCount,
+              intensity,
+              familiarita,
+              theme: theme.trim() || undefined,
+            }),
+          },
+          4500,
+        );
+        if (res.ok) {
+          const json = (await res.json()) as { cards?: PassCard[] };
+          if (Array.isArray(json.cards) && json.cards.length > 0) {
+            cards = json.cards;
+            saveCachedDeck(selectedMode, cards);
+          }
         }
+      } catch {
+        // Offline / network fallback handled below
       }
-    } catch {
-      // Offline / network fallback handled below
     }
 
     if (cards.length === 0) {
-      const fallbackPool = FALLBACK_DECKS[selectedMode];
+      const mergedById = new Map<string, PassCard>();
+      for (const c of [...loadCachedDeck(selectedMode), ...FALLBACK_DECKS[selectedMode]]) {
+        if (!mergedById.has(c.id)) mergedById.set(c.id, c);
+      }
+      const fallbackPool = [...mergedById.values()];
+      const byIntensity =
+        selectedMode === 'coppie'
+          ? fallbackPool.filter((c) => !('intensity' in c) || c.intensity === intensity)
+          : fallbackPool;
+      const intensityPool = byIntensity.length > 0 ? byIntensity : fallbackPool;
       const filtered =
         familiarita === 'vecchi_amici'
-          ? fallbackPool.filter((c) => c.familiarita !== 'nuove_conoscenze')
+          ? intensityPool.filter((c) => c.familiarita !== 'nuove_conoscenze')
           : familiarita === 'nuove_conoscenze'
-            ? fallbackPool.filter((c) => c.familiarita !== 'vecchi_amici')
-            : fallbackPool;
-      cards = shuffleSlice(filtered.length > 0 ? filtered : fallbackPool, roundCount);
+            ? intensityPool.filter((c) => c.familiarita !== 'vecchi_amici')
+            : intensityPool;
+      cards = shuffleSlice(filtered.length > 0 ? filtered : intensityPool, roundCount);
     }
 
     setLoadingDeck(false);
@@ -289,7 +376,10 @@ export default function PassAndPlayApp() {
           {state.phase === 'SETUP' ? '← Indietro' : '✕ Esci'}
         </button>
         {state.phase === 'SETUP' ? (
-          <Logo size={22} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {!online && <Pill selected>✈️ Offline pronto</Pill>}
+            <Logo size={22} />
+          </div>
         ) : state.phase !== 'FINAL_AWARDS' ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span className={styles.roundBadge}>

@@ -2,7 +2,7 @@
    Spettacolare sintesi di profondità cosmica, glassmorphism e colori vibranti ad alto contrasto. */
 
 /* ===== fonts.css ===== */
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Chakra+Petch:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rubik:wght@700;800;900&family=Syne:wght@700;800&display=swap');
+/* Google Fonts loaded in index.html via <link rel="stylesheet"> with preconnect */
 
 @font-face {
   font-family: 'Space Grotesk';
@@ -96,7 +96,9 @@
   --leading-snug:  1.16;
   --leading-body:  1.55;
 
-  /* Tracking */
+  /* Tracking & per-intensity display calibration */
+  --display-scale:       1;
+  --leading-display:     1.14;
   --tracking-tight:      -0.01em;  /* display grotesk */
   --tracking-serif:       0.03em;  /* legacy alias -> uppercase display tracking */
   --tracking-display:     0.03em;  /* decisive uppercase headlines & questions */
@@ -110,25 +112,33 @@
 :root[data-intensity='light'] {
   --font-display:   'Rubik', 'Space Grotesk', system-ui, sans-serif;
   --weight-display: 800;
+  --display-scale:  0.94;
+  --leading-display: 1.16;
   --tracking-display: 0.02em;
 }
 
 :root[data-intensity='medium'] {
   --font-display:   'Chakra Petch', 'Space Grotesk', system-ui, sans-serif;
   --weight-display: 700;
+  --display-scale:  1;
+  --leading-display: 1.14;
   --tracking-display: 0.03em;
 }
 
 :root[data-intensity='intense'] {
   --font-display:   'Barlow Condensed', 'Space Grotesk', system-ui, sans-serif;
   --weight-display: 800;
+  --display-scale:  1.08;
+  --leading-display: 1.08;
   --tracking-display: 0.04em;
 }
 
 :root[data-intensity='chaos'] {
   --font-display:   'Syne', 'Space Grotesk', system-ui, sans-serif;
   --weight-display: 800;
-  --tracking-display: 0.015em;
+  --display-scale:  0.88;
+  --leading-display: 1.18;
+  --tracking-display: 0.01em;
 }
 
 /* ===== spacing.css ===== */

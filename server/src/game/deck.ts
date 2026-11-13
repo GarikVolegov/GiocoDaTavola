@@ -187,12 +187,29 @@ export function inferPolarizzazione(d: Dilemma): PolarizzazioneDilemma {
   return 'media';
 }
 
+const RILANCIO_BY_TEMA: Record<string, string> = {
+  soldi: 'Quanto conta davvero la sicurezza economica rispetto alla libertà di scegliere come vivere?',
+  lavoro: 'Se domani cambiassi lavoro o ruolo, cosa difenderesti della tua scelta attuale?',
+  amicizia: 'Con gli amici più stretti: dici sempre ciò che pensi o proteggi l’equilibrio del gruppo?',
+  amore: 'In una relazione, qual è il confine tra compromesso sano e rinuncia a te stesso?',
+  famiglia: 'Quanto delle tue scelte di oggi nasce da ciò che vuoi tu e quanto da ciò che si aspettano i tuoi?',
+  tempo: 'Se guardassi la tua ultima settimana, dove hai messo il tempo rispetto a ciò che dici di amare?',
+  digitale: 'Senza notifiche né pubblico esterno, faresti esattamente la stessa scelta?',
+  verita: 'Preferisci una verità scomoda che chiarisce o un silenzio gentile che rimanda il problema?',
+  coraggio: 'Qual è il piccolo passo che rimandi da mesi solo per paura del giudizio altrui?',
+  etica: 'Quando una regola è ingiusta ma comoda, da che parte ti schieri nella vita di tutti i giorni?',
+};
+
 /**
  * Ensure every dilemma has a post-vote follow-up question that nudges real
- * reflection, tailored to its tonal lane if not explicitly authored.
+ * reflection, tailored to its themes or tonal lane if not explicitly authored.
  */
 export function ensureDomandaRilancio(d: Dilemma): string {
   if (d.domandaRilancio && d.domandaRilancio.trim().length > 0) return d.domandaRilancio;
+  const temi = inferTemi(d);
+  for (const t of temi) {
+    if (RILANCIO_BY_TEMA[t]) return RILANCIO_BY_TEMA[t];
+  }
   const tono = tonoOfDilemma(d);
   if (tono === 'risate') {
     return 'Chi nel gruppo sarebbe davvero capace di fare la scelta opposta nella vita reale, e perché?';
@@ -203,9 +220,21 @@ export function ensureDomandaRilancio(d: Dilemma): string {
   return 'Nella tua vita attuale, stai già andando verso quello che hai votato o stai rimandando?';
 }
 
+const LEZIONE_BY_TEMA: Record<string, string> = {
+  soldi: 'Nella vita reale: il denaro compra margine di manovra, ma ogni euro inseguito senza un limite chiaro diventa un nuovo vincolo.',
+  amicizia: 'Nei legami: la fiducia non si misura nei momenti facili, ma quando dire la verità costa un po’ di imbarazzo.',
+  amore: 'Nelle relazioni: la chiarezza all’inizio evita i risentimenti alla fine. Nessuno legge nel pensiero.',
+  famiglia: 'In famiglia: onorare le proprie radici non significa ripetere ogni copione; si può amare scegliendo la propria strada.',
+  tempo: 'Sul tempo: ogni "sì" automatico a qualcosa di urgente è un "no" silenzioso a qualcosa di importante.',
+  digitale: 'Nel digitale: l’attenzione è la tua risorsa più scarsa; ciò che misuri e condividi finisce per guidare ciò che desideri.',
+  verita: 'Sulla sincerità: la trasparenza selettiva protegge nel breve periodo, ma la coerenza costruisce reputazione nel lungo.',
+  coraggio: 'Sul coraggio: la chiarezza arriva quasi sempre dopo la prima mossa, quasi mai prima.',
+  etica: 'Sull’etica pratica: i valori si vedono solo quando rispettarli ha un prezzo concreto.',
+};
+
 /**
  * Assicura che ogni dilemma abbia un insegnamento per il mondo reale,
- * sintetizzandone uno specifico per il registro se non esplicitamente presente.
+ * sintetizzandone uno specifico per tema o registro se non esplicitamente presente.
  */
 export function ensureLezioneReale(d: Dilemma): string {
   if (d.lezioneReale && d.lezioneReale.trim().length > 0) return d.lezioneReale;
@@ -215,6 +244,10 @@ export function ensureLezioneReale(d: Dilemma): string {
   }
   if (d.register === 'carriera') {
     return 'Nel lavoro: la sicurezza apparente ha spesso il costo nascosto di un tetto al proprio potenziale. Chi sa cambiare idea davanti a nuove evidenze impara il doppio di chi difende l’inerzia.';
+  }
+  const temi = inferTemi(d);
+  for (const t of temi) {
+    if (LEZIONE_BY_TEMA[t]) return LEZIONE_BY_TEMA[t];
   }
   return 'Nella vita reale: il rimpianto per un’opportunità mancata brucia molto più a lungo del disagio di un tentativo fallito. Ascoltare chi dissente è l’unico modo per superare i propri punti ciechi.';
 }

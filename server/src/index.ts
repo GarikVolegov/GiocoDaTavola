@@ -1,5 +1,6 @@
 import express from 'express';
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
+import compression from 'compression';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
@@ -15,7 +16,7 @@ import { verifyClerkToken } from './clerk';
 import { serializeRoom, deserializeRoom } from './game/roomSnapshot';
 import { persistSnapshot, loadAllSnapshots, deleteSnapshot } from './snapshotStore';
 import { createRateLimiter } from './rateLimit';
-import { getOrGenerateTts } from './audioTts';
+import { getOrGenerateTts, MAX_TTS_TEXT_LENGTH } from './audioTts';
 import { generatePartyCards, getCuratedCards, isGeminiAvailable, type PartyMode } from './game/geminiGenerator';
 
 // Load server/.env (DATABASE_URL, CLERK_SECRET_KEY, AI_BASE_URL/AI_MODEL, …) if
@@ -45,6 +46,16 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 const app = express();
+app.set('trust proxy', 1);
+app.use(compression());
+// Baseline HTTP security headers (no extra dependency needed).
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+  next();
+});
 // Parse JSON request bodies (the profile PUT). Capped well above a resized
 // avatar data-URL (~tens of KB) but small enough to bound hostile payloads.
 app.use(express.json({ limit: '500kb' }));
@@ -56,6 +67,7 @@ export const httpServer = createServer(app);
 // single origin is enough.
 const io = new Server(httpServer, {
   cors: { origin: process.env.CLIENT_ORIGIN || '*' },
+  maxHttpBufferSize: 100 * 1024, // 100 KB cap per socket packet
 });
 
 // Authoritative in-memory room store (no DB).
@@ -63,6 +75,10 @@ const rooms = new RoomStore();
 // Throttle room create/join per socket: at most 10 attempts / 10s, so one
 // socket can't spam the room space or flood joins.
 const joinLimiter = createRateLimiter(10, 10_000);
+const ttsLimiter = createRateLimiter(30, 60_000);
+const reactLimiter = createRateLimiter(15, 5_000);
+const writeLimiter = createRateLimiter(12, 30_000);
+const identifyLimiter = createRateLimiter(10, 10_000);
 // Available dilemmas per tappa, computed once at boot — surfaced to the host so
 // the percorso setup can show an accurate (capped) length estimate. Static data.
 const ALL_DILEMMAS = loadDilemmas();
@@ -341,9 +357,23 @@ function pruneTokensForRoom(code: string): void {
   }
 }
 
-// Reap a dead room: stop its phase timer, drop its tokens, remove it from memory.
+// Reap a dead room: stop its phase timer, drop its tokens/sessions/grace timers, remove from memory.
 function reapRoom(code: string): void {
   clearPhaseTimer(code);
+  const room = rooms.get(code);
+  if (room) {
+    for (const playerId of room.players.keys()) {
+      cancelGrace(playerId);
+      const sid = playerSocket.get(playerId);
+      if (sid) {
+        sessions.delete(sid);
+        playerSocket.delete(playerId);
+      }
+    }
+  }
+  for (const [sid, s] of sessions) {
+    if (s.code === code) sessions.delete(sid);
+  }
   pruneTokensForRoom(code);
   rooms.delete(code);
   deleteSnapshot(code).catch((e) => console.error('[snapshot] delete failed', e));
@@ -514,14 +544,29 @@ app.get('/api/health', async (_req, res) => {
       db = 'down';
     }
   }
-  res.json({ ok: true, db });
+  res.json({
+    ok: true,
+    db,
+    activeRooms: rooms.activeCodes().length,
+    uptimeSec: Math.floor(process.uptime()),
+    dilemmasLoaded: ALL_DILEMMAS.length,
+  });
 });
 
 // Dynamic neural TTS narration endpoint (male Diego studio voice).
 app.get('/api/audio/tts', async (req, res) => {
+  const clientIp = req.ip || 'unknown';
+  if (!ttsLimiter.allow(clientIp)) {
+    res.status(429).json({ error: 'too-many-requests' });
+    return;
+  }
   const text = typeof req.query.text === 'string' ? req.query.text.trim() : '';
   if (!text) {
     res.status(400).json({ error: 'Testo mancante' });
+    return;
+  }
+  if (text.length > MAX_TTS_TEXT_LENGTH) {
+    res.status(400).json({ error: 'Testo troppo lungo' });
     return;
   }
   try {
@@ -700,10 +745,15 @@ app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
   const familiarita: Familiarita = isFamiliarita(familiaritaRaw) ? familiaritaRaw : 'misto';
 
   if (modeRaw === 'classico') {
-    const basePool = dilemmasForRegister(loadDilemmas(), register).filter((d) => !d.delicato && !d.roster);
+    const basePool = dilemmasForRegister(ALL_DILEMMAS, register).filter((d) => !d.delicato && !d.roster);
     const pool = filterByFamiliarita(basePool, familiarita);
-    const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, count);
-    res.json({ mode: 'classico', cards: shuffled, source: 'curated' });
+    const arr = [...pool];
+    const limit = Math.min(count, arr.length);
+    for (let i = 0; i < limit; i++) {
+      const j = i + Math.floor(Math.random() * (arr.length - i));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    res.json({ mode: 'classico', cards: arr.slice(0, limit), source: 'curated' });
     return;
   }
 
@@ -730,12 +780,22 @@ io.on('connection', (socket) => {
       socket.emit('player:joinError', { error: 'RATE_LIMITED' });
       return;
     }
+    if (!rooms.canCreate()) {
+      socket.emit('player:joinError', { error: 'SERVER_BUSY' });
+      return;
+    }
+    const prev = sessions.get(socket.id);
+    if (prev) {
+      socket.leave(prev.code);
+      sessions.delete(socket.id);
+    }
     const nickname = String(payload?.nickname ?? '');
     const { code } = rooms.create();
     const playerId = `p_${randomUUID()}`;
     const token = randomUUID();
     const result = rooms.join(code, playerId, nickname);
     if (!result.ok) {
+      rooms.delete(code);
       socket.emit('player:joinError', { error: result.error });
       return;
     }
@@ -752,6 +812,10 @@ io.on('connection', (socket) => {
 
   // A spectator screen (TV) attaches to an existing room in read-only mode.
   socket.on('spectator:join', (payload: { code?: string }) => {
+    if (!joinLimiter.allow(socket.id)) {
+      socket.emit('player:joinError', { error: 'RATE_LIMITED' });
+      return;
+    }
     const code = String(payload?.code ?? '').trim().toUpperCase();
     if (!rooms.has(code)) {
       socket.emit('player:joinError', { error: 'ROOM_NOT_FOUND' });
@@ -788,7 +852,10 @@ io.on('connection', (socket) => {
     // 5.1: the leader's own device memory of already-seen dilemmas (localStorage,
     // sent fresh on every start). Capped + sanitized against a hostile payload.
     const seenDilemmaIds = Array.isArray(payload?.seenDilemmaIds)
-      ? payload.seenDilemmaIds.slice(0, 1000).map((id) => String(id))
+      ? payload.seenDilemmaIds
+          .slice(0, 2000)
+          .map((id) => String(id).trim())
+          .filter((id) => id.length > 0 && id.length <= 64)
       : [];
     const partyMode = payload?.partyMode && ['flash', 'infiltrato', 'coppie', 'assurdo', 'mix'].includes(payload.partyMode)
       ? (payload.partyMode as PartyMode)
@@ -807,7 +874,7 @@ io.on('connection', (socket) => {
       typeof payload?.familiarita === 'string' && isFamiliarita(payload.familiarita)
         ? payload.familiarita
         : 'misto';
-    const theme = typeof payload?.theme === 'string' ? payload.theme.trim() : undefined;
+    const theme = typeof payload?.theme === 'string' ? payload.theme.trim().slice(0, 80) : undefined;
 
     const result = rooms.startGame(
       code,
@@ -981,6 +1048,11 @@ io.on('connection', (socket) => {
     }
 
     cancelGrace(playerId); // back in time — don't drop the seat
+    const prevSession = sessions.get(socket.id);
+    if (prevSession && prevSession.code !== code) {
+      socket.leave(prevSession.code);
+      sessions.delete(socket.id);
+    }
     tokens.set(token, { code, playerId });
     rooms.registerToken(code, token, playerId);
     sessions.set(socket.id, { code, playerId });
@@ -1151,6 +1223,7 @@ io.on('connection', (socket) => {
   // speaker; we re-broadcast just the emoji as a lightweight stream the host
   // animates (no full game:state — reactions are ephemeral, never secret votes).
   socket.on('player:react', (payload: { emoji?: string }) => {
+    if (!reactLimiter.allow(socket.id)) return;
     const session = sessions.get(socket.id);
     if (!session) return;
     const result = rooms.react(session.code, session.playerId, String(payload?.emoji ?? ''));
@@ -1257,6 +1330,10 @@ io.on('connection', (socket) => {
   // ("In Altre Parole", 4.2). Ends early once every present human has written;
   // the answers stay attributed-but-hidden until the anonymized WRITE_VOTE list.
   socket.on('player:write', (payload: { text?: string }) => {
+    if (!writeLimiter.allow(socket.id)) {
+      socket.emit('player:writeError', { error: 'RATE_LIMITED' });
+      return;
+    }
     const session = sessions.get(socket.id);
     if (!session) return;
     const { code, playerId } = session;
@@ -1323,6 +1400,10 @@ io.on('connection', (socket) => {
   // A player writes their own dilemma in the LOBBY (max 2/player). The store
   // validates + caps it; on success the room's submitted count is broadcast.
   socket.on('player:submitDilemma', (payload: { text?: string; optionA?: string; optionB?: string }) => {
+    if (!writeLimiter.allow(socket.id)) {
+      socket.emit('player:submitDilemmaError', { error: 'RATE_LIMITED' });
+      return;
+    }
     const session = sessions.get(socket.id);
     if (!session) return;
     const { code, playerId } = session;
@@ -1421,6 +1502,7 @@ io.on('connection', (socket) => {
   // server can attribute saved awards. A late identify on the awards screen
   // triggers a re-save (idempotent) so results aren't lost.
   socket.on('player:identify', async (payload: { token?: string }) => {
+    if (!identifyLimiter.allow(socket.id)) return;
     const session = sessions.get(socket.id);
     if (!session) return;
     const userId = await verifyClerkToken(typeof payload?.token === 'string' ? payload.token : undefined);
@@ -1496,8 +1578,21 @@ io.on('connection', (socket) => {
 // In production the server serves the built client from client/dist.
 const clientDist = path.resolve(__dirname, '../../client/dist');
 if (fs.existsSync(clientDist)) {
-  app.use(express.static(clientDist));
+  app.use(
+    express.static(clientDist, {
+      setHeaders: (res, filePath) => {
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else if (filePath.endsWith(`${path.sep}index.html`) || filePath.endsWith(`${path.sep}sw.js`)) {
+          res.setHeader('Cache-Control', 'no-cache');
+        } else {
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+        }
+      },
+    }),
+  );
   app.get('*', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 }
@@ -1571,4 +1666,28 @@ if (process.env.NODE_ENV !== 'test') {
       );
     });
   });
+
+  let shuttingDown = false;
+  const shutdown = async (signal: string): Promise<void> => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`[server] ${signal} received — flushing snapshots & shutting down`);
+    const forceTimer = setTimeout(() => process.exit(0), 5_000);
+    forceTimer.unref();
+    try {
+      const saves: Promise<void>[] = [];
+      for (const code of rooms.activeCodes()) {
+        clearPhaseTimer(code);
+        const room = rooms.get(code);
+        if (room) saves.push(persistSnapshot(code, serializeRoom(room)));
+      }
+      await Promise.allSettled(saves);
+      await new Promise<void>((resolve) => io.close(() => resolve()));
+      await getPool()?.end().catch(() => {});
+    } finally {
+      process.exit(0);
+    }
+  };
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
 }

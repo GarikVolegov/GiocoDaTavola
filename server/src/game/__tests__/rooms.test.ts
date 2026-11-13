@@ -3831,4 +3831,24 @@ describe('RoomStore.advancePhase / skipDilemma while paused', () => {
     expect(store.skipDilemma(code)).toEqual({ ok: false, error: 'PAUSED' });
     expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL'); // NOT 'UNANIMOUS_REVEAL'
   });
+
+  it('enforces maxRooms cap via canCreate() and create()', () => {
+    let seq = 0;
+    const store = new RoomStore(
+      () => `R00${++seq}`,
+      () => 0,
+      makeFixtureDeck,
+      Math.random,
+      undefined,
+      2,
+    );
+    expect(store.canCreate()).toBe(true);
+    const r1 = store.create();
+    expect(store.canCreate()).toBe(true);
+    store.create();
+    expect(store.canCreate()).toBe(false);
+    expect(() => store.create()).toThrow('MAX_ROOMS_REACHED');
+    store.delete(r1.code);
+    expect(store.canCreate()).toBe(true);
+  });
 });

@@ -71,7 +71,8 @@ h2 {
   text-transform: uppercase;
   letter-spacing: var(--tracking-display, 0.03em);
   margin: 0;
-  line-height: 1.08;
+  line-height: var(--leading-display, 1.12);
+  overflow-wrap: anywhere;
 }
 
 /* Consistent keyboard / switch-access focus ring across the whole app — many

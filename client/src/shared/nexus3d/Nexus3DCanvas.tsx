@@ -62,10 +62,14 @@ export function Nexus3DCanvas({
     const onShockwave = () => scene.triggerShockwave();
     window.addEventListener('nexus:shockwave', onShockwave);
 
-    const intervalId = setInterval(checkCssLean, 150);
+    const observer = new MutationObserver(checkCssLean);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['style', 'data-phase'],
+    });
 
     return () => {
-      clearInterval(intervalId);
+      observer.disconnect();
       window.removeEventListener('nexus:shockwave', onShockwave);
       scene.destroy();
       sceneRef.current = null;

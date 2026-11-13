@@ -131,6 +131,7 @@ export { MAX_GIOCATORI } from './ruleset';
 
 /** Max players allowed in a single room overall (giocatori + pubblico). */
 export const MAX_PLAYERS = 24;
+export const MAX_ROOMS = 500;
 
 /** Max nickname length — truncated (not rejected) for a forgiving UX. */
 export const NICKNAME_MAX = 24;
@@ -1161,7 +1162,11 @@ function emptyRoom(code: string, createdAt: number): Room {
  * default; only a truly missing key is backfilled.
  */
 function normalizeRestoredRoom(room: Room): Room {
-  return { ...emptyRoom(room.code, room.createdAt), ...room };
+  const merged = { ...emptyRoom(room.code, room.createdAt), ...room };
+  if (merged.familiarita !== 'vecchi_amici' && merged.familiarita !== 'nuove_conoscenze' && merged.familiarita !== 'misto') {
+    merged.familiarita = 'misto';
+  }
+  return merged;
 }
 
 export class RoomStore {
@@ -1179,7 +1184,13 @@ export class RoomStore {
     // Injectable so tests can supply a small deterministic story catalog instead
     // of reading server/data/stories.json.
     private readonly loadStoriesFn: () => Story[] = loadStories,
+    private readonly maxRooms: number = MAX_ROOMS,
   ) {}
+
+  /** Whether another room can be created without exceeding the server cap. */
+  canCreate(): boolean {
+    return this.rooms.size < this.maxRooms;
+  }
 
   /** Compute the auto-advance expiry for a phase, or null if it has no timer. */
   private expiryFor(phase: GamePhase): number | null {
@@ -1292,8 +1303,13 @@ export class RoomStore {
 
   /** Create a room with a code unique among the rooms currently in memory. */
   create(): Room {
+    if (this.rooms.size >= this.maxRooms) {
+      throw new Error('MAX_ROOMS_REACHED');
+    }
     let code = this.genCode();
+    let attempts = 0;
     while (this.rooms.has(code)) {
+      if (++attempts > 1000) throw new Error('ROOM_CODE_EXHAUSTED');
       code = this.genCode();
     }
     const room = emptyRoom(code, this.now());

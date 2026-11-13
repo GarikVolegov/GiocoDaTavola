@@ -22,7 +22,8 @@ function shuffle<T>(arr: T[], rng: () => number): T[] {
 const tierOf = (d: Dilemma): Complessita => d.complessita ?? 'alto';
 const isHeavy = (d: Dilemma): boolean => tierOf(d) === 'max' || tierOf(d) === 'power';
 
-const isSbilanciato = (d: Dilemma): boolean => d.bilanciamento === 'sbilanciato';
+const isSbilanciato = (d: Dilemma): boolean =>
+  d.bilanciamento === 'sbilanciato' || d.polarizzazione === 'bassa';
 
 /**
  * Repair an ascending-complexity sequence so it also respects the group's

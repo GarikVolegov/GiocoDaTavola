@@ -24,7 +24,14 @@
       "Un reddito sicuro ti dà lucidità",
       "Validare prima costa molto meno"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d02",
@@ -48,7 +55,13 @@
       "Gli investitori seri fanno due diligence",
       "La fiducia persa costa più di un round saltato"
     ],
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "soldi",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d03",
@@ -73,7 +86,13 @@
       "Chi ha riserve prende decisioni senza paura",
       "L'emergenza arriva sempre quando meno te lo aspetti"
     ],
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "soldi",
+      "digitale"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "d04",
@@ -97,7 +116,12 @@
       "L'organizzazione non può dipendere da una sola persona",
       "È l'occasione per valutare candidati freschi e motivati"
     ],
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "soldi"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d07",
@@ -121,7 +145,14 @@
       "Coprire gli errori degli altri crea dipendenza, non rispetto",
       "La chiarezza sulle cause è più utile del capro espiatorio"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "d10",
@@ -145,7 +176,13 @@
       "Un'azienda che sacrifica le persone perde l'anima",
       "Chi risolve problemi creativamente costruisce una cultura migliore"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d11",
@@ -169,7 +206,12 @@
       "Chi arriva secondo deve lottare contro qualcuno che ha già imparato",
       "Il brand costruito su un'idea unica vale molto di più"
     ],
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "business"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d12",
@@ -194,7 +236,12 @@
       "Una crescita solida è più difficile da distruggere",
       "Chi costruisce lentamente costruisce qualcosa che dura"
     ],
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "vita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "d13",
@@ -218,7 +265,13 @@
       "Forse il collega è in difficoltà e un confronto umano basta",
       "La denuncia dovrebbe essere l'ultimo passo, non il primo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "d14",
@@ -242,7 +295,13 @@
       "Il rispetto che nasce dalla forza è più stabile dell'affetto",
       "Chi è solo amato rischia di essere anche ignorato"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d16",
@@ -266,7 +325,15 @@
       "Un investitore col 60% decide prima di te sulle scelte chiave",
       "L'indipendenza vale un premio che i numeri non catturano"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "d17",
@@ -290,7 +357,14 @@
       "Un rapporto costruito su una bugia dura poco",
       "La reputazione di onestà vale più di qualsiasi singolo affare"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d18",
@@ -315,7 +389,13 @@
       "Cambiare tutto per inseguire la moda può alienare chi ti sostiene",
       "Una nicchia solida vale più di una quota in un mercato incerto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d20",
@@ -339,7 +419,12 @@
       "Condividere risorse significa condividere anche i rischi",
       "Chi cammina da solo va dove vuole, chi va in coppia scende a compromessi"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "d21",
@@ -363,7 +448,14 @@
       "Il ruolo del leader è anche proteggere il team dalle scelte sbagliate",
       "Non tutti gli errori sono recuperabili, soprattutto i primi"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d22",
@@ -389,7 +481,13 @@
       "Rovinare ciò che hai per inseguire altro è un lusso che non tutti si possono permettere",
       "La felicità sta spesso nel godersi il presente, non nel rincorrere il futuro"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d23",
@@ -415,7 +513,14 @@
       "I consigli migliori arrivano dall'ascolto profondo di sé stessi",
       "La tua strada ti appartiene: i mentori la illuminano, non la percorrono"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d24",
@@ -440,7 +545,12 @@
       "Le relazioni trascurate non aspettano che tu sia pronto",
       "Il successo senza connessione è vuoto: i ricordi con chi ami non lo sono mai"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "d25",
@@ -466,7 +576,13 @@
       "Tenere un segreto che riguarda qualcun altro lo rende complice",
       "La verità, anche scomoda, è sempre un atto di rispetto"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "d27",
@@ -491,7 +607,14 @@
       "La privacy è un diritto fondamentale, anche in coppia",
       "Cedere le password crea un precedente difficile da invertire"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "d28",
@@ -516,7 +639,14 @@
       "Non è colpa tua se hanno sbagliato a calcolare",
       "La vita si bilancia: altre volte hai pagato senza ottenere"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "d29",
@@ -541,7 +671,14 @@
       "Dire no con rispetto è più onesto che dire sì con risentimento",
       "Aiutare diversamente — tempo, connessioni, consigli — è spesso più utile"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "soldi",
+      "amicizia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "d32",
@@ -566,7 +703,15 @@
       "L'ex è ex, ma il dolore di vederli insieme è reale e legittimo",
       "Chi ti vuole bene davvero evita situazioni che sa ti feriscono"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia",
+      "amore",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "d34",
@@ -592,7 +737,14 @@
       "Il momento di dire una verità difficile è cruciale: aspettare può essere saggio",
       "Proteggere chi ami dal dolore è a volte l'atto più amorevole"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "d36",
@@ -618,7 +770,14 @@
       "Una volta ceduti non li recuperi più",
       "Chi vende la sua privacy per comodità la perde per sempre"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d38",
@@ -643,7 +802,12 @@
       "Non sai cosa perderesti nell'altra vita: potresti rimpiangere di più",
       "La nostra storia, anche dolorosa, ci ha resi chi siamo oggi"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "d46",
@@ -667,7 +831,12 @@
       "Una conversazione privata risolve meglio e senza danni collaterali",
       "Scegliere il momento giusto è intelligenza, non debolezza"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d47",
@@ -691,7 +860,14 @@
       "I valori ceduti una volta sono più facili da cedere ancora",
       "La reputazione professionale è un capitale che accumuli o distruggi"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d48",
@@ -715,7 +891,13 @@
       "La tua integrità non è in vendita, neanche per un collega",
       "Chi sbaglia deve imparare: coprirlo gliene impedisce la possibilità"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d51",
@@ -739,7 +921,13 @@
       "Le competenze si insegnano: la leadership naturale è rara",
       "Un manager amato riduce il turnover e aumenta la retention"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "amicizia"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "d52",
@@ -763,7 +951,13 @@
       "Con le risorse giuste puoi costruire l'indipendenza per non aver più bisogno di lui",
       "Il pragmatismo in certi momenti è più onesto dei principi che non ti puoi permettere"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d53",
@@ -787,7 +981,12 @@
       "Il climate aziendale è il moltiplicatore di tutti i talenti presenti",
       "Chi non sa lavorare in gruppo non è davvero un fenomeno completo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "business"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d55",
@@ -811,7 +1010,12 @@
       "Le aziende che anticipano le regolamentazioni ambientali sopravvivono meglio",
       "La responsabilità di un'azienda va oltre la legalità"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "business"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d56",
@@ -835,7 +1039,12 @@
       "Il tono conta quanto il contenuto: senza rispetto non arriva niente",
       "Costruire fiducia prima di dire la verità difficile produce risultati migliori"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d57",
@@ -859,7 +1068,16 @@
       "Non puoi essere onesto al 100% con un amico nelle difficoltà del business",
       "Perdere l'amicizia è un prezzo troppo alto per qualsiasi progetto"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "lavoro",
+      "amicizia",
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "d58",
@@ -884,7 +1102,13 @@
       "Aspettare il momento giusto non è rinunciare: è costruire le condizioni",
       "Un sogno realizzato con basi solide dura di più"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "tempo"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "d59",
@@ -908,7 +1132,14 @@
       "I segreti hanno un modo di emergere: il rischio è sproporzionato",
       "La lealtà professionale è la base di qualsiasi carriera solida"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "verita"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "h01",
@@ -933,7 +1164,14 @@
       "Un’azienda salvata col tradimento è già marcia",
       "La lealtà conta proprio quando costa"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "h02",
@@ -958,7 +1196,12 @@
       "Il legale non coincide col giusto",
       "Quel denaro sporca tutto il resto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "h03",
@@ -985,7 +1228,16 @@
       "Un padre infelice pesa più di un reddito basso",
       "Insegnare il coraggio vale più della sicurezza"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "famiglia",
+      "tempo",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "h04",
@@ -1010,7 +1262,12 @@
       "Mi guarderei allo specchio sapendo la verità",
       "Il rispetto di me vale più del posto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "h05",
@@ -1035,7 +1292,12 @@
       "I ponti tagliati raramente si ricostruiscono",
       "Nessuna cifra ricompra una domenica insieme"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "alta"
   },
   {
     "id": "h06",
@@ -1061,7 +1323,14 @@
       "La giustizia senza pietà è crudeltà",
       "Al suo posto avrei rubato anch’io"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "famiglia",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "h34",
@@ -1086,7 +1355,14 @@
       "La giustizia non può fare macerie a caso",
       "Esistono modi più mirati di un’esplosione"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "verita",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "h35",
@@ -1111,7 +1387,12 @@
       "Le radici danno la forza di osare",
       "La libertà senza legami è solo vuoto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "h07",
@@ -1137,7 +1418,13 @@
       "Anche le vittime hanno una famiglia",
       "Amare è volere che diventi migliore"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "h08",
@@ -1162,7 +1449,13 @@
       "Mi ha amato o solo non ha potuto?",
       "La fedeltà è una scelta, non una mancanza d’occasioni"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "h09",
@@ -1188,7 +1481,16 @@
       "C’è chi ha subìto ciò che ha fatto",
       "L’amicizia non può chiedermi di tradire me stesso"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia",
+      "tempo",
+      "digitale",
+      "verita",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "h10",
@@ -1214,7 +1516,15 @@
       "La verità detta da me rovina due legami",
       "Sono cose che devono dirsi tra loro"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "famiglia",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "h11",
@@ -1240,7 +1550,14 @@
       "Merito di essere onesto sul mio dolore",
       "Mentire ora svilisce tutto ciò che ho sofferto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "h12",
@@ -1265,7 +1582,14 @@
       "Restare per dovere è prigione, non amore",
       "Anche io ho una sola vita da vivere"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "h13",
@@ -1290,7 +1614,15 @@
       "Un figlio non dovrebbe crescere su questa colpa",
       "Senza chi amo non saprei crescerlo comunque"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "famiglia",
+      "tempo",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "h14",
@@ -1315,7 +1647,15 @@
       "Il sangue chiama, è giusto ascoltarlo",
       "Posso amare di più, non per forza di meno"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "h15",
@@ -1341,7 +1681,14 @@
       "Non tocca a me decidere per gli altri",
       "Chi confida deve potersi fidare sempre"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "tempo",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "h16",
@@ -1367,7 +1714,13 @@
       "Dei professionisti li curano meglio di me",
       "Logorarmi non aiuta nessuno dei due"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "h17",
@@ -1393,7 +1746,13 @@
       "Il rispetto è anche accettare un no",
       "A volte il dono d’amore è il silenzio"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "h18",
@@ -1419,7 +1778,13 @@
       "Decidere per lei è toglierle dignità",
       "I non detti marciscono e tornano peggio"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "alta"
   },
   {
     "id": "h19",
@@ -1444,7 +1809,12 @@
       "Devo essere onesto sui miei limiti",
       "Un fallimento lo distruggerebbe due volte"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "h20",
@@ -1470,7 +1840,12 @@
       "È una porta che non si richiude",
       "Il mio compito è restare, non lasciare andare"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "h21",
@@ -1495,7 +1870,12 @@
       "Le cicatrici sono mappe, non catene",
       "Cancellare il dolore cancella chi mi ha reso forte"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "vita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "alta"
   },
   {
     "id": "h22",
@@ -1520,7 +1900,13 @@
       "La pace comprata col dolore altrui è marcia",
       "Preferisco una vita scomoda ma pulita"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "h23",
@@ -1545,7 +1931,13 @@
       "Si ama proprio perché non si sa",
       "Il rischio è il sale di ogni legame"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "tempo"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "h24",
@@ -1572,7 +1964,14 @@
       "Gli ideali non piangono al tuo funerale",
       "Proteggere i miei è il primo dovere"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "h25",
@@ -1597,7 +1996,13 @@
       "I miei errori sono parte di me",
       "Non voglio una felicità che non mi appartiene"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "h26",
@@ -1623,7 +2028,13 @@
       "La rabbia mi ha tenuto vivo, non la rinnego",
       "Certe cose non vanno assolte, vanno ricordate"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "h27",
@@ -1648,7 +2059,13 @@
       "Anche io ho chi ha bisogno di me",
       "Sacrificarsi non sempre è amore: a volte è fuga"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "h28",
@@ -1673,7 +2090,12 @@
       "Senza dolore non c’è gioia vera",
       "Sentire, anche male, è essere vivi"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "vita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "alta"
   },
   {
     "id": "h29",
@@ -1698,7 +2120,13 @@
       "Non ogni verità va sbattuta in faccia",
       "A volte il silenzio salva ciò che conta"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "h30",
@@ -1724,7 +2152,13 @@
       "Certe verità tolgono la voglia di alzarsi",
       "Cercare è già un senso"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "verita"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "h31",
@@ -1749,7 +2183,13 @@
       "Ho il dovere di non ingannare più nessuno",
       "La verità vale anche quando fa male"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "h32",
@@ -1775,7 +2215,17 @@
       "Certi pesi non vanno scaricati sui figli",
       "Proteggerlo è anche tacere"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "famiglia",
+      "tempo",
+      "verita",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "h33",
@@ -1800,7 +2250,14 @@
       "Il dolore è il prezzo onesto dell’amore",
       "Spegnere il dolore spegne anche me"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "p01",
@@ -1827,7 +2284,14 @@
       "Le radici valgono più di un titolo",
       "Il prezzo nascosto del trasloco è altissimo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "p02",
@@ -1855,7 +2319,14 @@
       "I soldi non comprano le sere a casa",
       "Bruciarsi costa più di quanto rende"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "p03",
@@ -1881,7 +2352,14 @@
       "Si può amare anche da lontano",
       "Una vita rinviata diventa rancore"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "p04",
@@ -1907,7 +2385,14 @@
       "A volte il silenzio è un atto d’amore",
       "Smontare una bugia può distruggere tutto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "p05",
@@ -1932,7 +2417,12 @@
       "L’amore è l’unica cosa che si moltiplica",
       "Nessuno, alla fine, rimpiange di aver voluto bene"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "p06",
@@ -1957,7 +2447,12 @@
       "I soldi finiscono, l’ispirazione no",
       "Chi sei conta più di cosa lasci"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "vita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "alta"
   },
   {
     "id": "p07",
@@ -1982,7 +2477,12 @@
       "Conta la profondità, non la lunghezza",
       "Una vita intensa lascia il segno"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "p08",
@@ -2007,7 +2507,12 @@
       "L’amore vicino scalda, la fama no",
       "Si vive davvero negli occhi di chi ci ama"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "vita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "alta"
   },
   {
     "id": "p09",
@@ -2032,7 +2537,13 @@
       "La normalità è l’ultimo lusso",
       "Certi pesi è giusto portarli da soli"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "p10",
@@ -2057,7 +2568,12 @@
       "Si misura una vita da quanto bene ha fatto",
       "Nessuno è riuscito da solo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "p11",
@@ -2082,7 +2598,13 @@
       "Alcuni dolori si potevano risparmiare",
       "Desiderare di cambiare non è rinnegarsi"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s01",
@@ -2109,7 +2631,16 @@
       "Spesso non è la strada il problema, ma l’illusione che altrove sia meglio",
       "La maturità è anche trovare senso in ciò che hai costruito"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "famiglia",
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "s02",
@@ -2135,7 +2666,15 @@
       "Si butta troppo in fretta ciò che ha radici profonde",
       "Forse serve pazienza, non la fuga"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "digitale",
+      "verita",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "s03",
@@ -2161,7 +2700,12 @@
       "Il mio giudizio potrebbe essere sbagliato: non sono lui",
       "Togliergli l’errore è togliergli la crescita"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "s04",
@@ -2188,7 +2732,14 @@
       "Un rifugio che resta gratuito vale più di un reddito",
       "Non tutto ciò che amiamo deve diventare produttivo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "s05",
@@ -2214,7 +2765,14 @@
       "Se firmo oggi, domani la richiesta sarà più grande",
       "La reputazione di integrità è l’unica cosa che resta quando crolla tutto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "s06",
@@ -2239,7 +2797,14 @@
       "Proteggere la propria posizione è legittima sopravvivenza",
       "Aiutarlo troppo presto è regalare il proprio lavoro"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "s07",
@@ -2265,7 +2830,16 @@
       "Un’occasione persa fa male un anno, un’assenza per sempre",
       "Il successo goduto da soli sa di sconfitta"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "famiglia",
+      "tempo",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "s08",
@@ -2290,7 +2864,14 @@
       "Travolgerei colleghi innocenti che ci campano",
       "Cambiare le regole non è compito di chi le subisce"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "s09",
@@ -2316,7 +2897,15 @@
       "Il denaro in più non ricompra una nonna vicina",
       "La stabilità affettiva conta più del conto in banca"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "famiglia",
+      "tempo",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "s10",
@@ -2341,7 +2930,13 @@
       "La fiducia vale più di un singolo contratto",
       "Vendere ciò che danneggia è un guadagno che si paga dopo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "s11",
@@ -2368,7 +2963,14 @@
       "Restare per principio mentre perdi tutto è autolesionismo",
       "Anche la fedeltà ha bisogno di reciprocità per avere senso"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "s12",
@@ -2394,7 +2996,14 @@
       "Il talento trova un’altra porta, il bisogno spesso no",
       "Un lavoro può salvare una vita, non solo un bilancio"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "s13",
@@ -2420,7 +3029,14 @@
       "Forse il problema sono le aspettative, non la meta",
       "Anche le mete vere deludono un po’: la felicità costante non esiste"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "s14",
@@ -2445,7 +3061,14 @@
       "A volte un taglio netto salva l’insieme",
       "Diluire il dolore su tutti non lo riduce, lo prolunga"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "s15",
@@ -2472,7 +3095,14 @@
       "Spesso l’insoddisfazione ti segue ovunque vai",
       "Ricominciare da zero ha un costo reale su chi dipende da te"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "s16",
@@ -2497,7 +3127,12 @@
       "Lui non esiterebbe a farti fuori",
       "Le occasioni si colgono, non si regalano"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "business"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "s17",
@@ -2523,7 +3158,15 @@
       "Esistono modi di curare senza distruggersi",
       "Sacrificare la mia famiglia per la sua non è un pareggio"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "s18",
@@ -2549,7 +3192,16 @@
       "Riaprire ferite guarite non guarisce nulla",
       "A volte custodire la pace è più saggio che avere ragione"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "tempo",
+      "digitale",
+      "verita",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s19",
@@ -2574,7 +3226,16 @@
       "Nascondere al partner crea un’alleanza malsana",
       "Su cose serie un genitore non può decidere da solo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "famiglia",
+      "tempo",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s20",
@@ -2599,7 +3260,15 @@
       "Coprirlo è schierarmi contro un’altra persona",
       "Un amico che ti chiede di mentire ti sta già usando"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia",
+      "tempo",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s21",
@@ -2624,7 +3293,16 @@
       "Una vita insieme senza amore è una gabbia condivisa",
       "Fa più male una presenza assente di un addio onesto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "tempo",
+      "digitale",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "s22",
@@ -2649,7 +3327,15 @@
       "Le persone hanno diritto di sbagliare a modo loro",
       "Restare accanto vale più di avere ragione"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s23",
@@ -2675,7 +3361,14 @@
       "Un incidente evitabile sarebbe un rimpianto eterno",
       "La loro libertà non vale più della loro incolumità"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s24",
@@ -2700,7 +3393,15 @@
       "La fiducia tradita distrugge l’unico ponte che ho con lui",
       "Aiutare in silenzio rispetta la sua dignità"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "digitale",
+      "verita",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s25",
@@ -2726,7 +3427,17 @@
       "Una relazione non dovrebbe chiedere di sparire",
       "Anche i miei sogni hanno lo stesso diritto dei suoi"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "amore",
+      "tempo",
+      "digitale",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "s26",
@@ -2751,7 +3462,14 @@
       "Certi valori non sono opinioni, sono confini",
       "Tacere per amicizia è già tradire me stesso"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "tempo",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s27",
@@ -2776,7 +3494,16 @@
       "Lasciar cadere chi ami è un rischio che può non perdonarsi",
       "La durezza educativa a volte è solo abbandono mascherato"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "amore",
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s28",
@@ -2803,7 +3530,16 @@
       "Ha il diritto di conoscere la realtà, non una favola",
       "Le verità nascoste pesano comunque, anche taciute"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "digitale",
+      "verita",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "s29",
@@ -2829,7 +3565,14 @@
       "Tradire un no così profondo crea rancore eterno",
       "Su una scelta irreversibile non ci si può forzare"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "famiglia",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "s30",
@@ -2854,7 +3597,13 @@
       "Alcuni legami contano più di un desiderio",
       "Saper rinunciare è una forma matura di amore"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "s31",
@@ -2879,7 +3628,13 @@
       "Come dici una cosa conta quanto la cosa stessa",
       "Si può essere onesti senza essere spietati"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s32",
@@ -2904,7 +3659,14 @@
       "Forse è l’occasione per chiudere una vecchia ferita",
       "Le scelte di un giorno pesano sui rapporti di una vita"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s33",
@@ -2929,7 +3691,13 @@
       "Un perdono estorto dall’ansia non risolve davvero",
       "Anche i rapporti hanno bisogno di verità, non solo di pace"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "s34",
@@ -2954,7 +3722,14 @@
       "Anche chi aiuta ha bisogno di confini",
       "Una presenza esausta finisce per fare male a entrambi"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "famiglia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s35",
@@ -2979,7 +3754,14 @@
       "Il tempo con loro è l’unica cosa irrecuperabile",
       "Un sogno goduto da soli sa di sconfitta"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "famiglia",
+      "tempo"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s36",
@@ -3004,7 +3786,13 @@
       "La felicità di chi amo conta più della mia coerenza",
       "La verità totale può essere una forma di egoismo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "alta"
   },
   {
     "id": "s37",
@@ -3030,7 +3818,13 @@
       "Costruire per il dopo può rubarti l’unica vita che hai",
       "Nessuno, alla fine, rimpiange di aver vissuto troppo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "s38",
@@ -3055,7 +3849,14 @@
       "Ciò che una persona fa rivela chi è davvero",
       "Ammirare nonostante tutto svaluta le vittime"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s39",
@@ -3080,7 +3881,14 @@
       "Senza conseguenze, il male resta impunito",
       "La memoria del torto è una forma di rispetto per sé"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "s40",
@@ -3106,7 +3914,12 @@
       "La qualità di un giorno vale più di dieci vuoti",
       "Vivere col freno tirato è una lenta resa"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "s41",
@@ -3132,7 +3945,14 @@
       "Una volontà non può ipotecare tutta la mia vita",
       "L’amore vero non chiede catene"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "s42",
@@ -3157,7 +3977,13 @@
       "Un po’ di illusione ci rende più umani",
       "Non tutto va saputo per vivere bene"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "verita"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "s43",
@@ -3182,7 +4008,16 @@
       "L’orgoglio cieco al caso è arroganza",
       "Il merito vero sa distinguersi dalla fortuna"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "verita",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "s44",
@@ -3207,7 +4042,13 @@
       "Chi amiamo merita strumenti per crescere, non una bolla",
       "La verità data con amore è il regalo più duraturo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "verita"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "s45",
@@ -3233,7 +4074,14 @@
       "La libertà che fa solo macerie non è libertà",
       "A volte la pace degli altri è parte della propria"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "s46",
@@ -3258,7 +4106,15 @@
       "Non tutte le verità migliorano le cose",
       "Proteggere la loro serenità è un atto d’amore"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "digitale",
+      "verita",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "s47",
@@ -3283,7 +4139,13 @@
       "La felicità costruita lasciando soli gli altri è fragile",
       "A volte il senso della vita è proprio prendersi cura"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "s48",
@@ -3309,7 +4171,12 @@
       "Certe verità tolgono la pace senza dare nulla",
       "Conta come vivo, non come mi etichetteranno"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "verita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "alta"
   },
   {
     "id": "s49",
@@ -3334,7 +4201,14 @@
       "Non tutto va detto solo per liberare sé stessi",
       "Certe pagine chiuse vanno rispettate"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "s50",
@@ -3359,7 +4233,15 @@
       "Restare infelice “per gli altri” nessuno te lo chiede davvero",
       "Il rimpianto di non aver vissuto è il più crudele"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "a01",
@@ -3385,7 +4267,13 @@
       "Sparire chiude porte di lavoro",
       "Si possono usare senza esserne schiavi"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "a02",
@@ -3410,7 +4298,14 @@
       "Una vita registrata è ricattabile",
       "Nessun archivio resta davvero privato"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "a03",
@@ -3436,7 +4331,14 @@
       "Ci si abitua a essere spiati",
       "Nessuna comodità vale il microfono fisso"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "a04",
@@ -3461,7 +4363,12 @@
       "Mi pagano per la mia mente, non per copiarla",
       "Così svaluto chi crea davvero"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "a05",
@@ -3488,7 +4395,16 @@
       "La fiducia non si compra a percentuale",
       "Oggi il tono, domani i pensieri"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "a06",
@@ -3514,7 +4430,14 @@
       "Inseguire ogni novità logora",
       "Il mio mestiere ha ancora valore oggi"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "a07",
@@ -3540,7 +4463,12 @@
       "Una scatola nera non risponde degli errori",
       "Certe scelte devono restare mie"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "a08",
@@ -3568,7 +4496,14 @@
       "L’isolamento logora più della comodità",
       "Le idee migliori nascono di persona"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "a09",
@@ -3595,7 +4530,13 @@
       "Quelle foto resteranno per sempre",
       "Il consenso vale anche per i figli"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "a10",
@@ -3620,7 +4561,14 @@
       "Non conosco tutta la storia",
       "Certe battaglie non sono le mie"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "a11",
@@ -3645,7 +4593,13 @@
       "La privacy esiste anche in coppia",
       "Cercare prove dice più di me che di lui"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "a12",
@@ -3671,7 +4625,12 @@
       "Più tardi arriva, più sano cresce",
       "Proteggere viene prima di accontentare"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "a13",
@@ -3696,7 +4655,14 @@
       "Un figlio lo si vuole anche per sé",
       "Amare è non far nascere nella sofferenza"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "a14",
@@ -3721,7 +4687,13 @@
       "Voglio essere ricordato, non simulato",
       "Morire è anche lasciare spazio"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "a15",
@@ -3746,7 +4718,12 @@
       "Seppellire tutti è una pena infinita",
       "La vita ha senso perché finisce"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "r13",
@@ -3771,7 +4748,13 @@
       "L’80% di fallire è troppo",
       "La famiglia non vive di sogni"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "r14",
@@ -3794,7 +4777,15 @@
       "Mischiarli rovina entrambi",
       "Il ruolo va a chi è più adatto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "amicizia",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "r15",
@@ -3817,7 +4808,12 @@
       "Smascherarlo mi fa sembrare meschino",
       "La verità emerge da sé"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "r17",
@@ -3840,7 +4836,13 @@
       "Danneggiare l’onesto avvelena il mercato",
       "Il rispetto vale più dell’appalto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "r18",
@@ -3864,7 +4866,14 @@
       "Il denaro è libertà concreta",
       "Lo scopo lo trovo fuori dal lavoro"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "r19",
@@ -3888,7 +4897,14 @@
       "Tre ore al giorno sono una vita buttata",
       "Il tempo a casa non si recupera"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "famiglia",
+      "tempo"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "r20",
@@ -3911,7 +4927,13 @@
       "Non sta a me decidere per lui",
       "Gli affari non sono beneficenza"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "verita"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "r21",
@@ -3934,7 +4956,12 @@
       "Un cuscinetto dà libertà",
       "Scommettere tutto è imprudente"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "vita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "r22",
@@ -3957,7 +4984,12 @@
       "Chi non ti valorizza non ti merita",
       "Il mercato dice quanto vali"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "r23",
@@ -3980,7 +5012,13 @@
       "Nessuna azienda è davvero pulita",
       "I valori non pagano l’affitto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "r24",
@@ -4003,7 +5041,12 @@
       "Lo stipendio deve essere certo",
       "La volatilità è una trappola"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "r25",
@@ -4026,7 +5069,13 @@
       "Un’azienda è fatta di persone",
       "Efficienza senza umanità è vuota"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "r26",
@@ -4049,7 +5098,13 @@
       "Non è la scuola a fare la persona",
       "Meglio un gruzzolo per i loro sogni"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "r27",
@@ -4072,7 +5127,12 @@
       "I risultati pagano gli stipendi",
       "Un’azienda non è beneficenza"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "r28",
@@ -4096,7 +5156,13 @@
       "Senza scopo ci si spegne",
       "Il lavoro dà struttura e orgoglio"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "r29",
@@ -4119,7 +5185,15 @@
       "I confronti avvelenano il clima",
       "Lo stipendio è una cosa personale"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "tempo",
+      "verita"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "r30",
@@ -4143,7 +5217,13 @@
       "Perdere il lavoro non aiuta nessuno",
       "Ci sono modi più sicuri di farsi sentire"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "verita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "r31",
@@ -4167,7 +5247,15 @@
       "I prestiti spezzano le famiglie",
       "Aiutare non è farsi sfruttare"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "famiglia",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r32",
@@ -4190,7 +5278,14 @@
       "In amore nessuno ascolta i consigli",
       "Rischio solo di perderlo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "amore",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r33",
@@ -4213,7 +5308,14 @@
       "Senza fiducia non c’è coppia",
       "Chi tradisce una volta può rifarlo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r34",
@@ -4236,7 +5338,14 @@
       "Chi calpesta gli altri calpesterà te",
       "L’amicizia ha bisogno di rispetto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "amicizia",
+      "tempo"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r35",
@@ -4259,7 +5368,15 @@
       "Riaprire vecchie ferite non guarisce",
       "C’è chi non può più cambiare"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r36",
@@ -4282,7 +5399,15 @@
       "Un amore vero affronta i sacrifici",
       "Chiedere di scegliere non è egoismo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r37",
@@ -4305,7 +5430,13 @@
       "Devo essere onesto sui miei limiti",
       "Caricarmi più del dovuto rovina tutti"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r38",
@@ -4328,7 +5459,13 @@
       "La speranza dà forza",
       "Non sta a me togliergli la luce"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r39",
@@ -4351,7 +5488,13 @@
       "Non si torna come se nulla fosse",
       "Proteggermi viene prima"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r40",
@@ -4374,7 +5517,15 @@
       "Nessuno può spegnere un sogno",
       "Si impara solo provando"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "verita",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r41",
@@ -4397,7 +5548,14 @@
       "Un patto è un patto",
       "Decidere per lui è non rispettarlo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r42",
@@ -4420,7 +5578,15 @@
       "Rompere coi tuoi lascia ferite eterne",
       "Forse vedono ciò che io non vedo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r43",
@@ -4443,7 +5609,12 @@
       "Imporre una visione è una gabbia",
       "Devono costruirsi da soli"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r44",
@@ -4466,7 +5637,15 @@
       "Rischio di rovinare l’amicizia",
       "Potrei aver capito male"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "famiglia",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r45",
@@ -4489,7 +5668,13 @@
       "Affondare con lui non lo salva",
       "Anche io ho diritto di stare bene"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r46",
@@ -4512,7 +5697,13 @@
       "Un martire crea solo sensi di colpa",
       "Non posso dare ciò che non ho"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "r47",
@@ -4535,7 +5726,14 @@
       "Lasciare un segno dà senso",
       "Una vita solo per sé è sprecata"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r48",
@@ -4558,7 +5756,12 @@
       "Certe verità tolgono la pace per sempre",
       "L’ignoranza a volte è un dono"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "verita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "alta"
   },
   {
     "id": "r49",
@@ -4581,7 +5784,14 @@
       "Ho persone che dipendono da me",
       "Nessuno deve morire per un estraneo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "r50",
@@ -4607,7 +5817,12 @@
       "Finché c’è vita c’è tempo coi miei",
       "Anche giorni confusi sono giorni con loro"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "r51",
@@ -4632,7 +5847,13 @@
       "Confessare così è solo egoismo",
       "Li lascerei con una ferita eterna"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "verita",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "r52",
@@ -4655,7 +5876,12 @@
       "Senza la mia identità non sono io",
       "La mia vita imperfetta è mia"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "r53",
@@ -4678,7 +5904,14 @@
       "Sacrificare gli affetti è un prezzo troppo alto",
       "Salvare il mondo lasciando soli i tuoi è un controsenso"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "r54",
@@ -4701,7 +5934,12 @@
       "Rovinarsi non aiuta nessuno dei due",
       "Un “forse” non vale un futuro distrutto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "r55",
@@ -4724,7 +5962,12 @@
       "Perdonare l’imperdonabile è tradirsi",
       "La memoria è una forma di giustizia"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "vita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "alta"
   },
   {
     "id": "r56",
@@ -4747,7 +5990,13 @@
       "Si rimpiange ciò che non si è fatto",
       "Una vita senza rischi è una vita a metà"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "r57",
@@ -4770,7 +6019,13 @@
       "Senza ombre non c’è luce",
       "Una felicità piatta non è felicità"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "r58",
@@ -4793,7 +6048,13 @@
       "Vivere fuori dal proprio tempo è esilio",
       "Ogni cosa ha la sua stagione"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r59",
@@ -4816,7 +6077,16 @@
       "L’amore dato conta più del sangue",
       "A volte la verità ferisce e basta"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "famiglia",
+      "tempo",
+      "verita",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "r60",
@@ -4839,7 +6109,13 @@
       "Un genitore spento insegna la rinuncia",
       "Realizzarmi è insegnare a sognare"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q01",
@@ -4865,7 +6141,12 @@
       "A volte vedono prima di te ciò che ti serve",
       "La gratitudine non è una gabbia, è un legame"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "q02",
@@ -4890,7 +6171,12 @@
       "Anche le amicizie cambiano col tempo",
       "Non devo sacrificare il futuro per un legame fermo"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "q03",
@@ -4916,7 +6202,13 @@
       "Il mondo premia chi sa presentarsi",
       "Un piccolo adattamento apre porte che la rigidità chiude"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "verita",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "q04",
@@ -4943,7 +6235,13 @@
       "Aiutare con la riserva vuota non aiuta davvero",
       "Dire no a volte è il primo atto di cura per sé"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "tempo"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "q05",
@@ -4968,7 +6266,12 @@
       "Se nessuno è danneggiato, qual è il problema?",
       "Il risultato apre porte, lo scrupolo le chiude"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "q06",
@@ -4994,7 +6297,13 @@
       "Ciò che funziona è già più di quanto molti hanno",
       "Non ogni inquietudine è un richiamo da seguire"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "q07",
@@ -5020,7 +6329,13 @@
       "Entrare accettando è già aver perso",
       "La complicità non si lava col buon proposito"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "q08",
@@ -5046,7 +6361,13 @@
       "Diventare uno che non ti piaci è il prezzo più caro",
       "I soldi non ti ridanno gli anni spenti da spento"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "q09",
@@ -5071,7 +6392,15 @@
       "La lealtà a senso unico distrugge la fiducia di tutti",
       "Si cerca un ruolo, non per forza la porta"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "q10",
@@ -5096,7 +6425,13 @@
       "Se alzo troppo, l’azienda non regge",
       "Non è sfruttamento se è la norma per tutti"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "q11",
@@ -5122,7 +6457,12 @@
       "Un mio sogno non vale il loro futuro",
       "Ci sarà tempo per i miei sogni dopo di loro"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "q12",
@@ -5148,7 +6488,13 @@
       "Le informazioni viaggiano comunque",
       "Devo pensare prima alla mia carriera"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "q13",
@@ -5174,7 +6520,12 @@
       "Si può guidare col rispetto, non col timore",
       "Diventare ciò che odiavi è perdere te stesso"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "q14",
@@ -5199,7 +6550,14 @@
       "Salvare l’opera a volte viene prima della gloria",
       "In azienda i meriti sono sempre collettivi"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "verita",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "q15",
@@ -5224,7 +6582,14 @@
       "La sicurezza costruita proteggerà chi resta",
       "Posso recuperare le persone da una posizione di forza"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "tempo",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "q16",
@@ -5250,7 +6615,12 @@
       "Una volta sola non fa di me un corrotto",
       "La purezza è un lusso di chi non rischia il fallimento"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "q17",
@@ -5277,7 +6647,15 @@
       "Un genitore appagato dà di più, anche con meno tempo",
       "Rinunciare al proprio dono crea rimpianto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "q18",
@@ -5303,7 +6681,15 @@
       "Certe cose valgono più del denaro che frutterebbero",
       "L’eredità è un patto con chi non c’è più"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "famiglia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "q19",
@@ -5329,7 +6715,15 @@
       "Ognuno deve combattere le proprie battaglie",
       "Le crociate altrui costano care e cambiano poco"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "q20",
@@ -5354,7 +6748,13 @@
       "Una comunità che ti ha sostenuto merita lealtà",
       "Il profitto sopra tutto è ciò che svuota i territori"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "q21",
@@ -5379,7 +6779,13 @@
       "Ognuno ha anche il diritto di non sapere",
       "Spargere paura non è sempre fare il bene"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q22",
@@ -5405,7 +6811,14 @@
       "Anche i miei sacrifici contano",
       "L’equità protegge i rapporti, l’ingiustizia li marcisce"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "q23",
@@ -5430,7 +6843,14 @@
       "Anche i miei affetti valgono quanto i suoi",
       "Una scelta così va presa insieme, non subita"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "famiglia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q24",
@@ -5455,7 +6875,12 @@
       "Un genitore deve anche saper dire no",
       "Il vero sostegno a volte è non assecondare"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q25",
@@ -5480,7 +6905,14 @@
       "Il silenzio mi rende complice",
       "La fiducia non copre un torto verso altri"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q26",
@@ -5506,7 +6938,14 @@
       "Riaprire ferite può distruggermi di nuovo",
       "La riconciliazione non può essere un dovere"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q27",
@@ -5532,7 +6971,15 @@
       "Forse il suo è un dono, non un sacrificio",
       "Non ogni silenzio nasconde un’infelicità"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "digitale",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "q28",
@@ -5557,7 +7004,15 @@
       "Ingannare chi assume danneggia anche lui, dopo",
       "Un favore disonesto non è vera amicizia"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "amicizia",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q29",
@@ -5582,7 +7037,14 @@
       "Chi mi ha cresciuto non si abbandona per un legame nuovo",
       "I partner possono andare, il sangue resta"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "famiglia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q30",
@@ -5607,7 +7069,13 @@
       "Il rispetto quotidiano conta quanto la presenza",
       "Sopportare non è lealtà, è abitudine"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q31",
@@ -5632,7 +7100,16 @@
       "La mia certezza potrebbe essere solo paura",
       "Oppormi lo spingerebbe ancora di più verso di lei"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "famiglia",
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q32",
@@ -5657,7 +7134,13 @@
       "Perdonare non significa sacrificarsi",
       "Nessuno è obbligato a salvare chi lo ha distrutto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "q33",
@@ -5682,7 +7165,16 @@
       "A volte amare significa anche scegliere",
       "Un equilibrio impossibile prima o poi crolla"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "soldi",
+      "amicizia",
+      "amore",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q34",
@@ -5708,7 +7200,16 @@
       "Un sacrificio non è un contratto da ripagare",
       "Vivere per ripagarli tradisce il senso del loro dono"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "famiglia",
+      "tempo",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "q35",
@@ -5733,7 +7234,15 @@
       "Coprire una fragilità la trasforma in vergogna",
       "Mostrarsi fragili insegna ai figli a esserlo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "famiglia",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q36",
@@ -5759,7 +7268,15 @@
       "Un’amicizia di una vita non è una minaccia",
       "Rinunciare ai miei legami per amore è un allarme"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "amore",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q37",
@@ -5785,7 +7302,14 @@
       "Proteggere l’infanzia è un dovere",
       "Certe verità possono aspettare di essere capite"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q38",
@@ -5810,7 +7334,14 @@
       "Aiutare ha modi che non invadono l’intimità",
       "Un periodo “indefinito” è una porta che non si chiude più"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "famiglia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q39",
@@ -5835,7 +7366,13 @@
       "Anche la mia stabilità conta",
       "Sostenere non significa assecondare ogni azzardo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q40",
@@ -5860,7 +7397,14 @@
       "Esistono modi discreti prima dello scontro",
       "A volte tenere insieme è il bene più grande"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q41",
@@ -5885,7 +7429,16 @@
       "Su scelte di vita deve sentire la sua voce, non la mia",
       "Se sbaglio a consigliare, ne porto il peso"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "amicizia",
+      "tempo",
+      "verita",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q42",
@@ -5912,7 +7465,12 @@
       "I morti non soffrono, i vivi sì",
       "L’amore per lui non può ferire chi resta"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "alta"
   },
   {
     "id": "q43",
@@ -5937,7 +7495,13 @@
       "Vivere a lungo è più tempo per amare",
       "L’eroismo facile lo predica chi non ha responsabilità"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "q44",
@@ -5962,7 +7526,12 @@
       "Conoscere il proprio movente è il primo passo per crescere",
       "Il bene fatto per sé può ferire chi lo riceve"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "alta"
   },
   {
     "id": "q45",
@@ -5989,7 +7558,13 @@
       "Non tutto si ripara, alcune cose solo si accettano",
       "Perdonarsi è la riparazione più grande"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "q46",
@@ -6015,7 +7590,14 @@
       "Il passato non vale il dolore di chi non c’entra",
       "A volte la pietà conta più della verità"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale",
+      "verita",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "q47",
@@ -6040,7 +7622,14 @@
       "Un sogno che ti corrompe è una trappola",
       "Preferisco restare me che vincere snaturato"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q48",
@@ -6066,7 +7655,13 @@
       "Vivere bene giorno per giorno è già abbastanza",
       "Inseguire ricordi memorabili rovina il presente"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "q49",
@@ -6091,7 +7686,14 @@
       "Spendere nel superfluo mentre altri muoiono è una scelta",
       "La vera morale non guarda alla distanza"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "q50",
@@ -6117,7 +7719,15 @@
       "Un bel ricordo non va profanato",
       "Qui la verità non aggiunge nulla, può solo togliere"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "tempo",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q51",
@@ -6143,7 +7753,14 @@
       "Non si abbandona chi ha bisogno ora",
       "L’amore si dimostra nel quotidiano, non solo negli addii"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "q52",
@@ -6168,7 +7785,14 @@
       "Non tutti i giudizi su di me sono giusti",
       "La libertà nasce dall’infischiarsene un po’"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "verita",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q53",
@@ -6193,7 +7817,13 @@
       "Vivere nell’ansia non è davvero vivere",
       "La serenità quotidiana batte i picchi rari"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "q54",
@@ -6219,7 +7849,13 @@
       "Nessuno controlla del tutto i propri moventi",
       "Sminuirsi per scrupolo non aiuta nessuno"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "verita"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "q55",
@@ -6244,7 +7880,13 @@
       "Il declino può cancellare ciò che hai costruito",
       "A volte fermarsi al culmine è saggezza"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q56",
@@ -6270,7 +7912,12 @@
       "Certe convinzioni ci tengono in piedi per un motivo",
       "Crollare non aiuta nessuno, nemmeno la verità"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "alta"
   },
   {
     "id": "q57",
@@ -6295,7 +7942,12 @@
       "Le imprese passano, gli affetti restano",
       "Il tempo con chi ami è l’unica ricchezza finale"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "q58",
@@ -6321,7 +7973,12 @@
       "Certe ferite meritano di essere onorate",
       "Il dolore vissuto fa parte di chi sono"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "q59",
@@ -6346,7 +8003,14 @@
       "Le difficoltà sono i migliori maestri",
       "Proteggere troppo è non preparare alla vita"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "q60",
@@ -6371,7 +8035,12 @@
       "Rincorrere all’infinito è un’altra fuga",
       "Riconciliarsi con la propria vita è una vittoria"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "c01",
@@ -6397,7 +8066,14 @@
       "Non conosco i motivi del gruppo",
       "Non sono il giudice delle dinamiche altrui"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "c02",
@@ -6423,7 +8099,13 @@
       "Un’occasione persa per scrupolo non torna",
       "Tutti, prima o poi, prendono una scorciatoia"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "c03",
@@ -6448,7 +8130,15 @@
       "Coprirlo non lo aiuta, lo incoraggia",
       "La lealtà non può chiedermi di ingannare altri"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "famiglia",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "c04",
@@ -6475,7 +8165,15 @@
       "Il sostegno del gruppo vale più della fretta",
       "Crescere senza nessuno accanto è arido"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia",
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "c05",
@@ -6501,7 +8199,12 @@
       "Si può coltivare un sogno avendo un reddito",
       "L’entusiasmo da solo non paga le bollette"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "vita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "c06",
@@ -6526,7 +8229,12 @@
       "Non conosco il contesto reale",
       "Non devo a estranei di mettermi a rischio"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "c07",
@@ -6552,7 +8260,15 @@
       "Anche le mie energie hanno un limite",
       "Dare senza ricevere mai logora"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "c08",
@@ -6577,7 +8293,13 @@
       "Il rapporto vale più di avere ragione",
       "A volte le persone non sono pronte ad ascoltare"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "c09",
@@ -6603,7 +8325,12 @@
       "Tutti recitano una parte in società",
       "Le occasioni nascono dove si è dentro, non fuori"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "vita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "c10",
@@ -6628,7 +8355,14 @@
       "Confessare a volte fa più danni che bene",
       "Risolvere in silenzio è anche responsabilità"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "c11",
@@ -6653,7 +8387,14 @@
       "Non ogni divergenza merita uno scontro",
       "Si può dissentire senza spaccare tutto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "c12",
@@ -6678,7 +8419,12 @@
       "Le regole definiscono il lecito",
       "Se non lo faccio io, lo fa un altro"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "c13",
@@ -6704,7 +8450,14 @@
       "Anche i miei impegni hanno valore",
       "Dire no a volte è sano, non egoista"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "c14",
@@ -6729,7 +8482,14 @@
       "Forse per lui non ne valeva la pena",
       "A volte lasciar perdere è più maturo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "c15",
@@ -6755,7 +8515,13 @@
       "L’equità finta penalizza l’impegno",
       "Cedere il merito insegna che non conta sforzarsi"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "amicizia"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "c16",
@@ -6781,7 +8547,13 @@
       "Le circostanze cambiano le valutazioni",
       "L’eccessiva rigidità a volte fa più danni"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "c17",
@@ -6806,7 +8578,13 @@
       "Anche i piccoli favori, sommati, pesano",
       "Il mio tempo conta quanto il suo bisogno"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "c18",
@@ -6831,7 +8609,12 @@
       "Troppa autocritica paralizza",
       "Si può migliorare anche con incoraggiamento"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "c19",
@@ -6856,7 +8639,12 @@
       "Non sono il custode degli sbagli degli altri",
       "Chi è distratto impara la lezione"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "c20",
@@ -6882,7 +8670,14 @@
       "Certe comodità non fanno male a nessuno",
       "Il fanatismo dei valori è una prigione"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "c21",
@@ -6908,7 +8703,13 @@
       "I soldi tra amici rovinano i rapporti",
       "Dire no può essere il vero aiuto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "amicizia"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "c22",
@@ -6933,7 +8734,12 @@
       "Le competenze si imparano sul campo",
       "La troppa modestia chiude le porte"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "verita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "c23",
@@ -6958,7 +8764,12 @@
       "Non tutto va per forza chiarito",
       "A volte il silenzio ha già fatto pace"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "c24",
@@ -6983,7 +8794,14 @@
       "Qualche sacrificio per esserci vale la pena",
       "Nessuno vuole essere quello che si tira sempre indietro"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "c25",
@@ -7008,7 +8826,12 @@
       "Si finisce per assomigliare a dove si sta",
       "Il “poi me ne vado” spesso non arriva mai"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "c26",
@@ -7034,7 +8857,16 @@
       "Ognuno è responsabile di sé",
       "Aiutare chi non regge può trascinarti giù"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "c27",
@@ -7060,7 +8892,14 @@
       "La passione non paga l’affitto",
       "Il fascino del precario svanisce in fretta"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "c28",
@@ -7085,7 +8924,12 @@
       "Le risorse per recuperare hanno un limite",
       "La pietà mal riposta affossa l’azienda"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "c29",
@@ -7111,7 +8955,14 @@
       "Una carriera senza affetti stabili è arida",
       "La modestia con le persone giuste vale più del prestigio"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "famiglia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "c30",
@@ -7136,7 +8987,12 @@
       "Tutti ottimizzano i costi",
       "Se il cliente non percepisce la differenza, dov’è il danno?"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "c31",
@@ -7161,7 +9017,13 @@
       "Il “segno” spesso è vanità travestita",
       "L’utilità concreta vale più di un sogno romantico"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "digitale"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "c32",
@@ -7186,7 +9048,14 @@
       "In affari il sentimento si paga caro",
       "La responsabilità è prima verso i miei"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "c33",
@@ -7213,7 +9082,14 @@
       "Il successo che divora tutto non è successo",
       "Il tempo per sé e per gli altri è la vera ricchezza"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "c34",
@@ -7238,7 +9114,14 @@
       "Troppi attriti rallentano tutto",
       "Si lavora meglio con chi ci si capisce"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "c35",
@@ -7263,7 +9146,13 @@
       "Un colloquio premia chi si presenta meglio",
       "Certe cose non sono affari di chi assume"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "verita"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "c36",
@@ -7288,7 +9177,13 @@
       "In tempi magri ogni contratto conta",
       "Si recupera sul volume ciò che si perde sul prezzo"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc01",
@@ -7312,7 +9207,14 @@
       "In startup cresci a velocità doppia",
       "Un fallimento è un CV, non una condanna"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc03",
@@ -7338,7 +9240,14 @@
       "Se non chiedi, decide qualcun altro per te",
       "Il ruolo comodo oggi è la noia di domani"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "dc05",
@@ -7362,7 +9271,13 @@
       "Un buon capo vuole il tuo dissenso",
       "Se va male, eseguivo ordini non ti salva"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc06",
@@ -7387,7 +9302,14 @@
       "Le skill si trasferiscono più di quanto credi",
       "Meglio 30 anni di nuovo che 50 di rimpianto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc09",
@@ -7412,7 +9334,14 @@
       "Il feedback vero arriva solo dopo aver pubblicato",
       "Fatto è meglio di perfetto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc12",
@@ -7436,7 +9365,12 @@
       "La cultura vale più di un campione",
       "Quello che permetti, lo insegni"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "sb13",
@@ -7460,7 +9394,14 @@
       "Rispondere apre la porta a mesi di notifiche inutili",
       "Il passato ha un motivo per essere passato"
     ],
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "amicizia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "sb22",
@@ -7485,7 +9426,14 @@
       "Ci sono i traslocatori professionisti apposta",
       "Un'amicizia vera capisce anche un no sincero"
     ],
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "amicizia",
+      "famiglia",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "rt01",
@@ -7510,7 +9458,12 @@
       "I soldi facili si perdono facile",
       "Con calma si decide meglio, sempre"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "soldi"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "rt02",
@@ -7535,7 +9488,12 @@
       "Organizzare da soli è un peso ingiusto",
       "Il viaggio è di tutti, anche l'organizzazione"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "rt03",
@@ -7560,7 +9518,14 @@
       "Ammetterlo è più onesto che fingere",
       "Anche i migliori a volte restano indietro"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "lavoro",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "rt04",
@@ -7585,7 +9550,12 @@
       "Meglio un contratto chiaro di una stretta di mano",
       "Anche chi conosci può sorprenderti, in peggio"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "rt06",
@@ -7610,7 +9580,13 @@
       "Si può essere onesti senza essere brutali",
       "Proteggere chi ami non è disonestà"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "rt07",
@@ -7635,7 +9611,13 @@
       "Si trovano sempre altre strade, se si cercano davvero",
       "Un'azienda si giudica da come tratta chi è in difficoltà"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "rt08",
@@ -7660,7 +9642,12 @@
       "Decidere insieme evita rimpianti dopo",
       "Anche una piccola scelta condivisa unisce di più"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "dc19",
@@ -7684,7 +9671,13 @@
       "Chi resta dopo la contro-offerta spesso viene notato come \"quello che ha minacciato\"",
       "Il motivo per cui volevi andartene resta lì, intatto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc20",
@@ -7708,7 +9701,13 @@
       "L'entusiasmo produce risultati migliori nel tempo",
       "Uno stipendio più alto non compra la voglia di alzarsi al mattino"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "dc21",
@@ -7732,7 +9731,13 @@
       "Un buon capo dovrebbe accorgersene senza essere spinto",
       "Aspettare protegge la relazione con chi decide"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc22",
@@ -7756,7 +9761,14 @@
       "Si può costruire una carriera anche restando",
       "Ricominciare da soli in una città nuova ha un prezzo alto"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "amicizia",
+      "tempo"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc23",
@@ -7780,7 +9792,13 @@
       "Un elogio ricevuto puoi comunque girarlo in privato",
       "Un solo momento non definisce chi prende il merito davvero"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc24",
@@ -7804,7 +9822,12 @@
       "Un'esperienza vera vale più di un logo sul curriculum",
       "I soldi guadagnati oggi sono un'indipendenza che non si compra col prestigio"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc25",
@@ -7828,7 +9851,14 @@
       "Un cambiamento improvviso rischia di far crollare tutto",
       "Non tutti i capi difficili sono davvero tossici"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "dc26",
@@ -7852,7 +9882,13 @@
       "Il mercato giudica i titoli, non la serenità",
       "Puoi trovare equilibrio anche restando al tuo livello"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc27",
@@ -7876,7 +9912,14 @@
       "Un'offerta in mano vale più di una promessa",
       "La discrezione ti protegge finché non hai davvero deciso"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc28",
@@ -7900,7 +9943,13 @@
       "Il denaro senza significato stanca comunque, solo più lentamente",
       "Credere in quello che fai è un investimento sulla motivazione futura"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc29",
@@ -7924,7 +9973,15 @@
       "La lealtà tra colleghi vale più di un titolo",
       "Un rifiuto onesto protegge relazioni che contano da anni"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "amicizia",
+      "amore",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc30",
@@ -7950,7 +10007,14 @@
       "La stabilità permette di programmare, non solo di sperare",
       "Si può costruire libertà anche dentro un posto fisso"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc31",
@@ -7975,7 +10039,14 @@
       "Il momento sbagliato per parlare può bruciare l'argomento giusto",
       "A volte conviene scegliere le proprie battaglie"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc32",
@@ -8000,7 +10071,14 @@
       "Un lavoro eccellente si diffonde comunque, con più credibilità",
       "Il networking forzato suona spesso falso"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "dc33",
@@ -8024,7 +10102,15 @@
       "Bruciarsi il settore per un solo caso è un prezzo enorme",
       "La discrezione a volte ottiene di più del clamore"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "verita",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "dc34",
@@ -8049,7 +10135,15 @@
       "La distanza si può gestire, l'identità professionale no",
       "Chi ama davvero non chiede di rinunciare a se stessi"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "amore",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "dc35",
@@ -8073,7 +10167,15 @@
       "Un'altra promozione arriverà, un'infanzia no",
       "Il vero successo si misura anche fuori dall'ufficio"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "dc36",
@@ -8097,7 +10199,14 @@
       "Distruggere chi ti ha aiutato è un debito morale pesante",
       "Ci sono modi per correggere senza distruggere una persona"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "verita"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "dc37",
@@ -8121,7 +10230,14 @@
       "Rifiutare non cambia nulla, resta solo un gesto simbolico",
       "I valori si difendono anche lavorando, non solo restando a guardare"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "dc38",
@@ -8145,7 +10261,15 @@
       "Un esempio sbagliato ai figli vale più di ogni stipendio",
       "C'è sempre un altro modo di garantire un futuro, anche se più lento"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "dc39",
@@ -8169,7 +10293,14 @@
       "Nessuna carriera vale il rimpianto di non essere stato presente",
       "Le occasioni tornano, le persone che ami non sempre"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "famiglia",
+      "tempo"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "dc40",
@@ -8193,7 +10324,13 @@
       "Il successo senza qualcuno con cui condividerlo è vuoto",
       "Ci sono legami che, una volta spezzati, non tornano più come prima"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "dc41",
@@ -8217,7 +10354,14 @@
       "Il senso del proprio lavoro pesa più della comodità nel lungo periodo",
       "Rinunciare all'orgoglio per sempre è rinunciare a una parte di sé"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "dc42",
@@ -8241,7 +10385,16 @@
       "Ricominciare da zero è doloroso, ma libera davvero la coscienza",
       "Vent'anni bastano per sapere quando è il momento di dire basta"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "be07",
@@ -8265,7 +10418,16 @@
       "Il denaro non ripaga il vedere distrutto ciò che hai costruito",
       "La missione è il vero motivo per cui hai iniziato, non il conto in banca"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "be08",
@@ -8289,7 +10451,15 @@
       "Ci sono sempre altri modi per risolvere prima di licenziare chi ami",
       "Un'azienda costruita tradendo un amico non vale più nulla"
     ],
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "lavoro",
+      "amicizia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "be09",
@@ -8313,7 +10483,14 @@
       "La tua coscienza non aspetta i tempi di un consiglio di amministrazione",
       "A volte l'unico modo onesto di fermare un danno è non farne più parte"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "be10",
@@ -8337,7 +10514,15 @@
       "La fiducia persa non si ricostruisce con nessun bilancio",
       "Cento posti salvati su una menzogna sono cento posti fragili"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "famiglia",
+      "verita",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "be11",
@@ -8361,7 +10546,14 @@
       "La lealtà vera si dimostra proprio quando conviene tradirla",
       "Ci sono occasioni che non valgono il prezzo di un'amicizia spezzata"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "be12",
@@ -8385,7 +10577,12 @@
       "Tradire i propri valori per sopravvivere è già una forma di chiusura",
       "Meglio un'uscita di scena fedele a sé stessi che un compromesso senza fine"
     ],
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "pq05",
@@ -8412,7 +10609,13 @@
     ],
     "domandaRilancio": "Chi in questo gruppo è il campione indiscusso del \"visualizzato senza risposta\"?",
     "lezioneReale": "La reperibilità continua non è disponibilità emotiva: mettere confini chiari evita risentimenti silenziosi.",
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "pq06",
@@ -8438,7 +10641,13 @@
     ],
     "domandaRilancio": "Qual è la tua \"red flag\" istantanea che per gli altri sembra una sciocchezza?",
     "lezioneReale": "Il modo in cui una persona tratta chi è in una posizione più debole anticipa quasi sempre come gestirà i conflitti con te.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "amicizia",
+      "amore"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "pq07",
@@ -8464,7 +10673,13 @@
     ],
     "domandaRilancio": "Preferisci un amico che ti dice sempre la verità scomoda o uno che ti protegge l’umore?",
     "lezioneReale": "La sincerità senza empatia è crudeltà, ma l’empatia senza sincerità alla lunga svuota la fiducia.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "amicizia",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "pq08",
@@ -8491,7 +10706,15 @@
     ],
     "domandaRilancio": "Con quale soprannome dovremmo salvare ciascuno di noi stasera?",
     "lezioneReale": "Nelle amicizie durature l’ironia è un linguaggio d’affetto, purché resti un ponte e non una freccia.",
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia",
+      "tempo",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "pq09",
@@ -8518,7 +10741,13 @@
     ],
     "domandaRilancio": "Qual è la cosa che dici di amare di più ma a cui dedichi meno di un’ora a settimana?",
     "lezioneReale": "Il calendario non mente mai: ciò a cui non dai spazio oggi non sta aspettando un momento migliore, sta semplicemente sparendo.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "pq10",
@@ -8544,7 +10773,12 @@
     ],
     "domandaRilancio": "Se nessuno potesse mai sapere dei tuoi successi sui social o dal vivo, cosa smetteresti di fare domani?",
     "lezioneReale": "Molte persone scalano la montagna sbagliata per tutta la vita solo perché la vista piaceva agli altri.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "pq11",
@@ -8571,7 +10805,15 @@
     ],
     "domandaRilancio": "Qual è il rischio più piccolo che potresti fare già questa settimana per avvicinarti a ciò che vuoi?",
     "lezioneReale": "Tra il \"tutto o niente\" esiste quasi sempre un esperimento reversibile: spesso usiamo il rischio estremo come scusa per non iniziare in piccolo.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "pq12",
@@ -8598,7 +10840,14 @@
     ],
     "domandaRilancio": "Qual è il \"no\" che sai di dover dire da mesi ma continui a rimandare?",
     "lezioneReale": "La direzione della vita non si decide solo con ciò che aggiungi, ma soprattutto con ciò che hai il coraggio di togliere.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "pq13",
@@ -8624,7 +10873,13 @@
     ],
     "domandaRilancio": "Qual è la cifra mensile oltre la quale i soldi smetterebbero di cambiare davvero la tua felicità?",
     "lezioneReale": "Trattare il presente solo come sala d’attesa per il futuro è rischioso: i vent’anni migliori non tornano indietro.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "pq14",
@@ -8650,7 +10905,14 @@
     ],
     "domandaRilancio": "Quanto del tuo percorso lavorativo attuale è guidato dall’ego e quanto dal valore reale che crei?",
     "lezioneReale": "Distinguere tra stipendio e patrimonio reputazionale cambia il modo in cui negozi ogni opportunità.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "pq15",
@@ -8676,7 +10938,13 @@
     ],
     "domandaRilancio": "Ti è mai capitato di tacere al lavoro per convenienza? Come ti ha fatto sentire dopo?",
     "lezioneReale": "La fiducia professionale si costruisce in anni e si brucia nel singolo momento in cui scegli il silenzio comodo.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "pq16",
@@ -8702,7 +10970,14 @@
     ],
     "domandaRilancio": "Cos’è per te \"abbastanza\"? Sapresti riconoscerlo se ci arrivassi domani?",
     "lezioneReale": "Se non definisci oggi cosa significa \"abbastanza\", sposterai il traguardo ogni volta che lo raggiungi.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "pq17",
@@ -8728,7 +11003,14 @@
     ],
     "domandaRilancio": "Quale frase che dici spesso su di te (\"non sono bravo a...\", \"non fa per me\") potresti mettere in dubbio stasera?",
     "lezioneReale": "La nostra identità spesso è fatta di vecchie storie che ci raccontiamo: cambiare domanda cambia la storia.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "pq18",
@@ -8755,7 +11037,13 @@
     ],
     "domandaRilancio": "Cosa tieni nella tua vita oggi solo perché \"ormai ci hai investito troppo tempo\"?",
     "lezioneReale": "La trappola dei costi sommersi non vale solo per i soldi: spesso restiamo in lavori o legami solo per il passato, non per il futuro.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "pq19",
@@ -8781,7 +11069,14 @@
     ],
     "domandaRilancio": "Se il te stesso di 10 anni fa ti vedesse oggi, di cosa sarebbe più sorpreso — in bene o in male?",
     "lezioneReale": "Non serve una sfera di cristallo: guarda le tue abitudini di oggi e vedrai già il tuo futuro tra cinque anni.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "verita",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "pq20",
@@ -8808,7 +11103,15 @@
     ],
     "domandaRilancio": "Con chi dovresti avere una conversazione onesta di 10 minuti che rimandi da troppo tempo?",
     "lezioneReale": "La qualità della tua vita è spesso proporzionale al numero di conversazioni scomode che sei disposto ad affrontare.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "pq21",
@@ -8834,7 +11137,15 @@
     ],
     "domandaRilancio": "Qual è la cosa che per te rompe la fiducia in un legame molto più di quanto gli altri immaginino?",
     "lezioneReale": "Ogni coppia ha confini diversi, ma quasi tutte soffrono perché danno per scontato che l’altro abbia gli stessi confini senza averne mai parlato.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amore",
+      "tempo",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "pq22",
@@ -8860,7 +11171,12 @@
     ],
     "domandaRilancio": "Come fai a capire quando stai lottando per un legame sano e quando stai solo resistendo per paura di restare solo?",
     "lezioneReale": "L’amore non è solo quanto resisti, ma chi diventi quando sei accanto all’altra persona.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "pq23",
@@ -8886,7 +11202,15 @@
     ],
     "domandaRilancio": "Fin dove arriva la tua lealtà verso chi ami? C’è una linea che non supereresti per nessuno?",
     "lezioneReale": "La lealtà autentica non è approvare tutto, ma avere il coraggio di dire la verità anche a chi ami di più.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "pq24",
@@ -8912,7 +11236,14 @@
     ],
     "domandaRilancio": "C’è qualcuno a cui senti di dover ancora chiedere scusa davvero, o qualcuno che non sei riuscito a perdonare?",
     "lezioneReale": "Non possiamo riscrivere il passato, ma possiamo decidere se trasformare una ferita in chiusura o in consapevolezza.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "pq25",
@@ -8938,7 +11269,13 @@
     ],
     "domandaRilancio": "Qual è la preoccupazione più grande che avevi 3 anni fa e che oggi non esiste più?",
     "lezioneReale": "La maggior parte delle nostre paure vive solo nella nostra testa: raramente il presente è duro quanto lo immaginiamo in anticipo.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "pq26",
@@ -8964,7 +11301,15 @@
     ],
     "domandaRilancio": "Come ti presenteresti a uno sconosciuto senza poter citare lavoro, titolo di studio o relazioni?",
     "lezioneReale": "Costruire tutta la propria identità su un ruolo esterno ti rende fragile ogni volta che quel ruolo cambia.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "famiglia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "pq27",
@@ -8990,7 +11335,14 @@
     ],
     "domandaRilancio": "Qual è l’errore passato che all’inizio ti sembrava imperdonabile e che oggi invece ringrazi?",
     "lezioneReale": "La maturità non è l’assenza di errori, ma la capacità di non lasciare che la paura di sbagliare ti immobilizzi.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "pq28",
@@ -9016,7 +11368,12 @@
     ],
     "domandaRilancio": "Se dovessi scrivere oggi quella frase in tre righe per le persone in questa stanza, cosa scriveresti?",
     "lezioneReale": "Pensare alla fine non serve a rattristarsi, ma a togliere importanza a ciò che non ne merita affatto.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "alta"
   },
   {
     "id": "pq29",
@@ -9042,7 +11399,12 @@
     ],
     "domandaRilancio": "L’onestà per te è un principio assoluto o dipende da chi hai davanti?",
     "lezioneReale": "Il vero carattere emerge nelle scelte senza testimoni.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "alta"
   },
   {
     "id": "pq30",
@@ -9068,7 +11430,13 @@
     ],
     "domandaRilancio": "Dove finisce la morale universale e inizia il diritto di proteggere chi è tuo?",
     "lezioneReale": "I dilemmi morali estremi rivelano il conflitto eterno tra etica imparziale ed etica della cura.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "pq31",
@@ -9094,7 +11462,14 @@
     ],
     "domandaRilancio": "Qual è il principio su cui non scenderesti mai a compromessi, qualunque fosse il beneficio?",
     "lezioneReale": "La storia insegna che quasi ogni abuso di potere nasce giustificato da un \"bene superiore\".",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "pq32",
@@ -9120,7 +11495,12 @@
     ],
     "domandaRilancio": "Cosa rende davvero buona un’azione: il risultato o il fatto che avresti potuto scegliere diversamente?",
     "lezioneReale": "La libertà porta sempre con sé il rischio dell’errore, ma è anche l’unica condizione che dà valore al bene.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "nx01",
@@ -9146,7 +11526,13 @@
     ],
     "domandaRilancio": "Qual è la frase che vorresti cancellare dalla memoria di questo tavolo proprio adesso?",
     "lezioneReale": "Le figuracce spariscono in fretta dalla memoria altrui; è l’ego a tenerle vive più del necessario.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx02",
@@ -9172,7 +11558,15 @@
     ],
     "domandaRilancio": "Se aprissimo adesso il tuo tempo di utilizzo sullo schermo, chi in questa stanza farebbe la figura peggiore?",
     "lezioneReale": "La vergogna che proviamo per come usiamo il tempo dice molto più dei nostri buoni propositi.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "soldi",
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx03",
@@ -9198,7 +11592,14 @@
     ],
     "domandaRilancio": "Chi di noi avrebbe la lucina accesa già all’antipasto?",
     "lezioneReale": "L’attenzione è la forma più rara di generosità, ma pretenderla perfetta uccide la leggerezza.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "amicizia",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx04",
@@ -9224,7 +11625,13 @@
     ],
     "domandaRilancio": "Che genere musicale partirebbe adesso se dovessimo sentire il tuo vero umore?",
     "lezioneReale": "Mostrare ciò che proviamo ci rende leggibili ma vulnerabili; nasconderlo ci protegge ma ci isola.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx05",
@@ -9250,7 +11657,13 @@
     ],
     "domandaRilancio": "Chi in ufficio pagherebbe il caffè a tutto il piano già entro martedì?",
     "lezioneReale": "Il tempo degli altri costa quanto il nostro, ma in azienda lo trattiamo come gratis finché non ha un prezzo.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx06",
@@ -9276,7 +11689,14 @@
     ],
     "domandaRilancio": "Qual è la frase aziendale più ipocrita che usi anche tu quando sei furioso?",
     "lezioneReale": "La diplomazia professionale protegge i rapporti dal calore del momento, ma spesso nasconde problemi reali.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx07",
@@ -9302,7 +11722,15 @@
     ],
     "domandaRilancio": "Se dovessi dire in dieci parole perché hai lasciato il tuo penultimo lavoro senza filtri, cosa diresti?",
     "lezioneReale": "Nei colloqui spesso recitano due copioni; la chiarezza anticipata evita divorzi professionali costosi.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "lavoro",
+      "digitale",
+      "verita",
+      "etica"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx08",
@@ -9328,7 +11756,14 @@
     ],
     "domandaRilancio": "Qual è l’errore lavorativo più assurdo che hai coperto con successo senza che nessuno lo sapesse?",
     "lezioneReale": "La paura di ammettere gli errori costa alle squadre molta più energia della trasparenza.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "tempo"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx09",
@@ -9355,7 +11790,14 @@
     ],
     "domandaRilancio": "Chi in questo gruppo tira fuori la calcolatrice prima ancora che arrivi il cameriere?",
     "lezioneReale": "Il modo in cui gestiamo i piccoli conti comuni rivela subito quanto siamo attenti all’equità o alla leggerezza.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "soldi",
+      "amicizia",
+      "etica"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx10",
@@ -9381,7 +11823,13 @@
     ],
     "domandaRilancio": "Qual è il record di durata di un vocale che hai ricevuto e finto di aver ascoltato?",
     "lezioneReale": "La comunicazione asincrona funziona solo quando rispetta il tempo di chi riceve, non solo il bisogno di chi parla.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "amicizia",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx11",
@@ -9407,7 +11855,13 @@
     ],
     "domandaRilancio": "Quante chat parallele esistono in questo preciso momento tra le persone sedute qui?",
     "lezioneReale": "I gruppi reggono finché la complicità non diventa esclusione silenziosa.",
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia",
+      "verita"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx12",
@@ -9434,7 +11888,13 @@
     ],
     "domandaRilancio": "Qual è la cifra più alta che hai anticipato per un gruppo e non hai mai più rivisto?",
     "lezioneReale": "La generosità negli anticipi funziona finché non diventa una tassa fissa su chi è più organizzato.",
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "soldi",
+      "amicizia"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx13",
@@ -9460,7 +11920,14 @@
     ],
     "domandaRilancio": "Hai mai lasciato che qualcuno si prendesse il merito di un tuo lavoro per evitare una polemica?",
     "lezioneReale": "Senza un riconoscimento chiaro dei ruoli, la visibilità finisce spesso a chi fa più rumore invece che a chi produce.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "lavoro",
+      "amicizia",
+      "tempo"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx14",
@@ -9486,7 +11953,15 @@
     ],
     "domandaRilancio": "Qual è la cosa più assurda a cui hai annuito in ufficio pur di chiudere la riunione?",
     "lezioneReale": "Le piccole recite quotidiane sul lavoro sembrano innocue, finché non ci accorgiamo di recitare tutto il giorno.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx15",
@@ -9512,7 +11987,14 @@
     ],
     "domandaRilancio": "Qual è la cosa più falsa che hai scritto o applaudito su LinkedIn pur di sembrare professionale?",
     "lezioneReale": "La vetrina professionale premia chi sa raccontarsi meglio, ma confondere il racconto con il valore reale logora chi lavora davvero.",
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "lavoro",
+      "amore",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx16",
@@ -9538,7 +12020,15 @@
     ],
     "domandaRilancio": "Nell’ultimo posto che hai lasciato, hai detto il vero motivo o hai usato la scusa della «nuova sfida»?",
     "lezioneReale": "La sincerità all’uscita libera chi parte, ma la diplomazia protegge il percorso futuro.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx17",
@@ -9565,7 +12055,15 @@
     ],
     "domandaRilancio": "Qual è la paura che oggi sta guidando più decisioni nella tua vita senza che tu lo ammetta?",
     "lezioneReale": "Spesso scambiamo la sicurezza per serenità, ma il prezzo della certezza è quasi sempre la libertà.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "nx18",
@@ -9592,7 +12090,15 @@
     ],
     "domandaRilancio": "Chi è l’ultima persona che ti ha fatto cambiare davvero idea su qualcosa di importante?",
     "lezioneReale": "L’affinità ci fa sentire al sicuro, ma è il confronto con chi è diverso a farci evolvere.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "nx19",
@@ -9620,7 +12126,13 @@
     ],
     "domandaRilancio": "Nel tuo lavoro attuale stai costruendo potere sulla scarsità o libertà sulla crescita?",
     "lezioneReale": "Proteggere il proprio orticello dà sicurezza nel breve periodo, ma spesso chiude ogni porta verso l’alto.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "nx20",
@@ -9649,7 +12161,14 @@
     ],
     "domandaRilancio": "Quanti soldi in più ti servirebbero davvero per essere felice, e quanto tempo stai pagando per averli?",
     "lezioneReale": "Capire quando qualcosa è «abbastanza» è una delle scelte più difficili e libere della vita adulta.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "tempo"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "nx21",
@@ -9677,7 +12196,13 @@
     ],
     "domandaRilancio": "Quando hai ceduto a una richiesta ingiusta di un cliente o capo, poi è bastata o ne ha chiesta un’altra?",
     "lezioneReale": "La dipendenza da un solo grande cliente toglie sovranità molto prima di togliere fatturato.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "nx22",
@@ -9704,7 +12229,13 @@
     ],
     "domandaRilancio": "Se fossi tu il collaboratore da sostituire, cosa considereresti giusto da parte di chi guida?",
     "lezioneReale": "Innovare senza perdere umanità è la prova più dura di chi ha responsabilità sugli altri.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "famiglia"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "nx23",
@@ -9732,7 +12263,12 @@
     ],
     "domandaRilancio": "Qual è la regola non scritta in cui hai creduto per anni e che forse ti sta solo frenando?",
     "lezioneReale": "I nostri modelli spesso nascondono compromessi che non vediamo finché non ci avviciniamo davvero.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "nx24",
@@ -9760,7 +12296,15 @@
     ],
     "domandaRilancio": "Quanta parte della tua identità dipende dal sentirti utile sul lavoro?",
     "lezioneReale": "Le gabbie dorate sembrano comode all’ingresso, ma diventano difficili da lasciare quando il mercato si muove.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "nx25",
@@ -9787,7 +12331,13 @@
     ],
     "domandaRilancio": "L’ultima volta che qualcuno ha sparlato di un tuo amico assente, cosa hai fatto tu?",
     "lezioneReale": "L’amicizia si misura molto più da ciò che facciamo quando l’altro non guarda che dai brindisi insieme.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "nx26",
@@ -9814,7 +12364,16 @@
     ],
     "domandaRilancio": "Dove finiscono i nostri principi quando in gioco c’è la pelle di chi amiamo?",
     "lezioneReale": "È facile essere giusti quando non costa nulla; il vero test etico inizia dove l’amore spinge a fare eccezioni.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "nx27",
@@ -9842,7 +12401,17 @@
     ],
     "domandaRilancio": "Qual è il limite oltre il quale la lealtà verso un amico diventa complicità?",
     "lezioneReale": "La prova più dura dell’amicizia non è difendere l’amico quando ha ragione, ma decidere cosa fare quando ha torto grave.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "famiglia",
+      "tempo",
+      "digitale",
+      "verita",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "nx28",
@@ -9869,7 +12438,15 @@
     ],
     "domandaRilancio": "Quanto è facile trasformare chi amiamo in un alleato contro qualcun altro quando siamo feriti?",
     "lezioneReale": "Proteggere la propria immagine davanti a chi ci ama costa spesso la libertà emotiva di chi ci ascolta.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale",
+      "verita"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "nx29",
@@ -9896,7 +12473,14 @@
     ],
     "domandaRilancio": "Quante cose buone faresti ancora se avessi la certezza che nessuno al mondo lo saprà mai?",
     "lezioneReale": "Il bisogno di essere riconosciuti è umano, ma distinguere tra il bene e l’applauso ci rende davvero liberi.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "nx30",
@@ -9923,7 +12507,13 @@
     ],
     "domandaRilancio": "Fino a che punto sei disposto a cedere il controllo morale pur di ottenere un risultato migliore?",
     "lezioneReale": "L’efficienza senza responsabilità può salvare numeri ma svuotare di senso le scelte che ci definiscono umani.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "nx31",
@@ -9950,7 +12540,13 @@
     ],
     "domandaRilancio": "Se domani il tuo lavoro sparisse per sempre, cosa resterebbe esattamente di chi sei?",
     "lezioneReale": "Costruire una competenza ci dà identità, ma confondere il proprio ruolo con la propria persona ci imprigiona.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "alta"
   },
   {
     "id": "nx32",
@@ -9978,7 +12574,17 @@
     ],
     "domandaRilancio": "Quando una scelta è legale ma ti fa vergognare di spiegarla ad alta voce, cosa ti sta dicendo?",
     "lezioneReale": "La prova definitiva di un’etica non è ciò che dichiari quando i conti tornano, ma ciò che rifiuti quando stai per chiudere.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "lavoro",
+      "famiglia",
+      "tempo",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "nx33",
@@ -10005,7 +12611,14 @@
     ],
     "domandaRilancio": "Chi in questo gruppo chiede sempre passaggi ma non guida mai la propria macchina?",
     "lezioneReale": "La disponibilità verso gli amici è reale solo quando sappiamo anche dove finisce la cortesia e inizia il confine.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "soldi",
+      "amicizia",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx34",
@@ -10031,7 +12644,13 @@
     ],
     "domandaRilancio": "Se l’app fosse accesa adesso su questo tavolo, guarderesti prima il tuo punteggio o quello degli altri?",
     "lezioneReale": "Vogliamo sapere cosa pensano gli altri di noi, finché non scopriamo quanto è fragile la nostra vanità.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx35",
@@ -10057,7 +12676,14 @@
     ],
     "domandaRilancio": "Qual è la prima cosa imbarazzante che un animale domestico racconterebbe di te se potesse parlare?",
     "lezioneReale": "Amiamo chi ci guarda senza giudicarci; appena immaginiamo uno sguardo critico, l’incanto sparisce.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "amicizia",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx36",
@@ -10083,7 +12709,15 @@
     ],
     "domandaRilancio": "Qual è la bugia innocente che hai già detto oggi senza nemmeno accorgertene?",
     "lezioneReale": "Le piccole bugie quotidiane ci sembrano innocue finché non dobbiamo renderne conto davanti a tutti.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "soldi",
+      "digitale",
+      "verita",
+      "etica"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx37",
@@ -10109,7 +12743,12 @@
     ],
     "domandaRilancio": "Preferisci dimenticare tutto di una delusione o ricordare tutto ma senza più provare fastidio?",
     "lezioneReale": "Cancellare il passato promette sollievo immediato, ma spesso toglie proprio la memoria che ci fa crescere.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx38",
@@ -10135,7 +12774,14 @@
     ],
     "domandaRilancio": "Qual è il convenevole inutile che ti fa venire voglia di scappare ogni volta che lo senti?",
     "lezioneReale": "I rituali sociali sembrano tempo perso finché non proviamo a vivere solo di efficienza.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx39",
@@ -10161,7 +12807,14 @@
     ],
     "domandaRilancio": "Se potessi imparare una competenza in una sola notte senza fatica, quale sceglieresti per prima?",
     "lezioneReale": "La fame di migliorarci rischia di trasformare persino il riposo in una seconda giornata lavorativa.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "lavoro",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx40",
@@ -10188,7 +12841,15 @@
     ],
     "domandaRilancio": "Qual è l’acquisto più inutile degli ultimi dodici mesi che giace ancora nel tuo armadio?",
     "lezioneReale": "Compiramo spesso per chi vorremmo diventare, non per chi siamo davvero nella vita di tutti i giorni.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "soldi",
+      "famiglia",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx41",
@@ -10214,7 +12875,14 @@
     ],
     "domandaRilancio": "Dove ti teletrasporteresti stasera stessa se avessi il bottone qui sul tavolo?",
     "lezioneReale": "Ogni scorciatoia ha un piccolo prezzo visibile; la differenza sta nel capire quando ci vergogniamo di pagarlo.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "soldi",
+      "amore",
+      "famiglia"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx42",
@@ -10241,7 +12909,16 @@
     ],
     "domandaRilancio": "Qual è il peggior appuntamento o vacanza della tua vita che meriterebbe una stella su cinque?",
     "lezioneReale": "Trasformare ogni esperienza in un voto pubblico toglie indulgenza verso gli altri e verso noi stessi.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "soldi",
+      "amicizia",
+      "amore",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx43",
@@ -10267,7 +12944,13 @@
     ],
     "domandaRilancio": "Se sapessi che la tua stanza è registrata, cambieresti quello che dici quando qualcuno esce?",
     "lezioneReale": "Quasi nessuno reggerebbe la trasparenza totale sulle proprie parole a caldo; l’indulgenza reciproca è ciò che tiene insieme i gruppi.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "amicizia",
+      "coraggio"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx44",
@@ -10293,7 +12976,12 @@
     ],
     "domandaRilancio": "Qual è la cosa che stai rimandando da più settimane in questo momento?",
     "lezioneReale": "Procrastinare è facile solo perché scarichiamo il conto su una versione futura di noi che non possiamo ancora vedere.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "tempo"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx45",
@@ -10319,7 +13007,13 @@
     ],
     "domandaRilancio": "Qual è il trucco migliore che hai usato per sembrare impegnatissimo mentre non facevi nulla?",
     "lezioneReale": "Quando un’organizzazione premia la presenza invece del risultato, trasforma tutti in attori.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "lavoro",
+      "tempo"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx46",
@@ -10345,7 +13039,15 @@
     ],
     "domandaRilancio": "Quando invidi qualcuno, cosa stai guardando davvero della sua vita e cosa stai ignorando?",
     "lezioneReale": "Invidiamo sempre i risultati visibili degli altri senza mai vedere il prezzo invisibile che pagano ogni giorno.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "tempo",
+      "digitale",
+      "verita",
+      "coraggio"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx47",
@@ -10371,7 +13073,15 @@
     ],
     "domandaRilancio": "Qual è il «no» o il rinvio per pigrizia che oggi rifaresti al contrario?",
     "lezioneReale": "Il rimpianto insegna solo quando diventa carburante per la prossima scelta, altrimenti resta peso morto.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx48",
@@ -10397,7 +13107,13 @@
     ],
     "domandaRilancio": "Qual è la risposta perfetta che ti è venuta in mente tre ore dopo una lite?",
     "lezioneReale": "Desideriamo il controllo perfetto su ogni parola, ma ciò che ci rende autentici è proprio ciò che diciamo senza copione.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "tempo",
+      "etica"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "nx49",
@@ -10423,7 +13139,12 @@
     ],
     "domandaRilancio": "Quale dei due oggetti ti condiziona di più l’umore la mattina appena sveglio?",
     "lezioneReale": "Misurarci e guardarci continuamente nasce dal bisogno di controllo, ma spesso finisce per toglierci serenità.",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "nuove_conoscenze",
+    "temi": [
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "sp01",
@@ -10447,7 +13168,15 @@
     ],
     "domandaRilancio": "Chi al tavolo di solito paga anche per gli altri, e chi invece «dimentica sempre il portafoglio in macchina»?",
     "lezioneReale": "La tolleranza verso i piccoli squilibri rivela quanto pesi il quieto vivere rispetto alla giustizia.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "amicizia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "sp02",
@@ -10471,7 +13200,14 @@
     ],
     "domandaRilancio": "Qual è la regola non scritta delle vostre vacanze di gruppo che nessuno rispetta mai?",
     "lezioneReale": "Le regole esplicite prima di partire salvano più amicizie di mille buone intenzioni.",
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "amicizia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "sp03",
@@ -10495,7 +13231,15 @@
     ],
     "domandaRilancio": "Qual è la cosa più assurda che hai visto mettere in «cassa comune» in una vacanza?",
     "lezioneReale": "I risentimenti più stupidi nascono quando nessuno osa definire il confine tra comune e personale.",
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "soldi",
+      "amicizia",
+      "famiglia",
+      "tempo"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "sp04",
@@ -10519,7 +13263,15 @@
     ],
     "domandaRilancio": "Qual è la cifra minima sotto la quale tra amici non chiedi mai i soldi indietro?",
     "lezioneReale": "Il modo in cui gestisci i piccoli debiti dice molto su come gestisci la fiducia.",
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "soldi",
+      "amicizia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "sp05",
@@ -10543,7 +13295,14 @@
     ],
     "domandaRilancio": "Quante volte hai detto sì in una chat di gruppo solo per non sembrare quello che frena tutti?",
     "lezioneReale": "La pressione sociale costa più soldi di quanto siamo disposti ad ammettere.",
-    "familiarita": "vecchi_amici"
+    "familiarita": "vecchi_amici",
+    "temi": [
+      "soldi",
+      "amicizia",
+      "tempo"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "sp06",
@@ -10567,7 +13326,14 @@
     ],
     "domandaRilancio": "Qual è la spesa su cui tu fai il tirchio e quella su cui invece butti soldi senza pensarci?",
     "lezioneReale": "Dietro ogni «non posso permettermelo» si nasconde semplicemente una scala di priorità.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "soldi",
+      "amicizia",
+      "digitale"
+    ],
+    "dinamica": "assurdo",
+    "polarizzazione": "media"
   },
   {
     "id": "sp07",
@@ -10591,7 +13357,14 @@
     ],
     "domandaRilancio": "Quante ore di schermo hai fatto ieri, e quante di quelle ricordi davvero stamattina?",
     "lezioneReale": "Ciò che non misuri ti ruba la vita un minuto alla volta senza fare rumore.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "sp08",
@@ -10615,7 +13388,13 @@
     ],
     "domandaRilancio": "Faresti le stesse esperienze e gli stessi viaggi se fosse vietato fotografarli o raccontarli online?",
     "lezioneReale": "La vera prova di un desiderio è chiedersi se lo vorresti ancora senza pubblico.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "sp09",
@@ -10639,7 +13418,12 @@
     ],
     "domandaRilancio": "Quale account o persona che segui ti lascia puntualmente più svuotato che ispirato?",
     "lezioneReale": "La dieta informativa che scegli ogni giorno plasma il tuo livello di pace o di ansia.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale"
+    ],
+    "dinamica": "identita",
+    "polarizzazione": "media"
   },
   {
     "id": "sp10",
@@ -10663,7 +13447,13 @@
     ],
     "domandaRilancio": "Quando è stata l’ultima volta che sei stato irraggiungibile per 24 ore senza avvisare nessuno?",
     "lezioneReale": "La reperibilità costante è il modo moderno di vendere anche le ore che non ti pagano.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "tempo"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "sp11",
@@ -10687,7 +13477,14 @@
     ],
     "domandaRilancio": "E tu, quante volte hai guardato lo schermo mentre qualcuno che ami ti stava guardando negli occhi?",
     "lezioneReale": "L’attenzione indivisa è diventata il regalo più raro e più onesto che possiamo fare.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "amicizia",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "sp12",
@@ -10711,7 +13508,13 @@
     ],
     "domandaRilancio": "Cosa faresti domani sera se per legge tutti gli schermi si spegnessero alle 20:00?",
     "lezioneReale": "Spesso non siamo dipendenti dal telefono: siamo spaventati da ciò che emerge quando si spegne.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "priorita",
+    "polarizzazione": "media"
   },
   {
     "id": "sp13",
@@ -10735,7 +13538,14 @@
     ],
     "domandaRilancio": "Qual è quel progetto o cambiamento che rimandi da almeno due anni con una scusa impeccabile?",
     "lezioneReale": "Le scuse più pericolose non sembrano pigrizia: sembrano buon senso.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "sp14",
@@ -10759,7 +13569,13 @@
     ],
     "domandaRilancio": "Di chi temi davvero il giudizio quando stai per fare una scelta fuori dal coro?",
     "lezioneReale": "Ogni volta che eviti un rischio per salvare la faccia, stai pagando un affitto carissimo all’opinione altrui.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "sp15",
@@ -10783,7 +13599,14 @@
     ],
     "domandaRilancio": "In quale ambito della tua vita stai accettando un «tutto sommato va bene» che in realtà ti sta stretto?",
     "lezioneReale": "Il tiepido è più insidioso del pessimo perché non ti dà mai l’urgenza di cambiare.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "amore",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "media"
   },
   {
     "id": "sp16",
@@ -10807,7 +13630,15 @@
     ],
     "domandaRilancio": "Qual è stato il rischio più grande che hai preso finora, e cosa ti ha lasciato?",
     "lezioneReale": "Il vero coraggio non è non avere paura: è misurare il peggiore scenario possibile e accorgersi che ci sopravviveresti.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "sp17",
@@ -10831,7 +13662,13 @@
     ],
     "domandaRilancio": "Qual è l’ultima volta che hai ringraziato qualcuno per averti detto una verità scomoda?",
     "lezioneReale": "Chi ha bisogno di avere sempre ragione non può permettersi di imparare.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "verita",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "media"
   },
   {
     "id": "sp18",
@@ -10855,7 +13692,14 @@
     ],
     "domandaRilancio": "Se ci rivedessimo tra un mese qui attorno al tavolo, quale azione vorresti poter dire di aver finalmente fatto?",
     "lezioneReale": "La chiarezza senza un primo gesto entro 48 ore diventa solo un buon proposito.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "azione",
+    "polarizzazione": "media"
   },
   {
     "id": "sp19",
@@ -10881,7 +13725,17 @@
     ],
     "domandaRilancio": "Quale aspettativa della tua famiglia ti sei portato sulle spalle più a lungo del dovuto?",
     "lezioneReale": "Onorare le proprie radici non significa restare intrappolati nel vaso in cui sei nato.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "lavoro",
+      "famiglia",
+      "tempo",
+      "digitale",
+      "coraggio",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "sp20",
@@ -10906,7 +13760,14 @@
     ],
     "domandaRilancio": "Quando hai sentito per la prima volta di essere davvero alla pari con i tuoi genitori, o non è ancora successo?",
     "lezioneReale": "Diventare adulti significa anche accettare che chi ci ama possa restare deluso dalle nostre scelte.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "sp21",
@@ -10931,7 +13792,14 @@
     ],
     "domandaRilancio": "Qual è l’etichetta che la tua famiglia ti ha dato da bambino e che oggi non ti rappresenta più?",
     "lezioneReale": "I ruoli familiari proteggono l’equilibrio del gruppo, ma spesso costano la crescita del singolo.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "sp22",
@@ -10957,7 +13825,15 @@
     ],
     "domandaRilancio": "In famiglia si parla davvero di come state, o solo di lavoro, salute e cose pratiche?",
     "lezioneReale": "Ciò che una famiglia tace per pace finisce quasi sempre per chiedere il conto in solitudine.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "digitale",
+      "verita",
+      "etica"
+    ],
+    "dinamica": "etica",
+    "polarizzazione": "alta"
   },
   {
     "id": "sp23",
@@ -10982,7 +13858,15 @@
     ],
     "domandaRilancio": "Qual è la frase o il gesto di tuo padre o tua madre che ti sei sorpreso a ripetere identico?",
     "lezioneReale": "Non scegliamo ciò che abbiamo ricevuto, ma scegliamo cosa fermare prima che passi oltre.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "tempo",
+      "digitale",
+      "coraggio"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "sp24",
@@ -11008,7 +13892,13 @@
     ],
     "domandaRilancio": "C’è una domanda che vorresti fare ai tuoi genitori ma continui a rimandare?",
     "lezioneReale": "Il tempo con chi ci ha preceduto sembra infinito finché un giorno scopri che era contato.",
-    "familiarita": "tutti"
+    "familiarita": "tutti",
+    "temi": [
+      "famiglia",
+      "digitale"
+    ],
+    "dinamica": "relazione",
+    "polarizzazione": "alta"
   },
   {
     "id": "m137",
@@ -21691,7 +24581,7 @@
       "identita",
       "digitale"
     ],
-    "dinamica": "bassa",
+    "dinamica": "identita",
     "polarizzazione": "alta",
     "familiarita": "tutti"
   },

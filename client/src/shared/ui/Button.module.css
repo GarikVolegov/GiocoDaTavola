@@ -5,14 +5,18 @@
   justify-content: center;
   gap: var(--space-2);
   min-height: 2.85rem;
+  max-width: 100%;
   font-family: var(--font-display);
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-display, 0.05em);
+  line-height: 1.2;
+  white-space: normal;
+  text-align: center;
   border: 1px solid transparent;
   cursor: pointer;
   border-radius: var(--radius-md);
-  overflow: hidden;
+  overflow-wrap: anywhere;
   user-select: none;
   transition: transform var(--dur-fast) var(--ease),
     box-shadow var(--dur-fast) var(--ease),
@@ -28,12 +32,12 @@
 }
 
 .md {
-  font-size: 0.95rem;
+  font-size: calc(0.95rem * var(--display-scale, 1));
   padding: var(--space-3) var(--space-5);
 }
 
 .lg {
-  font-size: clamp(1rem, 2.2vw, 1.2rem);
+  font-size: calc(clamp(1rem, 2.2vw, 1.2rem) * var(--display-scale, 1));
   padding: var(--space-3) var(--space-6);
 }
 

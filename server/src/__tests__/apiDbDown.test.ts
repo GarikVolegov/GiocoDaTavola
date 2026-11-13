@@ -82,7 +82,7 @@ describe('/api/me/* con DB irraggiungibile (ogni query rejecta)', () => {
   it("GET /api/health resta 200 e riporta db:'down'", async () => {
     const res = await fetch(`${base}/api/health`);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, db: 'down' });
+    expect(await res.json()).toMatchObject({ ok: true, db: 'down' });
   });
 });
 

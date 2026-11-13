@@ -16,9 +16,12 @@
 .b .letter { color: var(--faction-b); }
 .label {
   font-family: var(--font-display);
-  font-size: var(--text-md);
+  font-size: calc(var(--text-md) * var(--display-scale, 1));
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: var(--tracking-display, 0.03em);
+  line-height: var(--leading-display, 1.18);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 @media (prefers-reduced-motion: reduce) { .option { transition: none; } }
