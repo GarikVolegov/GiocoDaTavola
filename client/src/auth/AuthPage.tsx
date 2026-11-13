@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuth, SignInButton, SignUpButton } from '@clerk/react';
+import { useAuth, SignIn, SignUp } from '@clerk/react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Card, Logo } from '../shared/ui';
 import styles from './AuthPage.module.css';
@@ -26,6 +26,49 @@ const PERKS = [
     desc: 'Ritrova statistiche, partite recenti e avvia nuove serate in un tap.',
   },
 ] as const;
+
+const CLERK_APPEARANCE = {
+  variables: {
+    colorPrimary: '#e5c158',
+    colorBackground: 'transparent',
+    colorText: '#f5f7ff',
+    colorTextSecondary: 'rgba(245, 247, 255, 0.72)',
+    colorInputBackground: 'rgba(0, 0, 0, 0.35)',
+    colorInputText: '#f5f7ff',
+    borderRadius: '0.65rem',
+  },
+  elements: {
+    cardBox: {
+      boxShadow: 'none',
+      border: 'none',
+      background: 'transparent',
+      width: '100%',
+    },
+    card: {
+      boxShadow: 'none',
+      border: 'none',
+      background: 'transparent',
+      padding: '0.25rem 0',
+      width: '100%',
+    },
+    headerTitle: {
+      fontSize: '1.15rem',
+      fontWeight: 800,
+    },
+    socialButtonsBlockButton: {
+      border: '1px solid rgba(255, 255, 255, 0.16)',
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      color: '#f5f7ff',
+    },
+    formButtonPrimary: {
+      color: '#0b0e1a',
+      fontWeight: 800,
+    },
+    footerAction: {
+      display: 'none',
+    },
+  },
+} as const;
 
 export default function AuthPage() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -99,42 +142,28 @@ export default function AuthPage() {
                 </button>
               </div>
 
-              {tab === 'accedi' ? (
-                <>
-                  <h2 className={styles.title} style={{ fontSize: '1.2rem' }}>Bentornato al tavolo</h2>
-                  <p className={styles.lead}>
-                    Accedi per ritrovare trofei, profilo e il limite sbloccato a 5 dilemmi personali.
-                  </p>
-                  {clerkConfigured ? (
-                    <SignInButton mode="modal" forceRedirectUrl="/casa" signUpForceRedirectUrl="/casa">
-                      <Button variant="primary" size="lg" style={{ width: '100%' }}>
-                        Accedi ora
-                      </Button>
-                    </SignInButton>
+              {clerkConfigured ? (
+                <div className={styles.clerkEmbed}>
+                  {tab === 'accedi' ? (
+                    <SignIn
+                      routing="hash"
+                      forceRedirectUrl="/casa"
+                      signUpForceRedirectUrl="/casa"
+                      appearance={CLERK_APPEARANCE}
+                    />
                   ) : (
-                    <p className={styles.lead} style={{ padding: '0.6rem 0.75rem', borderRadius: '0.6rem', background: 'rgba(255,255,255,0.06)' }}>
-                      Login disattivato in questa istanza locale (manca <code>VITE_CLERK_PUBLISHABLE_KEY</code>).
-                    </p>
+                    <SignUp
+                      routing="hash"
+                      forceRedirectUrl="/casa"
+                      signInForceRedirectUrl="/casa"
+                      appearance={CLERK_APPEARANCE}
+                    />
                   )}
-                </>
+                </div>
               ) : (
-                <>
-                  <h2 className={styles.title} style={{ fontSize: '1.2rem' }}>Crea il tuo account gratis</h2>
-                  <p className={styles.lead}>
-                    Zero spam, solo salvataggio automatico dei premi e fino a 5 dilemmi personali per partita.
-                  </p>
-                  {clerkConfigured ? (
-                    <SignUpButton mode="modal" forceRedirectUrl="/casa" signInForceRedirectUrl="/casa">
-                      <Button variant="primary" size="lg" style={{ width: '100%' }}>
-                        Registrati gratis
-                      </Button>
-                    </SignUpButton>
-                  ) : (
-                    <p className={styles.lead} style={{ padding: '0.6rem 0.75rem', borderRadius: '0.6rem', background: 'rgba(255,255,255,0.06)' }}>
-                      Registrazione disattivata in questa istanza locale (manca <code>VITE_CLERK_PUBLISHABLE_KEY</code>).
-                    </p>
-                  )}
-                </>
+                <p className={styles.lead} style={{ padding: '0.6rem 0.75rem', borderRadius: '0.6rem', background: 'rgba(255,255,255,0.06)' }}>
+                  Login Clerk disattivato in questa istanza locale (manca <code>VITE_CLERK_PUBLISHABLE_KEY</code>).
+                </p>
               )}
 
               <button

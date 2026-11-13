@@ -20,6 +20,14 @@ export function SignUpButton({ children }: { mode?: string; forceRedirectUrl?: s
   return <>{children ?? null}</>;
 }
 
+export function SignIn(_props: Record<string, unknown>) {
+  return null;
+}
+
+export function SignUp(_props: Record<string, unknown>) {
+  return null;
+}
+
 export function UserButton() {
   return null;
 }

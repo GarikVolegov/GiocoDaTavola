@@ -161,3 +161,16 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+.clerkEmbed {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.clerkEmbed :global(.cl-rootBox),
+.clerkEmbed :global(.cl-cardBox) {
+  width: 100%;
+  max-width: 100%;
+  box-shadow: none;
+}
