@@ -10,6 +10,8 @@ import {
   VOTE_ERROR_MESSAGES,
   START_ERROR_MESSAGES,
   PERSONA_LABELS,
+  MAX_SUBMISSIONS_PER_PLAYER,
+  MAX_SUBMISSIONS_PER_ACCOUNT,
   OBJECTIVE,
   HOW_TO_PLAY,
   FORMAT_DILEMMA_COUNT,
@@ -20,6 +22,7 @@ import {
   type SessionFormat,
   type ContentRegister,
   type Mood,
+  type Familiarita,
   type Caos,
   type PlayerJoinedPayload,
   type PlayerJoinErrorPayload,
@@ -63,6 +66,7 @@ import { Card, JoinQr, Button, Field, TextInput, Alert, ShareInviteButton, Pause
 import { useHostAudio } from '../host/audio/useHostAudio';
 import { useSfxCues } from '../host/audio/useSfxCues';
 import { useWakeLock } from '../shared/useWakeLock';
+import { useIntensityTheme } from '../shared/useIntensityTheme';
 import { MuteButton } from '../host/MuteButton';
 import { AudioGate } from '../host/AudioGate';
 // Lazy so jsQR (the camera decoder) only loads when a player actually opens the scanner.
@@ -76,6 +80,7 @@ import PredictView from './views/PredictView';
 import GroupMindView from './views/GroupMindView';
 import WriteView from './views/WriteView';
 import WriteVoteView from './views/WriteVoteView';
+import HotTakeView from './views/HotTakeView';
 import DuoArgueView from './views/DuoArgueView';
 import PickPredictView from './views/PickPredictView';
 import WaverView from './views/WaverView';
@@ -84,6 +89,7 @@ import StatusView from './views/StatusView';
 import LeaveGameMenu from './LeaveGameMenu';
 import SubmitDilemmaCard from './views/SubmitDilemmaCard';
 import LeaderSetup, { type TipoPartita } from './views/LeaderSetup';
+import lobbyStyles from './views/LobbyScreen.module.css';
 import { getSeenDilemmaIds, addSeenDilemmaIds } from '../shared/seenDilemmas';
 import { wrap } from './views/layout';
 
@@ -173,6 +179,7 @@ export default function PlayerApp() {
   const [knowGuess, setKnowGuess] = useState<VoteChoice | null>(null);
   const [knowResult, setKnowResult] = useState<PlayerKnowGuessResultPayload | null>(null);
   const [groupMindAnswer, setGroupMindAnswer] = useState<VoteChoice | null>(null);
+  const [myHotTakeScore, setMyHotTakeScore] = useState<number | null>(null);
   const [groupMindGuess, setGroupMindGuess] = useState<VoteChoice | null>(null);
   const [groupMindResult, setGroupMindResult] = useState<PlayerGroupMindResultPayload | null>(null);
   const [writeText, setWriteText] = useState('');
@@ -187,7 +194,9 @@ export default function PlayerApp() {
   const [secretQuestion, setSecretQuestion] = useState<PlayerSecretQuestionPayload | null>(null);
   const [gognaVotedTarget, setGognaVotedTarget] = useState<string | null>(null);
   const [partyMode, setPartyMode] = useState<PartyMode | null>('flash');
-  const [partyIntensity, setPartyIntensity] = useState<'complicita' | 'piccante'>('complicita');
+  const [partyIntensity, setPartyIntensity] = useState<'complicita' | 'piccante' | 'profondo'>('complicita');
+  const [infiltratoTono, setInfiltratoTono] = useState<'risate' | 'profondo' | 'misto'>('misto');
+  const [familiarita, setFamiliarita] = useState<Familiarita>('vecchi_amici');
   const [partyTheme, setPartyTheme] = useState('');
   const [myHotSeatBet, setMyHotSeatBet] = useState<'match' | 'scoppiano' | null>(null);
   const [myAccusation, setMyAccusation] = useState<string | null>(null);
@@ -204,6 +213,7 @@ export default function PlayerApp() {
   // Two-step guard on the lobby's "leave room" link: the first tap arms it, the
   // second actually leaves — so a stray tap never drops the player out of the room.
   const [confirmingLeave, setConfirmingLeave] = useState(false);
+  const [howToPlayOpen, setHowToPlayOpen] = useState(false);
   // "Salta ▶" needs a 2nd tap during a secret-vote phase (VOTE_1/VOTE_2/
   // PREDICT/SPEAKER_VOTE/DUO_PICK/DUO_REPICK) so an impatient leader can't
   // silently cut off someone else's still-forming vote with one stray tap.
@@ -233,6 +243,7 @@ export default function PlayerApp() {
   // (narrative tale). Percorso/storia are gruppo-only and replace the classic
   // register/durata pickers with their own config.
   const [tipoPartita, setTipoPartita] = useState<TipoPartita>('classica');
+  const [percorsoId, setPercorsoId] = useState<string>('bussola');
   const [startTappa, setStartTappa] = useState(1);
   const [durata, setDurata] = useState<Durata>('medio');
   // "Storia": the chosen story id (from the server's static catalog).
@@ -481,6 +492,7 @@ export default function PlayerApp() {
     setKnowResult(null);
     setSpeakerVote(null);
     setGroupMindAnswer(null);
+    setMyHotTakeScore(null);
     setGroupMindGuess(null);
     setGroupMindResult(null);
     setWriteText('');
@@ -781,6 +793,15 @@ export default function PlayerApp() {
   useSfxCues({ enabled: joinedCode != null && !isLeader, game });
   // Keep the phone awake while joined so narration and voting don't sleep
   useWakeLock(joinedCode != null);
+  // Dynamically shift display typography based on selected seriousness / intensity
+  useIntensityTheme({
+    mood: game ? undefined : mood,
+    complessita: game?.dilemma?.complessita,
+    caos: game?.caos ?? caos,
+    partyMode: game?.partyMode ?? partyMode,
+    partyIntensity: game?.partyCard?.intensity ?? partyIntensity,
+    phase,
+  });
   // Every joined phone gets a mute toggle: the leader's gates behind the explicit
   // AudioGate tap (musichetta/narrator need it), everyone else just gets the corner
   // button since their stings unlock silently on the first natural tap.
@@ -816,6 +837,7 @@ export default function PlayerApp() {
     if (tipoPartita === 'percorso') {
       getSocket().emit(SocketEvents.LeaderStartGame, {
         format: 'percorso',
+        percorsoId,
         startTappa,
         durata,
         mode: 'gruppo',
@@ -839,6 +861,8 @@ export default function PlayerApp() {
       seenDilemmaIds: getSeenDilemmaIds(), // 5.1: avoid déjà-vu across separate games on this device
       partyMode: partyMode ?? undefined,
       partyIntensity: partyIntensity ?? 'complicita',
+      infiltratoTono,
+      familiarita,
       theme: partyTheme.trim() ? partyTheme.trim() : undefined,
     });
   };
@@ -1200,6 +1224,26 @@ export default function PlayerApp() {
     );
   }
 
+  if (joinedCode && (phase === 'HOT_TAKE_VOTE' || phase === 'HOT_TAKE_REVEAL')) {
+    return withLeaveMenu(
+      <HotTakeView
+        phase={phase}
+        prompt={game?.hotTakePrompt ?? null}
+        reveal={game?.hotTakeReveal ?? null}
+        remaining={remaining}
+        myScore={myHotTakeScore}
+        submittedCount={game?.hotTakeSubmittedCount ?? 0}
+        playerCount={players.length}
+        missingHotTakers={game?.missingHotTakers ?? null}
+        onSubmitScore={(score) => {
+          setMyHotTakeScore(score);
+          getSocket().emit(SocketEvents.PlayerHotTake, { score });
+        }}
+        skipButton={skipButton}
+      />
+    );
+  }
+
   if (joinedCode && phase === 'GROUP_MIND') {
     return withLeaveMenu(
       <GroupMindView
@@ -1293,219 +1337,256 @@ export default function PlayerApp() {
 
   if (joinedCode) {
     return (
-      <main style={wrap}>
+      <main className={lobbyStyles.lobbyMain}>
         {audioControls}
-        <h1 style={{ fontSize: '1.5rem', margin: 0 }}>Sei nella stanza</h1>
-        <div
-          style={{
-            fontSize: '2.5rem',
-            fontWeight: 800,
-            letterSpacing: '0.3rem',
-            fontFamily: 'var(--font-mono)',
-          }}
-        >
-          {joinedCode}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-1)' }}>
-          <JoinQr code={joinedCode} />
-          <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.7 }}>
-            Fai inquadrare il QR per entrare — oppure detta il codice
-          </p>
-          <ShareInviteButton code={joinedCode} />
-        </div>
-        <h2 style={{ fontSize: '1.1rem', margin: '0.5rem 0 0' }}>
-          Giocatori ({players.length}/8)
-        </h2>
-        <ul
-          style={{
-            listStyle: 'none',
-            margin: 0,
-            padding: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--space-2)',
-            width: 'min(90vw, 22rem)',
-          }}
-        >
-          {players.map((p) => {
-            const absent = p.connected === false;
-            return (
-              <li
-                key={p.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 'var(--space-2)',
-                  padding: '0.5rem 0.9rem',
-                  borderRadius: 'var(--radius-md)',
-                  background: p.isBot ? 'var(--gold-soft)' : 'rgba(127,127,127,0.18)',
-                  fontWeight: 600,
-                  opacity: absent ? 0.5 : 1,
-                }}
-              >
-                <span>{p.isBot ? '🤖 ' : ''}{p.nickname}</span>
-                {p.isBot && p.persona && (
-                  <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{PERSONA_LABELS[p.persona]}</span>
-                )}
-                {p.role === 'pubblico' && (
-                  <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>🎟️ Pubblico</span>
-                )}
-                {absent && <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>· assente 📵</span>}
-                {isLeader && p.isBot && (
+
+        <div className={lobbyStyles.sidebarCol}>
+          <Card glow="accent" className={lobbyStyles.inviteCard}>
+            <div className={lobbyStyles.inviteMeta}>
+              <h1 className={lobbyStyles.inviteHeading}>Sei nella stanza</h1>
+              <div className={lobbyStyles.roomCode}>{joinedCode}</div>
+              <p className={lobbyStyles.inviteHint}>
+                Inquadra il QR o detta il codice
+              </p>
+              <ShareInviteButton code={joinedCode} />
+            </div>
+            <div className={lobbyStyles.qrWrap}>
+              <JoinQr code={joinedCode} size={104} />
+            </div>
+          </Card>
+
+          <Card
+            style={{
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.6rem',
+              padding: '0.8rem 0.9rem',
+            }}
+          >
+            <div className={lobbyStyles.playersHeader}>
+              <h2 className={lobbyStyles.sectionTitle}>
+                Giocatori ({players.length}/8)
+              </h2>
+              {isLeader && (
+                <div className={lobbyStyles.botActions}>
                   <button
                     type="button"
-                    onClick={() => removeBot(p.id)}
-                    aria-label={`Rimuovi ${p.nickname}`}
-                    style={{
-                      marginLeft: 'auto',
-                      border: 'none',
-                      background: 'transparent',
-                      color: 'inherit',
-                      cursor: 'pointer',
-                      fontWeight: 800,
-                      opacity: 0.7,
-                    }}
+                    className={lobbyStyles.compactBtn}
+                    onClick={addBot}
+                    disabled={!canAddBot}
                   >
-                    ✕
+                    + Aggiungi bot 🤖
                   </button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                  {humanCount === 2 && (!partyMode || gameMode === 'gruppo') && (
+                    <button
+                      type="button"
+                      className={lobbyStyles.compactBtn}
+                      onClick={() => {
+                        addBot();
+                        addBot();
+                      }}
+                      disabled={!canAddBot}
+                    >
+                      🤖🤖 Preset: 2 umani + 2 bot
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
 
-        <Card
-          glow="accent"
-          style={{
-            width: 'min(90vw, 22rem)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--space-2)',
-            textAlign: 'center',
-          }}
-        >
-          <h3 style={{ margin: 0, fontSize: '1.05rem' }}>Come funziona</h3>
-          <ol style={{ margin: 0, padding: 0, listStylePosition: 'inside', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-            {HOW_TO_PLAY.map((step) => (
-              <li key={step} style={{ fontSize: '0.95rem', opacity: 0.9 }}>{step}</li>
-            ))}
-          </ol>
-          <p style={{ margin: '0.2rem 0 0', fontSize: '0.95rem', fontWeight: 700 }}>
-            🎯 {OBJECTIVE}
-          </p>
-        </Card>
+            <ul className={lobbyStyles.playersList}>
+              {players.map((p) => {
+                const absent = p.connected === false;
+                return (
+                  <li
+                    key={p.id}
+                    className={`${lobbyStyles.playerChip} ${p.isBot ? lobbyStyles.playerChipBot : ''}`}
+                    style={{ opacity: absent ? 0.5 : 1 }}
+                  >
+                    <span>{p.isBot ? '🤖 ' : ''}{p.nickname}</span>
+                    {p.isBot && p.persona && (
+                      <span style={{ fontSize: '0.72rem', opacity: 0.72 }}>{PERSONA_LABELS[p.persona]}</span>
+                    )}
+                    {p.role === 'pubblico' && (
+                      <span style={{ fontSize: '0.72rem', opacity: 0.72 }}>🎟️ Pubblico</span>
+                    )}
+                    {absent && <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>· assente 📵</span>}
+                    {isLeader && p.isBot && (
+                      <button
+                        type="button"
+                        onClick={() => removeBot(p.id)}
+                        aria-label={`Rimuovi ${p.nickname}`}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          color: 'inherit',
+                          cursor: 'pointer',
+                          fontWeight: 800,
+                          opacity: 0.75,
+                          padding: '0.15rem 0.25rem',
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
 
-        <SubmitDilemmaCard
-          submittedCount={game?.submittedCount ?? 0}
-          mySubmitted={mySubmitted}
-          text={dilemmaText}
-          optionA={dilemmaA}
-          optionB={dilemmaB}
-          onTextChange={setDilemmaText}
-          onOptionAChange={setDilemmaA}
-          onOptionBChange={setDilemmaB}
-          onSubmit={submitDilemma}
-          error={submitDilemmaError}
-        />
-
-        {isLeader ? (
-          <LeaderSetup
-            tipoPartita={tipoPartita}
-            setTipoPartita={setTipoPartita}
-            gameMode={gameMode}
-            setGameMode={setGameMode}
-            register={register}
-            setRegister={setRegister}
-            mood={mood}
-            setMood={setMood}
-            caos={caos}
-            setCaos={setCaos}
-            delicatoOptIn={delicatoOptIn}
-            setDelicatoOptIn={setDelicatoOptIn}
-            serataLunga={serataLunga}
-            setSerataLunga={setSerataLunga}
-            format={format}
-            setFormat={setFormat}
-            startTappa={startTappa}
-            setStartTappa={setStartTappa}
-            durata={durata}
-            setDurata={setDurata}
-            storyId={storyId}
-            setStoryId={setStoryId}
-            storieCatalog={game?.storieCatalog ?? []}
-            submittedCount={game?.submittedCount ?? 0}
-            infiltratoOn={infiltratoOn}
-            setInfiltratoOn={setInfiltratoOn}
-            squadreOn={squadreOn}
-            setSquadreOn={setSquadreOn}
-            tappaCounts={game?.tappaCounts}
-            humanCount={humanCount}
-            canAddBot={canAddBot}
-            onAddBot={addBot}
-            canStart={canStart}
-            onStart={startGame}
-            startError={startError}
-            partyMode={partyMode}
-            setPartyMode={setPartyMode}
-            partyIntensity={partyIntensity}
-            setPartyIntensity={setPartyIntensity}
-            theme={partyTheme}
-            setTheme={setPartyTheme}
-          />
-        ) : (
-          <p style={{ opacity: 0.7, margin: 0 }}>In attesa che il leader avvii la partita…</p>
-        )}
-        {confirmingLeave ? (
-          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+          <Card
+            style={{
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: howToPlayOpen ? 'var(--space-2)' : 0,
+              padding: '0.6rem 0.85rem',
+            }}
+          >
             <button
               type="button"
-              onClick={leaveRoom}
+              aria-expanded={howToPlayOpen}
+              onClick={() => setHowToPlayOpen((v) => !v)}
               style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--terracotta, inherit)',
-                opacity: 0.9,
-                fontSize: '0.85rem',
-                fontWeight: 700,
-                textDecoration: 'underline',
-                cursor: 'pointer',
-              }}
-            >
-              Esci davvero
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmingLeave(false)}
-              style={{
+                width: '100%',
+                minHeight: '2.75rem',
                 background: 'transparent',
                 border: 'none',
                 color: 'inherit',
-                opacity: 0.55,
-                fontSize: '0.85rem',
                 cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.5rem',
+                padding: 0,
+                textAlign: 'left',
               }}
             >
-              Annulla
+              <span style={{ fontSize: '0.92rem', fontWeight: 700 }}>📖 Come funziona</span>
+              <span style={{ fontSize: '0.78rem', opacity: 0.72 }} aria-hidden="true">
+                {howToPlayOpen ? '▴' : '▾'}
+              </span>
             </button>
+            {howToPlayOpen && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', paddingTop: '0.2rem' }}>
+                <ol style={{ margin: 0, paddingLeft: '1.15rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  {HOW_TO_PLAY.map((step) => (
+                    <li key={step} style={{ fontSize: '0.86rem', opacity: 0.9 }}>{step}</li>
+                  ))}
+                </ol>
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.86rem', fontWeight: 700 }}>
+                  🎯 {OBJECTIVE}
+                </p>
+              </div>
+            )}
+          </Card>
+
+          <SubmitDilemmaCard
+            submittedCount={game?.submittedCount ?? 0}
+            mySubmitted={mySubmitted}
+            maxSubmissions={isSignedIn ? MAX_SUBMISSIONS_PER_ACCOUNT : MAX_SUBMISSIONS_PER_PLAYER}
+            isSignedIn={Boolean(isSignedIn)}
+            text={dilemmaText}
+            optionA={dilemmaA}
+            optionB={dilemmaB}
+            onTextChange={setDilemmaText}
+            onOptionAChange={setDilemmaA}
+            onOptionBChange={setDilemmaB}
+            onSubmit={submitDilemma}
+            error={submitDilemmaError}
+          />
+
+          <div className={lobbyStyles.leaveRow}>
+            {confirmingLeave ? (
+              <>
+                <button
+                  type="button"
+                  onClick={leaveRoom}
+                  className={lobbyStyles.leaveBtn}
+                  style={{ color: 'var(--terracotta, inherit)', opacity: 0.95, fontWeight: 700 }}
+                >
+                  Esci davvero
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingLeave(false)}
+                  className={lobbyStyles.leaveBtn}
+                >
+                  Annulla
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmingLeave(true)}
+                className={lobbyStyles.leaveBtn}
+              >
+                Esci dalla stanza
+              </button>
+            )}
           </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setConfirmingLeave(true)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'inherit',
-              opacity: 0.55,
-              fontSize: '0.85rem',
-              textDecoration: 'underline',
-              cursor: 'pointer',
-            }}
-          >
-            Esci dalla stanza
-          </button>
-        )}
+        </div>
+
+        <div className={lobbyStyles.setupCol}>
+          {isLeader ? (
+            <LeaderSetup
+              tipoPartita={tipoPartita}
+              setTipoPartita={setTipoPartita}
+              gameMode={gameMode}
+              setGameMode={setGameMode}
+              register={register}
+              setRegister={setRegister}
+              mood={mood}
+              setMood={setMood}
+              caos={caos}
+              setCaos={setCaos}
+              delicatoOptIn={delicatoOptIn}
+              setDelicatoOptIn={setDelicatoOptIn}
+              serataLunga={serataLunga}
+              setSerataLunga={setSerataLunga}
+              format={format}
+              setFormat={setFormat}
+              percorsoId={percorsoId}
+              setPercorsoId={setPercorsoId}
+              percorsoCounts={game?.percorsoCounts}
+              startTappa={startTappa}
+              setStartTappa={setStartTappa}
+              durata={durata}
+              setDurata={setDurata}
+              storyId={storyId}
+              setStoryId={setStoryId}
+              storieCatalog={game?.storieCatalog ?? []}
+              submittedCount={game?.submittedCount ?? 0}
+              infiltratoOn={infiltratoOn}
+              setInfiltratoOn={setInfiltratoOn}
+              squadreOn={squadreOn}
+              setSquadreOn={setSquadreOn}
+              tappaCounts={game?.tappaCounts}
+              humanCount={humanCount}
+              canStart={canStart}
+              onStart={startGame}
+              startError={startError}
+              partyMode={partyMode}
+              setPartyMode={setPartyMode}
+              partyIntensity={partyIntensity}
+              setPartyIntensity={setPartyIntensity}
+              infiltratoTono={infiltratoTono}
+              setInfiltratoTono={setInfiltratoTono}
+              familiarita={familiarita}
+              setFamiliarita={setFamiliarita}
+              theme={partyTheme}
+              setTheme={setPartyTheme}
+            />
+          ) : (
+            <Card style={{ width: '100%', textAlign: 'center', padding: '1.5rem 1rem' }}>
+              <p style={{ opacity: 0.78, margin: 0, fontWeight: 600 }}>
+                In attesa che il leader avvii la partita…
+              </p>
+            </Card>
+          )}
+        </div>
       </main>
     );
   }

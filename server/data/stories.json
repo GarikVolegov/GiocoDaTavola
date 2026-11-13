@@ -299,7 +299,8 @@
         "text": "Orbita-9 sopravvive avendo scelto, quasi sempre, le persone più dei numeri. Sarà una colonia più fragile e affamata — ma quando la Terra finalmente risponderà, troverà gente che si guarda ancora negli occhi."
       }
     ],
-    "durataStimaMin": 120
+    "durataStimaMin": 120,
+    "familiarita": "tutti"
   },
   {
     "id": "citta-che-pensa",
@@ -538,7 +539,8 @@
         "text": "Nuova Aurora resta nelle mani delle persone: più lenta, più caotica, più ingiusta di quanto ATLAS sopporterebbe. Ma quando sbaglia, è un errore suo — e quando sceglie bene, è una vittoria che sa ancora di umano."
       }
     ],
-    "durataStimaMin": 90
+    "durataStimaMin": 90,
+    "familiarita": "tutti"
   },
   {
     "id": "silenzio-aurora",
@@ -777,7 +779,8 @@
         "text": "L'Aurora arriva ferita ma onesta. Avete inseguito la verità a ogni costo, anche quando faceva male, anche quando conveniva tacere. I mille si svegliano in un mondo nuovo guidati da gente che ha imparato a guardarsi senza paura."
       }
     ],
-    "durataStimaMin": 90
+    "durataStimaMin": 90,
+    "familiarita": "tutti"
   },
   {
     "id": "quello-che-resta",
@@ -1016,7 +1019,8 @@
         "text": "Avete saputo lasciar andare. Elsa diventa un ricordo luminoso e libero, custodito nel modo più vero: dentro di voi. Il dolore si è fatto dolcezza, e la vita — la vostra, quella di Sofia — è ricominciata a respirare."
       }
     ],
-    "durataStimaMin": 90
+    "durataStimaMin": 90,
+    "familiarita": "vecchi_amici"
   },
   {
     "id": "torta-reale",
@@ -1122,7 +1126,8 @@
         "text": "Ogni scelta più prudente ripaga: la torta arriva perfetta, intatta, e senza il minimo incidente di percorso. Vi guadagnate una standing ovation silenziosa in cucina — e la certezza che, la prossima volta, vi chiameranno loro per primi."
       }
     ],
-    "durataStimaMin": 20
+    "durataStimaMin": 20,
+    "familiarita": "nuove_conoscenze"
   },
   {
     "id": "isola-pirati-pigri",
@@ -1228,7 +1233,8 @@
         "text": "Prudenti fino all'ultimo, tornate con meno oro ma zero grattacapi, un'alleanza pirata inaspettata e l'equipaggio tutto intero, riposato e vivo. Anche i pirati più pigri, a volte, fanno la scelta più saggia."
       }
     ],
-    "durataStimaMin": 20
+    "durataStimaMin": 20,
+    "familiarita": "nuove_conoscenze"
   },
   {
     "id": "roadtrip-ultimo-biglietto",
@@ -1334,6 +1340,190 @@
         "text": "Prudenti a ogni bivio, arrivate puntuali, con l'auto in ordine e senza un solo imprevisto degno di nota. Il festival è bellissimo lo stesso — e per una volta, tornare a casa non fa nemmeno un po' paura."
       }
     ],
-    "durataStimaMin": 20
+    "durataStimaMin": 20,
+    "familiarita": "tutti"
+  },
+  {
+    "id": "la-casa-sul-lago",
+    "title": "La Casa sul Lago",
+    "genre": "dramma",
+    "emoji": "🏡",
+    "familiarita": "vecchi_amici",
+    "hook": "Un weekend tra amici storici dove saltano fuori i non detti di dieci anni.",
+    "protagonist": "Marco, uno del gruppo di sempre",
+    "premessa": "Siete cinque amici che si conoscono dai tempi del liceo. Vi ritrovate per un weekend in una casa sul lago dopo mesi in cui vi siete visti solo di corsa. La prima sera il vino scioglie le lingue e, prima di mezzanotte, ogni scelta mette alla prova quello che vi siete sempre taciuti per quieto vivere.",
+    "durataStimaMin": 35,
+    "acts": [
+      {
+        "id": "atto-1",
+        "title": "Atto I — La prima sera",
+        "emoji": "🍷",
+        "scenes": [
+          {
+            "id": "s1",
+            "narration": "A tavola, Luca racconta entusiasta l’idea di mollare il lavoro sicuro per aprire un’attività con un socio appena conosciuto. Tutti gli fanno i complimenti, ma tu hai già visto i numeri e sai che rischia di bruciarsi tutti i risparmi.",
+            "bivio": {
+              "text": "Cosa fai davanti agli altri o appena restate soli?",
+              "optionA": "Glielo dici chiaro stasera: \"Stai per fare un errore enorme\".",
+              "optionB": "Lo lasci sognare: non sta a te smontarlo proprio qui.",
+              "complessita": "alto",
+              "spuntiA": [
+                "Un amico vero ti ferma prima del burrone",
+                "Tacere per educazione è complicità comoda",
+                "Meglio una litigata oggi che vederlo crollare tra sei mesi"
+              ],
+              "spuntiB": [
+                "Nessuno ascolta i consigli non richiesti davanti a tutti",
+                "Ogni adulto ha il diritto di fare i propri errori",
+                "Rovineresti l’unica serata tranquilla insieme"
+              ]
+            },
+            "consequenceA": "Luca si irrigidisce, il silenzio cala sul tavolo per dieci secondi. Ma più tardi, in veranda, ti ringrazia a bassa voce per essere stato l’unico sincero.",
+            "consequenceB": "La serata fila liscia tra brindisi e risate, ma mentre sparecchi senti quel nodo allo stomaco di chi ha scelto la pace al posto della verità."
+          },
+          {
+            "id": "s2",
+            "narration": "Giulia esce sul terrazzo con il telefono in mano. Per caso vedi sullo schermo il nome di una chat parallela del gruppo — senza Matteo, che intanto sta preparando il caffè in cucina per tutti.",
+            "bivio": {
+              "text": "Affronti la cosa della chat parallela?",
+              "optionA": "Sì: \"Ragazzi, questa cosa delle chat separate fa schifo\".",
+              "optionB": "Fingi di niente: in tutti i gruppi esistono sottogruppi.",
+              "complessita": "max",
+              "spuntiA": [
+                "Se lo fanno a Matteo oggi, lo faranno a te domani",
+                "I non detti marciscono la fiducia del gruppo",
+                "Chiarezza subito salva l’amicizia vera"
+              ],
+              "spuntiB": [
+                "A volte serve solo uno spazio per organizzare o sfogarsi",
+                "Scatenare una guerra nel weekend distrugge tutto",
+                "Non è detto che ci sia cattiveria dietro"
+              ]
+            },
+            "consequenceA": "Scoppia una discussione vera: all’inizio volano scuse imbarazzate, poi per la prima volta da anni vi dite cosa non funziona tra voi.",
+            "consequenceB": "Il weekend continua leggero, ma ogni volta che suona un telefono sul tavolo guardi gli altri con un mezzo dubbio in più."
+          }
+        ]
+      },
+      {
+        "id": "atto-2",
+        "title": "Atto II — La crepa",
+        "emoji": "🌧️",
+        "scenes": [
+          {
+            "id": "s3",
+            "narration": "Sabato pomeriggio piove. Esce il discorso su come siete cambiati negli ultimi cinque anni. Elena ammette che da mesi sente di recitare ancora la parte della \"solita simpatica\", mentre dentro è esausta e nessuno le chiede mai come sta davvero.",
+            "bivio": {
+              "text": "Come reagisci alla confessione di Elena?",
+              "optionA": "Ti apri anche tu: ammetti una tua fragilità che nascondi al gruppo.",
+              "optionB": "La rassicuri con leggerezza e riporti il discorso su qualcosa di allegro.",
+              "complessita": "max",
+              "spuntiA": [
+                "La vulnerabilità chiama vulnerabilità: sblocca tutto il gruppo",
+                "Senza togliere le maschere restate amici solo in superficie",
+                "È il momento di cambiare registro tra voi"
+              ],
+              "spuntiB": [
+                "Forzare l’analisi psicologica mette a disagio chi non è pronto",
+                "Gli amici servono anche a respirare dal peso quotidiano",
+                "Le parlerai domani da solo con più calma"
+              ]
+            },
+            "consequenceA": "Per due ore nessuno tocca più il telefono. Vi raccontate paure che non avevate mai condiviso nemmeno dopo dieci anni insieme.",
+            "consequenceB": "Elena annuisce e sorride, ma capisci subito che ha richiuso la porta appena l’aveva socchiusa."
+          },
+          {
+            "id": "s4",
+            "narration": "Arriva il momento di dividere le spese della casa e della spesa comune. Matteo guadagna molto meno degli altri quest’anno e si vede che è in difficoltà, anche se fa finta di nulla e tira fuori la carta.",
+            "bivio": {
+              "text": "Come gestisci il divario economico tra amici?",
+              "optionA": "Proponi apertamente di adattare le quote: \"Chi può di più mette di più\".",
+              "optionB": "Dividete alla pari come sempre per non umiliarlo.",
+              "complessita": "max",
+              "spuntiA": [
+                "L’amicizia vera protegge chi è in un momento duro",
+                "Fingere che siamo tutti uguali esclude chi fa fatica",
+                "La trasparenza toglie il peso silenzioso"
+              ],
+              "spuntiB": [
+                "Offrire davanti a tutti può ferire l’orgoglio",
+                "È meglio aiutarlo in privato in un altro momento",
+                "Le regole uguali evitano sensazioni di debito"
+              ]
+            },
+            "consequenceA": "Dopo un attimo di imbarazzo iniziale, Matteo tira un sospiro di sollievo e ammette quanto gli pesasse non riuscire a tenere il passo.",
+            "consequenceB": "Matteo paga la sua parte in silenzio, ma la sera dopo inventa una scusa per non venire al ristorante."
+          }
+        ]
+      },
+      {
+        "id": "atto-3",
+        "title": "Atto III — Domenica mattina",
+        "emoji": "🌅",
+        "scenes": [
+          {
+            "id": "s5",
+            "narration": "Domenica mattina. Prima di rifare le valigie, salta fuori la notizia che hai ricevuto un’offerta di lavoro importante all’estero. Se accetti, da settembre questo gruppo non si vedrà più come prima.",
+            "bivio": {
+              "text": "Cosa metti al primo posto nella tua decisione?",
+              "optionA": "Parti: chi ti vuole bene ti sostiene anche da lontano.",
+              "optionB": "Resti o cerchi un compromesso: questa cerchia è casa tua.",
+              "complessita": "power",
+              "spuntiA": [
+                "Fermarti per paura di perdere il gruppo genera rimpianto",
+                "I legami veri sopravvivono alle distanze",
+                "La tua strada viene prima della comodità collettiva"
+              ],
+              "spuntiB": [
+                "Gli affetti costruiti in dieci anni non si ricostruiscono altrove",
+                "Il lavoro passa, le persone vere restano",
+                "Esistono sempre altre occasioni professionali qui"
+              ]
+            },
+            "consequenceA": "C’è malinconia nei loro occhi, ma capisci chi fa davvero il tifo per te anche quando costa la tua assenza.",
+            "consequenceB": "Senti il calore del gruppo intorno a te, insieme alla domanda silenziosa su cosa sarebbe successo se avessi osato."
+          },
+          {
+            "id": "s6",
+            "narration": "Siete in macchina sulla strada del ritorno. Il weekend sta finendo e sapete già che lunedì ognuno tornerà nel proprio vortice di lavoro, notifiche e routine.",
+            "bivio": {
+              "text": "Che patto proponi al gruppo prima di scendere dall’auto?",
+              "optionA": "Una regola nuova: meno serate automatiche, più momenti veri senza filtri.",
+              "optionB": "Nessuna promessa solenne: ci vogliamo bene così come siamo, imperfetti.",
+              "complessita": "power",
+              "spuntiA": [
+                "Senza intenzionalità anche i legami forti diventano abitudine",
+                "Dopo questo weekend non ha senso tornare alle vecchie maschere",
+                "Bastano poche regole chiare per restare vivi"
+              ],
+              "spuntiB": [
+                "Le promesse forzate creano solo senso di colpa",
+                "La forza dell’amicizia è proprio non doverla regolamentare",
+                "Quello che è cambiato dentro di voi lavorerà da solo"
+              ]
+            },
+            "consequenceA": "Fissate già sul momento la prossima data senza cellulari sul tavolo. Per la prima volta sembra una promessa reale.",
+            "consequenceB": "Vi salutate con un abbraccio lungo sul marciapiede, consapevoli che qualcosa sotto la superficie si è comunque mosso."
+          }
+        ]
+      }
+    ],
+    "epiloghi": [
+      {
+        "minA": 5,
+        "maxA": 6,
+        "text": "Avete scelto la verità scomoda quasi a ogni bivio. Il weekend ha lasciato qualche livido, ma ha tolto dieci anni di polvere: da domani questo gruppo non si regge più sull’abitudine, ma su una confidenza nuova."
+      },
+      {
+        "minA": 2,
+        "maxA": 4,
+        "text": "Avete dosato coraggio e delicatezza. Qualcosa è uscito allo scoperto, altro è rimasto protetto dal silenzio: siete tornati a casa più vicini, sapendo esattamente quali discorsi aspettano ancora il momento giusto."
+      },
+      {
+        "minA": 0,
+        "maxA": 1,
+        "text": "Avete protetto l’armonia del weekend sopra ogni cosa. Nessuno ha litigato, le foto sono venute benissimo — ma nel viaggio di ritorno resta la sensazione di aver rimandato ancora una volta i discorsi che contano davvero."
+      }
+    ]
   }
 ]

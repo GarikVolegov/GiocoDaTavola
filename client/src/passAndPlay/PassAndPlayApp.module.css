@@ -3,19 +3,19 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding:
-    max(var(--space-5), env(safe-area-inset-top, 0px))
+    max(var(--space-4), env(safe-area-inset-top, 0px))
     max(var(--space-4), env(safe-area-inset-right, 0px))
     max(var(--space-6), env(safe-area-inset-bottom, 0px))
     max(var(--space-4), env(safe-area-inset-left, 0px));
-  gap: var(--space-4);
+  gap: var(--space-3);
   position: relative;
   z-index: 1;
 }
 
 .topbar {
-  width: min(94vw, 32rem);
+  width: min(94vw, 56rem);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -27,7 +27,8 @@
   border: 1px solid var(--border);
   color: var(--text-muted);
   border-radius: var(--radius-pill, 999px);
-  padding: 0.4rem 0.85rem;
+  padding: 0.5rem 0.95rem;
+  min-height: 2.75rem;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -58,11 +59,95 @@
   align-items: stretch;
 }
 
+.setupCard {
+  width: min(94vw, 32rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  align-items: stretch;
+}
+
+.setupGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.setupCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+@media (min-width: 820px) {
+  .setupCard {
+    width: min(94vw, 56rem);
+  }
+
+  .setupGrid {
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 1.25rem;
+  }
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: var(--space-1);
+}
+
+.modeCell {
+  display: flex;
+  gap: 0.3rem;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.infoBtn {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.infoBtnActive {
+  border-color: var(--gold);
+  background: rgba(229, 193, 88, 0.16);
+  color: var(--gold);
+}
+
+.infoBox {
+  margin: 0.4rem 0 0;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.35;
+}
+
 .title {
   margin: 0;
-  font-size: clamp(1.35rem, 4vw, 1.75rem);
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 3.8vw, 1.7rem);
   font-weight: 800;
-  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-display, 0.03em);
+  line-height: 1.18;
   text-align: center;
 }
 
@@ -90,11 +175,11 @@
 }
 
 .modeBtn {
+  flex: 1;
+  min-height: 2.75rem;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.2rem;
-  padding: 0.7rem 0.75rem;
+  align-items: center;
+  padding: 0.55rem 0.75rem;
   border-radius: var(--radius-md, 10px);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
@@ -114,8 +199,11 @@
 }
 
 .modeBtnTitle {
-  font-weight: 700;
-  font-size: 0.9rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.88rem;
 }
 
 .modeBtnDesc {
@@ -186,8 +274,11 @@
 }
 
 .curtainName {
+  font-family: var(--font-display);
   font-size: clamp(1.6rem, 5vw, 2.2rem);
   font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-display, 0.03em);
   margin: 0;
   color: var(--gold);
 }

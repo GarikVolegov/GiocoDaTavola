@@ -15,7 +15,7 @@ import {
   type PlayerKnowGuessResultPayload,
   type PlayerGroupMindResultPayload,
 } from '../../shared/events';
-import { Card, Button, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel, PodiumPanel } from '../../shared/ui';
+import { Card, Button, DilemmaCard, SplitBar, ResultsPanel, RilancioCard, AwardsPanel, NamedMomentsPanel, PodiumPanel } from '../../shared/ui';
 import { computeRealWorldArchetype, type PlayerVoteStats } from '../../shared/realworld/archetypes';
 import { NORTHSTAR_URL } from '../../shared/northstar';
 import { pickIronicTitle, WRONG_PREDICTION_TITLES, WRONG_SWING_BET_TITLES, WRONG_KNOW_TITLES } from '../../shared/ironicTitles';
@@ -208,9 +208,9 @@ export default function StatusView({
             style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
           >
             <p style={{ fontSize: '2.6rem', margin: 0 }}>{game.storia.emoji}</p>
-            <p style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0 }}>{game.storia.title}</p>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-display, 0.03em)', margin: 0 }}>{game.storia.title}</p>
             <p style={{ fontSize: '0.9rem', opacity: 0.85, margin: 0 }}>con {game.storia.protagonist}</p>
-            <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'center' }}>
+            <p style={{ fontSize: '1.02rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-body)', textAlign: 'center' }}>
               {game.storia.premessa}
             </p>
             {speechButton}
@@ -232,7 +232,7 @@ export default function StatusView({
               Scena {game.storia.sceneIndex + 1} di {game.storia.totalScenes}
             </p>
             {game.storia.sceneNarration && (
-              <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'center' }}>
+              <p style={{ fontSize: '1.02rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-body)', textAlign: 'center' }}>
                 {game.storia.sceneNarration}
               </p>
             )}
@@ -247,12 +247,12 @@ export default function StatusView({
             style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
           >
             {game.storia.decision && (
-              <p style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>
+              <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.08rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-display, 0.03em)', margin: 0 }}>
                 Il gruppo ha scelto {game.storia.decision === 'A' ? '🔵 A' : '🟠 B'}
               </p>
             )}
             {game.storia.consequence && (
-              <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'center' }}>
+              <p style={{ fontSize: '1.02rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-body)', textAlign: 'center' }}>
                 {game.storia.consequence}
               </p>
             )}
@@ -267,9 +267,9 @@ export default function StatusView({
             style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
           >
             <p style={{ fontSize: '2.2rem', margin: 0 }}>🌅</p>
-            <p style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>Epilogo</p>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-display, 0.03em)', margin: 0 }}>Epilogo</p>
             {game.storia.epilogo && (
-              <p style={{ fontSize: '1.05rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)', textAlign: 'center' }}>
+              <p style={{ fontSize: '1.02rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-body)', textAlign: 'center' }}>
                 {game.storia.epilogo}
               </p>
             )}
@@ -325,6 +325,7 @@ export default function StatusView({
               </p>
             </Card>
           )}
+          <RilancioCard domanda={game?.dilemma?.domandaRilancio} />
           <p style={{ fontSize: '0.95rem', opacity: 0.7, margin: 0 }}>
             Niente dibattito — nuovo dilemma in arrivo…
           </p>
@@ -341,6 +342,7 @@ export default function StatusView({
           <>
             {game?.split && <SplitBar split={game.split} />}
             {game?.dilemma && <DilemmaCard dilemma={game.dilemma} />}
+            <RilancioCard domanda={game?.dilemma?.domandaRilancio} />
             <p style={{ fontSize: '0.95rem', opacity: 0.7, margin: 0 }}>
               Ecco come si è diviso il gruppo — ora si difende
             </p>

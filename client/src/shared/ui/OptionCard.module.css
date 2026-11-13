@@ -14,5 +14,11 @@
 .letter { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 800; }
 .a .letter { color: var(--faction-a); }
 .b .letter { color: var(--faction-b); }
-.label { font-size: var(--text-md); font-weight: 600; }
+.label {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-display, 0.03em);
+}
 @media (prefers-reduced-motion: reduce) { .option { transition: none; } }

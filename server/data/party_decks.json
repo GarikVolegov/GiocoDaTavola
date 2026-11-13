@@ -5,256 +5,1035 @@
       "text": "Controllare il telefono del partner mentre dorme: legittima difesa o psicopatia?",
       "optionA": "Legittima difesa",
       "optionB": "Psicopatia pura",
-      "spuntiA": ["Se non hai nulla da nascondere non hai paura", "Meglio scoprire subito che perdere anni"],
-      "spuntiB": ["Senza fiducia la relazione è già morta", "Violare la privacy è la vera red flag"]
+      "spuntiA": [
+        "Se non hai nulla da nascondere non hai paura",
+        "Meglio scoprire subito che perdere anni"
+      ],
+      "spuntiB": [
+        "Senza fiducia la relazione è già morta",
+        "Violare la privacy è la vera red flag"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl02",
       "text": "Meglio un amico che ti dice sempre sì o uno che ti insulta quando sbagli?",
       "optionA": "Sempre sì",
       "optionB": "Mi insulta in faccia",
-      "spuntiA": ["La sera voglio supporto, non un giudice", "Gli errori li capisco già da solo"],
-      "spuntiB": ["Chi ti asseconda ti fa fare figure di merda", "L'amico vero ti sveglia a schiaffi"]
+      "spuntiA": [
+        "La sera voglio supporto, non un giudice",
+        "Gli errori li capisco già da solo"
+      ],
+      "spuntiB": [
+        "Chi ti asseconda ti fa fare figure di merda",
+        "L'amico vero ti sveglia a schiaffi"
+      ],
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "fl03",
       "text": "Uscire con l'ex del tuo migliore amico dopo 2 anni: accettabile o tradimento?",
       "optionA": "Dopo 2 anni ci sta",
       "optionB": "Tradimento a vita",
-      "spuntiA": ["Dopo due anni ognuno ha diritto di rifarsi una vita", "L'ex non è una proprietà privata"],
-      "spuntiB": ["Il codice tra amici non ha scadenza", "Con milioni di persone proprio quella?"]
+      "spuntiA": [
+        "Dopo due anni ognuno ha diritto di rifarsi una vita",
+        "L'ex non è una proprietà privata"
+      ],
+      "spuntiB": [
+        "Il codice tra amici non ha scadenza",
+        "Con milioni di persone proprio quella?"
+      ],
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "fl04",
       "text": "Scopri che il partner del tuo amico lo tradisce: glielo dici o stai zitto?",
       "optionA": "Glielo dico subito",
       "optionB": "Fatti miei, taccio",
-      "spuntiA": ["Se non glielo dici sei complice", "Preferirei saperlo domani che tra due anni"],
-      "spuntiB": ["Alla fine fanno pace e odiano te", "Non sai mai i reali accordi tra loro"]
+      "spuntiA": [
+        "Se non glielo dici sei complice",
+        "Preferirei saperlo domani che tra due anni"
+      ],
+      "spuntiB": [
+        "Alla fine fanno pace e odiano te",
+        "Non sai mai i reali accordi tra loro"
+      ],
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "fl05",
       "text": "Condividere la posizione GPS h24 col partner: dolcezza o controllo tossico?",
       "optionA": "Comodo e trasparente",
       "optionB": "Tossicità pura",
-      "spuntiA": ["Serve per sicurezza quando si torna tardi", "Se non hai niente da nascondere che cambia?"],
-      "spuntiB": ["Non sono un pacco Amazon da tracciare", "Ammazza ogni briciolo di mistero"]
+      "spuntiA": [
+        "Serve per sicurezza quando si torna tardi",
+        "Se non hai niente da nascondere che cambia?"
+      ],
+      "spuntiB": [
+        "Non sono un pacco Amazon da tracciare",
+        "Ammazza ogni briciolo di mistero"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl06",
       "text": "Ghostare qualcuno dopo 3 uscite andate male: diritto legittimo o mossa da infami?",
       "optionA": "Ci sta, zero sbatti",
       "optionB": "Da vigliacchi totali",
-      "spuntiA": ["Il silenzio è già una risposta chiarissima", "Meglio sparire che scrivere il solito papiro finto"],
-      "spuntiB": ["Bastano due righe di educazione", "Fai impazzire l'altra persona per pigrizia"]
+      "spuntiA": [
+        "Il silenzio è già una risposta chiarissima",
+        "Meglio sparire che scrivere il solito papiro finto"
+      ],
+      "spuntiB": [
+        "Bastano due righe di educazione",
+        "Fai impazzire l'altra persona per pigrizia"
+      ],
+      "familiarita": "nuove_conoscenze"
     },
     {
       "id": "fl07",
       "text": "Mettere like alla foto in costume dell'ex mentre sei fidanzato:",
       "optionA": "Like innocuo",
       "optionB": "Mancanza di rispetto",
-      "spuntiA": ["È solo un doppio tap su Instagram, calmati", "Non significa voler tornare insieme"],
-      "spuntiB": ["Lo fai apposta per farti notare", "Se lo facesse il tuo partner impazziresti"]
+      "spuntiA": [
+        "È solo un doppio tap su Instagram, calmati",
+        "Non significa voler tornare insieme"
+      ],
+      "spuntiB": [
+        "Lo fai apposta per farti notare",
+        "Se lo facesse il tuo partner impazziresti"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl08",
       "text": "Trovi 200€ per terra al bar davanti a te: li tieni o chiedi di chi sono?",
       "optionA": "Me li intasco subito",
       "optionB": "Chiedo al barista",
-      "spuntiA": ["Chi li ha persi non li rivede comunque", "Il barista se li terrebbe lui"],
-      "spuntiB": ["Magari erano i soldi dell'affitto di qualcuno", "Non voglio soldi sporchi di sfiga"]
+      "spuntiA": [
+        "Chi li ha persi non li rivede comunque",
+        "Il barista se li terrebbe lui"
+      ],
+      "spuntiB": [
+        "Magari erano i soldi dell'affitto di qualcuno",
+        "Non voglio soldi sporchi di sfiga"
+      ],
+      "familiarita": "nuove_conoscenze"
     },
     {
       "id": "fl09",
       "text": "Preferisci che tutti leggano le tue Note o sentano i tuoi ultimi 5 vocali?",
       "optionA": "Leggano le Note",
       "optionB": "Sentano i vocali",
-      "spuntiA": ["Nelle note ho solo liste della spesa e password", "I vocali alle 3 di notte sono incriminanti"],
-      "spuntiB": ["Nelle note ci sono i segreti più oscuri", "Nei vocali al massimo sparlo un po'"]
+      "spuntiA": [
+        "Nelle note ho solo liste della spesa e password",
+        "I vocali alle 3 di notte sono incriminanti"
+      ],
+      "spuntiB": [
+        "Nelle note ci sono i segreti più oscuri",
+        "Nei vocali al massimo sparlo un po'"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl10",
       "text": "Rimanere migliori amici col proprio ex storico: maturità o bomba a orologeria?",
       "optionA": "Grande maturità",
       "optionB": "Bomba a orologeria",
-      "spuntiA": ["Se è finita bene perché buttare il rapporto?", "Non tutti gli ex finiscono a coltellate"],
-      "spuntiB": ["Uno dei due spera sempre nel ritorno", "Il nuovo partner scapperà a gambe levate"]
+      "spuntiA": [
+        "Se è finita bene perché buttare il rapporto?",
+        "Non tutti gli ex finiscono a coltellate"
+      ],
+      "spuntiB": [
+        "Uno dei due spera sempre nel ritorno",
+        "Il nuovo partner scapperà a gambe levate"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl11",
       "text": "Al primo appuntamento si divide sempre alla romana o paga chi ha invitato?",
       "optionA": "Sempre 50 e 50",
       "optionB": "Paga chi invita",
-      "spuntiA": ["Parità vera fin dal giorno uno", "Così nessuno si sente in debito"],
-      "spuntiB": ["Se inviti tu fai il gesto elegante", "Dividere al centesimo ammazza il romanticismo"]
+      "spuntiA": [
+        "Parità vera fin dal giorno uno",
+        "Così nessuno si sente in debito"
+      ],
+      "spuntiB": [
+        "Se inviti tu fai il gesto elegante",
+        "Dividere al centesimo ammazza il romanticismo"
+      ],
+      "familiarita": "nuove_conoscenze"
     },
     {
       "id": "fl12",
       "text": "Un amico ti chiede 100€ e dopo due mesi non ne parla: glieli chiedi?",
       "optionA": "Glieli chiedo secco",
       "optionB": "Lascio perdere per imbarazzo",
-      "spuntiA": ["Sono soldi miei e li ho guadagnati io", "Chi fa finta di nulla ci prova"],
-      "spuntiB": ["Non rovino un'amicizia per cento euro", "Li considero un test gratis sulla persona"]
+      "spuntiA": [
+        "Sono soldi miei e li ho guadagnati io",
+        "Chi fa finta di nulla ci prova"
+      ],
+      "spuntiB": [
+        "Non rovino un'amicizia per cento euro",
+        "Li considero un test gratis sulla persona"
+      ],
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "fl13",
       "text": "Dire a un amico che il suo nuovo partner è insopportabile: glielo dici?",
       "optionA": "Glielo dico chiaro",
       "optionB": "Fingo che mi piaccia",
-      "spuntiA": ["Prima o poi si lasciano e te ne sarà grato", "Non posso fingere per mesi"],
-      "spuntiB": ["Si incazzerà con te e ti taglierà fuori", "Tanto innamorato non ti ascolta comunque"]
+      "spuntiA": [
+        "Prima o poi si lasciano e te ne sarà grato",
+        "Non posso fingere per mesi"
+      ],
+      "spuntiB": [
+        "Si incazzerà con te e ti taglierà fuori",
+        "Tanto innamorato non ti ascolta comunque"
+      ],
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "fl14",
       "text": "Disdire un'uscita 20 minuti prima inventando un finto mal di pancia:",
       "optionA": "Lo faccio spesso",
       "optionB": "Mai, è irrispettoso",
-      "spuntiA": ["Quando finisce la batteria sociale non si forza", "Meglio a casa che musone al tavolo"],
-      "spuntiB": ["La gente ha organizzato la serata attorno a te", "Dì la verità invece di fare il malato"]
+      "spuntiA": [
+        "Quando finisce la batteria sociale non si forza",
+        "Meglio a casa che musone al tavolo"
+      ],
+      "spuntiB": [
+        "La gente ha organizzato la serata attorno a te",
+        "Dì la verità invece di fare il malato"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl15",
       "text": "Guardare le storie di chi odi usando un profilo fake: normale o ossessione?",
       "optionA": "Lo facciamo tutti",
       "optionB": "Psicosi totale",
-      "spuntiA": ["La curiosità è umana e gratis", "Serve solo a farsi due risate in chat"],
-      "spuntiB": ["Dedicare tempo a chi odi è patetico", "Se hai un profilo fake sei già perso"]
+      "spuntiA": [
+        "La curiosità è umana e gratis",
+        "Serve solo a farsi due risate in chat"
+      ],
+      "spuntiB": [
+        "Dedicare tempo a chi odi è patetico",
+        "Se hai un profilo fake sei già perso"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl16",
       "text": "Una notte di fuoco con il/la tuo/a ex migliore amico/a: segreto per sempre o confessione?",
       "optionA": "Nella tomba con me",
       "optionB": "Confesso subito",
-      "spuntiA": ["Confessare serve solo a pulirsi la coscienza facendo male", "Quello che non sai non fa male"],
-      "spuntiB": ["Le bugie escono sempre al peggior momento", "Il rispetto vale più della codardia"]
+      "spuntiA": [
+        "Confessare serve solo a pulirsi la coscienza facendo male",
+        "Quello che non sai non fa male"
+      ],
+      "spuntiB": [
+        "Le bugie escono sempre al peggior momento",
+        "Il rispetto vale più della codardia"
+      ],
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "fl17",
       "text": "Meglio un partner ricchissimo ma noioso a letto o squattrinato ma fenomenale?",
       "optionA": "Ricco e noioso",
       "optionB": "Povero ma fenomenale",
-      "spuntiA": ["I soldi risolvono il 90% dello stress", "A letto si può sempre migliorare"],
-      "spuntiB": ["La noia ti porta a tradire in sei mesi", "La chimica non la compri col bonifico"]
+      "spuntiA": [
+        "I soldi risolvono il 90% dello stress",
+        "A letto si può sempre migliorare"
+      ],
+      "spuntiB": [
+        "La noia ti porta a tradire in sei mesi",
+        "La chimica non la compri col bonifico"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl18",
       "text": "In vacanza di gruppo: chi ordina solo insalata deve pagare quanto chi prende bistecca e vino?",
       "optionA": "Si divide tutto uguale",
       "optionB": "Ognuno paga il suo",
-      "spuntiA": ["Fare i conti con la calcolatrice rovina la serata", "Oggi tocca a te, domani a me"],
-      "spuntiB": ["Non pago il tuo filetto da 40 euro", "Ognuno è responsabile di quello che ordina"]
+      "spuntiA": [
+        "Fare i conti con la calcolatrice rovina la serata",
+        "Oggi tocca a te, domani a me"
+      ],
+      "spuntiB": [
+        "Non pago il tuo filetto da 40 euro",
+        "Ognuno è responsabile di quello che ordina"
+      ],
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "fl19",
       "text": "Mantenere le foto col proprio ex archiviate su Instagram invece di cancellarle:",
       "optionA": "Normalissimo, è il passato",
       "optionB": "Red flag gigante",
-      "spuntiA": ["Non puoi cancellare anni della tua vita", "L'importante è che siano archiviate"],
-      "spuntiB": ["Se le tieni lì ti manca ancora", "Il nuovo partner non merita fantasmi"]
+      "spuntiA": [
+        "Non puoi cancellare anni della tua vita",
+        "L'importante è che siano archiviate"
+      ],
+      "spuntiB": [
+        "Se le tieni lì ti manca ancora",
+        "Il nuovo partner non merita fantasmi"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl20",
       "text": "Un amico fa una battuta pessima in compagnia: ridi per pietà o lo lasci nel gelo?",
       "optionA": "Rido per pietà",
       "optionB": "Gelo totale",
-      "spuntiA": ["Salvarlo dall'imbarazzo è vera amicizia", "Una risata finta non costa nulla"],
-      "spuntiB": ["Se non soffre non impara mai", "Il gelo fa più ridere della battuta"]
+      "spuntiA": [
+        "Salvarlo dall'imbarazzo è vera amicizia",
+        "Una risata finta non costa nulla"
+      ],
+      "spuntiB": [
+        "Se non soffre non impara mai",
+        "Il gelo fa più ridere della battuta"
+      ],
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "fl21",
       "text": "Sposarsi a 25 anni: coraggio romantico o follia totale?",
       "optionA": "Bellissimo se è vero",
       "optionB": "Follia prematura",
-      "spuntiA": ["Se trovi la persona giusta perché aspettare?", "Costruire tutto da giovani è magico"],
-      "spuntiB": ["A 25 anni non sai neanche chi sei", "Il divorzio prima dei 30 è dietro l'angolo"]
+      "spuntiA": [
+        "Se trovi la persona giusta perché aspettare?",
+        "Costruire tutto da giovani è magico"
+      ],
+      "spuntiB": [
+        "A 25 anni non sai neanche chi sei",
+        "Il divorzio prima dei 30 è dietro l'angolo"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl22",
       "text": "In discoteca alle 3: tornare a casa a piedi da soli o dormire da uno sconosciuto?",
       "optionA": "A piedi alle 3",
       "optionB": "Da uno sconosciuto",
-      "spuntiA": ["Almeno dormo vivo nel mio letto", "Due passi fanno passare anche la sbronza"],
-      "spuntiB": ["È così che nascono le storie migliori", "La mattina dopo hai una colazione gratis"]
+      "spuntiA": [
+        "Almeno dormo vivo nel mio letto",
+        "Due passi fanno passare anche la sbronza"
+      ],
+      "spuntiB": [
+        "È così che nascono le storie migliori",
+        "La mattina dopo hai una colazione gratis"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl23",
       "text": "Seguire i consigli amorosi dell'amico single cronico o dell'amico tossico fidanzato da 5 anni?",
       "optionA": "L'amico single",
       "optionB": "L'amico fidanzato tossico",
-      "spuntiA": ["Almeno vede le red flag da fuori", "Non è intrappolato nella sua stessa gabbia"],
-      "spuntiB": ["Sa come sopravvivere a qualunque tempesta", "Il single vuole solo compagnia al bar"]
+      "spuntiA": [
+        "Almeno vede le red flag da fuori",
+        "Non è intrappolato nella sua stessa gabbia"
+      ],
+      "spuntiB": [
+        "Sa come sopravvivere a qualunque tempesta",
+        "Il single vuole solo compagnia al bar"
+      ],
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "fl24",
       "text": "Cancellare subito una chat su WhatsApp prima che il partner la veda: è già tradimento?",
       "optionA": "Sì, è tradimento",
       "optionB": "No, è pace mentale",
-      "spuntiA": ["Se cancelli sai di essere in torto", "Nascondere è uguale a mentire"],
-      "spuntiB": ["Eviti scenate inutili per messaggi innocenti", "La privacy vale anche in coppia"]
+      "spuntiA": [
+        "Se cancelli sai di essere in torto",
+        "Nascondere è uguale a mentire"
+      ],
+      "spuntiB": [
+        "Eviti scenate inutili per messaggi innocenti",
+        "La privacy vale anche in coppia"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl25",
       "text": "Mandare un messaggio all'ex alle 2 di notte da ubriaco: perdonabile o da bloccare subito?",
       "optionA": "Succede ai migliori",
       "optionB": "Da bloccare a vita",
-      "spuntiA": ["L'alcol parla al posto del cuore", "Domani mattina ci si pente e si ride"],
-      "spuntiB": ["Zero dignità personale", "Stai solo nutrendo il suo ego"]
+      "spuntiA": [
+        "L'alcol parla al posto del cuore",
+        "Domani mattina ci si pente e si ride"
+      ],
+      "spuntiB": [
+        "Zero dignità personale",
+        "Stai solo nutrendo il suo ego"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl26",
       "text": "Avere un gruppo WhatsApp segreto con gli amici per sparlare di un altro del gruppo:",
       "optionA": "Tutti ne abbiamo uno",
       "optionB": "Infamata imperdonabile",
-      "spuntiA": ["Serve per sfogarsi senza ferire nessuno", "È una valvola di sfogo naturale"],
-      "spuntiB": ["Se c'è un gruppo su di lui, ce n'è uno su di te", "Falsità pura allo stato brado"]
+      "spuntiA": [
+        "Serve per sfogarsi senza ferire nessuno",
+        "È una valvola di sfogo naturale"
+      ],
+      "spuntiB": [
+        "Se c'è un gruppo su di lui, ce n'è uno su di te",
+        "Falsità pura allo stato brado"
+      ],
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "fl27",
       "text": "Accettare 10.000€ per non usare mai più i social per 3 anni:",
       "optionA": "Accetto adesso",
       "optionB": "Troppo pochi soldi",
-      "spuntiA": ["Vivo meglio e pago le vacanze", "Instagram mi ruba già la vita gratis"],
-      "spuntiB": ["Diecimila euro finiscono in pochi mesi", "Senza social oggi sei tagliato fuori dal mondo"]
+      "spuntiA": [
+        "Vivo meglio e pago le vacanze",
+        "Instagram mi ruba già la vita gratis"
+      ],
+      "spuntiB": [
+        "Diecimila euro finiscono in pochi mesi",
+        "Senza social oggi sei tagliato fuori dal mondo"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl28",
       "text": "Fare pipì sotto la doccia: cosa che fanno tutti o schifezza inaccettabile?",
       "optionA": "Lo fanno tutti",
       "optionB": "Schifezza totale",
-      "spuntiA": ["Ci sono due tipi di persone: chi lo fa e chi mente", "Risparmi acqua e tempo"],
-      "spuntiB": ["Ci lavi i piedi lì sopra, dai", "Il water sta letteralmente a un metro"]
+      "spuntiA": [
+        "Ci sono due tipi di persone: chi lo fa e chi mente",
+        "Risparmi acqua e tempo"
+      ],
+      "spuntiB": [
+        "Ci lavi i piedi lì sopra, dai",
+        "Il water sta letteralmente a un metro"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl29",
       "text": "Se il tuo migliore amico ti ruba la persona che ti piace durante una serata:",
       "optionA": "Chiuso per sempre",
       "optionB": "Se non stavamo insieme ci sta",
-      "spuntiA": ["Lealtà zero, non è un amico", "C'è un codice non scritto da rispettare"],
-      "spuntiB": ["Non era tua proprietà", "Se ha scelto lui non era destino"]
+      "spuntiA": [
+        "Lealtà zero, non è un amico",
+        "C'è un codice non scritto da rispettare"
+      ],
+      "spuntiB": [
+        "Non era tua proprietà",
+        "Se ha scelto lui non era destino"
+      ],
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "fl30",
       "text": "Mentire sul proprio passato amoroso per non spaventare chi frequenti ora:",
       "optionA": "Meglio filtrare",
       "optionB": "Sempre verità totale",
-      "spuntiA": ["I dettagli del passato non servono a nessuno", "Ognuno ha diritto a un nuovo inizio"],
-      "spuntiB": ["Le bugie hanno le gambe corte", "Se ti accetta solo finto non ti vuole davvero"]
+      "spuntiA": [
+        "I dettagli del passato non servono a nessuno",
+        "Ognuno ha diritto a un nuovo inizio"
+      ],
+      "spuntiB": [
+        "Le bugie hanno le gambe corte",
+        "Se ti accetta solo finto non ti vuole davvero"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl31",
       "text": "Preferisci fare una figura di merda epica davanti al tuo capo o davanti ai genitori del partner?",
       "optionA": "Davanti al capo",
       "optionB": "Davanti ai suoceri",
-      "spuntiA": ["Il lavoro lo cambi, i suoceri restano anni", "Il capo apprezza l'umanità dopo un po'"],
-      "spuntiB": ["I suoceri ti perdonano per amore del figlio", "Il capo decide il tuo stipendio"]
+      "spuntiA": [
+        "Il lavoro lo cambi, i suoceri restano anni",
+        "Il capo apprezza l'umanità dopo un po'"
+      ],
+      "spuntiB": [
+        "I suoceri ti perdonano per amore del figlio",
+        "Il capo decide il tuo stipendio"
+      ],
+      "familiarita": "tutti"
     },
     {
       "id": "fl32",
       "text": "Fingere di aver letto un messaggio importante solo dalle notifiche per non rispondere:",
       "optionA": "Arte quotidiana",
       "optionB": "Ansia inutile, rispondo",
-      "spuntiA": ["Salva da conversazioni infinite che non vuoi fare", "Ho diritto al mio tempo"],
-      "spuntiB": ["Lasciare in sospeso crea solo più ansia", "Rispondi due parole e chiudi la pratica"]
+      "spuntiA": [
+        "Salva da conversazioni infinite che non vuoi fare",
+        "Ho diritto al mio tempo"
+      ],
+      "spuntiB": [
+        "Lasciare in sospeso crea solo più ansia",
+        "Rispondi due parole e chiudi la pratica"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl33",
+      "text": "Prendere una multa al posto di un amico che rischia la patente?",
+      "optionA": "Lo copro subito",
+      "optionB": "Ognuno paga i suoi casini",
+      "spuntiA": [
+        "L’amicizia vera si vede nei guai",
+        "I punti patente si recuperano"
+      ],
+      "spuntiB": [
+        "Non mi prendo punti sulla patente per nessuno",
+        "Così impara a guidare piano"
+      ],
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "fl34",
+      "text": "Tornare con un/una ex che ti ha fatto soffrire ma con cui c’era chimica pazzesca?",
+      "optionA": "Ci ricasco",
+      "optionB": "Mai più",
+      "spuntiA": [
+        "La chimica vera è rarissima",
+        "La gente cambia, a volte"
+      ],
+      "spuntiB": [
+        "È come rileggere un libro di cui sai già il finale",
+        "Il passato resta passato"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl35",
+      "text": "Avere 1 milione di euro subito ma non poter mai più lasciare l’Italia?",
+      "optionA": "Accetto i soldi",
+      "optionB": "Voglio la libertà di viaggiare",
+      "spuntiA": [
+        "Con 1 milione vivi da re in Italia",
+        "Abbiamo già mare, montagna e cibo top"
+      ],
+      "spuntiB": [
+        "Il mondo è troppo grande per chiudersi dentro",
+        "La libertà non ha prezzo"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl36",
+      "text": "Sapere sempre quando qualcuno ti sta mentendo, anche chi ami?",
+      "optionA": "Voglio la verità sempre",
+      "optionB": "Meglio non saperlo",
+      "spuntiA": [
+        "Nessuno ti prende più in giro",
+        "Sai subito di chi fidarti"
+      ],
+      "spuntiB": [
+        "Scopriresti quante bugie bianche ti tengono in piedi",
+        "Diventeresti paranoico"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl37",
+      "text": "Mangiare solo pizza per tutta la vita o non poterla mangiare mai più?",
+      "optionA": "Solo pizza per sempre",
+      "optionB": "Addio pizza per sempre",
+      "spuntiA": [
+        "La pizza è infinita con mille condimenti",
+        "Non rinuncio alla margherita"
+      ],
+      "spuntiB": [
+        "Dopo un mese la odieresti",
+        "Ci sono mille altri piatti incredibili"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl38",
+      "text": "Scoprire che il tuo capo guadagna 10x te facendo la metà?",
+      "optionA": "Chiedo aumento o me ne vado",
+      "optionB": "Fa parte del gioco",
+      "spuntiA": [
+        "Il valore va pagato",
+        "Restare sarebbe umiliante"
+      ],
+      "spuntiB": [
+        "Lui si prende il rischio d’impresa",
+        "Pensa al tuo percorso, non al suo"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl39",
+      "text": "Un anno intero senza sesso o un anno intero senza telefono?",
+      "optionA": "Senza sesso",
+      "optionB": "Senza telefono",
+      "spuntiA": [
+        "Senza telefono oggi non lavori e non vivi",
+        "Un anno passa in fretta"
+      ],
+      "spuntiB": [
+        "Senza telefono torni a vivere davvero",
+        "Basta un PC e si sopravvive"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl40",
+      "text": "Essere il più brutto di un gruppo di geni o il più bello di un gruppo di idioti?",
+      "optionA": "Brutto tra geni",
+      "optionB": "Bello tra idioti",
+      "spuntiA": [
+        "L’intelligenza ti porta ovunque",
+        "Tra geni cresci ogni giorno"
+      ],
+      "spuntiB": [
+        "Con gli idioti almeno ti rilassi e ridi",
+        "L’estetica apre porte facili"
+      ],
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "fl41",
+      "text": "Vedere tutti i messaggi cancellati su WhatsApp di chiunque o cancellare un tuo errore dal passato?",
+      "optionA": "Leggere i messaggi cancellati",
+      "optionB": "Cancellare un mio errore",
+      "spuntiA": [
+        "Il gossip è potere",
+        "Sveleresti tutti gli altarini"
+      ],
+      "spuntiB": [
+        "Un rimorso tolto vale oro",
+        "Guardare i segreti altrui porta solo guai"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl42",
+      "text": "Essere sempre 15 minuti in ritardo o sempre 45 minuti in anticipo?",
+      "optionA": "15 min in ritardo",
+      "optionB": "45 min in anticipo",
+      "spuntiA": [
+        "15 minuti è il quarto d’ora accademico",
+        "Non perdi tempo ad aspettare"
+      ],
+      "spuntiB": [
+        "La puntualità è rispetto puro",
+        "Nel frattempo leggi o lavori"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl43",
+      "text": "Rinunciare al caffè per sempre o rinunciare all’alcol per sempre?",
+      "optionA": "Addio caffè",
+      "optionB": "Addio alcol",
+      "spuntiA": [
+        "Le serate senza alcol non sono uguali",
+        "Esiste il tè"
+      ],
+      "spuntiB": [
+        "Senza caffè non apro gli occhi alle 8",
+        "L’alcol fa solo venire mal di testa"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl44",
+      "text": "Lavorare 4 giorni da 10 ore o 5 giorni da 8 ore?",
+      "optionA": "4×10 (weekend lungo)",
+      "optionB": "5×8 (ritmo regolare)",
+      "spuntiA": [
+        "Tre giorni liberi a settimana cambiano la vita",
+        "Due ore in più al giorno non si sentono"
+      ],
+      "spuntiB": [
+        "Dopo 8 ore il cervello è già fritto",
+        "Meglio avere le sere libere"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl45",
+      "text": "Ricevere 5.000€ al mese senza fare nulla, ma non poter mai lavorare o creare progetti?",
+      "optionA": "Accetto la rendita",
+      "optionB": "No, voglio poter costruire",
+      "spuntiA": [
+        "Viaggio, leggo, vivo di passioni",
+        "Lavorare è sopravvalutato"
+      ],
+      "spuntiB": [
+        "Senza uno scopo impazzisci dopo 2 anni",
+        "La soddisfazione personale non si compra"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl46",
+      "text": "Dire sempre esattamente quello che pensi ad alta voce per 24 ore?",
+      "optionA": "Sarebbe liberatorio",
+      "optionB": "Finirei senza amici né lavoro",
+      "spuntiA": [
+        "Finalmente zero ipocrisia",
+        "Sopravvivi e resti con chi ti ama davvero"
+      ],
+      "spuntiB": [
+        "Il filtro sociale esiste per un motivo",
+        "In un giorno bruci anni di diplomazia"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl47",
+      "text": "Vivere in una casa meravigliosa in un posto noioso o in un monolocale nel centro di una metropoli?",
+      "optionA": "Villa nel nulla",
+      "optionB": "Monolocale in centro",
+      "spuntiA": [
+        "Lo spazio e la pace mentale valgono tutto",
+        "Gli amici li ospiti tu"
+      ],
+      "spuntiB": [
+        "La città è energia, opportunità, vita",
+        "In casa ci dormi soltanto"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl48",
+      "text": "Scoprire che un tuo caro amico parla male di te alle spalle: lo affronti o sparisci?",
+      "optionA": "Lo affronto subito",
+      "optionB": "Sparisco in silenzio",
+      "spuntiA": [
+        "Merito un confronto diretto",
+        "Così capisco se è un malinteso"
+      ],
+      "spuntiB": [
+        "Chi tradisce non merita neanche una spiegazione",
+        "Zero drammi inutili"
+      ],
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "fl49",
+      "text": "Avere il tasto \"Muto\" nella vita reale o il tasto \"Skip\" di 10 secondi?",
+      "optionA": "Tasto Muto",
+      "optionB": "Skip 10 secondi",
+      "spuntiA": [
+        "Silenzio istantaneo su chi parla a vuoto",
+        "Pace assoluta quando vuoi"
+      ],
+      "spuntiB": [
+        "Salti le code e i discorsi imbarazzanti",
+        "Il tempo è la risorsa più preziosa"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl50",
+      "text": "Preferisci un partner super ambizioso ma sempre occupato o super presente ma senza ambizioni?",
+      "optionA": "Ambizioso e occupato",
+      "optionB": "Presente e rilassato",
+      "spuntiA": [
+        "L’ambizione è attraente e stimolante",
+        "Crescete insieme verso grandi obiettivi"
+      ],
+      "spuntiB": [
+        "Che te ne fai di un partner che non vedi mai?",
+        "La qualità del tempo insieme è tutto"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl51",
+      "text": "Accetti di non poter mai più ascoltare musica per avere sempre il volo gratis ovunque?",
+      "optionA": "Addio musica, ciao mondo",
+      "optionB": "Mai senza musica",
+      "spuntiA": [
+        "Viaggiare gratis ti apre l’universo",
+        "Ci sono i podcast e i suoni reali"
+      ],
+      "spuntiB": [
+        "Un viaggio senza musica è a metà",
+        "La musica è ossigeno emotivo"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl52",
+      "text": "Diventare famoso per una figuraccia virale con 100.000€ di sponsor o restare anonimo?",
+      "optionA": "Prendo i 100k e rido",
+      "optionB": "La dignità non si vende",
+      "spuntiA": [
+        "Tra 6 mesi internet si dimentica tutto, i soldi restano",
+        "Autoironia vince sempre"
+      ],
+      "spuntiB": [
+        "Quel video ti seguirà ai colloqui per anni",
+        "La reputazione vale di più"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl53",
+      "text": "Preferisci sapere cosa pensano davvero i tuoi amici di te quando non ci sei?",
+      "optionA": "Sì, voglio saperlo",
+      "optionB": "Assolutamente no",
+      "spuntiA": [
+        "Sai finalmente chi è leale davvero",
+        "Meglio un’amara verità"
+      ],
+      "spuntiB": [
+        "Anche chi ti ama a volte si sfoga",
+        "Rovineresti rapporti per frasi dette a caldo"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl54",
+      "text": "Avere 10 amici superficiali per uscire sempre o 1 solo amico vero ma che vive a 1.000 km?",
+      "optionA": "10 amici vicini",
+      "optionB": "1 amico vero lontano",
+      "spuntiA": [
+        "La solitudine del sabato sera pesa",
+        "La compagnia leggera fa bene"
+      ],
+      "spuntiB": [
+        "La qualità batte sempre la quantità",
+        "Un amico vero c’è anche a distanza"
+      ],
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "fl55",
+      "text": "Se potessi vedere il timer della tua relazione attuale (quanto durerà), lo guarderesti?",
+      "optionA": "Sì, lo guarderei",
+      "optionB": "Mai nella vita",
+      "spuntiA": [
+        "Non sprechi anni se è destinata a finire",
+        "Se dura per sempre ti rilassi"
+      ],
+      "spuntiB": [
+        "Ti rovini il presente aspettando la fine",
+        "L’amore si vive senza spoiler"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl56",
+      "text": "Meglio vincere alla lotteria a 65 anni o avere una vita agiata e serena dai 25 in poi?",
+      "optionA": "Agiata dai 25 anni",
+      "optionB": "Milionario a 65",
+      "spuntiA": [
+        "A 25-40 anni hai l’energia per goderti tutto",
+        "La giovinezza non si ricompra"
+      ],
+      "spuntiB": [
+        "L’attesa di un finale leggendario",
+        "Puoi sistemare figli e nipoti"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl57",
+      "text": "Per salvare un progetto di squadra, prendi il merito di un collega che è stato pigro?",
+      "optionA": "Sì, me lo prendo io",
+      "optionB": "No, dico la verità",
+      "spuntiA": [
+        "Chi lavora davvero merita i meriti",
+        "Così impari a non farti sfruttare"
+      ],
+      "spuntiB": [
+        "I panni sporchi si lavano in privato",
+        "Rischi di passare per spione"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl58",
+      "text": "Preferisci dover dire sempre \"Sì\" per una settimana o sempre \"No\" per un mese?",
+      "optionA": "Sì per 1 settimana",
+      "optionB": "No per 1 mese",
+      "spuntiA": [
+        "Chissà in quali avventure finisci!",
+        "Una settimana passa veloce"
+      ],
+      "spuntiB": [
+        "Dire No è l’arte più liberatoria del mondo",
+        "Un mese di pace totale"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "fl59",
+      "text": "Mangeresti un piatto cucinato dal peggior cuoco del gruppo qui presente ogni giorno per 1 settimana per 1.000€?",
+      "optionA": "Accetto i 1.000€",
+      "optionB": "Ci tengo al mio stomaco",
+      "spuntiA": [
+        "Per 1.000€ si manda giù tutto con un po’ di limone",
+        "È solo una settimana"
+      ],
+      "spuntiB": [
+        "La salute non ha prezzo",
+        "Finisci al pronto soccorso"
+      ],
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "fl60",
+      "text": "In un’emergenza, preferisci avere al fianco l’amico più cinico e lucido o quello più empatico?",
+      "optionA": "Cinico e lucido",
+      "optionB": "Empatico e caldo",
+      "spuntiA": [
+        "Nel panico serve chi risolve, non chi piange",
+        "La freddezza salva la situazione"
+      ],
+      "spuntiB": [
+        "L’umanità ti tiene in piedi nei momenti bui",
+        "Un robot non ti consola"
+      ],
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "fl_va01",
+      "text": "Un amico del gruppo sparisce ogni volta che si fidanza: quando torna single lo riaccogli subito o glielo fai pesare?",
+      "optionA": "Lo riaccoglio: in amore si perde la testa",
+      "optionB": "Glielo faccio pesare: non siamo un parcheggio",
+      "familiarita": "vecchi_amici",
+      "spuntiA": [
+        "Tutti prima o poi abbiamo fatto lo stesso errore",
+        "Tenere il broncio serve solo a perdere un amico"
+      ],
+      "spuntiB": [
+        "Chi ti cancella quando è felice non ti rispetta",
+        "Serve almeno una scusa sincera"
+      ]
+    },
+    {
+      "id": "fl_va02",
+      "text": "Nel gruppo c’è una verità scomoda che tutti sanno ma nessuno dice: è protezione o ipocrisia?",
+      "optionA": "Protezione affettuosa",
+      "optionB": "Ipocrisia comoda",
+      "familiarita": "vecchi_amici",
+      "spuntiA": [
+        "Non tutto va detto per forza se ferisce",
+        "A volte il silenzio tiene unito il gruppo"
+      ],
+      "spuntiB": [
+        "I veri amici non ti lasciano vivere in una bugia",
+        "Parlarne alle spalle è peggio che dirlo in faccia"
+      ]
+    },
+    {
+      "id": "fl_va03",
+      "text": "Un amico storico ti chiede un favore professionale gratis: glielo fai o ti fai pagare il giusto?",
+      "optionA": "Gratis, tra noi non si fa così",
+      "optionB": "Prezzo amico ma si paga",
+      "familiarita": "vecchi_amici",
+      "spuntiA": [
+        "Oggi aiuto io lui, domani aiuta lui me",
+        "Mettere i soldi in mezzo rovina tutto"
+      ],
+      "spuntiB": [
+        "Un vero amico è il primo a voler valorizzare il tuo lavoro",
+        "Il gratis poi genera pretese"
+      ]
+    },
+    {
+      "id": "fl_va04",
+      "text": "Tra vecchi amici ci si perdona più facilmente una grossa mancanza o si diventa più suscettibili col tempo?",
+      "optionA": "Si perdona di più: la storia pesa",
+      "optionB": "Pesa di più: da te non me l’aspetto",
+      "familiarita": "vecchi_amici",
+      "spuntiA": [
+        "Dopo anni insieme conosci i difetti dell’altro",
+        "Non butti via un legame lungo per uno scivolone"
+      ],
+      "spuntiB": [
+        "Proprio perché ci conosciamo, certi errori non hanno scuse",
+        "La confidenza non è licenza di ferire"
+      ]
+    },
+    {
+      "id": "fl_va05",
+      "text": "Conosci il gruppo da anni, ma senti che su certe cose intime preferisci aprirti con uno sconosciuto: normale o triste?",
+      "optionA": "Normalissimo",
+      "optionB": "Un po’ triste",
+      "familiarita": "vecchi_amici",
+      "spuntiA": [
+        "Con gli amici hai già un ruolo fisso e paura del giudizio",
+        "Uno sconosciuto non ti rinfaccia nulla"
+      ],
+      "spuntiB": [
+        "Se non puoi essere te stesso coi tuoi amici, con chi?",
+        "Significa che manca vera confidenza"
+      ]
+    },
+    {
+      "id": "fl_va06",
+      "text": "Quando uno del gruppo cambia lavoro o città e migliora di colpo, siamo felici al 100% o un po’ rosichiamo?",
+      "optionA": "Felici e basta",
+      "optionB": "Un filo si rosica sempre",
+      "familiarita": "vecchi_amici",
+      "spuntiA": [
+        "Il successo di un amico è orgoglio anche nostro",
+        "Se rosichi non sei davvero amico"
+      ],
+      "spuntiB": [
+        "L’invidia umana capita anche con chi ami",
+        "Il confronto fa male quando ti senti fermo"
+      ]
+    },
+    {
+      "id": "fl_va07",
+      "text": "Uno di noi fa sempre battutine passive-aggressive ma poi dice \"dai si scherza\": glielo dici o lasci perdere?",
+      "optionA": "Glielo dico chiaro",
+      "optionB": "Lascio scorrere",
+      "familiarita": "vecchi_amici",
+      "spuntiA": [
+        "L’ironia usata per pungere stanca",
+        "Meglio un chiarimento subito"
+      ],
+      "spuntiB": [
+        "Non vale la pena litigare su tutto",
+        "Tanto lo conosciamo"
+      ]
+    },
+    {
+      "id": "fl_va08",
+      "text": "Quando un amico cambia lavoro o città, si resta davvero vicini o col tempo si diventa estranei cordiali?",
+      "optionA": "Si resta vicini",
+      "optionB": "Si diventa estranei",
+      "familiarita": "vecchi_amici",
+      "spuntiA": [
+        "Chi ci tiene trova sempre il modo",
+        "La distanza non cancella la storia"
+      ],
+      "spuntiB": [
+        "Senza quotidianità il legame si raffredda",
+        "Restano solo gli auguri di compleanno"
+      ]
+    },
+    {
+      "id": "fl_va09",
+      "text": "In questo gruppo, chi organizza sempre tutto avrebbe diritto di scegliere posto e orario senza votazioni?",
+      "optionA": "Sì, dittatura meritata",
+      "optionB": "No, si vota sempre",
+      "familiarita": "vecchi_amici",
+      "spuntiA": [
+        "Chi si sbatte per tutti merita potere di veto",
+        "Altrimenti non si decide mai"
+      ],
+      "spuntiB": [
+        "Anche chi organizza può sbagliare posto",
+        "Il gruppo decide insieme"
+      ]
     }
   ],
   "infiltrato": [
@@ -263,160 +1042,970 @@
       "groupQuestion": "Qual è il posto più strano dove hai fatto serata?",
       "impostorQuestion": "Qual è il posto più strano dove hai dormito?",
       "category": "serate",
-      "botAnswersGroup": ["Un parcheggio sotterraneo", "Una lavanderia", "Su una barca", "In un bosco"],
-      "botAnswersImpostor": ["In stazione", "Sul divano di un bar", "In macchina"]
+      "botAnswersGroup": [
+        "Un parcheggio sotterraneo",
+        "Una lavanderia",
+        "Su una barca",
+        "In un bosco"
+      ],
+      "botAnswersImpostor": [
+        "In stazione",
+        "Sul divano di un bar",
+        "In macchina"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf02",
       "groupQuestion": "Qual è la scusa più assurda che hai usato per pacare un'uscita all'ultimo?",
       "impostorQuestion": "Qual è la bugia più stupida che hai detto ai tuoi genitori?",
       "category": "scuse",
-      "botAnswersGroup": ["Mal di pancia finto", "Si è rotta la macchina", "Devo aiutare mia zia", "Febbre improvvisa"],
-      "botAnswersImpostor": ["Dormo da un amico", "Ero in biblioteca", "Batteria morta"]
+      "botAnswersGroup": [
+        "Mal di pancia finto",
+        "Si è rotta la macchina",
+        "Devo aiutare mia zia",
+        "Febbre improvvisa"
+      ],
+      "botAnswersImpostor": [
+        "Dormo da un amico",
+        "Ero in biblioteca",
+        "Batteria morta"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf03",
       "groupQuestion": "Cosa guardi per prima cosa quando entri a casa di una persona nuova?",
       "impostorQuestion": "Cosa controlli per prima cosa quando entri in un hotel?",
       "category": "abitudini",
-      "botAnswersGroup": ["Il bagno", "I libri", "La pulizia del pavimento", "Il frigo"],
-      "botAnswersImpostor": ["Il materasso", "La vista dalla finestra", "Il bagno"]
+      "botAnswersGroup": [
+        "Il bagno",
+        "I libri",
+        "La pulizia del pavimento",
+        "Il frigo"
+      ],
+      "botAnswersImpostor": [
+        "Il materasso",
+        "La vista dalla finestra",
+        "Il bagno"
+      ],
+      "tono": "risate",
+      "familiarita": "nuove_conoscenze"
     },
     {
       "id": "inf04",
       "groupQuestion": "Quale cibo odi a morte anche se piace praticamente a tutti?",
       "impostorQuestion": "Quale cibo mangeresti tutti i giorni senza stancarti mai?",
       "category": "gusti",
-      "botAnswersGroup": ["Le olive", "Il sushi", "La maionese", "I funghi"],
-      "botAnswersImpostor": ["La carbonara", "Il sushi", "La pizza"]
+      "botAnswersGroup": [
+        "Le olive",
+        "Il sushi",
+        "La maionese",
+        "I funghi"
+      ],
+      "botAnswersImpostor": [
+        "La carbonara",
+        "Il sushi",
+        "La pizza"
+      ],
+      "tono": "risate",
+      "familiarita": "nuove_conoscenze"
     },
     {
       "id": "inf05",
       "groupQuestion": "Qual è la cosa più costosa che hai comprato d'impulso o da ubriaco?",
       "impostorQuestion": "Qual è il regalo più brutto che hai ricevuto?",
       "category": "soldi",
-      "botAnswersGroup": ["Biglietto aereo", "Scarpe assurde", "Un giro di shot", "Un gadget inutile"],
-      "botAnswersImpostor": ["Un maglione gigante", "Un profumo terribile", "Una tazza"]
+      "botAnswersGroup": [
+        "Biglietto aereo",
+        "Scarpe assurde",
+        "Un giro di shot",
+        "Un gadget inutile"
+      ],
+      "botAnswersImpostor": [
+        "Un maglione gigante",
+        "Un profumo terribile",
+        "Una tazza"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf06",
       "groupQuestion": "Qual è il nome della persona che non vorresti mai incontrare al supermercato?",
       "impostorQuestion": "Chi del mondo dello spettacolo porteresti a cena stasera?",
       "category": "persone",
-      "botAnswersGroup": ["Il mio ex", "Il mio ex prof", "Un collega", "La mia vicina"],
-      "botAnswersImpostor": ["Un attore famoso", "Un cantante", "Uno chef"]
+      "botAnswersGroup": [
+        "Il mio ex",
+        "Il mio ex prof",
+        "Un collega",
+        "La mia vicina"
+      ],
+      "botAnswersImpostor": [
+        "Un attore famoso",
+        "Un cantante",
+        "Uno chef"
+      ],
+      "tono": "risate",
+      "familiarita": "nuove_conoscenze"
     },
     {
       "id": "inf07",
       "groupQuestion": "Qual è la red flag immediata che ti fa chiudere un'uscita dopo 10 minuti?",
       "impostorQuestion": "Qual è il difetto che gli altri notano subito in te?",
       "category": "relazioni",
-      "botAnswersGroup": ["Tratta male i camerieri", "Parla solo dell'ex", "Sta sempre al telefono", "Mastica forte"],
-      "botAnswersImpostor": ["Arrivo sempre tardi", "Parlo troppo", "Sono testardo"]
+      "botAnswersGroup": [
+        "Tratta male i camerieri",
+        "Parla solo dell'ex",
+        "Sta sempre al telefono",
+        "Mastica forte"
+      ],
+      "botAnswersImpostor": [
+        "Arrivo sempre tardi",
+        "Parlo troppo",
+        "Sono testardo"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf08",
       "groupQuestion": "Quanti drink ti servono per iniziare a ballare senza vergogna?",
       "impostorQuestion": "Quante ore di sonno ti servono per funzionare davvero?",
       "category": "numeri",
-      "botAnswersGroup": ["Tre", "Quattro", "Due", "Cinque"],
-      "botAnswersImpostor": ["Otto", "Sette", "Sei"]
+      "botAnswersGroup": [
+        "Tre",
+        "Quattro",
+        "Due",
+        "Cinque"
+      ],
+      "botAnswersImpostor": [
+        "Otto",
+        "Sette",
+        "Sei"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf09",
       "groupQuestion": "Qual è la cosa più imbarazzante nella tua cronologia di YouTube o Google?",
       "impostorQuestion": "Qual è l'argomento di cui parli per ore quando sei alticcio?",
       "category": "segreti",
-      "botAnswersGroup": ["Tutorial su come baciare", "Sintomi assurdi", "Gossip trash", "Orari dei treni"],
-      "botAnswersImpostor": ["Politica", "Calcio", "Teorie complottiste"]
+      "botAnswersGroup": [
+        "Tutorial su come baciare",
+        "Sintomi assurdi",
+        "Gossip trash",
+        "Orari dei treni"
+      ],
+      "botAnswersImpostor": [
+        "Politica",
+        "Calcio",
+        "Teorie complottiste"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf10",
       "groupQuestion": "In quale città italiana non andresti mai a vivere nemmeno pagato?",
       "impostorQuestion": "Qual è la meta della tua prossima vacanza ideale?",
       "category": "luoghi",
-      "botAnswersGroup": ["Milano", "Roma", "Napoli", "Torino"],
-      "botAnswersImpostor": ["Roma", "Palermo", "Milano"]
+      "botAnswersGroup": [
+        "Milano",
+        "Roma",
+        "Napoli",
+        "Torino"
+      ],
+      "botAnswersImpostor": [
+        "Roma",
+        "Palermo",
+        "Milano"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf11",
       "groupQuestion": "Cosa fai sempre subito prima di andare a dormire anche se è inutile?",
       "impostorQuestion": "Cosa fai sempre appena sveglio prima ancora del caffè?",
       "category": "routine",
-      "botAnswersGroup": ["Controllo la porta", "Scorro TikTok", "Bevo acqua", "Metto tre sveglie"],
-      "botAnswersImpostor": ["Guardo le notifiche", "Spengo la sveglia", "Bevo acqua"]
+      "botAnswersGroup": [
+        "Controllo la porta",
+        "Scorro TikTok",
+        "Bevo acqua",
+        "Metto tre sveglie"
+      ],
+      "botAnswersImpostor": [
+        "Guardo le notifiche",
+        "Spengo la sveglia",
+        "Bevo acqua"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf12",
       "groupQuestion": "Qual è il lavoro che non faresti mai nella vita nemmeno per 5.000€ al mese?",
       "impostorQuestion": "Che lavoro sognavi di fare quando avevi 10 anni?",
       "category": "lavoro",
-      "botAnswersGroup": ["Il becchino", "Il call center", "Il chirurgo", "Il politico"],
-      "botAnswersImpostor": ["L'astronauta", "Il calciatore", "Il veterinario"]
+      "botAnswersGroup": [
+        "Il becchino",
+        "Il call center",
+        "Il chirurgo",
+        "Il politico"
+      ],
+      "botAnswersImpostor": [
+        "L'astronauta",
+        "Il calciatore",
+        "Il veterinario"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf13",
       "groupQuestion": "Qual è la cosa più stupida per cui hai pianto negli ultimi due anni?",
       "impostorQuestion": "Qual è il film che ti ha fatto emozionare di più?",
       "category": "emozioni",
-      "botAnswersGroup": ["Fame chimica finita", "Un video di cani", "Un treno perso", "Un graffio all'auto"],
-      "botAnswersImpostor": ["Il Re Leone", "Interstellar", "Titanic"]
+      "botAnswersGroup": [
+        "Fame chimica finita",
+        "Un video di cani",
+        "Un treno perso",
+        "Un graffio all'auto"
+      ],
+      "botAnswersImpostor": [
+        "Il Re Leone",
+        "Interstellar",
+        "Titanic"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf14",
       "groupQuestion": "Quale canzone metti a tutto volume quando pulisci casa da solo?",
       "impostorQuestion": "Quale canzone non sopporti più perché la passano ovunque?",
       "category": "musica",
-      "botAnswersGroup": ["Una hit anni 2000", "Reggaeton", "883", "Raffaella Carrà"],
-      "botAnswersImpostor": ["Un tormentone estivo", "Trap italiana", "Sanremo"]
+      "botAnswersGroup": [
+        "Una hit anni 2000",
+        "Reggaeton",
+        "883",
+        "Raffaella Carrà"
+      ],
+      "botAnswersImpostor": [
+        "Un tormentone estivo",
+        "Trap italiana",
+        "Sanremo"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf15",
       "groupQuestion": "Cosa porti sempre nello zaino o in borsa anche se non serve a nulla?",
       "impostorQuestion": "Qual è l'oggetto più strano sul tuo comodino adesso?",
       "category": "oggetti",
-      "botAnswersGroup": ["Fazzoletti vecchi", "Un accendino scarico", "Monetine da 1 cent", "Caricabatterie rotto"],
-      "botAnswersImpostor": ["Un bicchiere vuoto", "Cuffiette rotte", "Un libro mai aperto"]
+      "botAnswersGroup": [
+        "Fazzoletti vecchi",
+        "Un accendino scarico",
+        "Monetine da 1 cent",
+        "Caricabatterie rotto"
+      ],
+      "botAnswersImpostor": [
+        "Un bicchiere vuoto",
+        "Cuffiette rotte",
+        "Un libro mai aperto"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf16",
       "groupQuestion": "A che età hai dato il tuo primo vero bacio?",
       "impostorQuestion": "A che età hai preso la tua prima vera sbronza?",
       "category": "eta",
-      "botAnswersGroup": ["14", "15", "13", "16"],
-      "botAnswersImpostor": ["16", "17", "15"]
+      "botAnswersGroup": [
+        "14",
+        "15",
+        "13",
+        "16"
+      ],
+      "botAnswersImpostor": [
+        "16",
+        "17",
+        "15"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf17",
       "groupQuestion": "Qual è la tua peggiore abitudine quando guidi nel traffico?",
       "impostorQuestion": "Cosa ti fa perdere la pazienza in 3 secondi alle poste o in fila?",
       "category": "rabbia",
-      "botAnswersGroup": ["Impreco ad alta voce", "Suono il clacson", "Canto urlando", "Cambio corsia sempre"],
-      "botAnswersImpostor": ["Chi taglia la fila", "Chi è lento", "Il telefono che squilla"]
+      "botAnswersGroup": [
+        "Impreco ad alta voce",
+        "Suono il clacson",
+        "Canto urlando",
+        "Cambio corsia sempre"
+      ],
+      "botAnswersImpostor": [
+        "Chi taglia la fila",
+        "Chi è lento",
+        "Il telefono che squilla"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf18",
       "groupQuestion": "Quale animale domestico non vorresti mai avere in casa?",
       "impostorQuestion": "Che animale descrive meglio la tua personalità a letto o in festa?",
       "category": "animali",
-      "botAnswersGroup": ["Un serpente", "Un furetto", "Un pappagallo", "Un ragno"],
-      "botAnswersImpostor": ["Un gatto", "Un cane", "Una pantera"]
+      "botAnswersGroup": [
+        "Un serpente",
+        "Un furetto",
+        "Un pappagallo",
+        "Un ragno"
+      ],
+      "botAnswersImpostor": [
+        "Un gatto",
+        "Un cane",
+        "Una pantera"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf19",
       "groupQuestion": "Quanti soldi hai speso l'ultima volta che sei uscito a cena?",
       "impostorQuestion": "Quanto paghi al massimo per un paio di scarpe?",
       "category": "prezzi",
-      "botAnswersGroup": ["35 euro", "50 euro", "25 euro", "40 euro"],
-      "botAnswersImpostor": ["120 euro", "80 euro", "150 euro"]
+      "botAnswersGroup": [
+        "35 euro",
+        "50 euro",
+        "25 euro",
+        "40 euro"
+      ],
+      "botAnswersImpostor": [
+        "120 euro",
+        "80 euro",
+        "150 euro"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
     },
     {
       "id": "inf20",
       "groupQuestion": "Qual è la prima app che apri quando ti annoi sul water?",
       "impostorQuestion": "Qual è l'app che usi per perdere ore di notte prima di dormire?",
       "category": "app",
-      "botAnswersGroup": ["TikTok", "Instagram", "WhatsApp", "YouTube"],
-      "botAnswersImpostor": ["TikTok", "Instagram", "Netflix"]
+      "botAnswersGroup": [
+        "TikTok",
+        "Instagram",
+        "WhatsApp",
+        "YouTube"
+      ],
+      "botAnswersImpostor": [
+        "TikTok",
+        "Instagram",
+        "Netflix"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf21",
+      "groupQuestion": "Qual è l’app che usi di più sul telefono?",
+      "impostorQuestion": "Qual è l’app che hai cancellato per ultima?",
+      "category": "digitale",
+      "botAnswersGroup": [
+        "Instagram",
+        "WhatsApp",
+        "Spotify",
+        "TikTok"
+      ],
+      "botAnswersImpostor": [
+        "Tinder",
+        "LinkedIn",
+        "Un gioco"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf22",
+      "groupQuestion": "Qual è il tuo comfort food quando sei giù di morale?",
+      "impostorQuestion": "Qual è il cibo che proprio non riesci a digerire?",
+      "category": "cibo",
+      "botAnswersGroup": [
+        "Pizza",
+        "Gelato",
+        "Cioccolato",
+        "Carbonara"
+      ],
+      "botAnswersImpostor": [
+        "Broccoli",
+        "Cipolla",
+        "Fegato"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf23",
+      "groupQuestion": "Qual è la città in cui vorresti vivere per un anno?",
+      "impostorQuestion": "Qual è la città più sopravvalutata che hai visitato?",
+      "category": "viaggi",
+      "botAnswersGroup": [
+        "Barcellona",
+        "Tokyo",
+        "New York",
+        "Lisbona"
+      ],
+      "botAnswersImpostor": [
+        "Parigi",
+        "Milano",
+        "Dubai"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf24",
+      "groupQuestion": "A che età hai dato il tuo primo bacio serio?",
+      "impostorQuestion": "A che età hai preso la patente (o preso il primo mezzo)?",
+      "category": "vita",
+      "botAnswersGroup": [
+        "14 anni",
+        "15 anni",
+        "16 anni",
+        "17 anni"
+      ],
+      "botAnswersImpostor": [
+        "18 anni",
+        "19 anni",
+        "20 anni"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf25",
+      "groupQuestion": "Qual è la spesa più stupida di cui non ti penti?",
+      "impostorQuestion": "Qual è il regalo più brutto che hai mai ricevuto?",
+      "category": "soldi",
+      "botAnswersGroup": [
+        "Un biglietto per un concerto",
+        "Scarpe limitate",
+        "Una cena stellata"
+      ],
+      "botAnswersImpostor": [
+        "Un maglione orrendo",
+        "Una tazza",
+        "Calzini"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf26",
+      "groupQuestion": "Chi del gruppo chiameresti alle 3 di notte per un’emergenza?",
+      "impostorQuestion": "Chi del gruppo arriva sempre in ritardo cronico?",
+      "category": "gruppo",
+      "botAnswersGroup": [
+        "Il più affidabile",
+        "Chi abita vicino",
+        "Mio fratello"
+      ],
+      "botAnswersImpostor": [
+        "Quello distratto",
+        "Sempre lo stesso",
+        "Tutti tranne me"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf27",
+      "groupQuestion": "Qual è la serie TV che hai finito in un weekend?",
+      "impostorQuestion": "Qual è la serie TV che tutti amano ma tu hai mollato?",
+      "category": "cultura",
+      "botAnswersGroup": [
+        "La Casa di Carta",
+        "Stranger Things",
+        "Breaking Bad"
+      ],
+      "botAnswersImpostor": [
+        "Lost",
+        "Il Trono di Spade",
+        "Dark"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf28",
+      "groupQuestion": "Qual è il lavoro che sognavi di fare da bambino?",
+      "impostorQuestion": "Qual è il lavoro più noioso che riusciresti a fare?",
+      "category": "lavoro",
+      "botAnswersGroup": [
+        "Astronauta",
+        "Calciatore",
+        "Architetto",
+        "Cantante"
+      ],
+      "botAnswersImpostor": [
+        "Contabile",
+        "Portiere di notte",
+        "Data entry"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf29",
+      "groupQuestion": "Qual è il tuo vizio segreto a cui non rinunci?",
+      "impostorQuestion": "Qual è la tua fobia più irrazionale?",
+      "category": "segreti",
+      "botAnswersGroup": [
+        "Cioccolata di notte",
+        "Shopping online",
+        "Guardare trash TV"
+      ],
+      "botAnswersImpostor": [
+        "Ragni",
+        "Altezza",
+        "Volare"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf30",
+      "groupQuestion": "In quale decennio passato ti sarebbe piaciuto avere 20 anni?",
+      "impostorQuestion": "In quale periodo storico non vorresti mai nascere?",
+      "category": "storia",
+      "botAnswersGroup": [
+        "Anni 80",
+        "Anni 90",
+        "Anni 70"
+      ],
+      "botAnswersImpostor": [
+        "Medioevo",
+        "Prima guerra",
+        "Antica Roma"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf31",
+      "groupQuestion": "Qual è il talento nascosto di cui vai più fiero?",
+      "impostorQuestion": "Qual è la cosa in cui sei clamorosamente negato?",
+      "category": "talenti",
+      "botAnswersGroup": [
+        "Cucinare",
+        "Imitare voci",
+        "Parcheggiare al volo"
+      ],
+      "botAnswersImpostor": [
+        "Ballare",
+        "Orientarmi",
+        "Cantare"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf32",
+      "groupQuestion": "Qual è il primo acquisto che faresti vincendo 100.000€?",
+      "impostorQuestion": "Quanto costa in media il tuo affitto/mutuo o bolletta più alta?",
+      "category": "soldi",
+      "botAnswersGroup": [
+        "Un viaggio lungo",
+        "Estinguere debiti",
+        "Investirli"
+      ],
+      "botAnswersImpostor": [
+        "900 euro",
+        "Mille euro",
+        "Troppo"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf33",
+      "groupQuestion": "Qual è il film che hai visto almeno 5 volte?",
+      "impostorQuestion": "Qual è il film che ti ha fatto addormentare al cinema?",
+      "category": "cinema",
+      "botAnswersGroup": [
+        "Il Gladiatore",
+        "Interstellar",
+        "Harry Potter"
+      ],
+      "botAnswersImpostor": [
+        "Un film d’autore lento",
+        "Un sequel brutto",
+        "Avatar"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf34",
+      "groupQuestion": "Qual è la cosa che guardi per prima in una persona nuova?",
+      "impostorQuestion": "Qual è il difetto che proprio non tolleri in un coinquilino?",
+      "category": "relazioni",
+      "botAnswersGroup": [
+        "Lo sguardo",
+        "Il sorriso",
+        "Come parla"
+      ],
+      "botAnswersImpostor": [
+        "Il disordine",
+        "Piatti nel lavandino",
+        "Rumore"
+      ],
+      "tono": "risate",
+      "familiarita": "nuove_conoscenze"
+    },
+    {
+      "id": "inf35",
+      "groupQuestion": "Qual è il tuo posto preferito in casa per staccare?",
+      "impostorQuestion": "Qual è la stanza che pulisci sempre per ultima?",
+      "category": "casa",
+      "botAnswersGroup": [
+        "Il divano",
+        "Il letto",
+        "Il balcone"
+      ],
+      "botAnswersImpostor": [
+        "Il ripostiglio",
+        "Il bagno",
+        "La cucina"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf36",
+      "groupQuestion": "Qual è la canzone che metti sotto la doccia a tutto volume?",
+      "impostorQuestion": "Qual è la suoneria o sveglia che ti fa venire l’ansia?",
+      "category": "musica",
+      "botAnswersGroup": [
+        "Una hit pop",
+        "Rock anni 2000",
+        "Vasco"
+      ],
+      "botAnswersImpostor": [
+        "Radar iPhone",
+        "Allarme classico",
+        "Sveglia alle 6"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf37",
+      "groupQuestion": "Qual è l’oggetto che porti sempre in tasca o in borsa?",
+      "impostorQuestion": "Qual è l’oggetto che dimentichi più spesso a casa?",
+      "category": "quotidiano",
+      "botAnswersGroup": [
+        "Burrocacao",
+        "Auricolari",
+        "Chiavi"
+      ],
+      "botAnswersImpostor": [
+        "Ombrello",
+        "Occhiali",
+        "Caricatore"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf38",
+      "groupQuestion": "Qual è lo sport più bello da guardare dal vivo?",
+      "impostorQuestion": "Qual è lo sport che non guarderesti nemmeno pagato?",
+      "category": "sport",
+      "botAnswersGroup": [
+        "Calcio",
+        "Tennis",
+        "Formula 1",
+        "Basket"
+      ],
+      "botAnswersImpostor": [
+        "Golf",
+        "Curling",
+        "Ciclismo"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf39",
+      "groupQuestion": "Qual è il supermercato o negozio dove spendi troppo?",
+      "impostorQuestion": "Qual è l’acquisto online che non hai mai aperto?",
+      "category": "shopping",
+      "botAnswersGroup": [
+        "Ikea",
+        "Amazon",
+        "Zara"
+      ],
+      "botAnswersImpostor": [
+        "Un attrezzo palestra",
+        "Un libro",
+        "Cavi USB"
+      ],
+      "tono": "risate",
+      "familiarita": "nuove_conoscenze"
+    },
+    {
+      "id": "inf40",
+      "groupQuestion": "Quante ore dormi in media a notte?",
+      "impostorQuestion": "Quanti caffè bevi al giorno nei giorni pesanti?",
+      "category": "abitudini",
+      "botAnswersGroup": [
+        "Sette ore",
+        "Sei ore e mezza",
+        "Otto ore"
+      ],
+      "botAnswersImpostor": [
+        "Tre",
+        "Quattro",
+        "Cinque"
+      ],
+      "tono": "risate",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "infp01",
+      "tono": "profondo",
+      "category": "consapevolezza",
+      "groupQuestion": "Qual è la cosa che hai rimandato più a lungo per paura?",
+      "impostorQuestion": "Qual è la scelta di cui vai più fiero nonostante la paura?",
+      "botAnswersGroup": [
+        "Cambiare lavoro",
+        "Dire quello che penso",
+        "Partire da solo",
+        "Chiudere una storia"
+      ],
+      "botAnswersImpostor": [
+        "Ho cambiato città",
+        "Ho lasciato un lavoro sicuro",
+        "Ho detto la verità"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "infp02",
+      "tono": "profondo",
+      "category": "valori",
+      "groupQuestion": "Quale valore non tradiresti mai per soldi?",
+      "impostorQuestion": "Quale valore pensi che la gente oggi dimentichi più spesso?",
+      "botAnswersGroup": [
+        "La lealtà verso gli amici",
+        "La mia libertà",
+        "La parola data",
+        "L’onestà"
+      ],
+      "botAnswersImpostor": [
+        "Il rispetto",
+        "L’ascolto",
+        "La coerenza"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "infp03",
+      "tono": "profondo",
+      "category": "direzione",
+      "groupQuestion": "Cosa ti ruba più energia senza darti nulla in cambio?",
+      "impostorQuestion": "Cosa ti dà più energia anche quando sei stanco?",
+      "botAnswersGroup": [
+        "L’ansia per il futuro",
+        "Le persone false",
+        "Il lavoro ripetitivo",
+        "I social"
+      ],
+      "botAnswersImpostor": [
+        "Stare con gli amici veri",
+        "Viaggiare",
+        "Creare qualcosa di mio"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "infp04",
+      "tono": "profondo",
+      "category": "consapevolezza",
+      "groupQuestion": "Qual è la lezione più dura che hai imparato negli ultimi due anni?",
+      "impostorQuestion": "Qual è il consiglio migliore che hai ricevuto nella vita?",
+      "botAnswersGroup": [
+        "Non tutti restano",
+        "Il tempo non aspetta",
+        "Dire di no è sano",
+        "Fidarmi del mio istinto"
+      ],
+      "botAnswersImpostor": [
+        "Scegli chi ti sceglie",
+        "Inizia prima di sentirti pronto",
+        "Proteggi la tua pace"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "infp05",
+      "tono": "profondo",
+      "category": "relazioni",
+      "groupQuestion": "Cosa ti fa sentire davvero ascoltato da qualcuno?",
+      "impostorQuestion": "Cosa ti fa chiudere subito con una persona?",
+      "botAnswersGroup": [
+        "Quando ricorda i dettagli",
+        "Quando non giudica",
+        "Quando mette via il telefono",
+        "La sincerità"
+      ],
+      "botAnswersImpostor": [
+        "La falsità",
+        "L’arroganza",
+        "L’indifferenza"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "infp06",
+      "tono": "profondo",
+      "category": "direzione",
+      "groupQuestion": "Se avessi un anno completamente libero, cosa impareresti o faresti?",
+      "impostorQuestion": "Se potessi tornare indietro di 5 anni, cosa cambieresti?",
+      "botAnswersGroup": [
+        "Viaggerei senza meta",
+        "Scriverei un libro",
+        "Aprirei un progetto mio",
+        "Imparerei a suonare"
+      ],
+      "botAnswersImpostor": [
+        "Avrei rischiato prima",
+        "Avrei studiato altro",
+        "Avrei perso meno tempo"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "infp07",
+      "tono": "profondo",
+      "category": "consapevolezza",
+      "groupQuestion": "Quale bugia raccontiamo più spesso a noi stessi?",
+      "impostorQuestion": "Quale verità scomoda accettiamo più tardi nella vita?",
+      "botAnswersGroup": [
+        "Ho ancora tempo",
+        "Non mi importa cosa pensano",
+        "Domani inizio",
+        "Va bene così"
+      ],
+      "botAnswersImpostor": [
+        "Nessuno viene a salvarci",
+        "Le priorità si vedono dai fatti",
+        "Cambiare richiede coraggio"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "infp08",
+      "tono": "profondo",
+      "category": "valori",
+      "groupQuestion": "Per cosa vorresti essere ricordato dalle persone che ami?",
+      "impostorQuestion": "Cosa ammiri di più nella persona che stimi di più?",
+      "botAnswersGroup": [
+        "Per la mia presenza",
+        "Per aver fatto ridere nei momenti bui",
+        "Per la lealtà",
+        "Per il coraggio"
+      ],
+      "botAnswersImpostor": [
+        "La calma",
+        "La generosità",
+        "La determinazione"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "inf_va01",
+      "groupQuestion": "Qual è la cosa che questo gruppo fa sempre uguale ogni volta che esce?",
+      "impostorQuestion": "Qual è la cosa più noiosa che fai durante la settimana?",
+      "category": "gruppo",
+      "tono": "risate",
+      "familiarita": "vecchi_amici",
+      "botAnswersGroup": [
+        "Finire allo stesso bar",
+        "Arrivare tutti in ritardo",
+        "Scegliere il posto all’ultimo"
+      ],
+      "botAnswersImpostor": [
+        "Fare la spesa",
+        "Pulire casa",
+        "Rispondere alle mail"
+      ]
+    },
+    {
+      "id": "inf_va02",
+      "groupQuestion": "Qual è il difetto che ti viene perdonato più spesso da chi ti conosce bene?",
+      "impostorQuestion": "Qual è il pregio che ti riconoscono subito al primo incontro?",
+      "category": "gruppo",
+      "tono": "profondo",
+      "familiarita": "vecchi_amici",
+      "botAnswersGroup": [
+        "Il ritardo cronico",
+        "La testardaggine",
+        "Sparire per giorni"
+      ],
+      "botAnswersImpostor": [
+        "La simpatia",
+        "L’educazione",
+        "La calma"
+      ]
+    },
+    {
+      "id": "inf_va03",
+      "groupQuestion": "Cosa non hai mai avuto il coraggio di dire a un tuo amico stretto?",
+      "impostorQuestion": "Cosa dici sempre appena conosci una persona nuova?",
+      "category": "gruppo",
+      "tono": "profondo",
+      "familiarita": "vecchi_amici",
+      "botAnswersGroup": [
+        "Che sbagliava scelta",
+        "Che mi mancava",
+        "Che aveva torto"
+      ],
+      "botAnswersImpostor": [
+        "Che lavoro faccio",
+        "Di dove sono",
+        "Come sto"
+      ]
+    },
+    {
+      "id": "inf_va04",
+      "groupQuestion": "Quale periodo della nostra amicizia ricordi con più nostalgia?",
+      "impostorQuestion": "Quale stagione dell’anno sopporti di meno?",
+      "category": "gruppo",
+      "tono": "profondo",
+      "familiarita": "vecchi_amici",
+      "botAnswersGroup": [
+        "Le estati dopo il liceo",
+        "I primi viaggi insieme",
+        "Le serate improvvisate"
+      ],
+      "botAnswersImpostor": [
+        "L’inverno",
+        "Agosto in città",
+        "Novembre"
+      ]
     }
   ],
   "coppie": {
@@ -525,6 +2114,73 @@
         "intensity": "complicita",
         "prompt": "Imita per 15 secondi l'altro quando è arrabbiato o geloso.",
         "penalty": "Se l'altro non ride, bevi!"
+      },
+      {
+        "id": "cc16",
+        "cardType": "allineamento",
+        "intensity": "complicita",
+        "prompt": "Al 3 indicate chi dei due è più geloso ma fa finta di non esserlo.",
+        "penalty": "Non siete d’accordo! Ammettete entrambi l’ultima piccola scenata."
+      },
+      {
+        "id": "cc17",
+        "cardType": "allineamento",
+        "intensity": "complicita",
+        "prompt": "Al 3 indicate chi dei due spende di più in cose inutili.",
+        "penalty": "Disaccordo! Ognuno mostra l’ultimo acquisto online."
+      },
+      {
+        "id": "cc18",
+        "cardType": "verita",
+        "intensity": "complicita",
+        "prompt": "Qual è la piccola abitudine dell’altro che ti fa impazzire ma trovi tenera?",
+        "penalty": "Se non rispondi entro 10s bevi 1 sorso!"
+      },
+      {
+        "id": "cc19",
+        "cardType": "verita",
+        "intensity": "complicita",
+        "prompt": "Qual è stata la prima impressione sbagliata che avevi dell’altro?",
+        "penalty": "Racconta senza filtri!"
+      },
+      {
+        "id": "cc20",
+        "cardType": "obbligo",
+        "intensity": "complicita",
+        "prompt": "Guardatevi negli occhi in silenzio per 15 secondi senza ridere.",
+        "penalty": "Chi ride per primo paga pegno!"
+      },
+      {
+        "id": "cp_va_c1",
+        "cardType": "allineamento",
+        "intensity": "complicita",
+        "prompt": "Al 3 indicate chi dei due si lascia influenzare di più dal giudizio degli amici storici.",
+        "penalty": "Non siete d’accordo! Un sorso e spiegate il perché.",
+        "familiarita": "vecchi_amici"
+      },
+      {
+        "id": "cp_va_c2",
+        "cardType": "verita",
+        "intensity": "complicita",
+        "prompt": "Qual è l’abitudine dell’altro che gli amici di sempre notano subito e su cui vi prendono in giro?",
+        "penalty": "Se non rispondi entro 10 secondi, 1 sorso!",
+        "familiarita": "vecchi_amici"
+      },
+      {
+        "id": "cp_va_c3",
+        "cardType": "allineamento",
+        "intensity": "complicita",
+        "prompt": "Al 3 indicate chi dei due difenderebbe l’altro davanti al gruppo anche quando ha palesemente torto.",
+        "penalty": "Dissonanza! 1 sorso a testa.",
+        "familiarita": "vecchi_amici"
+      },
+      {
+        "id": "cp_va_c4",
+        "cardType": "obbligo",
+        "intensity": "complicita",
+        "prompt": "Racconta in 15 secondi un momento in cui l’altro ti ha sorpreso davanti a persone che vi conoscono da anni.",
+        "penalty": "Rifiuto = 2 sorsi!",
+        "familiarita": "vecchi_amici"
       }
     ],
     "piccante": [
@@ -632,6 +2288,183 @@
         "intensity": "piccante",
         "prompt": "Passa un dito lento lungo il collo o il braccio dell'altro guardandolo fisso negli occhi per 15s.",
         "penalty": "Chi cede prima fa penitenza!"
+      },
+      {
+        "id": "cp16",
+        "cardType": "allineamento",
+        "intensity": "piccante",
+        "prompt": "Al 3 indicate chi dei due prende più spesso l’iniziativa sotto le lenzuola.",
+        "penalty": "Non coincide! Brindisi obbligato."
+      },
+      {
+        "id": "cp17",
+        "cardType": "verita",
+        "intensity": "piccante",
+        "prompt": "Qual è il posto più assurdo dove vorresti farlo almeno una volta?",
+        "penalty": "Se censuri, doppio sorso!"
+      },
+      {
+        "id": "cp18",
+        "cardType": "verita",
+        "intensity": "piccante",
+        "prompt": "Qual è la cosa che ti accende all’istante nell’altro senza nemmeno sfiorarti?",
+        "penalty": "Risposta secca in 5 secondi!"
+      },
+      {
+        "id": "cp19",
+        "cardType": "obbligo",
+        "intensity": "piccante",
+        "prompt": "Sussurra all’orecchio dell’altro cosa vorresti fare stasera una volta a casa.",
+        "penalty": "Niente risatine timide!"
+      },
+      {
+        "id": "cp20",
+        "cardType": "allineamento",
+        "intensity": "piccante",
+        "prompt": "Al 3 indicate chi dei due farebbe più fatica a resistere un mese intero.",
+        "penalty": "Disaccordo! Penitenza doppia."
+      },
+      {
+        "id": "cp_va_p1",
+        "cardType": "verita",
+        "intensity": "piccante",
+        "prompt": "C’è qualcosa nella vostra intimità o complicità che nessuno di questo gruppo sospetterebbe mai?",
+        "penalty": "Scena muta = 2 sorsi!",
+        "familiarita": "vecchi_amici"
+      },
+      {
+        "id": "cp_va_p2",
+        "cardType": "allineamento",
+        "intensity": "piccante",
+        "prompt": "Al 3 indicate chi dei due ha raccontato meno dettagli della propria vita privata agli amici storici.",
+        "penalty": "Non siete d’accordo! 1 sorso a testa.",
+        "familiarita": "vecchi_amici"
+      },
+      {
+        "id": "cp_va_p3",
+        "cardType": "verita",
+        "intensity": "piccante",
+        "prompt": "Qual è il segreto più divertente o piccante che condividete e che non avete mai detto al tavolo?",
+        "penalty": "Censura = 2 sorsi!",
+        "familiarita": "vecchi_amici"
+      },
+      {
+        "id": "cp_va_p4",
+        "cardType": "obbligo",
+        "intensity": "piccante",
+        "prompt": "Sussurra all’altro una cosa che vorresti fare stasera appena tornate a casa da soli.",
+        "penalty": "Rifiuto = 2 sorsi!",
+        "familiarita": "vecchi_amici"
+      }
+    ],
+    "profondo": [
+      {
+        "id": "cpr01",
+        "cardType": "allineamento",
+        "intensity": "profondo",
+        "prompt": "Al 3 indicate chi dei due ha più paura di mostrarsi davvero fragile.",
+        "penalty": "Non coincide! Raccontatevi un momento recente in cui vi siete sentiti vulnerabili."
+      },
+      {
+        "id": "cpr02",
+        "cardType": "verita",
+        "intensity": "profondo",
+        "prompt": "Qual è una cosa che non mi hai mai detto chiaramente per paura di ferirmi o di cambiare gli equilibri?"
+      },
+      {
+        "id": "cpr03",
+        "cardType": "obbligo",
+        "intensity": "profondo",
+        "prompt": "Guardatevi negli occhi per 20 secondi in silenzio, poi dite una cosa per cui siete grati all’altro oggi."
+      },
+      {
+        "id": "cpr04",
+        "cardType": "allineamento",
+        "intensity": "profondo",
+        "prompt": "Al 3 indicate chi dei due tende a rimandare le conversazioni importanti.",
+        "penalty": "Non siete d’accordo! Ognuno nomini un tema su cui sente che si potrebbe parlare di più."
+      },
+      {
+        "id": "cpr05",
+        "cardType": "verita",
+        "intensity": "profondo",
+        "prompt": "In cosa senti che siamo cresciuti insieme nell’ultimo anno, e in cosa invece ci stiamo allontanando?"
+      },
+      {
+        "id": "cpr06",
+        "cardType": "verita",
+        "intensity": "profondo",
+        "prompt": "Qual è il sogno personale che stai tenendo in sospeso e in che modo posso aiutarti a non rimandarlo?"
+      },
+      {
+        "id": "cpr07",
+        "cardType": "obbligo",
+        "intensity": "profondo",
+        "prompt": "Dì all’altro una qualità che ammiri in lui/lei e che secondo te non riconosce abbastanza a se stesso/a."
+      },
+      {
+        "id": "cpr08",
+        "cardType": "allineamento",
+        "intensity": "profondo",
+        "prompt": "Al 3 indicate chi dei due ha più bisogno di sentirsi rassicurato nei momenti di silenzio.",
+        "penalty": "Ditevi come preferite essere ascoltati quando siete giù."
+      },
+      {
+        "id": "cpr09",
+        "cardType": "verita",
+        "intensity": "profondo",
+        "prompt": "Quale confine personale è per te sacro e non vuoi mai che venga superato?"
+      },
+      {
+        "id": "cpr10",
+        "cardType": "verita",
+        "intensity": "profondo",
+        "prompt": "Se tra 5 anni guardassimo indietro a oggi, di quale scelta insieme vorresti essere più fiero/a?"
+      },
+      {
+        "id": "cpr11",
+        "cardType": "obbligo",
+        "intensity": "profondo",
+        "prompt": "Chiedi scusa per una piccola cosa recente che forse hai sottovalutato, senza aggiungere \"ma\"."
+      },
+      {
+        "id": "cpr12",
+        "cardType": "allineamento",
+        "intensity": "profondo",
+        "prompt": "Al 3 indicate chi dei due sogna più in grande per il futuro.",
+        "penalty": "Raccontate un obiettivo che vi spaventa ammettere ad alta voce."
+      },
+      {
+        "id": "cp_va_d1",
+        "cardType": "verita",
+        "intensity": "profondo",
+        "prompt": "In cosa senti che questa persona ti conosce meglio di quanto ti conoscano gli amici di una vita?",
+        "penalty": "Prenditi 15 secondi per dirglielo guardandola negli occhi.",
+        "familiarita": "vecchi_amici"
+      },
+      {
+        "id": "cp_va_d2",
+        "cardType": "allineamento",
+        "intensity": "profondo",
+        "prompt": "Al 3 indicate chi dei due fa più fatica a chiedere aiuto quando sta davvero male.",
+        "penalty": "Se non siete d’accordo, raccontatevi il perché in 20 secondi.",
+        "familiarita": "vecchi_amici"
+      },
+      {
+        "id": "cp_va_d3",
+        "cardType": "verita",
+        "intensity": "profondo",
+        "prompt": "Qual è una paura sul vostro futuro che non hai ancora detto ad alta voce nemmeno alle persone più vicine?",
+        "penalty": "Condivisione libera — zero penitenza, solo ascolto.",
+        "familiarita": "vecchi_amici"
+      },
+      {
+        "id": "cp_va_d4",
+        "cardType": "obbligo",
+        "intensity": "profondo",
+        "prompt": "Di’ all’altro una cosa per cui gli sei grato oggi e che nella fretta quotidiana dai per scontata.",
+        "penalty": "Un abbraccio sincero di almeno 5 secondi.",
+        "familiarita": "vecchi_amici"
       }
     ]
   },
@@ -640,7 +2473,8 @@
       "id": "as01",
       "cardType": "gogna",
       "prompt": "Se finissimo tutti in prigione stasera, chi tradirebbe gli altri dopo 5 minuti per uscire?",
-      "penalty": "Alla gogna! Il più votato beve o fa una confessione!"
+      "penalty": "Alla gogna! Il più votato beve o fa una confessione!",
+      "familiarita": "nuove_conoscenze"
     },
     {
       "id": "as02",
@@ -648,13 +2482,15 @@
       "prompt": "Accetteresti 500€ subito, ma devi mandare un vocale in cui piangi alla tua ultima chat WhatsApp?",
       "optionA": "Accetto i 500€ 💸",
       "optionB": "Col c***o 🙅‍♂️",
-      "penalty": "Chi è in minoranza beve! E chi ha accettato deve far vedere la chat!"
+      "penalty": "Chi è in minoranza beve! E chi ha accettato deve far vedere la chat!",
+      "familiarita": "tutti"
     },
     {
       "id": "as03",
       "cardType": "gogna",
       "prompt": "Chi del gruppo scriverebbe all'ex alle 3 di notte dopo tre gin tonic?",
-      "penalty": "Il prescelto dal gruppo fa un sorso per ogni voto ricevuto!"
+      "penalty": "Il prescelto dal gruppo fa un sorso per ogni voto ricevuto!",
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "as04",
@@ -662,13 +2498,15 @@
       "prompt": "1.000€ subito sul conto, ma per un mese tua madre legge tutte le notifiche del tuo telefono?",
       "optionA": "Dammi i 1.000€ 🤑",
       "optionB": "Mai nella vita 🔒",
-      "penalty": "Minoranza alla sbarra: bevi!"
+      "penalty": "Minoranza alla sbarra: bevi!",
+      "familiarita": "tutti"
     },
     {
       "id": "as05",
       "cardType": "gogna",
       "prompt": "Chi manderebbe per sbaglio uno screenshot proprio alla persona di cui stava spettegolando?",
-      "penalty": "Il più votato beve doppio per distrazione cronica!"
+      "penalty": "Il più votato beve doppio per distrazione cronica!",
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "as06",
@@ -676,13 +2514,15 @@
       "prompt": "3.000€ adesso, ma devi mettere una storia Instagram in cui dichiari amore eterno al tuo ultimo ex?",
       "optionA": "Pubblico subito 📱",
       "optionB": "Tengo la dignità ✋",
-      "penalty": "Minoranza beve!"
+      "penalty": "Minoranza beve!",
+      "familiarita": "tutti"
     },
     {
       "id": "as07",
       "cardType": "gogna",
       "prompt": "Chi sopravviverebbe meno di 48 ore in un'apocalisse zombie senza Wi-Fi né delivery?",
-      "penalty": "Il meno adatto alla vita selvaggia beve!"
+      "penalty": "Il meno adatto alla vita selvaggia beve!",
+      "familiarita": "nuove_conoscenze"
     },
     {
       "id": "as08",
@@ -690,13 +2530,15 @@
       "prompt": "500€ subito, ma il tuo migliore amico legge ad alta voce le tue Note del telefono?",
       "optionA": "Leggi pure 📝",
       "optionB": "Brucio il telefono 🔥",
-      "penalty": "Chi è in minoranza paga pegno!"
+      "penalty": "Chi è in minoranza paga pegno!",
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "as09",
       "cardType": "gogna",
       "prompt": "Chi si farebbe arrestare per una scommessa idiota da 20 euro alle 2 di notte?",
-      "penalty": "Il più incosciente del tavolo beve!"
+      "penalty": "Il più incosciente del tavolo beve!",
+      "familiarita": "tutti"
     },
     {
       "id": "as10",
@@ -704,13 +2546,15 @@
       "prompt": "2.000€ subito, ma devi farti tagliare i capelli dal giocatore alla tua sinistra adesso?",
       "optionA": "Prendi le forbici ✂️",
       "optionB": "Scappo via 🏃",
-      "penalty": "Minoranza beve!"
+      "penalty": "Minoranza beve!",
+      "familiarita": "tutti"
     },
     {
       "id": "as11",
       "cardType": "gogna",
       "prompt": "Chi finge di essere al verde ogni sabato sera ma ha più soldi di tutti in banca?",
-      "penalty": "Offri il prossimo giro o bevi doppio!"
+      "penalty": "Offri il prossimo giro o bevi doppio!",
+      "familiarita": "tutti"
     },
     {
       "id": "as12",
@@ -718,13 +2562,15 @@
       "prompt": "400€ subito, ma per tutta la settimana devi salutare qualsiasi estraneo dicendo 'Miao'?",
       "optionA": "Miao a tutti 🐱",
       "optionB": "No grazie 🚫",
-      "penalty": "Minoranza beve!"
+      "penalty": "Minoranza beve!",
+      "familiarita": "tutti"
     },
     {
       "id": "as13",
       "cardType": "gogna",
       "prompt": "Chi del gruppo sparirebbe dalla discoteca senza salutare nessuno tornando a casa con uno sconosciuto?",
-      "penalty": "Il maestro della fuga ninja beve!"
+      "penalty": "Il maestro della fuga ninja beve!",
+      "familiarita": "vecchi_amici"
     },
     {
       "id": "as14",
@@ -732,13 +2578,15 @@
       "prompt": "5.000€ sul conto, ma non puoi più usare WhatsApp né Instagram per 6 mesi interi?",
       "optionA": "Sparisco 6 mesi 🏝️",
       "optionB": "Impossibile 📱",
-      "penalty": "Minoranza beve!"
+      "penalty": "Minoranza beve!",
+      "familiarita": "tutti"
     },
     {
       "id": "as15",
       "cardType": "gogna",
       "prompt": "Chi ha la cronologia di Google più inquietante se la sequestrasse la polizia stasera?",
-      "penalty": "Mostra l'ultima ricerca o bevi!"
+      "penalty": "Mostra l'ultima ricerca o bevi!",
+      "familiarita": "tutti"
     },
     {
       "id": "as16",
@@ -746,13 +2594,15 @@
       "prompt": "200€ subito, ma devi mangiare un cucchiaio pieno di maionese e Nutella mescolate?",
       "optionA": "Apro la bocca 🥄",
       "optionB": "Vomito solo al pensiero 🤢",
-      "penalty": "Minoranza beve!"
+      "penalty": "Minoranza beve!",
+      "familiarita": "tutti"
     },
     {
       "id": "as17",
       "cardType": "gogna",
       "prompt": "Chi si innamorerebbe in 48 ore di una persona piena di red flag solo perché è bellissima?",
-      "penalty": "Il più cieco davanti alle red flag beve!"
+      "penalty": "Il più cieco davanti alle red flag beve!",
+      "familiarita": "tutti"
     },
     {
       "id": "as18",
@@ -760,13 +2610,15 @@
       "prompt": "1.500€ subito, ma devi fare una videochiamata di 1 minuto al tuo capo o prof in pigiama alle 3 di notte?",
       "optionA": "Chiamo adesso 📞",
       "optionB": "Col cavolo 🛏️",
-      "penalty": "Minoranza beve!"
+      "penalty": "Minoranza beve!",
+      "familiarita": "tutti"
     },
     {
       "id": "as19",
       "cardType": "gogna",
       "prompt": "Chi ci metterebbe meno di 24 ore a baciare un'altra persona dopo essere stato mollato?",
-      "penalty": "Cuore di pietra: bevi!"
+      "penalty": "Cuore di pietra: bevi!",
+      "familiarita": "tutti"
     },
     {
       "id": "as20",
@@ -774,7 +2626,217 @@
       "prompt": "10.000€ subito, ma devi portare lo stesso paio di scarpe bagnate e puzzolenti per 30 giorni?",
       "optionA": "Per 10k soffro 👟",
       "optionB": "Che schifo, no 🤮",
-      "penalty": "Minoranza beve!"
+      "penalty": "Minoranza beve!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as21",
+      "cardType": "gogna",
+      "prompt": "Chi di questo gruppo diventerebbe un dittatore spietato nel giro di 48 ore se avesse potere assoluto?",
+      "penalty": "Alla gogna! Il più votato fa un discorso da dittatore di 15 secondi!",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "as22",
+      "cardType": "gogna",
+      "prompt": "Chi è la persona più propensa a mandare un messaggio compromettente nel gruppo sbagliato?",
+      "penalty": "Alla gogna! Racconta il tuo ultimo messaggio imbarazzante!",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "as23",
+      "cardType": "gogna",
+      "prompt": "Chi di noi sopravviverebbe meno di 24 ore in un bosco senza Wi-Fi?",
+      "penalty": "Alla gogna! Bevi 1 sorso o fai 10 secondi senza guardare il telefono!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as24",
+      "cardType": "gogna",
+      "prompt": "Chi finirebbe sicuramente in un reality show trash pur di non lavorare?",
+      "penalty": "Alla gogna! Presentati come fossi al confessionale!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as25",
+      "cardType": "gogna",
+      "prompt": "Chi ha le scuse più creative e palesemente false quando dà buca?",
+      "penalty": "Alla gogna! Inventa una scusa adesso in 5 secondi!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as26",
+      "cardType": "gogna",
+      "prompt": "Chi del gruppo sposerà qualcuno conosciuto su internet dopo 3 settimane?",
+      "penalty": "Alla gogna! Brindisi per il futuro matrimonio!",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "as27",
+      "cardType": "gogna",
+      "prompt": "Chi si addormenta per primo alle feste o sul divano alle 22:30?",
+      "penalty": "Alla gogna! Sveglia con un sorso!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as28",
+      "cardType": "gogna",
+      "prompt": "Chi risponderebbe \"Dipende\" anche alla domanda \"Come ti chiami?\"?",
+      "penalty": "Alla gogna! Rispondi sì o no alle prossime 3 domande!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as29",
+      "cardType": "gogna",
+      "prompt": "Chi ha sicuramente almeno 3 chat silenziate tra le persone che conosce bene?",
+      "penalty": "Alla gogna! Confessa quante chat archiviate hai!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as30",
+      "cardType": "gogna",
+      "prompt": "Chi tra noi potrebbe avere una doppia vita segreta senza che nessuno se ne accorga?",
+      "penalty": "Alla gogna! Racconta un dettaglio che nessuno sa di te!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as31",
+      "cardType": "dignita",
+      "prompt": "Accetteresti 1.000€ subito, ma per una settimana il tuo capo/prof legge ogni tuo pensiero?",
+      "optionA": "Accetto i 1.000€ 💸",
+      "optionB": "Sarei licenziato in 4 secondi ❌",
+      "penalty": "Chi è in minoranza paga pegno!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as32",
+      "cardType": "dignita",
+      "prompt": "Accetteresti un viaggio gratis alle Maldive, ma devi andarci con la tua ex / il tuo ex?",
+      "optionA": "Maldive tutta la vita 🏝️",
+      "optionB": "Preferisco il divano 🛋️",
+      "penalty": "La minoranza racconta il peggior viaggio mai fatto!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as33",
+      "cardType": "dignita",
+      "prompt": "Metteresti la tua cronologia di Google degli ultimi 7 giorni proiettata in piazza per 2.000€?",
+      "optionA": "Sì, datemi i 2.000€ 💰",
+      "optionB": "Mai nella vita 🔥",
+      "penalty": "La minoranza confessa l’ultima ricerca strana fatta!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as34",
+      "cardType": "dignita",
+      "prompt": "Mangeresti un cucchiaio di maionese pura a temperatura ambiente per 200€?",
+      "optionA": "Subito 🥄",
+      "optionB": "Mi viene da vomitare 🤢",
+      "penalty": "La minoranza beve un sorso!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as35",
+      "cardType": "dignita",
+      "prompt": "Lavoreresti 1 anno gratis nell’azienda dei tuoi sogni se alla fine hai il 50% di essere assunto?",
+      "optionA": "Ci provo 💼",
+      "optionB": "Il lavoro si paga 💸",
+      "penalty": "La minoranza difende il proprio punto in 15 secondi!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as36",
+      "cardType": "dignita",
+      "prompt": "Pubblicheresti adesso una tua foto orrenda del 2015 nelle storie Instagram per 300€?",
+      "optionA": "Per 300€ la metto 📸",
+      "optionB": "La dignità prima di tutto 🙅",
+      "penalty": "La minoranza mostra l’ultima foto in galleria!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as37",
+      "cardType": "dignita",
+      "prompt": "Accetteresti di non poter più usare emoji né vocali per 1 anno in cambio di un iPhone nuovo?",
+      "optionA": "Accetto subito 📱",
+      "optionB": "Come comunico?! 🫠",
+      "penalty": "La minoranza parla solo a gesti per 15 secondi!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as38",
+      "cardType": "dignita",
+      "prompt": "Faresti leggere al gruppo il tuo ultimo messaggio inviato su WhatsApp per 50€?",
+      "optionA": "Leggo tutto 📲",
+      "optionB": "Col cavolo 🔒",
+      "penalty": "Chi vince la sfida sceglie chi deve bere!",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "as39",
+      "cardType": "dignita",
+      "prompt": "Passeresti 48 ore chiuso in una stanza con la persona che sopporti di meno per 3.000€?",
+      "optionA": "Sopporto per 3.000€ 🧘",
+      "optionB": "Rischio la galera 🚫",
+      "penalty": "La minoranza fa un brindisi!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as40",
+      "cardType": "dignita",
+      "prompt": "Raderesti a zero i capelli / cambieresti taglio radicalmente domani per 1.500€?",
+      "optionA": "Ricrescono, dammi i soldi ✂️",
+      "optionB": "I capelli non si toccano 💇",
+      "penalty": "La minoranza riceve un consiglio di stile dal gruppo!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "as_va01",
+      "cardType": "gogna",
+      "prompt": "Chi di questo gruppo ha già dato un consiglio di vita saggio a tutti, facendo poi esattamente l’opposto nella propria vita?",
+      "penalty": "Il più votato deve ammettere l’ultima volta che ha predicato bene e razzolato male!",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "as_va02",
+      "cardType": "gogna",
+      "prompt": "Chi qui dentro sparirebbe per 6 mesi appena trova un nuovo partner, per poi riscrivere \"ragaa ci vediamo?\" appena si lascia?",
+      "penalty": "Alla gogna! Prometti una cena offerta se sparisci di nuovo.",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "as_va03",
+      "cardType": "gogna",
+      "prompt": "Chi del gruppo non direbbe mai la verità scomoda a un amico nemmeno sotto tortura, pur di evitare discussioni?",
+      "penalty": "Devi fare un complimento e una critica vera (affettuosa) al giocatore alla tua destra.",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "as_va04",
+      "cardType": "gogna",
+      "prompt": "Se il gruppo aprisse un’azienda insieme domani, chi manderebbe tutto in bancarotta nel giro di 3 settimane?",
+      "penalty": "Il più votato spiega in 15 secondi quale ruolo si prenderebbe in azienda!",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "as_va05",
+      "cardType": "gogna",
+      "prompt": "Chi qui dentro è rimasto esattamente uguale a 5 anni fa mentre tutti gli altri cambiavano?",
+      "penalty": "Il più votato racconta una cosa in cui sente di essere cambiato davvero negli ultimi 2 anni.",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "as_va06",
+      "cardType": "gogna",
+      "prompt": "Chi qui dentro dice sempre \"dai ragazzi poi organizziamo!\" e poi non risponde mai quando si fissa la data?",
+      "penalty": "Il più votato deve proporre adesso una data precisa per la prossima uscita!",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "as_va07",
+      "cardType": "gogna",
+      "prompt": "Chi del gruppo conosce più segreti inconfessabili di tutti gli altri messi insieme?",
+      "penalty": "La cassaforte del gruppo! Scegli qualcuno a cui fare una domanda scomoda.",
+      "familiarita": "vecchi_amici"
     }
   ]
 }

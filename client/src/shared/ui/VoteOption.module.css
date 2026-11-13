@@ -30,6 +30,10 @@
   box-shadow: 0 0 0 3px var(--gold), var(--glow-accent);
 }
 
+.option:not(:disabled):active {
+  transform: scale(0.975);
+}
+
 .center {
   justify-content: center;
 }
@@ -140,14 +144,21 @@
 }
 
 .label {
-  font-size: var(--text-md);
-  line-height: 1.35;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-display, 0.03em);
+  line-height: 1.25;
   overflow-wrap: anywhere;
 }
 
 .hint {
+  font-family: var(--font-body);
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
+  text-transform: none;
+  letter-spacing: 0;
   color: var(--text-muted);
 }
 

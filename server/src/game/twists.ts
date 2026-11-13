@@ -6,7 +6,14 @@
 // keeps this cycle-free (mirrors absurdConstraints.ts / groupMind.ts).
 import type { Room } from './rooms';
 
-export type TwistId = 'difesa-lampo' | 'interventi-vietati' | 'doppio-difensore';
+export type TwistId =
+  | 'difesa-lampo'
+  | 'interventi-vietati'
+  | 'doppio-difensore'
+  | 'avvocato-opposto'
+  | 'duello-botta-risposta'
+  | 'voto-pesato'
+  | 'dieci-parole';
 
 export interface Twist {
   id: TwistId;
@@ -18,10 +25,16 @@ export const TWISTS: Twist[] = [
   { id: 'difesa-lampo', label: '⚡ Difesa lampo', description: 'Difesa in 30 secondi netti!' },
   { id: 'interventi-vietati', label: '🤐 Niente interventi', description: 'Questo round si difende senza interruzioni.' },
   { id: 'doppio-difensore', label: '👯 Doppio difensore', description: 'Due difensori per lato, qualunque sia la grandezza del gruppo.' },
+  { id: 'avvocato-opposto', label: '🔄 Avvocato opposto', description: 'Ogni difensore deve difendere la fazione OPPOSTA a quella che ha votato!' },
+  { id: 'duello-botta-risposta', label: '⚔️ Botta e risposta', description: 'Difesa fulminea da 20 secondi netti, zero interruzioni.' },
+  { id: 'voto-pesato', label: '⚖️ Svolta pesante', description: 'Chi cambia idea al secondo voto raddoppia l’impatto psicologico!' },
+  { id: 'dieci-parole', label: '✂️ Massimo 10 parole', description: 'Convinci tutti usando al massimo 10 parole o una frase secca!' },
 ];
 
 /** DEFENSE's forced cap under the "difesa-lampo" twist, overriding room.defenseMaxMs. */
 export const TWIST_DEFENSE_LAMPO_MS = 30_000;
+/** DEFENSE's forced cap under the "duello-botta-risposta" twist. */
+export const TWIST_DUELLO_MS = 20_000;
 
 /**
  * The leader's "caos" dial (4.3): how often a dilemma round draws a twist.

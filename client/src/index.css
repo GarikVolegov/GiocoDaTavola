@@ -12,6 +12,7 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  overscroll-behavior-y: contain;
 }
 
 * {
@@ -19,17 +20,43 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+button,
+a,
+input,
+select,
+textarea,
+[role='button'],
+[role='slider'] {
+  touch-action: manipulation;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
   min-height: 100dvh;
+  overscroll-behavior-y: contain;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* long unbroken words (URLs, codes) never push the layout sideways on phones */
   overflow-wrap: break-word;
+}
+
+input,
+textarea,
+select {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+input::placeholder,
+textarea::placeholder {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 #root {
@@ -40,8 +67,11 @@ body {
 h1,
 h2 {
   font-family: var(--font-display);
+  font-weight: var(--weight-display, 800);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-display, 0.03em);
   margin: 0;
-  line-height: 1.15;
+  line-height: 1.08;
 }
 
 /* Consistent keyboard / switch-access focus ring across the whole app — many
@@ -73,4 +103,30 @@ h2 {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(229, 193, 88, 0.5);
+}
+
+.hostPhaseStage {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  animation: hostPhaseEnter var(--dur-slow, 500ms) var(--ease, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+@keyframes hostPhaseEnter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hostPhaseStage {
+    animation: none;
+  }
 }

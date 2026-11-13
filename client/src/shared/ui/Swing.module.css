@@ -1,11 +1,20 @@
-.swing { display: inline-flex; flex-direction: column; gap: calc(var(--sw-h, 14px) * 0.6); }
-.ab {
-  display: flex; justify-content: space-between;
-  font-family: var(--font-display); font-weight: 700;
-  font-size: calc(var(--sw-h, 14px) * 1.1);
+.swing { display: inline-flex; flex-direction: column; gap: calc(var(--sw-h, 14px) * 0.4); }
+.abInside {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.7rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  pointer-events: none;
 }
-.a { color: var(--faction-a); }
-.b { color: var(--faction-b); }
+.a { color: #9bc2ff; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7); }
+.b { color: #ffb293; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7); }
 .bar {
   position: relative; overflow: hidden;
   border-radius: var(--radius-pill);

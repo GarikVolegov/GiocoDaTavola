@@ -5,8 +5,8 @@ import { Server } from 'socket.io';
 import path from 'path';
 import fs from 'fs';
 import { randomUUID } from 'crypto';
-import { RoomStore, isVotingPhase, tappaCounts, storieCatalog, loadStories, type Room } from './game/rooms';
-import { loadDilemmas, dilemmasForRegister, type ContentRegister } from './game/deck';
+import { RoomStore, isVotingPhase, tappaCounts, percorsoCounts, storieCatalog, loadStories, type Room } from './game/rooms';
+import { loadDilemmas, dilemmasForRegister, filterByFamiliarita, isFamiliarita, type ContentRegister, type Familiarita } from './game/deck';
 import { generateBotDefense, aiDefenseEnabled } from './game/aiDefense';
 import { migrate, dbEnabled, getPool } from './db';
 import { saveAwards, awardsToPersist, saveGameRecords, gamesToPersist } from './persistence';
@@ -65,7 +65,9 @@ const rooms = new RoomStore();
 const joinLimiter = createRateLimiter(10, 10_000);
 // Available dilemmas per tappa, computed once at boot — surfaced to the host so
 // the percorso setup can show an accurate (capped) length estimate. Static data.
-const TAPPA_COUNTS = tappaCounts(loadDilemmas());
+const ALL_DILEMMAS = loadDilemmas();
+const TAPPA_COUNTS = tappaCounts(ALL_DILEMMAS);
+const PERCORSO_COUNTS = percorsoCounts(ALL_DILEMMAS);
 // The story catalog (ids + teasers, no prose), computed once at boot — surfaced
 // to the host so the storia setup can list the available tales. Static data.
 const STORIE_CATALOG = storieCatalog(loadStories());
@@ -173,6 +175,7 @@ function gameStatePayload(room: Room) {
     format: room.format,
     percorso: rooms.publicPercorso(room.code),
     tappaCounts: TAPPA_COUNTS,
+    percorsoCounts: PERCORSO_COUNTS,
     // Storie: the narrative view (prose + progress; null in classic/percorso) and
     // the static story catalog for the host's setup picker. Secret-safe.
     storia: rooms.publicStoria(room.code),
@@ -220,6 +223,10 @@ function gameStatePayload(room: Room) {
     writtenAnswers: rooms.publicWrittenAnswers(room.code),
     writeVoteProgress: rooms.writeVoteProgress(room.code),
     writeReveal: rooms.writeRevealResults(room.code),
+    hotTakePrompt: rooms.publicHotTakePrompt(room.code),
+    hotTakeReveal: rooms.publicHotTakeReveal(room.code),
+    hotTakeSubmittedCount: rooms.hotTakeSubmittedCount(room.code),
+    missingHotTakers: rooms.hotTakeProgress(room.code)?.missingNicknames ?? null,
     // "L'Infiltrato": how many have accused (ACCUSE) + the FINAL_AWARDS reveal.
     accusedCount: room.accusations.size,
     infiltratoResult: rooms.publicInfiltratoResult(room.code),
@@ -442,7 +449,13 @@ function broadcastAdvance(code: string, hadLateJoiners: boolean): void {
       if (sid) io.to(sid).emit('player:myWriteToken', { token });
     }
   }
-  if (room && room.partyMode === 'infiltrato' && room.currentPartyCard && room.phase === 'DILEMMA_REVEAL') {
+  if (
+    room &&
+    (room.partyMode === 'infiltrato' || room.partyMode === 'mix') &&
+    room.currentPartyCard &&
+    'groupQuestion' in room.currentPartyCard &&
+    room.phase === 'DILEMMA_REVEAL'
+  ) {
     const card = room.currentPartyCard as { groupQuestion?: string; impostorQuestion?: string };
     for (const player of room.players.values()) {
       if (player.isBot) continue;
@@ -683,9 +696,12 @@ app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
   const registerRaw = typeof body.register === 'string' ? body.register : 'misto';
   const register: ContentRegister =
     registerRaw === 'vita' || registerRaw === 'business' || registerRaw === 'carriera' ? registerRaw : 'misto';
+  const familiaritaRaw = typeof body.familiarita === 'string' ? body.familiarita : 'misto';
+  const familiarita: Familiarita = isFamiliarita(familiaritaRaw) ? familiaritaRaw : 'misto';
 
   if (modeRaw === 'classico') {
-    const pool = dilemmasForRegister(loadDilemmas(), register).filter((d) => !d.delicato && !d.roster);
+    const basePool = dilemmasForRegister(loadDilemmas(), register).filter((d) => !d.delicato && !d.roster);
+    const pool = filterByFamiliarita(basePool, familiarita);
     const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, count);
     res.json({ mode: 'classico', cards: shuffled, source: 'curated' });
     return;
@@ -695,12 +711,12 @@ app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
   const partyMode: PartyMode = validPartyModes.includes(modeRaw as PartyMode) ? (modeRaw as PartyMode) : 'flash';
 
   if (theme && isGeminiAvailable()) {
-    const cards = await generatePartyCards(partyMode, { count, intensity, theme });
+    const cards = await generatePartyCards(partyMode, { count, intensity, familiarita, theme });
     res.json({ mode: partyMode, cards, source: 'gemini' });
     return;
   }
 
-  const cards = getCuratedCards(partyMode, { count, intensity });
+  const cards = getCuratedCards(partyMode, { count, intensity, familiarita });
   res.json({ mode: partyMode, cards, source: 'curated' });
 });
 
@@ -749,17 +765,21 @@ io.on('connection', (socket) => {
 
   // The leader starts the game for their room, choosing the dilemma count.
   // Gated: only the socket whose player is the room leader may start.
-  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string; storyId?: string; mood?: string; delicatoOptIn?: boolean; serataLunga?: boolean; caos?: string; seenDilemmaIds?: string[]; partyMode?: string; partyIntensity?: string; theme?: string }) => {
+  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string; percorsoId?: string; storyId?: string; mood?: string; delicatoOptIn?: boolean; serataLunga?: boolean; caos?: string; seenDilemmaIds?: string[]; partyMode?: string; partyIntensity?: string; infiltratoTono?: string; familiarita?: string; theme?: string }) => {
     const code = leaderCodeFor(socket.id);
     if (!code) {
       socket.emit('leader:startError', { error: 'ROOM_NOT_FOUND' });
       return;
     }
-    // "Percorso" format carries its own config (start tappa + duration) instead
+    // "Percorso" format carries its own config (percorsoId + start tappa + duration) instead
     // of a dilemma count / register; presence of `percorso` switches the mode.
     const percorso =
       payload?.format === 'percorso'
-        ? { startTappa: Number(payload?.startTappa), durata: String(payload?.durata) }
+        ? {
+            startTappa: Number(payload?.startTappa),
+            durata: String(payload?.durata),
+            ...(payload?.percorsoId ? { percorsoId: String(payload.percorsoId) } : {}),
+          }
         : undefined;
     // "Storia" format carries the chosen story id; like percorso it overrides the
     // classic count/register and always runs in gruppo mode.
@@ -770,10 +790,23 @@ io.on('connection', (socket) => {
     const seenDilemmaIds = Array.isArray(payload?.seenDilemmaIds)
       ? payload.seenDilemmaIds.slice(0, 1000).map((id) => String(id))
       : [];
-    const partyMode = payload?.partyMode && ['flash', 'infiltrato', 'coppie', 'assurdo'].includes(payload.partyMode)
+    const partyMode = payload?.partyMode && ['flash', 'infiltrato', 'coppie', 'assurdo', 'mix'].includes(payload.partyMode)
       ? (payload.partyMode as PartyMode)
       : undefined;
-    const partyIntensity = payload?.partyIntensity === 'piccante' ? 'piccante' : 'complicita';
+    const partyIntensity =
+      payload?.partyIntensity === 'piccante'
+        ? 'piccante'
+        : payload?.partyIntensity === 'profondo'
+          ? 'profondo'
+          : 'complicita';
+    const infiltratoTono =
+      payload?.infiltratoTono === 'risate' || payload?.infiltratoTono === 'profondo'
+        ? payload.infiltratoTono
+        : 'misto';
+    const familiarita: Familiarita =
+      typeof payload?.familiarita === 'string' && isFamiliarita(payload.familiarita)
+        ? payload.familiarita
+        : 'misto';
     const theme = typeof payload?.theme === 'string' ? payload.theme.trim() : undefined;
 
     const result = rooms.startGame(
@@ -793,14 +826,16 @@ io.on('connection', (socket) => {
       partyMode,
       partyIntensity,
       theme,
+      infiltratoTono,
+      familiarita,
     );
     if (!result.ok) {
       socket.emit('leader:startError', { error: result.error });
       return;
     }
     // If Gemini is available and we're in a party mode, optionally generate fresh cards in background
-    if (partyMode && isGeminiAvailable()) {
-      generatePartyCards(partyMode, { count: Number(payload?.dilemmaCount) || 5, intensity: partyIntensity, theme })
+    if (partyMode && partyMode !== 'mix' && isGeminiAvailable()) {
+      generatePartyCards(partyMode, { count: Number(payload?.dilemmaCount) || 5, intensity: partyIntensity, infiltratoTono, familiarita, theme })
         .then((aiCards) => {
           const r = rooms.get(code);
           if (r && r.partyMode === partyMode && aiCards.length > 0) {
@@ -1265,6 +1300,26 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Termometro (Hot Take 1-10): player submits or updates their 1-10 slider score.
+  socket.on('player:hotTake', (payload: { score?: number }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const score = Number(payload?.score);
+    const result = rooms.submitHotTake(code, playerId, score);
+    if (!result.ok) {
+      socket.emit('player:hotTakeError', { error: result.error });
+      return;
+    }
+    socket.emit('player:hotTakeSubmitted', { score });
+    if (rooms.hotTakePhaseComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
+      broadcastGameState(code);
+    }
+  });
+
   // A player writes their own dilemma in the LOBBY (max 2/player). The store
   // validates + caps it; on success the room's submitted count is broadcast.
   socket.on('player:submitDilemma', (payload: { text?: string; optionA?: string; optionB?: string }) => {
@@ -1372,7 +1427,13 @@ io.on('connection', (socket) => {
     if (!userId) return;
     rooms.setPlayerUser(session.code, session.playerId, userId);
     const room = rooms.get(session.code);
-    if (room && room.partyMode === 'infiltrato' && room.currentPartyCard && room.phase === 'DILEMMA_REVEAL') {
+    if (
+    room &&
+    (room.partyMode === 'infiltrato' || room.partyMode === 'mix') &&
+    room.currentPartyCard &&
+    'groupQuestion' in room.currentPartyCard &&
+    room.phase === 'DILEMMA_REVEAL'
+  ) {
     const card = room.currentPartyCard as { groupQuestion?: string; impostorQuestion?: string };
     for (const player of room.players.values()) {
       if (player.isBot) continue;

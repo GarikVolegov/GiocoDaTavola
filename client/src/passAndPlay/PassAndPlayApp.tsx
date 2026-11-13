@@ -12,6 +12,7 @@ import {
   Alert,
 } from '../shared/ui';
 import { fetchWithTimeout } from '../shared/api';
+import { useIntensityTheme } from '../shared/useIntensityTheme';
 import { vibrateInfiltrator, vibrateTick } from '../shared/haptics';
 import { playFanfare, playGong, playTick } from '../host/audio/synthSfx';
 import { unlockAudio } from '../host/audio/engine';
@@ -22,6 +23,11 @@ import {
   startThematicMusic,
   stopThematicMusic,
 } from '../host/audio/thematicMusic';
+import {
+  FAMILIARITA_VALUES,
+  FAMILIARITA_LABELS,
+  type Familiarita,
+} from '../shared/events';
 import {
   FALLBACK_DECKS,
   type PassAssurdoCard,
@@ -98,6 +104,7 @@ export default function PassAndPlayApp() {
 
   // Setup local state
   const [selectedMode, setSelectedMode] = useState<PassMode>('flash');
+  const [familiarita, setFamiliarita] = useState<Familiarita>('vecchi_amici');
   const [intensity, setIntensity] = useState<'complicita' | 'piccante'>('complicita');
   const [roundCount, setRoundCount] = useState<number>(5);
   const [theme, setTheme] = useState('');
@@ -105,11 +112,20 @@ export default function PassAndPlayApp() {
   const [nameInput, setNameInput] = useState('');
   const [loadingDeck, setLoadingDeck] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [openInfo, setOpenInfo] = useState<string | null>(null);
+  const toggleInfo = (id: string) => setOpenInfo((cur) => (cur === id ? null : id));
 
   // Suspense & debate local timers
   const [suspenseLeft, setSuspenseLeft] = useState(3);
   const [debateLeft, setDebateLeft] = useState(30);
   const [debatePaused, setDebatePaused] = useState(false);
+
+  const activePassMode = state.phase === 'SETUP' ? selectedMode : state.mode;
+  useIntensityTheme({
+    partyMode: activePassMode === 'classico' ? null : activePassMode,
+    partyIntensity: activePassMode === 'coppie' ? intensity : null,
+    mood: activePassMode === 'classico' ? 'profonda' : undefined,
+  });
 
   // Sync saved players back to setup on rematch
   useEffect(() => {
@@ -223,6 +239,7 @@ export default function PassAndPlayApp() {
             mode: selectedMode,
             count: roundCount,
             intensity,
+            familiarita,
             theme: theme.trim() || undefined,
           }),
         },
@@ -239,7 +256,14 @@ export default function PassAndPlayApp() {
     }
 
     if (cards.length === 0) {
-      cards = shuffleSlice(FALLBACK_DECKS[selectedMode], roundCount);
+      const fallbackPool = FALLBACK_DECKS[selectedMode];
+      const filtered =
+        familiarita === 'vecchi_amici'
+          ? fallbackPool.filter((c) => c.familiarita !== 'nuove_conoscenze')
+          : familiarita === 'nuove_conoscenze'
+            ? fallbackPool.filter((c) => c.familiarita !== 'vecchi_amici')
+            : fallbackPool;
+      cards = shuffleSlice(filtered.length > 0 ? filtered : fallbackPool, roundCount);
     }
 
     setLoadingDeck(false);
@@ -283,113 +307,183 @@ export default function PassAndPlayApp() {
 
       {/* SETUP */}
       {state.phase === 'SETUP' && (
-        <Card glow="accent" className={styles.card}>
-          <div>
+        <Card glow="accent" className={styles.setupCard}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
             <h1 className={styles.title}>📱 Passa il Telefono</h1>
-            <p className={styles.subtitle}>
+            <button
+              type="button"
+              aria-label="Dettagli modalità"
+              aria-expanded={openInfo === 'header'}
+              className={`${styles.infoBtn} ${openInfo === 'header' ? styles.infoBtnActive : ''}`}
+              onClick={() => toggleInfo('header')}
+            >
+              ⓘ
+            </button>
+          </div>
+          {openInfo === 'header' && (
+            <p className={styles.infoBox} style={{ marginTop: '-0.3rem', textAlign: 'center' }}>
               Un solo dispositivo per tutto il tavolo. Niente codici, niente QR.
             </p>
-          </div>
+          )}
 
-          <div>
-            <div className={styles.sectionLabel}>1. Scegli la modalità</div>
-            <div className={styles.modeGrid}>
-              {MODE_OPTIONS.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  className={`${styles.modeBtn} ${selectedMode === m.id ? styles.modeBtnActive : ''}`}
-                  onClick={() => setSelectedMode(m.id)}
-                >
-                  <span className={styles.modeBtnTitle}>{m.label}</span>
-                  <span className={styles.modeBtnDesc}>{m.desc}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <div className={styles.setupGrid}>
+            <div className={styles.setupCol}>
+              <div>
+                <div className={styles.sectionHeader}>
+                  <div className={styles.sectionLabel} style={{ marginBottom: 0 }}>Con chi giochi?</div>
+                  <button
+                    type="button"
+                    aria-label="Dettagli gruppo"
+                    aria-expanded={openInfo === 'familiarita'}
+                    className={`${styles.infoBtn} ${openInfo === 'familiarita' ? styles.infoBtnActive : ''}`}
+                    onClick={() => toggleInfo('familiarita')}
+                  >
+                    ⓘ
+                  </button>
+                </div>
+                <div className={styles.pillRow}>
+                  {FAMILIARITA_VALUES.map((fam) => (
+                    <Pill key={fam} selected={familiarita === fam} onClick={() => setFamiliarita(fam)}>
+                      {FAMILIARITA_LABELS[fam].nome}
+                    </Pill>
+                  ))}
+                </div>
+                {openInfo === 'familiarita' && (
+                  <div className={styles.infoBox}>
+                    {FAMILIARITA_VALUES.map((fam) => (
+                      <div key={fam}>
+                        <strong>{FAMILIARITA_LABELS[fam].nome}</strong>: {FAMILIARITA_LABELS[fam].descr}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-          {selectedMode === 'coppie' && (
-            <div>
-              <div className={styles.sectionLabel}>Intensità</div>
-              <div className={styles.pillRow}>
-                <Pill selected={intensity === 'complicita'} onClick={() => setIntensity('complicita')}>
-                  🥂 Complicità
-                </Pill>
-                <Pill selected={intensity === 'piccante'} onClick={() => setIntensity('piccante')}>
-                  🌶️ Piccante
-                </Pill>
+              <div>
+                <div className={styles.sectionLabel}>1. Scegli la modalità</div>
+                <div className={styles.modeGrid}>
+                  {MODE_OPTIONS.map((m) => (
+                    <div key={m.id} className={styles.modeCell}>
+                      <button
+                        type="button"
+                        className={`${styles.modeBtn} ${selectedMode === m.id ? styles.modeBtnActive : ''}`}
+                        onClick={() => setSelectedMode(m.id)}
+                      >
+                        <span className={styles.modeBtnTitle}>{m.label}</span>
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Dettagli opzione"
+                        aria-expanded={openInfo === `mode-${m.id}`}
+                        className={`${styles.infoBtn} ${openInfo === `mode-${m.id}` ? styles.infoBtnActive : ''}`}
+                        onClick={() => toggleInfo(`mode-${m.id}`)}
+                      >
+                        ⓘ
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {openInfo?.startsWith('mode-') && (
+                  <p className={styles.infoBox}>
+                    {MODE_OPTIONS.find((m) => `mode-${m.id}` === openInfo)?.desc}
+                  </p>
+                )}
+              </div>
+
+              {selectedMode === 'coppie' && (
+                <div>
+                  <div className={styles.sectionLabel}>Intensità</div>
+                  <div className={styles.pillRow}>
+                    <Pill selected={intensity === 'complicita'} onClick={() => setIntensity('complicita')}>
+                      🥂 Complicità
+                    </Pill>
+                    <Pill selected={intensity === 'piccante'} onClick={() => setIntensity('piccante')}>
+                      🌶️ Piccante
+                    </Pill>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div className={styles.sectionLabel}>2. Quanti round?</div>
+                <div className={styles.pillRow}>
+                  {ROUND_COUNTS.map((n) => (
+                    <Pill key={n} selected={roundCount === n} onClick={() => setRoundCount(n)}>
+                      {n} round
+                    </Pill>
+                  ))}
+                </div>
               </div>
             </div>
-          )}
 
-          <div>
-            <div className={styles.sectionLabel}>2. Quanti round?</div>
-            <div className={styles.pillRow}>
-              {ROUND_COUNTS.map((n) => (
-                <Pill key={n} selected={roundCount === n} onClick={() => setRoundCount(n)}>
-                  {n} round
-                </Pill>
-              ))}
-            </div>
-          </div>
+            <div className={styles.setupCol}>
+              {selectedMode !== 'classico' && (
+                <div>
+                  <label htmlFor="pass-theme-input" className={styles.sectionLabel} style={{ display: 'block' }}>
+                    Tema della serata (opzionale)
+                  </label>
+                  <TextInput
+                    id="pass-theme-input"
+                    name="passTheme"
+                    style={{ width: '100%' }}
+                    value={theme}
+                    onChange={(e) => setTheme(e.target.value)}
+                    placeholder="Es. vacanza al mare, coinquilini, ex..."
+                    maxLength={60}
+                  />
+                </div>
+              )}
 
-          {selectedMode !== 'classico' && (
-            <div>
-              <div className={styles.sectionLabel}>Tema della serata (opzionale)</div>
-              <TextInput
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-                placeholder="Es. vacanza al mare, coinquilini, ex..."
-                maxLength={60}
-              />
-            </div>
-          )}
+              <div>
+                <label htmlFor="pass-player-input" className={styles.sectionLabel} style={{ display: 'block' }}>
+                  3. Chi gioca? ({players.length}/10 · min {minPlayersForMode(selectedMode)})
+                </label>
+                <form onSubmit={handleAddPlayer} className={styles.rosterInputRow}>
+                  <TextInput
+                    id="pass-player-input"
+                    name="playerName"
+                    style={{ width: '100%' }}
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    placeholder="Nome amico..."
+                    maxLength={18}
+                  />
+                  <Button type="submit" variant="ghost">
+                    + Aggiungi
+                  </Button>
+                </form>
+                {players.length > 0 && (
+                  <div className={styles.chips} style={{ marginTop: '0.65rem' }}>
+                    {players.map((p) => (
+                      <span key={p.id} className={styles.chip}>
+                        <span>{p.avatar}</span>
+                        <span>{p.name}</span>
+                        <button
+                          type="button"
+                          className={styles.chipRemove}
+                          aria-label={`Rimuovi ${p.name}`}
+                          onClick={() => handleRemovePlayer(p.id)}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-          <div>
-            <div className={styles.sectionLabel}>
-              3. Chi gioca? ({players.length}/10 · min {minPlayersForMode(selectedMode)})
-            </div>
-            <form onSubmit={handleAddPlayer} className={styles.rosterInputRow}>
-              <TextInput
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                placeholder="Nome amico..."
-                maxLength={18}
-              />
-              <Button type="submit" variant="ghost">
-                + Aggiungi
+              {setupError && <Alert tone="danger">{setupError}</Alert>}
+
+              <Button
+                variant="primary"
+                size="lg"
+                disabled={loadingDeck || players.length < minPlayersForMode(selectedMode)}
+                onClick={() => void handleStartGame()}
+              >
+                {loadingDeck ? 'Preparo le carte...' : 'Inizia la serata ▶'}
               </Button>
-            </form>
-            {players.length > 0 && (
-              <div className={styles.chips} style={{ marginTop: '0.65rem' }}>
-                {players.map((p) => (
-                  <span key={p.id} className={styles.chip}>
-                    <span>{p.avatar}</span>
-                    <span>{p.name}</span>
-                    <button
-                      type="button"
-                      className={styles.chipRemove}
-                      aria-label={`Rimuovi ${p.name}`}
-                      onClick={() => handleRemovePlayer(p.id)}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
+            </div>
           </div>
-
-          {setupError && <Alert tone="danger">{setupError}</Alert>}
-
-          <Button
-            variant="primary"
-            size="lg"
-            disabled={loadingDeck || players.length < minPlayersForMode(selectedMode)}
-            onClick={() => void handleStartGame()}
-          >
-            {loadingDeck ? 'Preparo le carte...' : 'Inizia la serata ▶'}
-          </Button>
         </Card>
       )}
 

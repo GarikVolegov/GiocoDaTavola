@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { PHASE_LABELS, type GroupMindQuestion, type VoteChoice } from '../../shared/events';
 import { VoteOption } from '../../shared/ui';
-import { wrap, formatWaitingList } from './layout';
+import { formatWaitingList } from './layout';
+import MobilePhaseShell from './MobilePhaseShell';
+import { vibrateTick } from '../../shared/haptics';
 
 interface GroupMindViewProps {
   question: GroupMindQuestion | null;
@@ -28,24 +30,37 @@ export default function GroupMindView({
   progress,
   skipButton,
 }: GroupMindViewProps) {
-  return (
-    <main style={wrap}>
-      <h1 style={{ fontSize: '1.5rem', margin: 0 }}>🧠 {PHASE_LABELS.GROUP_MIND}</h1>
-      {question && (
-        <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>{question.prompt}</p>
+  const dock = (
+    <>
+      {answer && guess ? (
+        <p style={{ opacity: 0.85, margin: 0, fontWeight: 700, fontSize: '0.92rem' }}>
+          Fatto! Vediamo chi legge meglio il gruppo. 🔮
+        </p>
+      ) : (
+        <p style={{ opacity: 0.7, margin: 0, fontSize: '0.88rem' }}>
+          Rispondi ed indovina, poi aspetta gli altri.
+        </p>
       )}
-      {remaining != null && (
-        <div
-          aria-label="Tempo rimanente"
-          style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-        >
-          {remaining}s
-        </div>
+      <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem' }}>
+        {progress && progress.missingNicknames.length > 0
+          ? `Aspettiamo ${formatWaitingList(progress.missingNicknames)}…`
+          : progress
+            ? `Hanno risposto ${progress.done}/${progress.total}`
+            : null}
+      </p>
+      {skipButton}
+    </>
+  );
+
+  return (
+    <MobilePhaseShell title={`🧠 ${PHASE_LABELS.GROUP_MIND}`} remaining={remaining} dock={dock}>
+      {question && (
+        <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>{question.prompt}</p>
       )}
       <div
         role="group"
         aria-label="La tua risposta"
-        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', width: 'min(90vw, 22rem)' }}
+        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', width: '100%' }}
       >
         <p style={{ fontSize: '0.9rem', opacity: 0.7, margin: 0 }}>Tu, sinceramente:</p>
         {(['A', 'B'] as const).map((letter) => (
@@ -55,7 +70,10 @@ export default function GroupMindView({
             letter={letter}
             label={question ? (letter === 'A' ? question.optionA : question.optionB) : letter}
             selected={answer === letter}
-            onClick={() => onAnswer(letter)}
+            onClick={() => {
+              vibrateTick();
+              onAnswer(letter);
+            }}
             centered
           />
         ))}
@@ -63,7 +81,7 @@ export default function GroupMindView({
       <div
         role="group"
         aria-label="La tua previsione sulla maggioranza"
-        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', width: 'min(90vw, 22rem)' }}
+        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', width: '100%' }}
       >
         <p style={{ fontSize: '0.9rem', opacity: 0.7, margin: 0 }}>Cosa risponderà la maggioranza del gruppo?</p>
         {(['A', 'B'] as const).map((letter) => (
@@ -73,24 +91,14 @@ export default function GroupMindView({
             letter={letter}
             label={question ? (letter === 'A' ? question.optionA : question.optionB) : letter}
             selected={guess === letter}
-            onClick={() => onGuess(letter)}
+            onClick={() => {
+              vibrateTick();
+              onGuess(letter);
+            }}
             centered
           />
         ))}
       </div>
-      {answer && guess ? (
-        <p style={{ opacity: 0.8, margin: 0 }}>Fatto! Vediamo chi legge meglio il gruppo. 🔮</p>
-      ) : (
-        <p style={{ opacity: 0.7, margin: 0 }}>Rispondi ed indovina, poi aspetta gli altri.</p>
-      )}
-      <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
-        {progress && progress.missingNicknames.length > 0
-          ? `Aspettiamo ${formatWaitingList(progress.missingNicknames)}…`
-          : progress
-            ? `Hanno risposto ${progress.done}/${progress.total}`
-            : null}
-      </p>
-      {skipButton}
-    </main>
+    </MobilePhaseShell>
   );
 }

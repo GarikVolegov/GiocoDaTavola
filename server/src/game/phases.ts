@@ -45,6 +45,9 @@ export type GamePhase =
   | 'WRITE'
   | 'WRITE_VOTE'
   | 'WRITE_REVEAL'
+  // "Termometro (Hot Take 1–10)": mobile slider mini-game (vote 1–10, reveal extremes).
+  | 'HOT_TAKE_VOTE'
+  | 'HOT_TAKE_REVEAL'
   // "Percorso" mode: the chapter card shown entering a new tappa, and the
   // end-of-tappa recap/pause (handled by nextPercorsoPhase, not nextPhase).
   | 'TAPPA_INTRO'
@@ -113,7 +116,9 @@ export const DUO_TURN_MIN_MS = 15_000;
  * soft deadline kicks in so one distracted holdout can't freeze it forever.
  */
 export const SOFT_TIMEOUT_THRESHOLD = 0.7;
-export const SOFT_TIMEOUT_MS = 50_000;
+export const SOFT_TIMEOUT_MS = 35_000;
+export const SOFT_TIMEOUT_FAST_MS = 20_000;
+export const SOFT_TIMEOUT_LONG_MS = 50_000;
 
 /**
  * How long each phase lasts before the server auto-advances, in ms. `null`
@@ -150,6 +155,8 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   WRITE: null,
   WRITE_VOTE: null,
   WRITE_REVEAL: 10_000,
+  HOT_TAKE_VOTE: null,
+  HOT_TAKE_REVEAL: 20_000,
   // Percorso: the chapter card auto-advances; the end-of-tappa recap has no timer
   // so it doubles as a break — the host resumes with "Continua ▶" when ready.
   TAPPA_INTRO: 8_000,

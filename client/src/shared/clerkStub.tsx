@@ -11,8 +11,12 @@ export function Show({ when, children }: ShowProps) {
   return when === 'signed-out' ? <>{children}</> : null;
 }
 
-export function SignInButton({ children }: { mode?: string; children?: ReactNode }) {
+export function SignInButton({ children }: { mode?: string; forceRedirectUrl?: string; signUpForceRedirectUrl?: string; children?: ReactNode }) {
   // Render the trigger so layout stays intact; it just can't open a real modal.
+  return <>{children ?? null}</>;
+}
+
+export function SignUpButton({ children }: { mode?: string; forceRedirectUrl?: string; signInForceRedirectUrl?: string; children?: ReactNode }) {
   return <>{children ?? null}</>;
 }
 

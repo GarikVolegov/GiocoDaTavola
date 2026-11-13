@@ -70,10 +70,13 @@ describe('ResultsPanel with Real-World Insight', () => {
       optionA: 'A',
       optionB: 'B',
       lezioneReale: 'La prudenza non deve trasformarsi in paralisi.',
+      domandaRilancio: 'Qual è la scelta che stai rimandando oggi?',
     };
 
     render(<ResultsPanel swing={swing} dilemma={dilemma} />);
     expect(screen.getByTestId('oracolo-lezione')).toBeInTheDocument();
+    expect(screen.getByTestId('domanda-rilancio')).toBeInTheDocument();
+    expect(screen.getByText(/Qual è la scelta che stai rimandando oggi\?/i)).toBeInTheDocument();
     expect(screen.getByText(/L’Oracolo della Realtà/i)).toBeInTheDocument();
     expect(screen.getByText(/"La prudenza non deve trasformarsi in paralisi."/i)).toBeInTheDocument();
   });

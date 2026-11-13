@@ -52,6 +52,13 @@ export class NexusScene {
   private goldLight: THREE.PointLight | null = null;
   private shockwaveRing: THREE.Mesh | null = null;
   private celebratoryVortex: THREE.Points | null = null;
+  private floatingShards: Array<{
+    mesh: THREE.Mesh;
+    baseY: number;
+    speed: number;
+    phase: number;
+    amp: number;
+  }> = [];
 
   // Camera targets for smooth cinematic lerp
   private targetCamPos = new THREE.Vector3(0, 1.2, 9);
@@ -60,6 +67,12 @@ export class NexusScene {
   private targetLean = 50;
   private shockwaveScale = 0;
   private shockwaveActive = false;
+  private pointerX = 0;
+  private pointerY = 0;
+  private targetPointerX = 0;
+  private targetPointerY = 0;
+  private scrollProgress = 0;
+  private reducedMotion = false;
 
   private state: NexusState = {
     variant: 'host',
@@ -96,15 +109,28 @@ export class NexusScene {
       this.renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
       this.renderer.setClearColor(0x070a14, 0);
 
+      this.reducedMotion =
+        typeof window !== 'undefined' &&
+        Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+
       this.buildCosmos();
       this.buildPathways();
       this.buildMonoliths();
+      this.buildShards();
       this.buildLights();
       this.buildShockwave();
       this.buildCelebration();
 
       this.onResize = this.onResize.bind(this);
+      this.onPointerMove = this.onPointerMove.bind(this);
+      this.onScroll = this.onScroll.bind(this);
       window.addEventListener('resize', this.onResize);
+      if (!this.reducedMotion) {
+        window.addEventListener('pointermove', this.onPointerMove, { passive: true });
+        if (this.state.variant === 'landing') {
+          window.addEventListener('scroll', this.onScroll, { passive: true });
+        }
+      }
 
       this.applyPhase(this.state.phase);
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
@@ -126,6 +152,13 @@ export class NexusScene {
 
     if (next.phase && next.phase !== prevPhase) {
       this.applyPhase(next.phase);
+      if (
+        next.phase === 'SPLIT_REVEAL' ||
+        next.phase === 'UNANIMOUS_REVEAL' ||
+        next.phase === 'FINAL_AWARDS'
+      ) {
+        this.triggerShockwave();
+      }
     }
 
     if (next.isRibaltone) {
@@ -201,7 +234,8 @@ export class NexusScene {
   }
 
   private buildCosmos(): void {
-    const starCount = this.state.variant === 'host' ? 1100 : 450;
+    const starCount =
+      this.state.variant === 'host' ? 1100 : this.state.variant === 'landing' ? 900 : 450;
     const positions = new Float32Array(starCount * 3);
     const colors = new Float32Array(starCount * 3);
 
@@ -441,6 +475,55 @@ export class NexusScene {
     this.scene.add(this.celebratoryVortex);
   }
 
+  private buildShards(): void {
+    const shardCount =
+      this.state.variant === 'landing' ? 14 : this.state.variant === 'host' ? 10 : 6;
+    const colors = [0x3e82fc, 0xf56c38, 0xe5c158];
+    const shardGeo = new THREE.OctahedronGeometry(0.45, 0);
+
+    for (let i = 0; i < shardCount; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const color = colors[i % colors.length];
+      const mat = new THREE.MeshBasicMaterial({
+        color,
+        wireframe: true,
+        transparent: true,
+        opacity: this.state.variant === 'player' ? 0.22 : 0.34,
+        blending: THREE.AdditiveBlending,
+      });
+      const mesh = new THREE.Mesh(shardGeo, mat);
+      const x = side * (4.5 + ((i * 2.3) % 10.5));
+      const baseY = -1.4 + ((i * 1.7) % 5.8);
+      const z = -4 - ((i * 2.9) % 16);
+      const scale = 0.65 + (i % 4) * 0.28;
+      mesh.position.set(x, baseY, z);
+      mesh.scale.setScalar(scale);
+      this.scene.add(mesh);
+      this.floatingShards.push({
+        mesh,
+        baseY,
+        speed: 0.45 + (i % 5) * 0.14,
+        phase: i * 0.85,
+        amp: 0.28 + (i % 3) * 0.14,
+      });
+    }
+  }
+
+  private onPointerMove(e: PointerEvent): void {
+    if (this.disposed || typeof window === 'undefined') return;
+    const w = window.innerWidth || 1;
+    const h = window.innerHeight || 1;
+    this.targetPointerX = (e.clientX / w - 0.5) * 2;
+    this.targetPointerY = (e.clientY / h - 0.5) * 2;
+  }
+
+  private onScroll(): void {
+    if (this.disposed || typeof window === 'undefined') return;
+    const doc = document.documentElement;
+    const maxScroll = Math.max(1, doc.scrollHeight - window.innerHeight);
+    this.scrollProgress = Math.min(1, Math.max(0, window.scrollY / maxScroll));
+  }
+
   private onResize(): void {
     if (!this.renderer || this.disposed) return;
     const w = this.canvas.clientWidth;
@@ -460,15 +543,33 @@ export class NexusScene {
     const elapsed = (now - this.startTime) / 1000;
     this.lastTime = now;
 
-    // Smooth lean interpolation
-    this.currentLean += (this.targetLean - this.currentLean) * 0.055;
+    // Frame-rate-independent exponential damping (consistent across 60Hz & 120Hz)
+    const damp = (speed: number) => 1 - Math.exp(-speed * Math.max(delta, 0.001));
+    const camFactor = damp(3.2);
+    const leanFactorDamp = damp(3.8);
+
+    // Smooth lean & pointer parallax interpolation
+    this.currentLean += (this.targetLean - this.currentLean) * leanFactorDamp;
     const leanFraction = this.currentLean / 100; // 0 (full B) .. 1 (full A)
 
-    // Smooth camera lerp
-    this.camera.position.lerp(this.targetCamPos, 0.045);
-    this.camera.rotation.x += (this.targetCamRot.x - this.camera.rotation.x) * 0.045;
-    this.camera.rotation.y += (this.targetCamRot.y - this.camera.rotation.y) * 0.045;
-    this.camera.rotation.z += (this.targetCamRot.z - this.camera.rotation.z) * 0.045;
+    this.pointerX += (this.targetPointerX - this.pointerX) * damp(4.5);
+    this.pointerY += (this.targetPointerY - this.pointerY) * damp(4.5);
+
+    const parallaxScale =
+      this.reducedMotion ? 0 : this.state.variant === 'landing' ? 0.55 : this.state.variant === 'host' ? 0.28 : 0.16;
+    const scrollZ = this.state.variant === 'landing' && !this.reducedMotion ? this.scrollProgress * -2.2 : 0;
+    const scrollY = this.state.variant === 'landing' && !this.reducedMotion ? this.scrollProgress * 0.45 : 0;
+
+    const desiredX = this.targetCamPos.x + this.pointerX * parallaxScale;
+    const desiredY = this.targetCamPos.y - this.pointerY * parallaxScale * 0.55 + scrollY;
+    const desiredZ = this.targetCamPos.z + scrollZ;
+
+    this.camera.position.x += (desiredX - this.camera.position.x) * camFactor;
+    this.camera.position.y += (desiredY - this.camera.position.y) * camFactor;
+    this.camera.position.z += (desiredZ - this.camera.position.z) * camFactor;
+    this.camera.rotation.x += (this.targetCamRot.x - this.pointerY * 0.025 * parallaxScale - this.camera.rotation.x) * camFactor;
+    this.camera.rotation.y += (this.targetCamRot.y - this.pointerX * 0.035 * parallaxScale - this.camera.rotation.y) * camFactor;
+    this.camera.rotation.z += (this.targetCamRot.z - this.camera.rotation.z) * camFactor;
 
     // Subtle ambient breathing motion
     const breathY = Math.sin(elapsed * 0.75) * 0.07;
@@ -521,6 +622,15 @@ export class NexusScene {
       this.spireB.rotation.y = -elapsed * 0.2;
     }
 
+    // Floating 3D polyhedral shards
+    if (!this.reducedMotion) {
+      for (const s of this.floatingShards) {
+        s.mesh.position.y = s.baseY + Math.sin(elapsed * s.speed + s.phase) * s.amp;
+        s.mesh.rotation.y = elapsed * s.speed * 0.6 + s.phase;
+        s.mesh.rotation.x = Math.cos(elapsed * s.speed * 0.4 + s.phase) * 0.45;
+      }
+    }
+
     // Star rotation
     if (this.starPoints) {
       this.starPoints.rotation.y = elapsed * 0.012;
@@ -561,6 +671,8 @@ export class NexusScene {
     }
     if (typeof window !== 'undefined') {
       window.removeEventListener('resize', this.onResize);
+      window.removeEventListener('pointermove', this.onPointerMove);
+      window.removeEventListener('scroll', this.onScroll);
     }
     this.scene.clear();
     this.renderer?.dispose();

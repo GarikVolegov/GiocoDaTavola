@@ -19,13 +19,14 @@ import {
   type PublicPlayer,
   type PercorsoView,
 } from '../shared/events';
-import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, AwardsPanel, NamedMomentsPanel, PodiumPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip, LiveVoterStatus, leanFromSplit, PauseOverlay } from '../shared/ui';
+import { Card, CardGrid, DilemmaCard, SplitBar, ResultsPanel, RilancioCard, AwardsPanel, NamedMomentsPanel, PodiumPanel, Logo, Swing, Button, TextInput, Alert, Celebration, RoomCodeChip, LiveVoterStatus, leanFromSplit, PauseOverlay } from '../shared/ui';
 import ReactionSwarm from '../shared/ReactionSwarm';
 import { AudioGate } from './AudioGate';
 import { MuteButton } from './MuteButton';
 import { useHostAudio } from './audio/useHostAudio';
 import { useIsSpeaking } from './audio/narrator';
 import { useWakeLock } from '../shared/useWakeLock';
+import { useIntensityTheme } from '../shared/useIntensityTheme';
 import { playTick, playSiren, playGong, playFanfare } from './audio/synthSfx';
 
 const screen = {
@@ -148,6 +149,14 @@ export default function HostApp() {
   const isSpeaking = useIsSpeaking();
   // Keep host screen / TV awake during the entire game
   useWakeLock(code != null);
+  // Dynamically shift display typography based on seriousness / intensity
+  useIntensityTheme({
+    complessita: game?.dilemma?.complessita,
+    caos: game?.caos,
+    partyMode: game?.partyMode,
+    partyIntensity: game?.partyCard?.intensity,
+    phase,
+  });
 
   // Sfondo "bivio": al SPLIT_REVEAL la scena pende verso il lato in testa
   // (voto AGGREGATO — i voti restano segreti, nessun aggancio durante VOTE_*).
@@ -302,6 +311,7 @@ export default function HostApp() {
         {code && <RoomCodeChip code={code} />}
         {/* Percorso: the climb map (current tappa highlighted) sits above the phase. */}
         {game.percorso && <PercorsoMap percorso={game.percorso} />}
+        <div key={`${phase}-${game.dilemmaIndex}`} className="hostPhaseStage">
         {inDilemma && (
           <p style={{ opacity: 0.7, margin: 0, fontSize: '1.1rem' }}>
             {game.storia
@@ -311,14 +321,14 @@ export default function HostApp() {
                 : `Dilemma ${game.dilemmaIndex}/${game.dilemmaCount}`}
           </p>
         )}
-        <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', margin: 0, fontFamily: phase === 'PHASE_INTRO' ? 'var(--font-serif)' : 'var(--font-display)', fontWeight: phase === 'PHASE_INTRO' ? 500 : 700, ...(phase === 'PHASE_INTRO' && { letterSpacing: 'var(--tracking-serif)' }) }}>{PHASE_LABELS[phase]}</h1>
+        <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)', margin: 0, fontFamily: 'var(--font-display)', fontWeight: 'var(--weight-display, 800)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-display, 0.03em)' }}>{PHASE_LABELS[phase]}</h1>
 
         {phase === 'TAPPA_INTRO' && game.percorso && (() => {
           const meta = tappaMeta(game.percorso.currentTappa);
           return (
             <Card glow="accent" style={{ maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center', alignItems: 'center' }}>
               <span style={{ fontSize: '4rem' }}>{meta.emoji}</span>
-              <h2 style={{ fontSize: '2rem', margin: 0, fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>{meta.nome}</h2>
+              <h2 style={{ fontSize: '2rem', margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-display, 0.03em)' }}>{meta.nome}</h2>
               <p style={{ fontSize: '1.3rem', opacity: 0.85, margin: 0 }}>{meta.sottotitolo}</p>
               <p style={{ fontSize: '1.1rem', opacity: 0.7, margin: 0 }}>{meta.descrizione}</p>
             </Card>
@@ -349,19 +359,19 @@ export default function HostApp() {
           return meta ? (
             <Card glow="accent" style={{ maxWidth: '40rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center', alignItems: 'center' }}>
               <span style={{ fontSize: '4rem' }}>{meta.emoji}</span>
-              <h2 style={{ fontSize: '2rem', margin: 0, fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>{meta.nome}</h2>
+              <h2 style={{ fontSize: '2rem', margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-display, 0.03em)' }}>{meta.nome}</h2>
               <p style={{ fontSize: '1.3rem', opacity: 0.85, margin: 0 }}>{meta.sottotitolo}</p>
             </Card>
           ) : null;
         })()}
 
-        {/* Storie: the narrator's prose, read aloud by the host voice. Large serif. */}
+        {/* Storie: story title in decisive display caps, narrative prose in readable sentence-case body. */}
         {phase === 'STORY_INTRO' && game.storia && (
           <Card glow="accent" style={{ maxWidth: '46rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', textAlign: 'center', alignItems: 'center' }}>
             <span style={{ fontSize: '4rem' }}>{game.storia.emoji}</span>
-            <h2 style={{ fontSize: '2.2rem', margin: 0, fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>{game.storia.title}</h2>
+            <h2 style={{ fontSize: '2.1rem', margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-display, 0.03em)' }}>{game.storia.title}</h2>
             <p style={{ fontSize: '1.2rem', opacity: 0.75, margin: 0 }}>con {game.storia.protagonist}</p>
-            <p style={{ fontSize: '1.45rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.premessa}</p>
+            <p style={{ fontSize: '1.35rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-body)' }}>{game.storia.premessa}</p>
             {narratorStatus}
             {leaderWaitCue}
           </Card>
@@ -370,9 +380,9 @@ export default function HostApp() {
         {phase === 'SCENE_INTRO' && game.storia && (
           <Card glow="accent" style={{ maxWidth: '46rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center', alignItems: 'center' }}>
             {game.storia.actTitle && (
-              <p style={{ fontSize: '1rem', opacity: 0.6, margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{game.storia.actTitle}</p>
+              <p style={{ fontSize: '1rem', opacity: 0.7, margin: 0, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-display)', fontWeight: 700 }}>{game.storia.actTitle}</p>
             )}
-            <p style={{ fontSize: '1.5rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.sceneNarration}</p>
+            <p style={{ fontSize: '1.4rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-body)' }}>{game.storia.sceneNarration}</p>
             {narratorStatus}
             {leaderWaitCue}
           </Card>
@@ -381,11 +391,11 @@ export default function HostApp() {
         {phase === 'SCENE_CONSEQUENCE' && game.storia && (
           <Card glow="accent" style={{ maxWidth: '46rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center', alignItems: 'center' }}>
             {game.storia.decision && (
-              <h2 style={{ fontSize: '1.6rem', margin: 0 }}>
-                Il gruppo ha scelto: {game.storia.decision === 'A' ? dilemma?.optionA : dilemma?.optionB}
+              <h2 style={{ fontSize: '1.55rem', margin: 0, fontFamily: 'var(--font-display)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-display, 0.03em)' }}>
+                IL GRUPPO HA SCELTO: {game.storia.decision === 'A' ? dilemma?.optionA : dilemma?.optionB}
               </h2>
             )}
-            <p style={{ fontSize: '1.45rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.consequence}</p>
+            <p style={{ fontSize: '1.35rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-body)' }}>{game.storia.consequence}</p>
             {narratorStatus}
             {leaderWaitCue}
           </Card>
@@ -394,7 +404,7 @@ export default function HostApp() {
         {phase === 'STORY_EPILOGUE' && game.storia && (
           <Card glow="accent" style={{ maxWidth: '46rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', textAlign: 'center', alignItems: 'center' }}>
             <span style={{ fontSize: '3.5rem' }}>🌅</span>
-            <p style={{ fontSize: '1.5rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-serif)' }}>{game.storia.epilogo}</p>
+            <p style={{ fontSize: '1.4rem', lineHeight: 1.55, margin: 0, fontFamily: 'var(--font-body)' }}>{game.storia.epilogo}</p>
             {narratorStatus}
             {leaderWaitCue}
           </Card>
@@ -402,11 +412,11 @@ export default function HostApp() {
 
         {phase === 'PHASE_INTRO' && (
           <>
-            <p style={{ fontSize: '1.5rem', opacity: 0.85, margin: 0, maxWidth: '40rem' }}>
+            <p style={{ fontSize: '1.4rem', opacity: 0.85, margin: 0, maxWidth: '40rem' }}>
               Vi mostreremo {game.dilemmaCount} dilemmi. Votate, ascoltate le difese e
               cambiate idea… se vi convincono!
             </p>
-            <p style={{ fontSize: '1.6rem', fontWeight: 500, margin: 0, maxWidth: '40rem', fontFamily: 'var(--font-serif)', letterSpacing: 'var(--tracking-serif)' }}>
+            <p style={{ fontSize: '1.45rem', fontWeight: 800, margin: 0, maxWidth: '40rem', fontFamily: 'var(--font-display)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-display, 0.03em)', color: 'var(--gold)' }}>
               🎯 {OBJECTIVE}
             </p>
           </>
@@ -746,7 +756,10 @@ export default function HostApp() {
               {remaining - SPLIT_REVEAL_WINDOW_S}
             </div>
           ) : (
-            split && <SplitBar split={split} />
+            <>
+              {split && <SplitBar split={split} />}
+              <RilancioCard domanda={dilemma?.domandaRilancio} />
+            </>
           );
         })()}
 
@@ -764,6 +777,7 @@ export default function HostApp() {
             <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, opacity: 0.9 }}>
               {game.unanimous.count} su {game.unanimous.count} dalla stessa parte
             </p>
+            <RilancioCard domanda={dilemma?.domandaRilancio} />
             <p style={{ fontSize: '1.15rem', margin: 0, opacity: 0.7 }}>
               Niente dibattito — nuovo dilemma in arrivo…
             </p>
@@ -798,6 +812,46 @@ export default function HostApp() {
           <p style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, maxWidth: '40rem' }}>
             Votate dal telefono chi vi ha strappato l'applauso · {game.speakerVotedCount}/{players.length}
           </p>
+        )}
+
+        {phase === 'HOT_TAKE_VOTE' && game.hotTakePrompt && (
+          <>
+            <p style={{ fontSize: '1.65rem', fontWeight: 800, margin: 0, maxWidth: '42rem' }}>
+              🌡️ {game.hotTakePrompt.text}
+            </p>
+            <p style={{ fontSize: '1.15rem', margin: 0, opacity: 0.85 }}>
+              Scegliete da 1 a 10 sul telefono · {game.hotTakeSubmittedCount ?? 0}/{players.length}
+            </p>
+          </>
+        )}
+
+        {phase === 'HOT_TAKE_REVEAL' && game.hotTakeReveal && (
+          <>
+            <p style={{ fontSize: '1.45rem', fontWeight: 700, margin: 0, maxWidth: '42rem' }}>
+              {game.hotTakeReveal.prompt.text}
+            </p>
+            <div style={{ fontSize: '3.2rem', fontWeight: 900, color: 'var(--gold)', lineHeight: 1.05 }}>
+              Media {game.hotTakeReveal.average.toFixed(1)} <span style={{ fontSize: '1.3rem', opacity: 0.6 }}>/ 10</span>
+            </div>
+            {game.hotTakeReveal.lowest &&
+              game.hotTakeReveal.highest &&
+              game.hotTakeReveal.lowest.playerId !== game.hotTakeReveal.highest.playerId && (
+                <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--faction-a)', fontWeight: 800 }}>❄️ PIÙ FREDDO</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 900 }}>
+                      {game.hotTakeReveal.lowest.nickname} ({game.hotTakeReveal.lowest.score}/10)
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--faction-b)', fontWeight: 800 }}>🔥 PIÙ CALDO</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 900 }}>
+                      {game.hotTakeReveal.highest.nickname} ({game.hotTakeReveal.highest.score}/10)
+                    </div>
+                  </div>
+                </div>
+              )}
+          </>
         )}
 
         {phase === 'GROUP_MIND' && game.groupMindQuestion && (
@@ -1375,6 +1429,7 @@ export default function HostApp() {
             {remaining}s
           </div>
         ) : null}
+        </div>
       </main>
     );
   }

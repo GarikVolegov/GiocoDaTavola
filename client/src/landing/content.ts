@@ -9,10 +9,10 @@ export interface Feature {
 }
 
 export const FEATURES: Feature[] = [
-  { icon: '🗳️', title: '60 dilemmi, mai gli stessi', body: 'Scelte di vita e di business: scomode, divertenti, da litigarci (per gioco).' },
-  { icon: '🎯', title: 'Vince chi convince', body: 'Non conta aver ragione: conta far cambiare idea agli altri… e restare pronti a cambiarla tu.' },
-  { icon: '🤖', title: 'Anche in pochi', body: 'Pochi amici? Aggiungi dei bot con personalità e giocate lo stesso.' },
-  { icon: '🎉', title: 'Nessuno perde', body: 'A fine serata premi simpatici per tutti. Si gioca per ridere, non per vincere.' },
+  { icon: '🗳️', title: 'Centinaia di dilemmi, mai uguali', body: 'Scelte di vita, lavoro e morale: scomode, brillanti e perfette per accendere il dibattito.' },
+  { icon: '🎯', title: 'Vince chi convince', body: 'Non conta avere ragione: conta far cambiare idea agli altri… e saperla cambiare al momento giusto.' },
+  { icon: '🤖', title: 'Perfetto anche in pochi', body: 'Siete in meno di 4? Aggiungi bot con personalità diverse e giocate subito.' },
+  { icon: '🎉', title: 'Nessuno perde', body: 'A fine serata premi ironici per tutti: si gioca per ridere e scoprirsi, non per il punteggio.' },
 ];
 
 export interface Duration {
@@ -44,8 +44,10 @@ export const AWARDS: Award[] = [
   { emoji: '🦓', title: 'Bastian Contrario', sub: 'Sempre in minoranza' },
 ];
 
+export type PartyModeVisualId = 'flash' | 'infiltrato' | 'coppie' | 'assurdo';
+
 export interface PartyModeInfo {
-  icon: string;
+  id: PartyModeVisualId;
   name: string;
   tag: string;
   desc: string;
@@ -53,27 +55,27 @@ export interface PartyModeInfo {
 
 export const PARTY_MODES_INFO: PartyModeInfo[] = [
   {
-    icon: '⚡',
+    id: 'flash',
     name: 'Schierati Flash',
-    tag: 'Party rapido · 3s voto',
-    desc: '3 secondi per votare, 15s blitz defense. Dilemmi istantanei e chi è in minoranza beve o fa penitenza!',
+    tag: '3s Voto · Blitz',
+    desc: 'Voto istantaneo e difesa lampo: chi resta in minoranza paga pegno.',
   },
   {
-    icon: '🕵️',
+    id: 'infiltrato',
     name: "L'Infiltrato",
-    tag: 'Social deduction · 60s dibattito',
-    desc: 'Domanda segreta inviata a tutti, tranne all’infiltrato che ne riceve una diversa. 60s per smascherarlo!',
+    tag: 'Bluff · 60s',
+    desc: 'Tutti hanno la stessa domanda tranne uno: smaschera chi bluffa.',
   },
   {
-    icon: '🌶️',
+    id: 'coppie',
     name: 'Coppie & Scintille',
-    tag: 'Complicità o Piccante 18+',
-    desc: 'Allineamento cieco, verità senza filtri e sfide fisiche. Scoprite quanto vi conoscete davvero.',
+    tag: 'Complicità / 18+',
+    desc: 'Allineamento cieco, verità senza filtri e sfide ad alta tensione.',
   },
   {
-    icon: '🤡',
-    name: 'Assurdo ma Semplice',
-    tag: 'Caos & risate immediate',
-    desc: 'La Gogna ("chi di noi finisce nei guai?") e il Prezzo della Dignità ("accetteresti 500€ se...?").',
+    id: 'assurdo',
+    name: 'Assurdo',
+    tag: 'Caos & Gogna',
+    desc: 'Punta il dito sugli amici o svela il prezzo della tua dignità.',
   },
 ];

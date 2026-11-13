@@ -79,6 +79,45 @@ export function ribaltoneHero(swing: PublicSwing): DefenseImpact | null {
   return swing.attribution.reduce((best, imp) => (imp.votes > best.votes ? imp : best));
 }
 
+/**
+ * Post-vote follow-up question ("Domanda di Rilancio") shown immediately after
+ * the vote results to spark live conversation and deeper awareness.
+ */
+export function RilancioCard({ domanda }: { domanda?: string | null }) {
+  if (!domanda) return null;
+  return (
+    <div
+      data-testid="domanda-rilancio"
+      style={{
+        width: 'min(92vw, 36rem)',
+        padding: '0.85rem 1.1rem',
+        borderRadius: 'var(--radius-md)',
+        background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.14) 0%, rgba(139, 92, 246, 0.12) 100%)',
+        border: '1px solid rgba(56, 189, 248, 0.38)',
+        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.3rem',
+      }}
+    >
+      <span
+        style={{
+          fontSize: '0.72rem',
+          fontWeight: 800,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          color: '#7dd3fc',
+        }}
+      >
+        💬 Domanda per voi · Parlatene dal vivo
+      </span>
+      <p style={{ margin: 0, fontSize: 'clamp(1rem, 2.1vw, 1.2rem)', fontWeight: 700, lineHeight: 1.35 }}>
+        {domanda}
+      </p>
+    </div>
+  );
+}
+
 /** The persuasion swing + per-defender attribution (PHASE_RESULTS). */
 export function ResultsPanel({ swing, dilemma }: { swing: PublicSwing; dilemma?: PublicDilemma | null }) {
   const hero = ribaltoneHero(swing);
@@ -133,6 +172,7 @@ export function ResultsPanel({ swing, dilemma }: { swing: PublicSwing; dilemma?:
           ))}
         </div>
       )}
+      <RilancioCard domanda={dilemma?.domandaRilancio} />
       {dilemma?.lezioneReale && (
         <div data-testid="oracolo-lezione" className={styles.oracleCard}>
           <div className={styles.oracleBadge}>

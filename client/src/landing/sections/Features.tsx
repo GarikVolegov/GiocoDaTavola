@@ -1,69 +1,123 @@
-import type { ReactNode } from 'react';
 import { FEATURES } from '../content';
 import styles from '../Landing.module.css';
 
-// Stroke icons (1.6 hairline, currentColor → gold on the chip). Keyed by feature
-// title so content.ts stays the single source of copy; emoji stay only for the
-// Awards/personaggi section. Order mirrors FEATURES: deck · persuasion · bots · party.
-const ICONS: Record<string, ReactNode> = {
-  '60 dilemmi, mai gli stessi': (
-    <>
-      <rect x="4" y="5" width="11" height="15" rx="1.5" />
-      <path d="M8.5 3.5 18.5 6 16 18" />
-    </>
-  ),
-  'Vince chi convince': (
-    <>
-      <circle cx="12" cy="12" r="8" />
-      <circle cx="12" cy="12" r="4" />
-      <circle cx="12" cy="12" r="0.8" fill="currentColor" stroke="none" />
-    </>
-  ),
-  'Anche in pochi': (
-    <>
-      <rect x="5" y="8" width="14" height="11" rx="2" />
-      <path d="M12 4.5V8M9.5 13h.01M14.5 13h.01M3 12v3M21 12v3" />
-    </>
-  ),
-  'Nessuno perde': (
-    <>
-      <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z" />
-      <path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M9 19h6M10 16h4" />
-    </>
-  ),
-};
+function FeaturePreview({ index }: { index: number }) {
+  if (index === 0) {
+    return (
+      <div className={styles.sceneBox} aria-hidden="true">
+        <div className={styles.deckStack}>
+          <div className={`${styles.deckBack} ${styles.deckBackLeft}`}>LAVORO</div>
+          <div className={`${styles.deckBack} ${styles.deckBackRight}`}>CAOS 18+</div>
+          <div className={styles.deckFront}>
+            <div className={styles.deckFrontTop}>
+              <span className={styles.miniBadgeGold}>DILEMMA #142</span>
+              <span className={styles.deckCat}>MORALE</span>
+            </div>
+            <div className={styles.deckQ}>SALVI UN AMICO O LA TUA CARRIERA?</div>
+            <div className={styles.deckOpts}>
+              <span className={styles.deckOptA}>A · AMICO</span>
+              <span className={styles.deckOptB}>B · CARRIERA</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (index === 1) {
+    return (
+      <div className={styles.sceneBox} aria-hidden="true">
+        <div className={styles.swingScene}>
+          <div className={styles.swingCompareRow}>
+            <span className={styles.swingBefore}>PRIMA: 65% A</span>
+            <span className={styles.miniShiftTag}>+2 VOTI RIBALTATI</span>
+            <span className={styles.swingAfter}>DOPO: 68% B</span>
+          </div>
+          <div className={styles.swingTokensRow}>
+            <span className={styles.tokenBlue}>M</span>
+            <span className={styles.tokenShift}>S →</span>
+            <span className={styles.tokenShift}>L →</span>
+            <span className={styles.tokenOrange}>G</span>
+            <span className={styles.tokenOrange}>A</span>
+          </div>
+          <div className={styles.miniSplitTrackTall}>
+            <div className={styles.miniSplitA} style={{ width: '32%' }}>32%</div>
+            <div className={styles.miniSplitB} style={{ width: '68%' }}>68%</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (index === 2) {
+    return (
+      <div className={styles.sceneBox} aria-hidden="true">
+        <div className={styles.rosterGrid}>
+          <div className={styles.rosterTile}>
+            <span className={`${styles.rosterAvatar} ${styles.rosterAvatarA}`}>M</span>
+            <div className={styles.rosterInfo}>
+              <span className={styles.rosterName}>MARCO</span>
+              <span className={styles.rosterRole}>HOST</span>
+            </div>
+          </div>
+          <div className={styles.rosterTile}>
+            <span className={`${styles.rosterAvatar} ${styles.rosterAvatarB}`}>S</span>
+            <div className={styles.rosterInfo}>
+              <span className={styles.rosterName}>SARA</span>
+              <span className={styles.rosterRoleReady}>PRONTO ✓</span>
+            </div>
+          </div>
+          <div className={`${styles.rosterTile} ${styles.rosterTileBot}`}>
+            <span className={`${styles.rosterAvatar} ${styles.rosterAvatarBot}`}>🤖</span>
+            <div className={styles.rosterInfo}>
+              <span className={styles.rosterName}>LOGICO</span>
+              <span className={styles.rosterRoleBot}>BOT AI</span>
+            </div>
+          </div>
+          <div className={`${styles.rosterTile} ${styles.rosterTileBot}`}>
+            <span className={`${styles.rosterAvatar} ${styles.rosterAvatarBot}`}>🤖</span>
+            <div className={styles.rosterInfo}>
+              <span className={styles.rosterName}>CAOS</span>
+              <span className={styles.rosterRoleBot}>BOT AI</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={styles.sceneBox} aria-hidden="true">
+      <div className={styles.trophyRow}>
+        <div className={styles.trophyCard}>
+          <span className={styles.trophyEmoji}>🏆</span>
+          <span className={styles.trophyTitle}>PERSUASORE</span>
+          <span className={styles.trophySub}>SARA · +4 VOTI</span>
+        </div>
+        <div className={styles.trophyCard}>
+          <span className={styles.trophyEmoji}>🎤</span>
+          <span className={styles.trophyTitle}>ORATORE</span>
+          <span className={styles.trophySub}>MARCO · 92%</span>
+        </div>
+        <div className={styles.trophyCard}>
+          <span className={styles.trophyEmoji}>🎏</span>
+          <span className={styles.trophyTitle}>BANDERUOLA</span>
+          <span className={styles.trophySub}>LUCA · 3 CAMBI</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-const FALLBACK_ICON: ReactNode = (
-  <>
-    <circle cx="12" cy="12" r="8" />
-    <path d="M9.5 12.5 11.5 14.5 15 10" />
-  </>
-);
-
+// Feature cards with rich, realistic mini-UI scenes representing key game moments.
 export default function Features() {
   return (
     <div className={`${styles.wrap} ${styles.section}`}>
       <p className={styles.kicker}>Perché ti piacerà</p>
       <h2 className={styles.h2}>Fatto per accendere il tavolo</h2>
       <div className={styles.feat}>
-        {FEATURES.map((f) => (
+        {FEATURES.map((f, i) => (
           <div className={styles.card} key={f.title}>
-            <span className={styles.cardIc} aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.6}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                {ICONS[f.title] ?? FALLBACK_ICON}
-              </svg>
-            </span>
-            <div>
-              <h3>{f.title}</h3>
-              <p>{f.body}</p>
-            </div>
+            <FeaturePreview index={i} />
+            <h3>{f.title}</h3>
+            <p>{f.body}</p>
           </div>
         ))}
       </div>

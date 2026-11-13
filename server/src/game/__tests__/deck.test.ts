@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Deck, loadDilemmas, dilemmasForRegister, dilemmasForTappa, filterByMood, type Dilemma } from '../deck';
+import { Deck, loadDilemmas, dilemmasForRegister, dilemmasForTappa, filterByMood, filterByFamiliarita, isFamiliarita, type Dilemma } from '../deck';
 
 // A small fixed deck for exercising draw behavior without depending on the
 // real data file.
@@ -328,5 +328,33 @@ describe('Deck.cards (snapshot support)', () => {
     const deck = new Deck(fixture);
     deck.cards.pop();
     expect(deck.remainingCount).toBe(fixture.length);
+  });
+});
+
+describe('filterByFamiliarita', () => {
+  const pool: Dilemma[] = [
+    { id: 'va', text: 'va', optionA: 'A', optionB: 'B', register: 'vita', familiarita: 'vecchi_amici', spuntiA: [], spuntiB: [] },
+    { id: 'nc', text: 'nc', optionA: 'A', optionB: 'B', register: 'vita', familiarita: 'nuove_conoscenze', spuntiA: [], spuntiB: [] },
+    { id: 'tu', text: 'tu', optionA: 'A', optionB: 'B', register: 'vita', familiarita: 'tutti', spuntiA: [], spuntiB: [] },
+    { id: 'un', text: 'un', optionA: 'A', optionB: 'B', register: 'vita', spuntiA: [], spuntiB: [] },
+  ];
+
+  it('validates familiarita values', () => {
+    expect(isFamiliarita('vecchi_amici')).toBe(true);
+    expect(isFamiliarita('nuove_conoscenze')).toBe(true);
+    expect(isFamiliarita('misto')).toBe(true);
+    expect(isFamiliarita('invalid')).toBe(false);
+  });
+
+  it('vecchi_amici excludes nuove_conoscenze-only dilemmas', () => {
+    expect(filterByFamiliarita(pool, 'vecchi_amici').map((d) => d.id)).toEqual(['va', 'tu', 'un']);
+  });
+
+  it('nuove_conoscenze excludes vecchi_amici-only dilemmas', () => {
+    expect(filterByFamiliarita(pool, 'nuove_conoscenze').map((d) => d.id)).toEqual(['nc', 'tu', 'un']);
+  });
+
+  it('misto keeps all dilemmas', () => {
+    expect(filterByFamiliarita(pool, 'misto').map((d) => d.id)).toEqual(['va', 'nc', 'tu', 'un']);
   });
 });

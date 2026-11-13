@@ -3,7 +3,52 @@ import styles from '../Landing.module.css';
 
 const TITLES = ['Voti A o B', 'Si difende', 'Si rivota'];
 
-// 3-step explainer; the short body lines come from the shared HOW_TO_PLAY copy.
+function StepPreview({ step }: { step: number }) {
+  if (step === 0) {
+    return (
+      <div className={styles.miniUi} aria-hidden="true">
+        <div className={styles.miniUiHead}>
+          <span className={styles.miniBadgeGold}>VOTO SEGRETO</span>
+          <span className={styles.miniTimer}>0:12</span>
+        </div>
+        <div className={styles.miniVoteRow}>
+          <span className={`${styles.miniVoteBtn} ${styles.miniVoteA}`}>A ✓</span>
+          <span className={`${styles.miniVoteBtn} ${styles.miniVoteB}`}>B</span>
+        </div>
+      </div>
+    );
+  }
+  if (step === 1) {
+    return (
+      <div className={styles.miniUi} aria-hidden="true">
+        <div className={styles.miniSpeakerRow}>
+          <span className={styles.miniMic}>🎤</span>
+          <div className={styles.miniSpeakerText}>
+            <span className={styles.miniSpeakerName}>MARCO DIFENDE B</span>
+            <span className={styles.miniSpeakerSub}>ARRINGA DAL VIVO · 0:24</span>
+          </div>
+        </div>
+        <div className={styles.miniProgressTrack}>
+          <div className={styles.miniProgressFill} />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={styles.miniUi} aria-hidden="true">
+      <div className={styles.miniUiHead}>
+        <span className={styles.miniSplitText}>38% A · 62% B</span>
+        <span className={styles.miniSwingBadge}>⚡ RIBALTONE!</span>
+      </div>
+      <div className={styles.miniSplitTrack}>
+        <div className={styles.miniSplitA} />
+        <div className={styles.miniSplitB} />
+      </div>
+    </div>
+  );
+}
+
+// 3-step explainer with realistic mini-UI game snapshots for each phase.
 export default function HowToPlay() {
   return (
     <div className={`${styles.wrap} ${styles.section}`} id="come">
@@ -12,8 +57,11 @@ export default function HowToPlay() {
       <div className={styles.steps}>
         {HOW_TO_PLAY.map((line, i) => (
           <div className={styles.step} key={TITLES[i]}>
-            <div className={styles.stepN}>{i + 1}</div>
-            <h3>{TITLES[i]}</h3>
+            <div className={styles.stepHeader}>
+              <div className={styles.stepN}>{i + 1}</div>
+              <h3>{TITLES[i]}</h3>
+            </div>
+            <StepPreview step={i} />
             <p>{line}</p>
           </div>
         ))}

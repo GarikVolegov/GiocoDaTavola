@@ -2,7 +2,7 @@
    Spettacolare sintesi di profondità cosmica, glassmorphism e colori vibranti ad alto contrasto. */
 
 /* ===== fonts.css ===== */
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Chakra+Petch:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rubik:wght@700;800;900&family=Syne:wght@700;800&display=swap');
 
 @font-face {
   font-family: 'Space Grotesk';
@@ -70,35 +70,65 @@
 
 /* ===== typography.css ===== */
 :root {
-  --font-serif:   'Newsreader', Georgia, 'Times New Roman', serif;   /* headlines, claims, oracle */
-  --font-display: 'Space Grotesk', system-ui, sans-serif;            /* UI display, codes, countdown */
-  --font-body:    system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Chakra Petch', 'Space Grotesk', system-ui, sans-serif; /* default game UI display */
+  --font-serif:   var(--font-display);                                    /* legacy alias -> unified game display */
+  --font-body:    'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono:    ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Fluid type scale */
-  --text-xs:  0.85rem;
-  --text-sm:  1rem;
-  --text-md:  1.2rem;
-  --text-lg:  clamp(1.5rem, 4vw, 2.3rem);
-  --text-xl:  clamp(2rem, 7vw, 3rem);
-  --text-2xl: clamp(3rem, 11vw, 5.5rem);   /* room code / countdown */
+  /* Fluid type scale — calibrated for all-caps legibility & clear hierarchy */
+  --text-xs:  0.78rem;
+  --text-sm:  0.92rem;
+  --text-md:  1.08rem;
+  --text-lg:  clamp(1.35rem, 3.4vw, 2rem);
+  --text-xl:  clamp(1.85rem, 6vw, 2.75rem);
+  --text-2xl: clamp(2.6rem, 9.5vw, 5rem);   /* room code / countdown */
 
   /* Weights */
-  --weight-regular: 400;
-  --weight-medium:  500;
-  --weight-semibold:600;
-  --weight-bold:    700;
+  --weight-regular:   400;
+  --weight-medium:    500;
+  --weight-semibold:  600;
+  --weight-bold:      700;
+  --weight-extrabold: 800;
+  --weight-display:   700;
 
   /* Line heights */
   --leading-tight: 1.04;
-  --leading-snug:  1.18;
+  --leading-snug:  1.16;
   --leading-body:  1.55;
 
   /* Tracking */
-  --tracking-tight:   -0.025em;   /* display grotesk */
-  --tracking-serif:   -0.015em;   /* serif headlines */
-  --tracking-eyebrow:  0.22em;    /* uppercase kickers */
-  --tracking-code:     0.35rem;   /* room codes */
+  --tracking-tight:      -0.01em;  /* display grotesk */
+  --tracking-serif:       0.03em;  /* legacy alias -> uppercase display tracking */
+  --tracking-display:     0.03em;  /* decisive uppercase headlines & questions */
+  --tracking-caps-tight:  0.03em;
+  --tracking-caps-wide:   0.14em;
+  --tracking-eyebrow:     0.20em;  /* uppercase kickers */
+  --tracking-code:        0.35rem; /* room codes */
+}
+
+/* Dynamic game-themed display fonts by seriousness / intensity */
+:root[data-intensity='light'] {
+  --font-display:   'Rubik', 'Space Grotesk', system-ui, sans-serif;
+  --weight-display: 800;
+  --tracking-display: 0.02em;
+}
+
+:root[data-intensity='medium'] {
+  --font-display:   'Chakra Petch', 'Space Grotesk', system-ui, sans-serif;
+  --weight-display: 700;
+  --tracking-display: 0.03em;
+}
+
+:root[data-intensity='intense'] {
+  --font-display:   'Barlow Condensed', 'Space Grotesk', system-ui, sans-serif;
+  --weight-display: 800;
+  --tracking-display: 0.04em;
+}
+
+:root[data-intensity='chaos'] {
+  --font-display:   'Syne', 'Space Grotesk', system-ui, sans-serif;
+  --weight-display: 800;
+  --tracking-display: 0.015em;
 }
 
 /* ===== spacing.css ===== */

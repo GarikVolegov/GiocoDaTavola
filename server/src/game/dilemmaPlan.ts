@@ -5,7 +5,8 @@
 // Player-submitted dilemmas (5.2, "non bruciati in testa") are spread through
 // the game rather than clustered at the front. Pure given a Deck + rng.
 // (Percorso planning lives in percorso.ts.)
-import { COMPLESSITA_RANK, type Deck, type Dilemma, type Complessita } from './deck';
+import { COMPLESSITA_RANK, type Deck, type Dilemma, type Complessita, type Familiarita } from './deck';
+import { pickBestReplacement, selectMatchedSequence } from './matcher';
 import type { Room } from './rooms';
 
 /** A fresh shuffled copy of `arr` using the injected rng (Fisher–Yates). */
@@ -86,7 +87,16 @@ function enforcePacing(seq: Dilemma[], submittedIds: Set<string>): Dilemma[] {
     }
     for (let i = 0; i < n - 1; i++) {
       if (isSbilanciato(arr[i]) && isSbilanciato(arr[i + 1])) {
-        const swapIdx = arr.findIndex((d, j) => j > i + 1 && !isSbilanciato(d));
+        let swapIdx = arr.findIndex((d, j) => j > i + 1 && !isSbilanciato(d));
+        if (swapIdx === -1) {
+          swapIdx = arr.findIndex(
+            (d, j) =>
+              j < i &&
+              !isSbilanciato(d) &&
+              (j === 0 || !isSbilanciato(arr[j - 1])) &&
+              !isSbilanciato(arr[j + 1]),
+          );
+        }
         if (swapIdx !== -1) [arr[i + 1], arr[swapIdx]] = [arr[swapIdx], arr[i + 1]];
       }
     }
@@ -111,31 +121,30 @@ export function buildClassicPlan(
   submitted: Dilemma[],
   count: number,
   rng: () => number,
+  playerCount = 0,
+  familiarita: Familiarita = 'misto',
 ): Dilemma[] {
   const chosenSubmitted = shuffle(submitted, rng).slice(0, count);
   const submittedIds = new Set(chosenSubmitted.map((d) => d.id));
-  const chosen: Dilemma[] = [...chosenSubmitted];
-  // "Igiene del pool" (5.4): at most one dilemma per `famiglia` (near-
-  // duplicate group) per game — a rejected same-family draw is set aside
-  // rather than lost, and only backfilled if the deck runs dry before
-  // reaching `count` any other way (a repeat beats a shorter game).
-  const usedFamilies = new Set(
-    chosenSubmitted.map((d) => d.famiglia).filter((f): f is string => f != null),
-  );
-  const setAside: Dilemma[] = [];
-  while (chosen.length < count) {
-    const d = deck.draw();
-    if (!d) break;
-    if (d.famiglia != null && usedFamilies.has(d.famiglia)) {
-      setAside.push(d);
-      continue;
-    }
-    chosen.push(d);
-    if (d.famiglia != null) usedFamilies.add(d.famiglia);
-  }
-  while (chosen.length < count && setAside.length > 0) {
-    chosen.push(setAside.shift()!);
-  }
+  const needed = Math.max(0, count - chosenSubmitted.length);
+
+  // Pull available cards from deck, run the intelligent matcher for novelty,
+  // family deduplication, thematic anti-monotony, and polarization balance,
+  // then return unchosen cards back to the deck so remainingCount stays exact.
+  const pool: Dilemma[] = [];
+  for (let d = deck.draw(); d; d = deck.draw()) pool.push(d);
+  const picked = selectMatchedSequence(pool, {
+    count: needed,
+    alreadyPicked: chosenSubmitted,
+    playerCount,
+    useArc: true,
+    familiarita,
+    rng,
+  });
+  const pickedIds = new Set(picked.map((d) => d.id));
+  deck.putBack(pool.filter((d) => !pickedIds.has(d.id)));
+
+  const chosen: Dilemma[] = [...chosenSubmitted, ...picked];
   const rank = (d: Dilemma) => COMPLESSITA_RANK[d.complessita ?? 'alto'];
   const escalating = chosen
     .map((d, i) => ({ d, i }))
@@ -159,27 +168,17 @@ export function replaceCurrentDilemma(room: Room): boolean {
   if (!deck) return false;
   const idx = room.dilemmaIndex - 1;
   const old = room.plannedDilemmas[idx];
-  // The OLD dilemma's own family is about to leave the plan — it must not
-  // count as "used" against itself, or a same-family replacement gets
-  // needlessly rejected even though nothing else planned shares it.
-  const usedFamilies = new Set(
-    room.plannedDilemmas
-      .filter((_, i) => i !== idx)
-      .map((d) => d.famiglia)
-      .filter((f): f is string => f != null),
-  );
-  const setAside: Dilemma[] = [];
-  let fresh: Dilemma | null = null;
-  for (let d = deck.draw(); d; d = deck.draw()) {
-    if (d.famiglia != null && usedFamilies.has(d.famiglia)) {
-      setAside.push(d);
-      continue;
-    }
-    fresh = d;
-    break;
-  }
-  if (!fresh && setAside.length > 0) fresh = setAside.shift()!;
-  deck.putBack(setAside);
+  const otherPlanned = room.plannedDilemmas.filter((_, i) => i !== idx);
+  const available: Dilemma[] = [];
+  for (let d = deck.draw(); d; d = deck.draw()) available.push(d);
+  const fresh = pickBestReplacement(available, {
+    alreadyPicked: otherPlanned,
+    excludeIds: room.excludeDilemmaIds,
+    playerCount: room.players.size,
+    boostPolarization: true,
+    familiarita: room.familiarita,
+  });
+  deck.putBack(available.filter((d) => d.id !== fresh?.id));
   if (!fresh) return false;
   if (old) room.excludeDilemmaIds.add(old.id);
   room.plannedDilemmas[idx] = fresh;

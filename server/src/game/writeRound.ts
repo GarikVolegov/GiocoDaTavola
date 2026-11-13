@@ -5,11 +5,13 @@
 // count. Type-only import from rooms.ts keeps this cycle-free (mirrors
 // groupMind.ts / knowRound.ts).
 import type { Room } from './rooms';
+import { pickByFamiliarita, type DilemmaFamiliarita, type Familiarita } from './deck';
 
 export interface WritePrompt {
   id: string;
   /** The short free-text prompt everyone answers, e.g. "La tua filosofia di vita in uno slogan da maglietta." */
   text: string;
+  familiarita?: DilemmaFamiliarita;
 }
 
 /** A small starter bank (vita + business), same spirit as groupMind.ts's questions. */
@@ -24,6 +26,38 @@ export const WRITE_PROMPTS: WritePrompt[] = [
   { id: 'wp08', text: "Il nome di un'azienda che vende esattamente niente." },
   { id: 'wp09', text: 'La regola non scritta più importante di questo gruppo.' },
   { id: 'wp10', text: "Un motto per l'ufficio scritto malissimo apposta." },
+  { id: 'wp11', text: 'Cosa diresti agli alieni per convincerli a non distruggere l’Italia.' },
+  { id: 'wp12', text: 'La frase che non vorresti mai sentire al primo appuntamento.' },
+  { id: 'wp13', text: 'Il superpotere più inutile ma comunque figo da avere.' },
+  { id: 'wp14', text: 'Come giustifichi un bonifico sospetto da 3.000€ alle 3 di notte.' },
+  { id: 'wp15', text: 'Il nome perfetto per una startup destinata a fallire in 2 settimane.' },
+  { id: 'wp16', text: 'Cosa scriveresti sul tuo epitaffio per far ridere chi passa.' },
+  { id: 'wp17', text: 'La bugia più convincente da dire al vigile che ti ferma.' },
+  { id: 'wp18', text: 'Una recensione da 1 stella per la tua giornata di ieri.' },
+  { id: 'wp19', text: 'Il titolo di un libro di self-help scritto dal peggior membro del gruppo.' },
+  { id: 'wp20', text: 'Cosa metti nella bio di Tinder per essere 100% onesto ma comunque attraente.' },
+  { id: 'wp21', text: 'Il motivo assurdo per cui questo gruppo finirebbe sul giornale domani.' },
+  { id: 'wp22', text: 'Rispondi con eleganza a "Ma quando ti sistemi?".' },
+  { id: 'wp23', text: 'Il gusto di gelato che non dovrebbe esistere ma che assaggeresti.' },
+  { id: 'wp24', text: 'Cosa scrivi al tuo capo se vinci alla lotteria lunedì mattina.' },
+  { id: 'wp25', text: 'La red flag più sottovalutata di una persona.' },
+  { id: 'wp26', text: 'Inventa una festa nazionale obbligatoria e spiega cosa si festeggia.' },
+  { id: 'wp27', text: 'La cosa più imbarazzante che faresti per 100€ in contanti adesso.' },
+  { id: 'wp28', text: 'Il messaggio vocale di 4 secondi che fa preoccupare tutti.' },
+  { id: 'wp29', text: 'Dai un nome al nostro gruppo WhatsApp se fosse una setta.' },
+  { id: 'wp30', text: 'Cosa ti fa dire immediatamente "Ok, esco da questa chat".' },
+  { id: 'wp31', text: 'La tua strategia di sopravvivenza in un’apocalisse zombie in 5 parole.' },
+  { id: 'wp32', text: 'Un complimento che in realtà è un insulto passivo-aggressivo.' },
+  { id: 'wp33', text: 'Il vero motivo per cui siamo ancora svegli a quest’ora.' },
+  { id: 'wp34', text: 'Se la tua ansia fosse un animale domestico, come si chiamerebbe?' },
+  { id: 'wp35', text: 'La risposta automatica ideale per quando non vuoi vedere nessuno.' },
+  { id: 'wp36', text: 'Una promessa elettorale assurda ma che ti farebbe votare subito.', familiarita: 'nuove_conoscenze' },
+  { id: 'wp37', text: 'La regola non scritta che in questo gruppo nessuno osa violare.', familiarita: 'vecchi_amici' },
+  { id: 'wp38', text: 'Una cosa che tutti in questo gruppo pensano di sapere su di te ma è falsa.', familiarita: 'vecchi_amici' },
+  { id: 'wp39', text: 'Il motivo più stupido per cui avete rischiato di litigare davvero.', familiarita: 'vecchi_amici' },
+  { id: 'wp40', text: 'La frase tipica che uno di noi dice sempre quando sta per fare una cazzata.', familiarita: 'vecchi_amici' },
+  { id: 'wp41', text: 'Cosa non diresti mai ad alta voce nella nostra chat di gruppo ma pensi spesso.', familiarita: 'vecchi_amici' },
+  { id: 'wp42', text: 'Il ruolo fisso che ti hanno appiccicato in questo gruppo e che vorresti cambiare.', familiarita: 'vecchi_amici' },
 ];
 
 /** Generic filler answers a bot writes when it's its turn (Fase B, no LLM needed here). */
@@ -36,10 +70,13 @@ const BOT_WRITE_FILLERS = [
   'Boh, sembrava una buona idea.',
 ];
 
-export function pickWritePrompt(usedIds: Set<string>, rng: () => number): WritePrompt | null {
+export function pickWritePrompt(
+  usedIds: Set<string>,
+  rng: () => number,
+  familiarita: Familiarita = 'misto',
+): WritePrompt | null {
   const pool = WRITE_PROMPTS.filter((p) => !usedIds.has(p.id));
-  if (pool.length === 0) return null;
-  return pool[Math.floor(rng() * pool.length)];
+  return pickByFamiliarita(pool, familiarita, rng);
 }
 
 /** Cast each bot's filler answer immediately on WRITE entry. */

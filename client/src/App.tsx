@@ -13,6 +13,7 @@ const PassAndPlayApp = lazy(() => import('./passAndPlay/PassAndPlayApp'));
 const Profile = lazy(() => import('./profile/Profile'));
 const Home = lazy(() => import('./home/Home'));
 const Settings = lazy(() => import('./settings/Settings'));
+const AuthPage = lazy(() => import('./auth/AuthPage'));
 // Realtime-connection banner, shown only on the socket-backed routes (/host, /join).
 const ConnectionBanner = lazy(() => import('./shared/ConnectionBanner'));
 
@@ -37,6 +38,8 @@ export default function App() {
             <Route path="/passa" element={<><BivioBackdrop variant="player" /><PassAndPlayApp /></>} />
             <Route path="/profilo" element={<><BivioBackdrop variant="dashboard" /><Profile /></>} />
             <Route path="/impostazioni" element={<><BivioBackdrop variant="dashboard" /><Settings /></>} />
+            <Route path="/accedi" element={<><BivioBackdrop variant="dashboard" /><AuthPage /></>} />
+            <Route path="/registrati" element={<Navigate to="/accedi?tab=registrati" replace />} />
           </Routes>
         </Suspense>
       </BrowserRouter>

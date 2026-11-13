@@ -3,6 +3,8 @@
 
 export type PassMode = 'flash' | 'infiltrato' | 'assurdo' | 'coppie' | 'classico';
 
+export type PassFamiliarita = 'vecchi_amici' | 'nuove_conoscenze' | 'tutti';
+
 export interface PassFlashCard {
   id: string;
   text: string;
@@ -11,6 +13,7 @@ export interface PassFlashCard {
   spuntiA?: string[];
   spuntiB?: string[];
   penalty?: string;
+  familiarita?: PassFamiliarita;
 }
 
 export interface PassInfiltratoCard {
@@ -18,6 +21,7 @@ export interface PassInfiltratoCard {
   groupQuestion: string;
   impostorQuestion: string;
   category?: string;
+  familiarita?: PassFamiliarita;
 }
 
 export interface PassCoppieCard {
@@ -28,6 +32,7 @@ export interface PassCoppieCard {
   optionA?: string;
   optionB?: string;
   penalty?: string;
+  familiarita?: PassFamiliarita;
 }
 
 export interface PassAssurdoCard {
@@ -38,6 +43,7 @@ export interface PassAssurdoCard {
   optionB?: string;
   penalty?: string;
   sentenza?: string;
+  familiarita?: PassFamiliarita;
 }
 
 export type PassCard = PassFlashCard | PassInfiltratoCard | PassCoppieCard | PassAssurdoCard;
@@ -84,6 +90,24 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       spuntiA: ['Serve per sicurezza quando si torna tardi', 'Se non hai niente da nascondere che cambia?'],
       spuntiB: ['Non sono un pacco da tracciare', 'Ammazza ogni briciolo di mistero'],
     },
+    {
+      id: 'fb_fl6',
+      text: 'Un amico del gruppo sparisce ogni volta che si fidanza: quando torna lo riaccogli o glielo fai pesare?',
+      optionA: 'Lo riaccoglio subito',
+      optionB: 'Glielo faccio pesare',
+      familiarita: 'vecchi_amici',
+      spuntiA: ['In amore si perde la testa, capita a tutti', 'Tenere il broncio rovina solo il gruppo'],
+      spuntiB: ['Non siamo un parcheggio tra una storia e l’altra', 'Un confine chiaro insegna rispetto'],
+    },
+    {
+      id: 'fb_fl7',
+      text: 'Nel gruppo c’è una verità scomoda che tutti sanno su uno di noi ma nessuno dice: protezione o ipocrisia?',
+      optionA: 'Protezione affettuosa',
+      optionB: 'Ipocrisia comoda',
+      familiarita: 'vecchi_amici',
+      spuntiA: ['Non tutto va detto per forza se ferisce', 'Il silenzio a volte tiene unito il gruppo'],
+      spuntiB: ['I veri amici non ti lasciano vivere in una bugia', 'Parlarne alle spalle è peggio'],
+    },
   ],
   infiltrato: [
     {
@@ -115,6 +139,13 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       groupQuestion: 'Qual è la cosa più imbarazzante che hai cercato su Google di recente?',
       impostorQuestion: 'Qual è l’ultimo acquisto inutile che hai fatto online?',
       category: 'segreti',
+    },
+    {
+      id: 'fb_inf6',
+      groupQuestion: 'Qual è il difetto che ti viene perdonato più spesso da chi ti conosce da anni?',
+      impostorQuestion: 'Qual è il pregio che ti riconoscono subito al primo incontro?',
+      category: 'gruppo',
+      familiarita: 'vecchi_amici',
     },
   ],
   assurdo: [
@@ -151,6 +182,13 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       cardType: 'gogna',
       prompt: 'Chi di voi ha la cronologia di Instagram più imbarazzante?',
       penalty: 'Mostra il terzo reel nei "Piaciuti" oppure bevi!',
+    },
+    {
+      id: 'fb_as6',
+      cardType: 'gogna',
+      prompt: 'Chi di questo gruppo dà sempre consigli saggi a tutti ma nella propria vita fa esattamente l’opposto?',
+      penalty: 'Il più votato racconta l’ultima volta che ha predicato bene e razzolato male!',
+      familiarita: 'vecchi_amici',
     },
   ],
   coppie: [
@@ -191,6 +229,14 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       prompt: 'Qual è stata la prima impressione reale che hai avuto quando vi siete conosciuti?',
       penalty: 'Sii sincero o penitenza!',
     },
+    {
+      id: 'fb_cp6',
+      cardType: 'verita',
+      intensity: 'complicita',
+      prompt: 'C’è un lato di te che mostri a questa persona ma che gli amici di sempre non hanno ancora capito?',
+      penalty: 'Raccontalo in 15 secondi o 1 sorso!',
+      familiarita: 'vecchi_amici',
+    },
   ],
   classico: [
     {
@@ -198,6 +244,7 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       text: 'Un tuo amico ti chiede un parere sincero sul suo nuovo progetto, ma sai che è destinato a fallire. Che fai?',
       optionA: 'Glielo dico senza filtri',
       optionB: 'Lo incoraggio lo stesso',
+      familiarita: 'vecchi_amici',
       spuntiA: ['La vera amicizia si vede nella sincerità scomoda', 'Meglio un dispiacere oggi che un disastro domani'],
       spuntiB: ['Nessuno può prevedere il futuro al 100%', 'A volte serve solo qualcuno che creda in te'],
     },
@@ -214,8 +261,18 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       text: 'Trovi un portafoglio con 500€ in contanti e nessun documento, ma sai in quale bar lo hanno perso.',
       optionA: 'Lo lascio al bar',
       optionB: 'Tengo i soldi',
+      familiarita: 'nuove_conoscenze',
       spuntiA: ['La coscienza pulita vale più di 500€', 'Al barista o al proprietario tornerà indietro'],
       spuntiB: ['Senza documenti non hai garanzia che arrivi al vero proprietario', 'La fortuna ogni tanto bussa'],
+    },
+    {
+      id: 'fb_cl4',
+      text: 'Ti accorgi che con un amico storico non hai più nulla in comune: vi vedete solo per abitudine e ricordi.',
+      optionA: 'Lo tengo stretto per la storia condivisa',
+      optionB: 'Lascio che si spenga con onestà',
+      familiarita: 'vecchi_amici',
+      spuntiA: ['Chi ti conosce da prima che diventassi adulto ha un valore unico', 'Le amicizie hanno stagioni diverse'],
+      spuntiB: ['La nostalgia non basta a reggere un rapporto presente', 'Crescere significa anche dividersi'],
     },
   ],
 };

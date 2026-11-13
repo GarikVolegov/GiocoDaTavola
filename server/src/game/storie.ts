@@ -6,7 +6,7 @@
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import type { Complessita, Dilemma } from './deck';
+import type { Complessita, Dilemma, DilemmaFamiliarita } from './deck';
 import type { VoteChoice } from './rooms';
 
 /** The four narrative registers the catalog spans. */
@@ -73,6 +73,8 @@ export interface Story {
   epiloghi: StoryEpilogo[];
   /** Rough length estimate (minutes) for the picker. */
   durataStimaMin: number;
+  /** Group familiarity fit ('vecchi_amici' | 'nuove_conoscenze' | 'tutti'). */
+  familiarita?: DilemmaFamiliarita;
 }
 
 /**
@@ -96,6 +98,7 @@ export interface StoriaCatalogItem {
   durataStimaMin: number;
   /** Number of crossroads (debate rounds) in the story. */
   scene: number;
+  familiarita?: DilemmaFamiliarita;
 }
 
 /** Total number of crossroads (scenes) across a story's acts. */
@@ -165,6 +168,7 @@ export function storieCatalog(stories: Story[]): StoriaCatalogItem[] {
     hook: s.hook,
     durataStimaMin: s.durataStimaMin,
     scene: totalScenes(s),
+    ...(s.familiarita ? { familiarita: s.familiarita } : {}),
   }));
 }
 

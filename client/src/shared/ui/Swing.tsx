@@ -20,19 +20,20 @@ interface SwingProps {
  */
 export function Swing({ width = 220, height = 14, split = 50, labels = false, animated = false }: SwingProps) {
   const widthVal = typeof width === 'number' ? `${width}px` : width;
+  const barHeight = labels ? Math.max(height, 24) : height;
   return (
-    <div className={styles.swing} style={{ ['--sw-h' as never]: `${height}px`, width: widthVal }} aria-label="Divisione dei voti">
-      {labels && (
-        <div className={styles.ab}>
-          <span className={styles.a}>A</span>
-          <span className={styles.b}>B</span>
-        </div>
-      )}
-      <div className={styles.bar} style={{ width: '100%', height }}>
+    <div className={styles.swing} style={{ ['--sw-h' as never]: `${barHeight}px`, width: widthVal }} aria-label="Divisione dei voti">
+      <div className={styles.bar} style={{ width: '100%', height: barHeight }}>
         <div
           className={animated ? `${styles.fill} ${styles.anim}` : styles.fill}
           style={animated ? undefined : { width: `${split}%` }}
         />
+        {labels && (
+          <div className={styles.abInside} aria-hidden="true">
+            <span className={styles.a}>A</span>
+            <span className={styles.b}>B</span>
+          </div>
+        )}
       </div>
     </div>
   );

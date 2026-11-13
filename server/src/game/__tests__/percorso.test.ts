@@ -6,9 +6,12 @@ import {
   TAPPE,
   N_TAPPE,
   tappaCounts,
+  percorsoCounts,
+  PERCORSI_CATALOG,
   isDurata,
 } from '../percorso';
-import type { Dilemma, Tappa } from '../deck';
+import { loadDilemmas, tonoOfDilemma, type Dilemma, type Tappa } from '../deck';
+import { getCuratedCards } from '../geminiGenerator';
 
 function makePool(tappa: Tappa, n: number): Dilemma[] {
   return Array.from({ length: n }, (_, i) => ({
@@ -132,5 +135,66 @@ describe('tappaCounts', () => {
   it('le tappe senza dilemmi valgono 0', () => {
     const onlyT1 = makePool(1, 5);
     expect(tappaCounts(onlyT1)).toEqual({ 1: 5, 2: 0, 3: 0, 4: 0 });
+  });
+});
+
+describe('PERCORSI_CATALOG & tonal separation', () => {
+  it('every percorso has 4 tappe and non-empty coverage across all 4 tappe in dilemmas.json', () => {
+    const all = loadDilemmas();
+    const counts = percorsoCounts(all);
+    for (const p of PERCORSI_CATALOG) {
+      expect(p.tappe).toHaveLength(N_TAPPE);
+      for (let t = 1 as Tappa; t <= N_TAPPE; t = (t + 1) as Tappa) {
+        expect(counts[p.id][t]).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('strictly separates risate and serio tones when building a percorso plan', () => {
+    const all = loadDilemmas();
+    const risatePlan = buildPercorsoPlan(all, 1, 'corto', Math.random, 'risate-assurdi');
+    expect(risatePlan.dilemmas.length).toBeGreaterThan(0);
+    for (const d of risatePlan.dilemmas) {
+      expect(tonoOfDilemma(d)).toBe('risate');
+    }
+
+    const serioPlan = buildPercorsoPlan(all, 1, 'corto', Math.random, 'bilanci-senso');
+    expect(serioPlan.dilemmas.length).toBeGreaterThan(0);
+    for (const d of serioPlan.dilemmas) {
+      expect(tonoOfDilemma(d)).toBe('serio');
+    }
+  });
+
+  it('every loaded dilemma has a non-empty domandaRilancio for post-vote discussion', () => {
+    const all = loadDilemmas();
+    for (const d of all) {
+      expect(d.domandaRilancio).toBeDefined();
+      expect(d.domandaRilancio!.trim().length).toBeGreaterThan(10);
+    }
+  });
+
+  it('supports profondo cards in Coppie and Infiltrato party modes', () => {
+    const coppieProfondo = getCuratedCards('coppie', { count: 5, intensity: 'profondo' });
+    expect(coppieProfondo.length).toBe(5);
+    for (const c of coppieProfondo) {
+      expect('intensity' in c && c.intensity).toBe('profondo');
+    }
+
+    const infiltratoProfondo = getCuratedCards('infiltrato', { count: 5, infiltratoTono: 'profondo' });
+    expect(infiltratoProfondo.length).toBe(5);
+    for (const c of infiltratoProfondo) {
+      expect('tono' in c && c.tono).toBe('profondo');
+    }
+  });
+
+  it('builds non-empty plans for all PERCORSI_CATALOG tracks with familiarita = vecchi_amici and excludes nuove_conoscenze', () => {
+    const all = loadDilemmas();
+    for (const track of PERCORSI_CATALOG) {
+      const plan = buildPercorsoPlan(all, 1, 'corto', () => 0.25, track.id, undefined, 4, 'vecchi_amici');
+      expect(plan.dilemmas.length, `track ${track.id} should have dilemmas for vecchi_amici`).toBeGreaterThan(0);
+      for (const d of plan.dilemmas) {
+        expect(d.familiarita).not.toBe('nuove_conoscenze');
+      }
+    }
   });
 });

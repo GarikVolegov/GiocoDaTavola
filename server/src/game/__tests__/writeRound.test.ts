@@ -32,6 +32,18 @@ describe('pickWritePrompt', () => {
     const used = new Set(WRITE_PROMPTS.map((p) => p.id));
     expect(pickWritePrompt(used, () => 0)).toBeNull();
   });
+
+  it('prefers vecchi_amici prompts and avoids nuove_conoscenze while neutral ones remain', () => {
+    const picked = pickWritePrompt(new Set(), () => 0, 'vecchi_amici');
+    expect(picked?.familiarita).toBe('vecchi_amici');
+
+    const usedVecchi = new Set(
+      WRITE_PROMPTS.filter((p) => p.familiarita === 'vecchi_amici').map((p) => p.id),
+    );
+    const neutralPick = pickWritePrompt(usedVecchi, () => 0, 'vecchi_amici');
+    expect(neutralPick).not.toBeNull();
+    expect(neutralPick?.familiarita).toBeUndefined();
+  });
 });
 
 // Drive a 3-player, 5-dilemma classic game to the 2nd breather checkpoint

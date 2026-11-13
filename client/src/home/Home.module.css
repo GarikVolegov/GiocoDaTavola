@@ -49,10 +49,11 @@
 
 .greeting {
   margin: 0;
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-serif);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-display, 0.03em);
   line-height: var(--leading-snug);
 }
 
@@ -82,9 +83,11 @@
 }
 .welcomeTitle {
   margin: 0;
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-display, 0.03em);
 }
 .welcomeText {
   margin: 0;
@@ -190,10 +193,11 @@
 }
 .blockTitle {
   margin: 0;
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-serif);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-display, 0.03em);
 }
 .link {
   background: rgba(229, 193, 88, 0.12);

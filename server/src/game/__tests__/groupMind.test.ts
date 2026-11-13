@@ -59,6 +59,18 @@ describe('pickGroupMindQuestion', () => {
     const used = new Set(GROUP_MIND_QUESTIONS.map((q) => q.id));
     expect(pickGroupMindQuestion(used, () => 0)).toBeNull();
   });
+
+  it('prefers vecchi_amici questions and avoids nuove_conoscenze while neutral ones remain', () => {
+    const picked = pickGroupMindQuestion(new Set(), () => 0, 'vecchi_amici');
+    expect(picked?.familiarita).toBe('vecchi_amici');
+
+    const usedVecchi = new Set(
+      GROUP_MIND_QUESTIONS.filter((q) => q.familiarita === 'vecchi_amici').map((q) => q.id),
+    );
+    const neutralPick = pickGroupMindQuestion(usedVecchi, () => 0, 'vecchi_amici');
+    expect(neutralPick).not.toBeNull();
+    expect(neutralPick?.familiarita).toBeUndefined();
+  });
 });
 
 // Drive a 3-player, 3-dilemma classic game to the GROUP_MIND checkpoint after

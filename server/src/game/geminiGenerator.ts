@@ -4,8 +4,9 @@
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { GoogleGenAI } from '@google/genai';
+import type { DilemmaFamiliarita, Familiarita } from './deck';
 
-export type PartyMode = 'flash' | 'infiltrato' | 'coppie' | 'assurdo';
+export type PartyMode = 'flash' | 'infiltrato' | 'coppie' | 'assurdo' | 'mix';
 
 export interface FlashCard {
   id: string;
@@ -15,6 +16,7 @@ export interface FlashCard {
   spuntiA?: string[];
   spuntiB?: string[];
   penalty?: string;
+  familiarita?: DilemmaFamiliarita;
 }
 
 export interface InfiltratoCard {
@@ -22,18 +24,23 @@ export interface InfiltratoCard {
   groupQuestion: string;
   impostorQuestion: string;
   category?: string;
+  tono?: 'risate' | 'profondo';
   botAnswersGroup?: string[];
   botAnswersImpostor?: string[];
+  familiarita?: DilemmaFamiliarita;
 }
+
+export type CoppieIntensity = 'complicita' | 'piccante' | 'profondo';
 
 export interface CoppieCard {
   id: string;
   cardType: 'allineamento' | 'verita' | 'obbligo';
-  intensity: 'complicita' | 'piccante';
+  intensity: CoppieIntensity;
   prompt: string;
   optionA?: string;
   optionB?: string;
   penalty?: string;
+  familiarita?: DilemmaFamiliarita;
 }
 
 export interface AssurdoCard {
@@ -44,6 +51,7 @@ export interface AssurdoCard {
   optionB?: string;
   penalty?: string;
   sentenza?: string;
+  familiarita?: DilemmaFamiliarita;
 }
 
 export type PartyCard = FlashCard | InfiltratoCard | CoppieCard | AssurdoCard;
@@ -57,12 +65,20 @@ REGOLE TASSATIVE DI SCRITTURA (VIETATO INFRANGERLE):
 4. POLARIZZAZIONE IMMEDIATA: Nei dilemmi "Schierati", non deve mai esserci una risposta "ovvia". Entrambe le scelte devono avere un lato imbarazzante, egoista o controverso che costringa gli amici a urlare "Ma come fai a scegliere questo?!".
 5. FORMATO JSON RIGOROSO: Rispondi esclusivamente in formato JSON valido secondo lo schema richiesto dalla modalità attiva, senza testo extra.`;
 
+export const DEEP_SYSTEM_PROMPT = `Sei l'autore creativo di un gioco di domande profonde e consapevolezza per amici e coppie. Il tuo obiettivo è porre domande che aprono gli occhi sulla vita, sulle possibilità, sui legami e sulle scelte di direzione.
+
+REGOLE DI SCRITTURA:
+1. CHIAREZZA E IMPATTO: Niente giri di parole accademici. Ogni domanda deve colpire nel segno in pochi secondi e far pensare "cavolo, non ci avevo mai pensato così".
+2. PROFONDITÀ AUTENTICA: Parla di paure nascoste, desideri rimandati, confini nei legami, priorità di vita, cosa conta davvero.
+3. FORMATO JSON RIGOROSO: Rispondi esclusivamente in formato JSON valido secondo lo schema richiesto.`;
+
 interface PartyDecksData {
   flash: FlashCard[];
   infiltrato: InfiltratoCard[];
   coppie: {
     complicita: CoppieCard[];
     piccante: CoppieCard[];
+    profondo?: CoppieCard[];
   };
   assurdo: AssurdoCard[];
 }
@@ -83,14 +99,21 @@ export function loadCuratedDecks(): PartyDecksData {
   return {
     flash: [],
     infiltrato: [],
-    coppie: { complicita: [], piccante: [] },
+    coppie: { complicita: [], piccante: [], profondo: [] },
     assurdo: [],
   };
 }
 
 export function getCuratedCards(
   mode: PartyMode,
-  options: { count?: number; intensity?: 'complicita' | 'piccante'; rng?: () => number } = {},
+  options: {
+    count?: number;
+    intensity?: CoppieIntensity;
+    infiltratoTono?: 'risate' | 'profondo' | 'misto';
+    familiarita?: Familiarita;
+    rng?: () => number;
+    excludeIds?: Set<string>;
+  } = {},
 ): PartyCard[] {
   const decks = loadCuratedDecks();
   const rng = options.rng ?? Math.random;
@@ -99,18 +122,51 @@ export function getCuratedCards(
   if (mode === 'flash') {
     pool = [...decks.flash];
   } else if (mode === 'infiltrato') {
-    pool = [...decks.infiltrato];
+    const tono = options.infiltratoTono ?? 'misto';
+    pool =
+      tono === 'misto'
+        ? [...decks.infiltrato]
+        : decks.infiltrato.filter((c) => (c.tono ?? 'risate') === tono);
+    if (pool.length === 0) pool = [...decks.infiltrato];
   } else if (mode === 'coppie') {
-    const intensity = options.intensity === 'piccante' ? 'piccante' : 'complicita';
+    const intensity: CoppieIntensity =
+      options.intensity === 'piccante'
+        ? 'piccante'
+        : options.intensity === 'profondo'
+          ? 'profondo'
+          : 'complicita';
     pool = [...(decks.coppie[intensity] ?? decks.coppie.complicita)];
   } else if (mode === 'assurdo') {
     pool = [...decks.assurdo];
+  } else if (mode === 'mix') {
+    pool = [...decks.flash, ...decks.assurdo];
   }
 
-  // Shuffle pool with rng
-  const shuffled = [...pool].sort(() => rng() - 0.5);
-  const count = options.count ?? shuffled.length;
-  return shuffled.slice(0, count);
+  const fam = options.familiarita;
+  if (fam === 'vecchi_amici') {
+    const filtered = pool.filter((c) => c.familiarita !== 'nuove_conoscenze');
+    if (filtered.length > 0) pool = filtered;
+  } else if (fam === 'nuove_conoscenze') {
+    const filtered = pool.filter((c) => c.familiarita !== 'vecchi_amici');
+    if (filtered.length > 0) pool = filtered;
+  }
+
+  const exclude = options.excludeIds;
+  const fresh = exclude && exclude.size > 0 ? pool.filter((c) => !exclude.has(c.id)) : pool;
+  const stale = exclude && exclude.size > 0 ? pool.filter((c) => exclude.has(c.id)) : [];
+
+  const shuffleWithRng = <T>(arr: T[]) => [...arr].sort(() => rng() - 0.5);
+  // When playing as vecchi_amici, prioritize cards explicitly written for vecchi_amici first
+  const prioritize = (arr: PartyCard[]) => {
+    const s = shuffleWithRng(arr);
+    if (fam !== 'vecchi_amici') return s;
+    const preferred = s.filter((c) => c.familiarita === 'vecchi_amici');
+    const rest = s.filter((c) => c.familiarita !== 'vecchi_amici');
+    return [...preferred, ...rest];
+  };
+  const ordered = [...prioritize(fresh), ...prioritize(stale)];
+  const count = options.count ?? ordered.length;
+  return ordered.slice(0, count);
 }
 
 export function isGeminiAvailable(): boolean {
@@ -123,7 +179,7 @@ export function isGeminiAvailable(): boolean {
  */
 export async function generatePartyCards(
   mode: PartyMode,
-  options: { count?: number; intensity?: 'complicita' | 'piccante'; theme?: string } = {},
+  options: { count?: number; intensity?: CoppieIntensity; infiltratoTono?: 'risate' | 'profondo' | 'misto'; familiarita?: Familiarita; theme?: string } = {},
 ): Promise<PartyCard[]> {
   const count = options.count ?? 5;
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
@@ -133,7 +189,11 @@ export async function generatePartyCards(
     return getCuratedCards(mode, options);
   }
 
-  const userPrompt = getUserPromptForMode(mode, count, options.intensity, options.theme);
+  const useDeepPrompt =
+    (mode === 'coppie' && options.intensity === 'profondo') ||
+    (mode === 'infiltrato' && options.infiltratoTono === 'profondo');
+  const systemPrompt = useDeepPrompt ? DEEP_SYSTEM_PROMPT : SYSTEM_PROMPT;
+  const userPrompt = getUserPromptForMode(mode, count, options.intensity, options.theme, options.infiltratoTono, options.familiarita);
 
   // Strict 3.5s timeout: if Gemini Flash or network takes longer, fallback immediately to curated cards!
   const timeoutPromise = new Promise<never>((_, reject) =>
@@ -150,7 +210,7 @@ export async function generatePartyCards(
           model,
           contents: userPrompt,
           config: {
-            systemInstruction: SYSTEM_PROMPT,
+            systemInstruction: systemPrompt,
             responseMimeType: 'application/json',
             temperature: 1.0,
           },
@@ -197,9 +257,17 @@ export async function generatePartyCards(
 function getUserPromptForMode(
   mode: PartyMode,
   count: number,
-  intensity?: 'complicita' | 'piccante',
+  intensity?: CoppieIntensity,
   theme?: string,
+  infiltratoTono?: 'risate' | 'profondo' | 'misto',
+  familiarita?: Familiarita,
 ): string {
+  const famContext =
+    familiarita === 'vecchi_amici'
+      ? '\nCONTESTO GRUPPO: I giocatori sono VECCHI AMICI che si conoscono benissimo da anni. Vietate domande banali o da sconosciuti: punta su dinamiche vere di gruppo, non detti, ipocrisie affettuose, scelte che svelano chi sono davvero.'
+      : familiarita === 'nuove_conoscenze'
+        ? '\nCONTESTO GRUPPO: I giocatori sono NUOVE CONOSCENZE o un gruppo misto. Fai domande accessibili, divertenti e coinvolgenti per rompere il ghiaccio senza creare imbarazzo eccessivo.'
+        : '';
   let prompt = '';
   switch (mode) {
     case 'flash':
@@ -219,10 +287,10 @@ Rispondi con un JSON array di oggetti con questo schema:
       break;
 
     case 'infiltrato':
-      prompt = `Genera ${count} carte per la modalità "L'INFILTRATO".
+      prompt = `Genera ${count} carte per la modalità "L'INFILTRATO"${infiltratoTono === 'profondo' ? ' a tono PROFONDO (valori, paure, scelte di vita, cosa conta davvero — domande che fanno riflettere pur restando brevi)' : ''}.
 Ogni elemento deve avere:
-- "groupQuestion": domanda ricevuta dalla maggioranza (es. "Qual è il posto più strano dove hai fatto serata?")
-- "impostorQuestion": domanda simile ma con significato diverso ricevuta dall'infiltrato (es. "Qual è il posto più strano dove hai dormito?")
+- "groupQuestion": domanda ricevuta dalla maggioranza (${infiltratoTono === 'profondo' ? 'es. "Qual è la cosa che hai rimandato più a lungo per paura?"' : 'es. "Qual è il posto più strano dove hai fatto serata?"'})
+- "impostorQuestion": domanda simile ma con significato diverso ricevuta dall'infiltrato (${infiltratoTono === 'profondo' ? 'es. "Qual è la scelta di cui vai più fiero nonostante la paura?"' : 'es. "Qual è il posto più strano dove hai dormito?"'})
 - "category": breve categoria tematica.
 Rispondi con un JSON array di oggetti:
 [
@@ -235,12 +303,18 @@ Rispondi con un JSON array di oggetti:
 ]`;
       break;
 
-    case 'coppie':
-      prompt = `Genera ${count} carte per la modalità "COPPIE & SCINTILLE" a intensità "${intensity === 'piccante' ? 'piccante (18+ sensuale, doppio senso, senza filtri)' : 'complicita (gelosia, abitudini, dinamiche di coppia)'}".
+    case 'coppie': {
+      const intensityDesc =
+        intensity === 'piccante'
+          ? 'piccante (18+ sensuale, doppio senso, senza filtri)'
+          : intensity === 'profondo'
+            ? 'profondo (domande intime e consapevoli: paure, gratitudine non detta, futuro, confini, cosa conta davvero nel legame)'
+            : 'complicita (gelosia, abitudini, dinamiche di coppia)';
+      prompt = `Genera ${count} carte per la modalità "COPPIE & SCINTILLE" a intensità "${intensityDesc}".
 Alterna carte di 3 tipi:
 1. "allineamento": "Al 3 indicate chi dei due..."
-2. "verita": domanda diretta scomoda sulla relazione
-3. "obbligo": sfida fisica o contatto immediato
+2. "verita": domanda diretta ${intensity === 'profondo' ? 'autentica e profonda' : 'scomoda'} sulla relazione
+3. "obbligo": ${intensity === 'profondo' ? 'gesto di ascolto, sincerità o connessione immediata' : 'sfida fisica o contatto immediato'}
 Rispondi con un JSON array di oggetti:
 [
   {
@@ -252,6 +326,7 @@ Rispondi con un JSON array di oggetti:
   }
 ]`;
       break;
+    }
 
     case 'assurdo':
       prompt = `Genera ${count} carte per la modalità "ASSURDO MA SEMPLICE".
@@ -281,6 +356,9 @@ Rispondi con un JSON array di oggetti:
 
   if (theme && theme.trim().length > 0) {
     prompt += `\n\nTEMA DELLA SERATA RICHIESTO DAL GRUPPO: "${theme.trim()}". Ambientate e contestualizzate le situazioni a questo tema!`;
+  }
+  if (famContext) {
+    prompt += `\n${famContext}`;
   }
 
   return prompt;

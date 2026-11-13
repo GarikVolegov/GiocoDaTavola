@@ -9,6 +9,12 @@ import { join } from 'path';
 export type ContentRegister = 'vita' | 'business' | 'carriera' | 'misto';
 
 /**
+ * Exclusive tonal lane ("corsia"): keeps a light night of laughs strictly
+ * separated from constructive life-direction questions and deep/serious talks.
+ */
+export type CorsiaTono = 'risate' | 'direzione' | 'serio';
+
+/**
  * A 1-based "tappa" (life chapter / depth level) for the "Percorso" mode. Higher
  * = a later, deeper chapter of life. Absent on a dilemma means it is NOT part of
  * a percorso (classic 3/5/7 mode ignores this field entirely).
@@ -36,6 +42,8 @@ export interface Dilemma {
   register: 'vita' | 'business' | 'carriera';
   /** Percorso chapter/level (1..4); absent ⇒ classic-only dilemma. */
   tappa?: Tappa;
+  /** Themed percorso step (1..4), decoupled from legacy complexity-bound `tappa`. */
+  percorsoTappa?: Tappa;
   /** Debate-complexity tier (alto < max < power). Present on every curated dilemma. */
   complessita?: Complessita;
   /**
@@ -76,6 +84,123 @@ export interface Dilemma {
    * spunto pratico che collega il dilemma alle scelte autentiche di vita e lavoro.
    */
   lezioneReale?: string;
+  /** Exclusive tonal lane ('risate' | 'direzione' | 'serio') for strict separation. */
+  tono?: CorsiaTono;
+  /** Percorso IDs this question belongs to (e.g. ['bussola', 'carriera-soldi']). */
+  percorsi?: string[];
+  /**
+   * Eye-opening follow-up question shown right after the vote to spark real
+   * live conversation and self-awareness among players.
+   */
+  domandaRilancio?: string;
+  /** Semantic theme tags (e.g. ['soldi', 'amicizia', 'tempo']) for anti-monotony. */
+  temi?: string[];
+  /** Psychological lever / dilemma archetype. */
+  dinamica?: DinamicaDilemma;
+  /** Expected vote split heat ('alta' = 50/50 debate, 'bassa' = near-unanimous). */
+  polarizzazione?: PolarizzazioneDilemma;
+  /** Group familiarity fit: close/old friends vs new acquaintances vs universal. */
+  familiarita?: DilemmaFamiliarita;
+}
+
+/** Group familiarity setting chosen by the leader for a session. */
+export type Familiarita = 'vecchi_amici' | 'nuove_conoscenze' | 'misto';
+
+/** Per-dilemma familiarity tag ('tutti' = works well for any group). */
+export type DilemmaFamiliarita = 'vecchi_amici' | 'nuove_conoscenze' | 'tutti';
+
+export function isFamiliarita(v: string): v is Familiarita {
+  return v === 'vecchi_amici' || v === 'nuove_conoscenze' || v === 'misto';
+}
+
+/** Psychological/narrative lever of a dilemma for thematic diversity matching. */
+export type DinamicaDilemma =
+  | 'identita'
+  | 'relazione'
+  | 'etica'
+  | 'azione'
+  | 'assurdo'
+  | 'priorita';
+
+/** Expected vote polarization heat used by the intelligent matching engine. */
+export type PolarizzazioneDilemma = 'alta' | 'media' | 'bassa';
+
+/**
+ * Derive the tonal lane of a dilemma if `tono` is not explicitly set,
+ * keeping existing 390+ dilemmas cleanly separated by complexity/register.
+ */
+export function tonoOfDilemma(d: Dilemma): CorsiaTono {
+  if (d.tono) return d.tono;
+  if (d.complessita === 'sorbetto') return 'risate';
+  if (d.delicato || d.complessita === 'power' || d.complessita === 'max') return 'serio';
+  return 'direzione';
+}
+
+const TEMA_RULES: ReadonlyArray<[string, RegExp]> = [
+  ['soldi', /sold[io]|stipendi|pagar|conto|prestit|ricc|pover|econom|spesa|bonus|budget|affitto|euro|€/i],
+  ['lavoro', /lavor|capo|collega|aziend|carriera|ufficio|progetto|team|cliente|licenzi|promozione|startup|riunione/i],
+  ['amicizia', /amic[oi]|gruppo|compagn|serata|festa|vacanz|passaggio|chat|whatsapp/i],
+  ['amore', /partner|amore|relazione|coppia|tradim|gelos|matrimonio|ex\b|appuntamento|bacio/i],
+  ['famiglia', /genitor|mamma|papà|madre|padre|figli|fratell|sorell|famigli|casa|radic|nonn/i],
+  ['tempo', /tempo|ore|anni|futuro|passato|fretta|aspett|rimand|giorno|settiman|vita/i],
+  ['digitale', /telefono|social|schermo|notific|online|instagram|app\b|algoritm|ia\b|ai\b|digitale|reperib/i],
+  ['verita', /verit|mentir|bugi|segret|sincer|onest|confess|fing|nascond/i],
+  ['coraggio', /paura|coragg|rischi|giudizi|fallir|cambi|salt|comfort|espor/i],
+  ['etica', /giust|legge|rub|colp|salvare|sacrif|coscienz|morale|danno|innocent|potere/i],
+];
+
+/**
+ * Derive semantic themes for a dilemma (explicit `temi` if present, otherwise
+ * deterministically inferred from text, options, and register).
+ */
+export function inferTemi(d: Dilemma): string[] {
+  if (d.temi && d.temi.length > 0) return d.temi;
+  const hay = `${d.text} ${d.optionA} ${d.optionB}`;
+  const matched = TEMA_RULES.filter(([, re]) => re.test(hay)).map(([tema]) => tema);
+  if (matched.length > 0) return matched;
+  return [d.register];
+}
+
+/**
+ * Derive the primary psychological lever (`dinamica`) of a dilemma.
+ */
+export function inferDinamica(d: Dilemma): DinamicaDilemma {
+  if (d.dinamica) return d.dinamica;
+  const tono = tonoOfDilemma(d);
+  if (tono === 'risate') return 'assurdo';
+  const temi = inferTemi(d);
+  if (temi.includes('etica')) return 'etica';
+  if (temi.includes('amore') || temi.includes('amicizia') || temi.includes('famiglia')) return 'relazione';
+  if (temi.includes('coraggio') || d.register === 'carriera' || d.register === 'business') return 'azione';
+  if (temi.includes('tempo')) return 'priorita';
+  return 'identita';
+}
+
+/**
+ * Derive expected vote polarization (`alta` = divisive debate, `bassa` = lopsided).
+ */
+export function inferPolarizzazione(d: Dilemma): PolarizzazioneDilemma {
+  if (d.polarizzazione) return d.polarizzazione;
+  if (d.bilanciamento === 'sbilanciato') return 'bassa';
+  if (d.bilanciamento === 'equilibrato') return 'alta';
+  if (d.complessita === 'max' || d.complessita === 'power') return 'alta';
+  return 'media';
+}
+
+/**
+ * Ensure every dilemma has a post-vote follow-up question that nudges real
+ * reflection, tailored to its tonal lane if not explicitly authored.
+ */
+export function ensureDomandaRilancio(d: Dilemma): string {
+  if (d.domandaRilancio && d.domandaRilancio.trim().length > 0) return d.domandaRilancio;
+  const tono = tonoOfDilemma(d);
+  if (tono === 'risate') {
+    return 'Chi nel gruppo sarebbe davvero capace di fare la scelta opposta nella vita reale, e perché?';
+  }
+  if (tono === 'serio') {
+    return 'Questa scelta parla più di ciò che desideri davvero o di ciò che hai paura di perdere?';
+  }
+  return 'Nella tua vita attuale, stai già andando verso quello che hai votato o stai rimandando?';
 }
 
 /**
@@ -120,11 +245,74 @@ export function filterByMood(pool: Dilemma[], mood: Mood, delicatoOptIn: boolean
 }
 
 /**
+ * Filter a dilemma pool by group familiarity ('vecchi_amici' excludes basic
+ * icebreakers meant only for strangers; 'nuove_conoscenze' excludes deep
+ * group-history dilemmas meant for close friends; 'misto' keeps everything).
+ * Falls back to the unfiltered pool only if filtering would leave it empty.
+ */
+export function filterByFamiliarita<T extends { familiarita?: DilemmaFamiliarita }>(
+  pool: T[],
+  familiarita: Familiarita,
+): T[] {
+  if (familiarita === 'misto') return pool;
+  const filtered =
+    familiarita === 'vecchi_amici'
+      ? pool.filter((d) => d.familiarita !== 'nuove_conoscenze')
+      : pool.filter((d) => d.familiarita !== 'vecchi_amici');
+  return filtered.length > 0 ? filtered : pool;
+}
+
+/**
+ * Pick one item from `pool` respecting `familiarita` and prioritizing items
+ * explicitly tagged for the selected group type when available.
+ */
+export function pickByFamiliarita<T extends { familiarita?: DilemmaFamiliarita }>(
+  pool: T[],
+  familiarita: Familiarita,
+  rng: () => number,
+): T | null {
+  if (pool.length === 0) return null;
+  const eligible = filterByFamiliarita(pool, familiarita);
+  if (familiarita === 'vecchi_amici' || familiarita === 'nuove_conoscenze') {
+    const preferred = eligible.filter((item) => item.familiarita === familiarita);
+    if (preferred.length > 0) {
+      return preferred[Math.floor(rng() * preferred.length)];
+    }
+  }
+  return eligible[Math.floor(rng() * eligible.length)];
+}
+
+/**
  * Dilemmas belonging to a given percorso tappa. Dilemmas without a `tappa` are
  * never returned — they belong to the classic (untagged) pool only.
  */
 export function dilemmasForTappa(all: Dilemma[], tappa: Tappa): Dilemma[] {
   return all.filter((d) => d.tappa === tappa);
+}
+
+/**
+ * Dilemmas belonging to a specific themed percorso (and optionally filtered by
+ * its guaranteed tonal lane so light and deep nights never leak into each other).
+ */
+export function dilemmasForPercorso(
+  all: Dilemma[],
+  percorsoId: string,
+  requiredTono?: CorsiaTono,
+): Dilemma[] {
+  return all.filter((d) => {
+    if ((d.percorsoTappa ?? d.tappa) == null) return false;
+    if (requiredTono && tonoOfDilemma(d) !== requiredTono) return false;
+    if (d.percorsi && d.percorsi.length > 0) {
+      return d.percorsi.includes(percorsoId);
+    }
+    // Backward-compatible fallback for untagged legacy dilemmas in 'bussola'
+    return percorsoId === 'bussola' && d.register === 'vita';
+  });
+}
+
+/** Dilemmas belonging to a given step (1..4) within a themed percorso. */
+export function dilemmasForPercorsoTappa(all: Dilemma[], tappa: Tappa): Dilemma[] {
+  return all.filter((d) => (d.percorsoTappa ?? d.tappa) === tappa);
 }
 
 /**
@@ -137,7 +325,9 @@ export function loadDilemmas(): Dilemma[] {
   const list = JSON.parse(readFileSync(file, 'utf-8')) as Dilemma[];
   return list.map((d) => ({
     ...d,
+    tono: tonoOfDilemma(d),
     lezioneReale: ensureLezioneReale(d),
+    domandaRilancio: ensureDomandaRilancio(d),
   }));
 }
 

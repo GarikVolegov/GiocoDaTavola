@@ -1,12 +1,14 @@
 // In-memory store of game rooms. The server is authoritative; rooms live here
 // only for the lifetime of the process (no DB).
 
-import { Deck, dilemmasForRegister, loadDilemmas, filterByMood, type Dilemma, type ContentRegister, type Tappa, type Mood } from './deck';
+import { Deck, dilemmasForRegister, loadDilemmas, filterByMood, filterByFamiliarita, isFamiliarita, type Dilemma, type ContentRegister, type Tappa, type Mood, type Familiarita } from './deck';
 import * as knowRound from './knowRound';
 import * as groupMind from './groupMind';
 import type { GroupMindQuestion, GroupMindOutcome } from './groupMind';
 import * as writeRound from './writeRound';
 import type { WritePrompt, PublicWrittenAnswer, WriteRevealAnswer } from './writeRound';
+import * as hotTake from './hotTake';
+import type { HotTakePrompt, HotTakeReveal, HotTakeSubmitResult } from './hotTake';
 import * as twists from './twists';
 import type { Twist, Caos } from './twists';
 import * as rosterDilemmas from './rosterDilemmas';
@@ -31,6 +33,8 @@ import {
   PHASE_DURATIONS_MS,
   SOFT_TIMEOUT_THRESHOLD,
   SOFT_TIMEOUT_MS,
+  SOFT_TIMEOUT_FAST_MS,
+  SOFT_TIMEOUT_LONG_MS,
   DUO_TURN_MIN_MS,
   DEFENSE_MAX_MS_NORMALE,
   DEFENSE_MAX_MS_LUNGA,
@@ -43,9 +47,12 @@ import {
 import {
   buildPercorsoPlan,
   isDurata,
+  isPercorsoId,
+  getPercorsoMeta,
   clampTappa,
   N_TAPPE,
   type Durata,
+  type PercorsoId,
 } from './percorso';
 import {
   buildStoriaPlan,
@@ -66,6 +73,7 @@ import {
   type InfiltratoCard,
   type CoppieCard,
   type AssurdoCard,
+  type CoppieIntensity,
 } from './geminiGenerator';
 import { computeAwards as computeAwardsFor, type Award, type PlayerStats } from './awards';
 import { computeBlindSpot, type BlindSpot } from './blindspots';
@@ -306,6 +314,8 @@ export interface Room {
   register: ContentRegister | null;
   /** Session format: 'classic' (3/5/7), 'percorso' (themed ascent) or 'storia' (narrative). Default 'classic'. */
   format: 'classic' | 'percorso' | 'storia';
+  /** Percorso: which themed percorso was chosen; null in classic/storia. */
+  percorsoId: PercorsoId | null;
   /** Percorso: the tappa the host chose to start from (1..4); null in classic. */
   startTappa: Tappa | null;
   /** Percorso: the duration preset chosen at start; null in classic. */
@@ -606,8 +616,10 @@ export interface Room {
   defenseCounts: Map<string, number>;
   /** Revamped 4 viral party modes ('flash' | 'infiltrato' | 'coppie' | 'assurdo'); null if classic. */
   partyMode: PartyMode | null;
-  /** Intensity for 'coppie' mode ('complicita' | 'piccante'). */
-  partyIntensity: 'complicita' | 'piccante';
+  /** Intensity for 'coppie' mode ('complicita' | 'piccante' | 'profondo'). */
+  partyIntensity: CoppieIntensity;
+  /** Group familiarity setting ('vecchi_amici' | 'nuove_conoscenze' | 'misto'). */
+  familiarita: Familiarita;
   /** Deck of party cards drawn for this game. */
   partyCards: PartyCard[];
   /** Currently active party card. */
@@ -629,6 +641,40 @@ export interface Room {
   hotSeatBets: Map<string, 'match' | 'scoppiano'>;
   /** Running party points accumulated across the game. */
   partyScores: Map<string, number>;
+  /** Termometro (Hot Take 1–10) state for the current round. */
+  hotTakeScores: Map<string, number>;
+  currentHotTakePrompt: HotTakePrompt | null;
+  usedHotTakeIds: Set<string>;
+  /** Cross-game anti-repeat tracking for party cards. */
+  usedPartyCardIds: Set<string>;
+  /** Dynamic mini-game sequence when partyMode === 'mix'. */
+  mixPlan: MixRoundKind[];
+}
+
+export type MixRoundKind = 'flash' | 'hotTake' | 'groupMind' | 'write' | 'assurdo' | 'infiltrato';
+
+/**
+ * Build a variable, non-repeating sequence of mini-games for "Serata Mix".
+ * Guarantees no two consecutive rounds share the same mini-game kind.
+ */
+export function buildMixPlan(count: number, playerCount: number, rng: () => number): MixRoundKind[] {
+  const basePool: MixRoundKind[] = ['flash', 'hotTake', 'groupMind', 'write', 'assurdo'];
+  if (playerCount >= 4) basePool.push('infiltrato');
+  const plan: MixRoundKind[] = [];
+  for (let i = 0; i < count; i++) {
+    const prev = i > 0 ? plan[i - 1] : null;
+    const candidates = basePool.filter((k) => k !== prev);
+    const chosen = candidates[Math.floor(rng() * candidates.length)];
+    plan.push(chosen);
+  }
+  return plan;
+}
+
+export function mixEntryPhase(kind: MixRoundKind): GamePhase {
+  if (kind === 'hotTake') return 'HOT_TAKE_VOTE';
+  if (kind === 'groupMind') return 'GROUP_MIND';
+  if (kind === 'write') return 'WRITE';
+  return 'DILEMMA_REVEAL';
 }
 
 export interface FlashResultPayload {
@@ -716,6 +762,7 @@ export interface PercorsoTappaProgress {
 
 /** Secret-safe percorso view broadcast to host/phones (no individual votes). */
 export interface PercorsoView {
+  percorsoId: PercorsoId;
   startTappa: number;
   durata: Durata;
   currentTappa: number | null;
@@ -992,6 +1039,7 @@ function emptyRoom(code: string, createdAt: number): Room {
     dilemmaCount: null,
     register: null,
     format: 'classic',
+    percorsoId: null,
     startTappa: null,
     durata: null,
     plannedDilemmas: [],
@@ -1083,6 +1131,7 @@ function emptyRoom(code: string, createdAt: number): Room {
     defenseCounts: new Map(),
     partyMode: null,
     partyIntensity: 'complicita',
+    familiarita: 'misto',
     partyCards: [],
     currentPartyCard: null,
     gognaVotes: new Map(),
@@ -1095,6 +1144,11 @@ function emptyRoom(code: string, createdAt: number): Room {
     hotSeatCouple: null,
     hotSeatBets: new Map(),
     partyScores: new Map(),
+    hotTakeScores: new Map(),
+    currentHotTakePrompt: null,
+    usedHotTakeIds: new Set(),
+    usedPartyCardIds: new Set(),
+    mixPlan: [],
   };
 }
 
@@ -1269,6 +1323,7 @@ export class RoomStore {
     room.dilemmaCount = null;
     room.register = null;
     room.format = 'classic';
+    room.percorsoId = null;
     room.startTappa = null;
     room.durata = null;
     room.plannedDilemmas = [];
@@ -1354,6 +1409,7 @@ export class RoomStore {
     room.defenseCounts = new Map();
     room.partyMode = null;
     room.partyIntensity = 'complicita';
+    room.familiarita = 'misto';
     room.partyCards = [];
     room.currentPartyCard = null;
     room.gognaVotes = new Map();
@@ -1366,6 +1422,9 @@ export class RoomStore {
     room.hotSeatCouple = null;
     room.hotSeatBets = new Map();
     room.partyScores = new Map();
+    room.hotTakeScores = new Map();
+    room.currentHotTakePrompt = null;
+    room.mixPlan = [];
     return { ok: true, room };
   }
 
@@ -1382,7 +1441,7 @@ export class RoomStore {
     mode: string = 'gruppo',
     infiltrato: boolean = false,
     squadre: boolean = false,
-    percorso?: { startTappa: number; durata: string },
+    percorso?: { startTappa: number; durata: string; percorsoId?: string },
     storia?: { storyId: string },
     mood: string = 'mista',
     delicatoOptIn: boolean = false,
@@ -1393,9 +1452,12 @@ export class RoomStore {
      * rematch exclusion. Ignored outside classic format. */
     deviceSeenIds: string[] = [],
     partyMode?: PartyMode,
-    partyIntensity?: 'complicita' | 'piccante',
+    partyIntensity?: CoppieIntensity,
     theme?: string,
+    infiltratoTono?: 'risate' | 'profondo' | 'misto',
+    familiarita: Familiarita = 'misto',
   ): StartGameResult {
+    const safeFamiliarita: Familiarita = isFamiliarita(familiarita) ? familiarita : 'misto';
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
     if (room.phase !== 'LOBBY') return { ok: false, error: 'ALREADY_STARTED' };
@@ -1424,11 +1486,24 @@ export class RoomStore {
         !Number.isInteger(percorso.startTappa) ||
         percorso.startTappa < 1 ||
         percorso.startTappa > N_TAPPE ||
-        !isDurata(percorso.durata)
+        !isDurata(percorso.durata) ||
+        (percorso.percorsoId != null && !isPercorsoId(percorso.percorsoId))
       ) {
         return { ok: false, error: 'INVALID_PERCORSO' };
       }
-      plan = buildPercorsoPlan(this.makeDeck('misto').cards, percorso.startTappa, percorso.durata, this.rng);
+      const chosenPercorsoId = percorso.percorsoId ? getPercorsoMeta(percorso.percorsoId).id : 'bussola';
+      const excludeIds = new Set([...room.excludeDilemmaIds, ...deviceSeenIds]);
+      room.excludeDilemmaIds = new Set();
+      plan = buildPercorsoPlan(
+        this.makeDeck('misto').cards,
+        percorso.startTappa,
+        percorso.durata,
+        this.rng,
+        chosenPercorsoId,
+        excludeIds,
+        room.players.size,
+        safeFamiliarita,
+      );
       if (plan.dilemmas.length === 0) return { ok: false, error: 'INVALID_PERCORSO' };
     } else if (partyMode) {
       const validPartyCounts = [3, 5, 7, 10];
@@ -1487,6 +1562,7 @@ export class RoomStore {
     }
 
     room.mode = mode;
+    room.familiarita = safeFamiliarita;
     room.defenseMaxMs = serataLunga ? DEFENSE_MAX_MS_LUNGA : DEFENSE_MAX_MS_NORMALE;
     room.dilemmaIndex = 0;
     room.phase = 'PHASE_INTRO';
@@ -1526,6 +1602,7 @@ export class RoomStore {
       // Percorso: the precomputed ascent drives everything; no register/deck and
       // (for now) no player-submitted dilemmas — the climb is the curated content.
       room.format = 'percorso';
+      room.percorsoId = percorso.percorsoId ? getPercorsoMeta(percorso.percorsoId).id : 'bussola';
       room.startTappa = clampTappa(percorso.startTappa);
       room.durata = percorso.durata as Durata;
       room.plannedDilemmas = plan.dilemmas;
@@ -1556,13 +1633,14 @@ export class RoomStore {
       // leader explicitly asked for them. Validated above via isMood.
       const cards = room.deck.cards;
       const moodEligible = filterByMood(cards, mood as Mood, delicatoOptIn);
+      const famEligible = filterByFamiliarita(moodEligible, safeFamiliarita);
       // Roster templates (5.3) read differently every time (a fresh random
       // name), so "già visto" exclusion never applies to them — they're
       // exempt from ever being filtered out here.
-      const fresh = moodEligible.filter((d) => d.roster || !excludeIds.has(d.id));
+      const fresh = famEligible.filter((d) => d.roster || !excludeIds.has(d.id));
       // Never let exclusion empty the pool outright (a huge device history) —
       // a shorter or repeated game beats a broken one.
-      const eligible = fresh.length > 0 ? fresh : moodEligible;
+      const eligible = fresh.length > 0 ? fresh : famEligible;
       // Only rebuild when something was actually excluded — an unfiltered
       // rebuild would replace the deck's own injected rng with the default
       // Math.random, silently breaking draw-order determinism in tests.
@@ -1576,7 +1654,14 @@ export class RoomStore {
         mode === 'duello'
           ? buildDuoActPlan(dilemmaCount).reduce((a, b) => a + b, 0)
           : dilemmaCount;
-      room.plannedDilemmas = dilemmaPlan.buildClassicPlan(room.deck, room.submittedDilemmas, targetCount, this.rng);
+      room.plannedDilemmas = dilemmaPlan.buildClassicPlan(
+        room.deck,
+        room.submittedDilemmas,
+        targetCount,
+        this.rng,
+        room.players.size,
+        safeFamiliarita,
+      );
       room.dilemmaCount = room.plannedDilemmas.length || targetCount;
       room.submittedQueue = []; // baked into plannedDilemmas
     }
@@ -1619,13 +1704,17 @@ export class RoomStore {
     room.duoFirstPickAgreements = 0;
     room.duoMoments = [];
     // Configure revamped party mode if requested
-    if (partyMode && ['flash', 'infiltrato', 'coppie', 'assurdo'].includes(partyMode)) {
+    if (partyMode && ['flash', 'infiltrato', 'coppie', 'assurdo', 'mix'].includes(partyMode)) {
       room.partyMode = partyMode;
-      room.partyIntensity = partyIntensity === 'piccante' ? 'piccante' : 'complicita';
+      room.partyIntensity =
+        partyIntensity === 'piccante' ? 'piccante' : partyIntensity === 'profondo' ? 'profondo' : 'complicita';
       room.theme = theme?.trim() || null;
       room.flashResult = null;
       room.infiltratoRoundResult = null;
       room.partyScores = new Map();
+      room.hotTakeScores = new Map();
+      room.currentHotTakePrompt = null;
+      room.mixPlan = [];
       if (partyMode === 'infiltrato') {
         const candidates = humans.length > 0 ? humans : [...room.players.values()].filter((p) => !p.isBot);
         if (candidates.length > 0) {
@@ -1641,18 +1730,40 @@ export class RoomStore {
         room.hotSeatCouple = null;
         room.hotSeatBets = new Map();
       }
-      if (partyMode === 'flash') room.defenseMaxMs = 15_000;
+      if (partyMode === 'flash' || partyMode === 'mix') room.defenseMaxMs = 15_000;
       else if (partyMode === 'infiltrato') room.defenseMaxMs = 60_000;
       else if (partyMode === 'coppie') room.defenseMaxMs = 30_000;
       else if (partyMode === 'assurdo') room.defenseMaxMs = 30_000;
       const count = dilemmaCount || 5;
-      const cards = getCuratedCards(partyMode, {
-        count,
-        intensity: room.partyIntensity,
-        rng: this.rng,
-      });
-      room.partyCards = cards;
-      room.dilemmaCount = cards.length;
+      if (partyMode === 'mix') {
+        room.mixPlan = buildMixPlan(count, room.players.size, this.rng);
+        // Pre-draw a card for every slot in mixPlan (flash / assurdo / infiltrato)
+        const flashCards = getCuratedCards('flash', { count, familiarita: safeFamiliarita, rng: this.rng, excludeIds: room.usedPartyCardIds });
+        const assurdoCards = getCuratedCards('assurdo', { count, familiarita: safeFamiliarita, rng: this.rng, excludeIds: room.usedPartyCardIds });
+        const infiltratoCards = getCuratedCards('infiltrato', { count, familiarita: safeFamiliarita, rng: this.rng, excludeIds: room.usedPartyCardIds });
+        let fi = 0;
+        let ai = 0;
+        let ii = 0;
+        room.partyCards = room.mixPlan.map((kind) => {
+          if (kind === 'assurdo') return assurdoCards[ai++ % assurdoCards.length];
+          if (kind === 'infiltrato') return infiltratoCards[ii++ % infiltratoCards.length];
+          return flashCards[fi++ % flashCards.length];
+        });
+        for (const c of room.partyCards) if (c) room.usedPartyCardIds.add(c.id);
+        room.dilemmaCount = room.mixPlan.length;
+      } else {
+        const cards = getCuratedCards(partyMode, {
+          count,
+          intensity: room.partyIntensity,
+          infiltratoTono,
+          familiarita: safeFamiliarita,
+          rng: this.rng,
+          excludeIds: room.usedPartyCardIds,
+        });
+        for (const c of cards) room.usedPartyCardIds.add(c.id);
+        room.partyCards = cards;
+        room.dilemmaCount = cards.length;
+      }
       room.currentPartyCard = null;
       room.gognaVotes = new Map();
       room.gognaTargetId = null;
@@ -1670,6 +1781,9 @@ export class RoomStore {
       room.hotSeatCouple = null;
       room.hotSeatBets = new Map();
       room.partyScores = new Map();
+      room.hotTakeScores = new Map();
+      room.currentHotTakePrompt = null;
+      room.mixPlan = [];
       room.partyCards = [];
       room.currentPartyCard = null;
     }
@@ -1876,6 +1990,36 @@ export class RoomStore {
               : { phase: 'FINAL_AWARDS', dilemmaIndex: idx };
           }
         }
+        if (room.partyMode === 'mix') {
+          const advanceToNextMixRound = (currentIdx: number): PhaseTransition => {
+            if (currentIdx >= total) return { phase: 'FINAL_AWARDS', dilemmaIndex: currentIdx };
+            const nextKind = room.mixPlan[currentIdx] ?? 'flash';
+            return { phase: mixEntryPhase(nextKind), dilemmaIndex: currentIdx + 1 };
+          };
+          if (phase === 'PHASE_INTRO') return advanceToNextMixRound(0);
+          const curKind = room.mixPlan[idx - 1] ?? 'flash';
+          if (curKind === 'hotTake') {
+            if (phase === 'HOT_TAKE_VOTE') return { phase: 'HOT_TAKE_REVEAL', dilemmaIndex: idx };
+            if (phase === 'HOT_TAKE_REVEAL') return advanceToNextMixRound(idx);
+          } else if (curKind === 'groupMind') {
+            if (phase === 'GROUP_MIND') return { phase: 'GROUP_MIND_REVEAL', dilemmaIndex: idx };
+            if (phase === 'GROUP_MIND_REVEAL') return advanceToNextMixRound(idx);
+          } else if (curKind === 'write') {
+            if (phase === 'WRITE') return { phase: 'WRITE_VOTE', dilemmaIndex: idx };
+            if (phase === 'WRITE_VOTE') return { phase: 'WRITE_REVEAL', dilemmaIndex: idx };
+            if (phase === 'WRITE_REVEAL') return advanceToNextMixRound(idx);
+          } else if (curKind === 'infiltrato') {
+            if (phase === 'DILEMMA_REVEAL') return { phase: 'DEFENSE', dilemmaIndex: idx };
+            if (phase === 'DEFENSE') return { phase: 'ACCUSE', dilemmaIndex: idx };
+            if (phase === 'ACCUSE') return { phase: 'SPLIT_REVEAL', dilemmaIndex: idx };
+            if (phase === 'SPLIT_REVEAL') return advanceToNextMixRound(idx);
+          } else {
+            if (phase === 'DILEMMA_REVEAL') return { phase: 'VOTE_1', dilemmaIndex: idx };
+            if (phase === 'VOTE_1') return { phase: 'SPLIT_REVEAL', dilemmaIndex: idx };
+            if (phase === 'SPLIT_REVEAL') return { phase: 'DEFENSE', dilemmaIndex: idx };
+            if (phase === 'DEFENSE') return advanceToNextMixRound(idx);
+          }
+        }
       }
       if (room.format === 'classic') {
         if (phase === 'PHASE_RESULTS' && groupMind.isGroupMindCheckpoint(idx, room.dilemmaCount ?? 0)) {
@@ -1904,6 +2048,7 @@ export class RoomStore {
     if (room.phase === 'PREDICT') predictions.applyPredictDefaults(room);
     if (room.phase === 'GROUP_MIND') groupMind.applyGroupMindDefaults(room);
     if (room.phase === 'WRITE') writeRound.applyWriteDefaults(room);
+    if (room.phase === 'HOT_TAKE_VOTE') hotTake.applyHotTakeDefaults(room);
     let transition: PhaseTransition;
     if (room.phase === 'UNANIMOUS_REVEAL') {
       // The shared "discard the current dilemma" exit (unanimous skip AND the
@@ -1950,9 +2095,11 @@ export class RoomStore {
       } else if (transition.phase === 'SPLIT_REVEAL') {
         room.phaseExpiresAt = this.now() + (room.partyMode === 'flash' ? 6_000 : 8_000);
       } else if (transition.phase === 'DEFENSE') {
-        if (room.partyMode === 'infiltrato') {
+        const defenseSubMode =
+          room.partyMode === 'mix' ? (room.mixPlan[transition.dilemmaIndex - 1] ?? 'flash') : room.partyMode;
+        if (defenseSubMode === 'infiltrato') {
           room.phaseExpiresAt = this.now() + 60_000;
-        } else if (room.partyMode === 'flash') {
+        } else if (defenseSubMode === 'flash') {
           room.phaseExpiresAt = this.now() + 15_000;
         } else {
           room.phaseExpiresAt = this.now() + 20_000;
@@ -2013,7 +2160,11 @@ export class RoomStore {
         const cardIndex = (transition.dilemmaIndex - 1) % room.partyCards.length;
         const card = room.partyCards[cardIndex];
         room.currentPartyCard = card;
-        if (room.partyMode === 'flash') {
+        const activeSubMode =
+          room.partyMode === 'mix'
+            ? (room.mixPlan[transition.dilemmaIndex - 1] ?? 'flash')
+            : room.partyMode;
+        if (activeSubMode === 'flash') {
           const fc = card as FlashCard;
           room.currentDilemma = {
             id: fc.id,
@@ -2025,7 +2176,7 @@ export class RoomStore {
             register: 'vita',
             complessita: 'sorbetto',
           };
-        } else if (room.partyMode === 'infiltrato') {
+        } else if (activeSubMode === 'infiltrato') {
           const ic = card as InfiltratoCard;
           room.currentDilemma = {
             id: ic.id,
@@ -2037,7 +2188,7 @@ export class RoomStore {
             register: 'vita',
             complessita: 'sorbetto',
           };
-        } else if (room.partyMode === 'coppie') {
+        } else if (activeSubMode === 'coppie') {
           const cc = card as CoppieCard;
           room.currentDilemma = {
             id: cc.id,
@@ -2049,7 +2200,7 @@ export class RoomStore {
             register: 'vita',
             complessita: 'sorbetto',
           };
-        } else if (room.partyMode === 'assurdo') {
+        } else if (activeSubMode === 'assurdo') {
           const ac = card as AssurdoCard;
           room.currentDilemma = {
             id: ac.id,
@@ -2066,14 +2217,14 @@ export class RoomStore {
         room.gognaTargetId = null;
         room.gognaTargetNickname = null;
         room.gognaVotesCount = 0;
-        if (room.partyMode === 'infiltrato') {
+        if (activeSubMode === 'infiltrato') {
           const humans = [...room.players.values()].filter((p) => !p.isBot);
           if (humans.length > 0) {
             room.infiltratorId = humans[Math.floor(this.rng() * humans.length)].id;
           }
           room.accusations.clear();
           room.infiltratoRoundResult = null;
-        } else if (room.partyMode === 'coppie') {
+        } else if (activeSubMode === 'coppie') {
           if (room.players.size > 2) {
             const humans = [...room.players.values()].filter((p) => !p.isBot);
             if (humans.length >= 2) {
@@ -2132,7 +2283,12 @@ export class RoomStore {
     // Entering GROUP_MIND (4.1): draw a fresh question, reset this round's
     // answers/guesses, and have bots answer immediately so they never block it.
     if (transition.phase === 'GROUP_MIND') {
-      room.groupMindQuestion = groupMind.pickGroupMindQuestion(room.usedGroupMindIds, this.rng);
+      let q = groupMind.pickGroupMindQuestion(room.usedGroupMindIds, this.rng, room.familiarita);
+      if (!q) {
+        room.usedGroupMindIds.clear();
+        q = groupMind.pickGroupMindQuestion(room.usedGroupMindIds, this.rng, room.familiarita);
+      }
+      room.groupMindQuestion = q;
       if (room.groupMindQuestion) room.usedGroupMindIds.add(room.groupMindQuestion.id);
       room.groupMindAnswers = new Map();
       room.groupMindGuesses = new Map();
@@ -2141,12 +2297,29 @@ export class RoomStore {
     // Entering WRITE (4.2): draw a fresh prompt, reset this round's answers,
     // and have bots write immediately so they never block it.
     if (transition.phase === 'WRITE') {
-      room.writePrompt = writeRound.pickWritePrompt(room.usedWritePromptIds, this.rng);
+      let wp = writeRound.pickWritePrompt(room.usedWritePromptIds, this.rng, room.familiarita);
+      if (!wp) {
+        room.usedWritePromptIds.clear();
+        wp = writeRound.pickWritePrompt(room.usedWritePromptIds, this.rng, room.familiarita);
+      }
+      room.writePrompt = wp;
       if (room.writePrompt) room.usedWritePromptIds.add(room.writePrompt.id);
       room.writeAnswers = new Map();
       room.writeOrder = [];
       room.writeVotes = new Map();
       writeRound.castBotWrite(room, this.rng);
+    }
+    // Entering HOT_TAKE_VOTE: draw a fresh 1-10 statement, reset scores, and have bots vote.
+    if (transition.phase === 'HOT_TAKE_VOTE') {
+      let hp = hotTake.pickHotTakePrompt(room.usedHotTakeIds, this.rng, room.familiarita);
+      if (!hp) {
+        room.usedHotTakeIds.clear();
+        hp = hotTake.pickHotTakePrompt(room.usedHotTakeIds, this.rng, room.familiarita);
+      }
+      room.currentHotTakePrompt = hp;
+      if (room.currentHotTakePrompt) room.usedHotTakeIds.add(room.currentHotTakePrompt.id);
+      room.hotTakeScores = new Map();
+      hotTake.castBotHotTake(room, this.rng);
     }
     // Entering WRITE_VOTE: freeze the anonymized shuffled order, then bots vote.
     if (transition.phase === 'WRITE_VOTE') {
@@ -2181,7 +2354,9 @@ export class RoomStore {
     // wait on themselves; the per-choice split stays secret until SPLIT_REVEAL.
     if (transition.phase === 'VOTE_1') {
       botVotes.castBotFirstVotes(room, this.rng);
-      if (room.partyMode === 'assurdo') {
+      const voteSubMode =
+        room.partyMode === 'mix' ? (room.mixPlan[transition.dilemmaIndex - 1] ?? 'flash') : room.partyMode;
+      if (voteSubMode === 'assurdo') {
         const playerIds = [...room.players.keys()];
         for (const p of room.players.values()) {
           if (p.isBot && playerIds.length > 0) {
@@ -2395,12 +2570,23 @@ export class RoomStore {
       );
       total = humans.length;
       acted = humans.filter((p) => room.writeVotes.has(p.id)).length;
+    } else if (room.phase === 'HOT_TAKE_VOTE') {
+      const humans = [...room.players.values()].filter(
+        (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
+      );
+      total = humans.length;
+      acted = humans.filter((p) => room.hotTakeScores.has(p.id)).length;
     } else {
       return false;
     }
     if (total === 0 || acted === total) return false;
     if (acted / total < SOFT_TIMEOUT_THRESHOLD) return false;
-    room.phaseExpiresAt = this.now() + SOFT_TIMEOUT_MS;
+    const timeoutMs = room.partyMode
+      ? SOFT_TIMEOUT_FAST_MS
+      : room.defenseMaxMs > DEFENSE_MAX_MS_NORMALE
+        ? SOFT_TIMEOUT_LONG_MS
+        : SOFT_TIMEOUT_MS;
+    room.phaseExpiresAt = this.now() + timeoutMs;
     return true;
   }
 
@@ -2622,6 +2808,40 @@ export class RoomStore {
     return room ? writeRound.writeRevealResults(room) : null;
   }
 
+  /** Record (or update) a player's 1–10 score during HOT_TAKE_VOTE. */
+  submitHotTake(code: string, playerId: string, score: number): HotTakeSubmitResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'NOT_HOT_TAKE_PHASE' };
+    return hotTake.submitHotTake(room, playerId, score);
+  }
+
+  hotTakePhaseComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? hotTake.hotTakePhaseComplete(room) : false;
+  }
+
+  hotTakeProgress(code: string): { done: number; total: number; missingNicknames: string[] } | null {
+    const room = this.rooms.get(code);
+    return room ? hotTake.hotTakeProgress(room) : null;
+  }
+
+  hotTakeSubmittedCount(code: string): number {
+    const room = this.rooms.get(code);
+    return room ? hotTake.hotTakeSubmittedCount(room) : 0;
+  }
+
+  publicHotTakePrompt(code: string): HotTakePrompt | null {
+    const room = this.rooms.get(code);
+    if (!room) return null;
+    if (room.phase !== 'HOT_TAKE_VOTE' && room.phase !== 'HOT_TAKE_REVEAL') return null;
+    return room.currentHotTakePrompt;
+  }
+
+  publicHotTakeReveal(code: string): HotTakeReveal | null {
+    const room = this.rooms.get(code);
+    return room ? hotTake.buildHotTakeReveal(room) : null;
+  }
+
   /** A fresh shuffled copy of `arr` using the injectable rng (Fisher–Yates). */
 
   /**
@@ -2752,7 +2972,9 @@ export class RoomStore {
     const room = this.rooms.get(code);
     if (!room || !room.partyMode || !room.currentPartyCard) return null;
     const card = room.currentPartyCard;
-    if (room.partyMode === 'flash') {
+    const activeMode =
+      room.partyMode === 'mix' ? (room.mixPlan[room.dilemmaIndex - 1] ?? 'flash') : room.partyMode;
+    if (activeMode === 'flash') {
       const fc = card as FlashCard;
       return {
         mode: 'flash' as const,
@@ -2764,7 +2986,7 @@ export class RoomStore {
         flashResult: room.flashResult,
       };
     }
-    if (room.partyMode === 'infiltrato') {
+    if (activeMode === 'infiltrato') {
       const ic = card as InfiltratoCard;
       const unmasked =
         room.phase === 'SPLIT_REVEAL' || room.phase === 'FINAL_AWARDS' || room.infiltratoRoundResult != null;
@@ -2784,7 +3006,7 @@ export class RoomStore {
         infiltratoRoundResult: room.infiltratoRoundResult,
       };
     }
-    if (room.partyMode === 'coppie') {
+    if (activeMode === 'coppie') {
       const cc = card as CoppieCard;
       let hotSeat: HotSeatPayload | null = null;
       if (room.hotSeatCouple) {
@@ -2821,7 +3043,9 @@ export class RoomStore {
         hotSeat,
       };
     }
-    if (room.partyMode === 'assurdo') {
+    const partySubMode =
+      room.partyMode === 'mix' ? (room.mixPlan[room.dilemmaIndex - 1] ?? 'flash') : room.partyMode;
+    if (partySubMode === 'assurdo') {
       const ac = card as AssurdoCard;
       return {
         mode: 'assurdo' as const,
@@ -2989,6 +3213,7 @@ export class RoomStore {
       return { id, total, done };
     });
     return {
+      percorsoId: room.percorsoId ?? 'bussola',
       startTappa: room.startTappa,
       durata: room.durata,
       currentTappa: room.currentTappa,
@@ -3238,7 +3463,9 @@ export class RoomStore {
       );
       return spectators.every((p) => room.hotSeatBets.has(p.id));
     }
-    if (room.partyMode === 'assurdo') {
+    const partySubMode =
+      room.partyMode === 'mix' ? (room.mixPlan[room.dilemmaIndex - 1] ?? 'flash') : room.partyMode;
+    if (partySubMode === 'assurdo') {
       const card = room.currentPartyCard as AssurdoCard | null;
       if (card?.cardType === 'gogna') {
         const present = [...room.players.values()].filter(

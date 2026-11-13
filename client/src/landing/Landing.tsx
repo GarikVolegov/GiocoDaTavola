@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { Show, SignInButton, UserButton } from '@clerk/react';
+import { Show, UserButton } from '@clerk/react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Logo } from '../shared/ui';
+import { Logo } from '../shared/ui';
 import Hero from './sections/Hero';
+import BivioScrollRoad from './sections/BivioScrollRoad';
 import HowToPlay from './sections/HowToPlay';
 import Features from './sections/Features';
 import Modes from './sections/Modes';
@@ -45,32 +46,40 @@ export default function Landing() {
 
   return (
     <main className={styles.page}>
-      <nav className={styles.nav}>
-        <Logo size={28} payoff className={styles.navLogo} />
-        <div className={styles.navLinks}>
-          <a href="#come">Come si gioca</a>
-          <a href="#modalita">Modalità</a>
-          <Show when="signed-out">
-            <SignInButton mode="modal">
-              <button type="button" className={styles.navAuth}>Accedi</button>
-            </SignInButton>
-          </Show>
-          <Show when="signed-in">
-            <UserButton />
-          </Show>
-          <Button variant="primary" size="md" onClick={create} className={styles.navCta}>
-            <span className={styles.ctaFull}>Crea una partita</span>
-            <span className={styles.ctaShort}>Crea</span>
-          </Button>
-        </div>
-      </nav>
+      <div className={styles.navPillWrap}>
+        <nav className={styles.navPill} aria-label="Navigazione principale">
+          <Logo size={24} className={styles.navLogo} />
+          <div className={styles.navCenterLinks}>
+            <a href="#come">Come si gioca</a>
+            <a href="#modalita">Modalità</a>
+            <a href="#premi">Premi</a>
+          </div>
+          <div className={styles.navActions}>
+            <Show when="signed-out">
+              <button type="button" className={styles.navAuth} onClick={() => navigate('/accedi')}>
+                Accedi
+              </button>
+            </Show>
+            <Show when="signed-in">
+              <UserButton />
+            </Show>
+            <button type="button" className={styles.navJoinBtn} onClick={join}>
+              <span className={styles.ctaFull}>Entra con codice</span>
+              <span className={styles.ctaShort}>Entra</span>
+            </button>
+          </div>
+        </nav>
+      </div>
 
       <Hero onCreate={create} onJoin={join} />
-      <div className={styles.reveal} data-reveal><HowToPlay /></div>
-      <div className={styles.reveal} data-reveal><Features /></div>
-      <div className={styles.reveal} data-reveal><Modes /></div>
-      <div className={styles.reveal} data-reveal><Awards /></div>
-      <div className={styles.reveal} data-reveal><FinalCta onCreate={create} /></div>
+      <div className={styles.scrollyBody}>
+        <BivioScrollRoad />
+        <div className={styles.reveal} data-reveal><HowToPlay /></div>
+        <div className={styles.reveal} data-reveal><Features /></div>
+        <div className={styles.reveal} data-reveal><Modes /></div>
+        <div className={styles.reveal} data-reveal><Awards /></div>
+        <div className={styles.reveal} data-reveal><FinalCta onCreate={create} /></div>
+      </div>
     </main>
   );
 }

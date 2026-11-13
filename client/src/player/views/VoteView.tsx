@@ -6,7 +6,8 @@ import {
   type PlayerSecretQuestionPayload,
 } from '../../shared/events';
 import { Button, VoteOption, Alert } from '../../shared/ui';
-import { wrap, formatWaitingList } from './layout';
+import { formatWaitingList } from './layout';
+import MobilePhaseShell from './MobilePhaseShell';
 import { useIsSpeaking, unlockSpeech } from '../../host/audio/narrator';
 import { unlockAudio } from '../../host/audio/engine';
 import { getStoryAudioUrl, playStoryAudio, stopStoryAudio } from '../../host/audio/storyAudioPlayer';
@@ -119,29 +120,105 @@ export default function VoteView({
     }
   };
 
+  const dock = (
+    <>
+      {/* Main A/B voting options pinned in the mobile thumb-zone */}
+      {!isHotSeatSpectator && (
+        <div
+          role="group"
+          aria-label="Il tuo voto"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-2)',
+            width: '100%',
+            opacity: isFlashReading ? 0.45 : 1,
+            pointerEvents: isFlashReading ? 'none' : 'auto',
+            transition: 'opacity 200ms ease',
+          }}
+        >
+          {(['A', 'B'] as const).map((letter) => (
+            <VoteOption
+              key={letter}
+              faction={letter === 'A' ? 'a' : 'b'}
+              letter={letter}
+              label={dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
+              selected={vote === letter}
+              onClick={() => {
+                vibrateTick();
+                onVote(letter);
+              }}
+              centered
+            />
+          ))}
+        </div>
+      )}
+
+      {voteError ? (
+        <Alert>{voteError}</Alert>
+      ) : vote ? (
+        <p style={{ opacity: 0.8, margin: 0, fontSize: '0.88rem' }}>
+          Hai votato <strong>{vote}</strong>. Puoi cambiare finché c’è tempo.
+        </p>
+      ) : !isHotSeatSpectator ? (
+        <p style={{ opacity: 0.7, margin: 0, fontSize: '0.88rem' }}>
+          {isFlashReading ? 'Aspetta lo sblocco per votare…' : 'Tocca A o B per votare.'}
+        </p>
+      ) : null}
+
+      {isCastPhase &&
+        (missingVoters && missingVoters.length > 0 ? (
+          <p style={{ opacity: 0.65, margin: 0, fontSize: '0.85rem' }}>
+            Aspettiamo {formatWaitingList(missingVoters)}…
+          </p>
+        ) : (
+          <p style={{ opacity: 0.65, margin: 0, fontSize: '0.85rem' }}>
+            Hanno votato {votedCount}/{playerCount}
+          </p>
+        ))}
+
+      {isConfirmPhase &&
+        (confirmed ? (
+          <>
+            <p style={{ fontWeight: 800, margin: '0.15rem 0 0', fontSize: '1rem' }}>
+              ✓ Hai confermato
+            </p>
+            <p style={{ opacity: 0.7, margin: 0, fontSize: '0.85rem' }}>
+              {missingVoters && missingVoters.length > 0
+                ? `Aspettiamo ${formatWaitingList(missingVoters)}…`
+                : `Aspettiamo gli altri… ${confirmedCount}/${playerCount}`}
+            </p>
+          </>
+        ) : (
+          <>
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => {
+                vibrateWarning();
+                onConfirm();
+              }}
+              style={{ marginTop: '0.15rem', width: '100%' }}
+            >
+              Confermo ✓
+            </Button>
+            <p style={{ opacity: 0.7, margin: 0, fontSize: '0.85rem' }}>
+              Conferma per proseguire — si va avanti quando confermano tutti ({confirmedCount}/
+              {playerCount})
+            </p>
+          </>
+        ))}
+
+      {skipButton}
+    </>
+  );
+
   return (
-    <main style={wrap}>
-      <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
+    <MobilePhaseShell title={PHASE_LABELS[phase]} remaining={remaining} dock={dock}>
       {subtitle && (
         <p style={{ opacity: 0.85, margin: 0, textAlign: 'center', maxWidth: '20rem' }}>
           {subtitle}
         </p>
-      )}
-
-      {remaining != null && (
-        <div
-          aria-label="Tempo rimanente"
-          style={{
-            fontSize: remaining <= 3 ? '3rem' : remaining <= 5 ? '2.6rem' : '2.25rem',
-            fontWeight: 900,
-            fontVariantNumeric: 'tabular-nums',
-            color: remaining <= 3 ? '#ef4444' : remaining <= 5 ? 'var(--gold)' : undefined,
-            transition: 'font-size 200ms ease, color 200ms ease',
-            textShadow: remaining <= 3 ? '0 0 20px rgba(239, 68, 68, 0.8)' : undefined,
-          }}
-        >
-          {remaining}s
-        </div>
       )}
 
       {/* Schierati Flash 3+3s Indicators */}
@@ -245,7 +322,7 @@ export default function VoteView({
           >
             {secretQuestion.isInfiltrator ? '🕵️ SEI L’INFILTRATO!' : '🤫 LA TUA DOMANDA SEGRETA'}
           </span>
-          <p style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#fff', lineHeight: 1.25 }}>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-display, 0.03em)', margin: 0, color: '#fff', lineHeight: 1.2 }}>
             {secretQuestion.question}
           </p>
           <span style={{ fontSize: '0.78rem', opacity: 0.85, marginTop: '0.2rem' }}>
@@ -358,7 +435,10 @@ export default function VoteView({
                       ? 'rgba(16, 185, 129, 0.35)'
                       : 'rgba(255, 255, 255, 0.05)',
                   color: '#fff',
+                  fontFamily: 'var(--font-display)',
                   fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.03em',
                   fontSize: '0.88rem',
                   cursor: 'pointer',
                 }}
@@ -372,7 +452,7 @@ export default function VoteView({
 
       {dilemma && (
         <>
-          <p style={{ fontSize: '1.15rem', fontWeight: 700, opacity: 0.9, margin: 0, textAlign: 'center' }}>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-display, 0.03em)', opacity: 0.96, margin: 0, textAlign: 'center', lineHeight: 1.25 }}>
             {dilemma.text}
           </p>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -383,9 +463,10 @@ export default function VoteView({
                 background: isSpeaking ? 'rgba(229, 193, 88, 0.2)' : 'rgba(255, 255, 255, 0.08)',
                 border: `1px solid ${isSpeaking ? 'var(--gold)' : 'rgba(255, 255, 255, 0.2)'}`,
                 borderRadius: '999px',
-                padding: '0.2rem 0.65rem',
+                padding: '0.35rem 0.85rem',
+                minHeight: '2.5rem',
                 color: isSpeaking ? 'var(--gold)' : 'inherit',
-                fontSize: '0.8rem',
+                fontSize: '0.85rem',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -398,95 +479,6 @@ export default function VoteView({
           </div>
         </>
       )}
-
-      {/* Main A/B voting options (hidden for hot seat spectators who only bet) */}
-      {!isHotSeatSpectator && (
-        <div
-          role="group"
-          aria-label="Il tuo voto"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--space-3)',
-            width: 'min(90vw, 22rem)',
-            opacity: isFlashReading ? 0.45 : 1,
-            pointerEvents: isFlashReading ? 'none' : 'auto',
-            transition: 'opacity 200ms ease',
-          }}
-        >
-          {(['A', 'B'] as const).map((letter) => (
-            <VoteOption
-              key={letter}
-              faction={letter === 'A' ? 'a' : 'b'}
-              letter={letter}
-              label={dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
-              selected={vote === letter}
-              onClick={() => {
-                vibrateTick();
-                onVote(letter);
-              }}
-              centered
-            />
-          ))}
-        </div>
-      )}
-
-      {voteError ? (
-        <Alert>{voteError}</Alert>
-      ) : vote ? (
-        <p style={{ opacity: 0.8, margin: 0 }}>
-          Hai votato <strong>{vote}</strong>. Puoi cambiare finché c’è tempo.
-        </p>
-      ) : !isHotSeatSpectator ? (
-        <p style={{ opacity: 0.7, margin: 0 }}>
-          {isFlashReading ? 'Aspetta lo sblocco per votare…' : 'Tocca A o B per votare.'}
-        </p>
-      ) : null}
-
-      {isCastPhase &&
-        (missingVoters && missingVoters.length > 0 ? (
-          <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
-            Aspettiamo {formatWaitingList(missingVoters)}…
-          </p>
-        ) : (
-          <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
-            Hanno votato {votedCount}/{playerCount}
-          </p>
-        ))}
-
-      {isConfirmPhase &&
-        (confirmed ? (
-          <>
-            <p style={{ fontWeight: 800, margin: '0.25rem 0 0', fontSize: '1.05rem' }}>
-              ✓ Hai confermato
-            </p>
-            <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
-              {missingVoters && missingVoters.length > 0
-                ? `Aspettiamo ${formatWaitingList(missingVoters)}…`
-                : `Aspettiamo gli altri… ${confirmedCount}/${playerCount}`}
-            </p>
-          </>
-        ) : (
-          <>
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={() => {
-                vibrateWarning();
-                onConfirm();
-              }}
-              style={{ marginTop: '0.25rem', width: 'min(90vw, 22rem)' }}
-            >
-              Confermo ✓
-            </Button>
-            <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
-              Conferma per proseguire — si va avanti quando confermano tutti ({confirmedCount}/
-              {playerCount})
-            </p>
-          </>
-        ))}
-
-      {skipButton}
-    </main>
+    </MobilePhaseShell>
   );
 }

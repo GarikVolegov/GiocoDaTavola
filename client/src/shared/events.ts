@@ -117,6 +117,12 @@ export const SocketEvents = {
    * entering WRITE_VOTE (or reconnecting into it), so the client can filter
    * its own entry out of the anonymized list. */
   PlayerMyWriteToken: 'player:myWriteToken',
+  /** Player submits a 1-10 score on the Termometro (Hot Take) slider. */
+  PlayerHotTake: 'player:hotTake',
+  /** Server confirms the player's 1-10 score back to them only. */
+  PlayerHotTakeSubmitted: 'player:hotTakeSubmitted',
+  /** Server rejects the score (wrong phase, not in room, out of 1-10 range). */
+  PlayerHotTakeError: 'player:hotTakeError',
   /** Player writes their own dilemma in the LOBBY (max 2/player). */
   PlayerSubmitDilemma: 'player:submitDilemma',
   /** Server confirms the player's submission back to them only (with their count). */
@@ -240,9 +246,231 @@ export const TAPPE: readonly TappaMeta[] = [
 ];
 
 /** Look up a tappa's metadata (falls back to the first tappa). */
-export function tappaMeta(id: number | null | undefined): TappaMeta {
-  return TAPPE.find((t) => t.id === id) ?? TAPPE[0];
+export function tappaMeta(id: number | null | undefined, percorsoId?: string | null): TappaMeta {
+  const tappe = percorsoId ? getPercorsoMeta(percorsoId).tappe : TAPPE;
+  return tappe.find((t) => t.id === id) ?? tappe[0];
 }
+
+export type CorsiaTono = 'risate' | 'direzione' | 'serio';
+
+export const CORSIE_META: Record<CorsiaTono, { nome: string; emoji: string; sottotitolo: string }> = {
+  risate: {
+    nome: 'Serata tra Risate',
+    emoji: '😂',
+    sottotitolo: 'Leggero, assurdo e senza pensieri — vietati discorsi pesanti',
+  },
+  direzione: {
+    nome: 'Direzione & Possibilità',
+    emoji: '🧭',
+    sottotitolo: 'Domande che aprono gli occhi su priorità, scelte e nuove strade',
+  },
+  serio: {
+    nome: 'Discorsi Seri & Consapevolezza',
+    emoji: '🔥',
+    sottotitolo: 'Legami, verità scomode, senso della vita ed etica profonda',
+  },
+};
+
+export const PERCORSO_IDS = [
+  'risate-assurdi',
+  'risate-quotidiano',
+  'risate-amicizia-soldi',
+  'bussola',
+  'carriera-soldi',
+  'rompere-schemi',
+  'direzione-tempo-digitale',
+  'direzione-coraggio-paure',
+  'legami-verita',
+  'bilanci-senso',
+  'etica-estremi',
+  'serio-famiglia-radici',
+] as const;
+
+export type PercorsoId = (typeof PERCORSO_IDS)[number];
+
+export interface PercorsoMeta {
+  id: PercorsoId;
+  corsia: CorsiaTono;
+  nome: string;
+  emoji: string;
+  sottotitolo: string;
+  descrizione: string;
+  tappe: readonly TappaMeta[];
+}
+
+export const PERCORSI_CATALOG: readonly PercorsoMeta[] = [
+  {
+    id: 'risate-assurdi',
+    corsia: 'risate',
+    nome: 'Assurdi & Scenari Folli',
+    emoji: '🎭',
+    sottotitolo: 'Zero pensieri · Ridere subito',
+    descrizione: 'Domande surreali, paradossi quotidiani e scelte impossibili per scatenare risate senza impegno.',
+    tappe: [
+      { id: 1, key: 'basi', nome: 'Riscaldamento', emoji: '🍕', sottotitolo: 'Gusti & manie', descrizione: 'Piccole follie quotidiane e abitudini inconfessabili.' },
+      { id: 2, key: 'bivi', nome: 'Scenari Assurdi', emoji: '🛸', sottotitolo: 'E se succedesse…', descrizione: 'Situazioni paradossali dove ogni scelta è ridicola.' },
+      { id: 3, key: 'legami', nome: 'Caos Sociale', emoji: '🍻', sottotitolo: 'Amici & figuracce', descrizione: 'Cosa faresti davanti a tutti pur di cavartela.' },
+      { id: 4, key: 'bilanci', nome: 'Follia Finale', emoji: '🎪', sottotitolo: 'Senza freni', descrizione: 'Le domande più assurde per chiudere tra le risate.' },
+    ],
+  },
+  {
+    id: 'risate-quotidiano',
+    corsia: 'risate',
+    nome: 'Vita Quotidiana & Red Flag',
+    emoji: '🚩',
+    sottotitolo: 'Ex, serate & scomodità leggere',
+    descrizione: 'Dibattiti accesi su abitudini, amicizie, appuntamenti e piccoli egoismi di ogni giorno.',
+    tappe: [
+      { id: 1, key: 'basi', nome: 'Piccole Ipocrisie', emoji: '📱', sottotitolo: 'Quello che fanno tutti', descrizione: 'Chat, social, ritardi e bugie bianche.' },
+      { id: 2, key: 'bivi', nome: 'Red Flag', emoji: '🚩', sottotitolo: 'Appuntamenti & ex', descrizione: 'Segnali d’allarme e scelte scomode ma divertenti.' },
+      { id: 3, key: 'legami', nome: 'Segreti da Tavola', emoji: '🍷', sottotitolo: 'Complicità', descrizione: 'Quanto siamo davvero sinceri con gli amici?' },
+      { id: 4, key: 'bilanci', nome: 'Verdetto Leggero', emoji: '😂', sottotitolo: 'Senza maschere', descrizione: 'Le confessioni più spassose della serata.' },
+    ],
+  },
+  {
+    id: 'risate-amicizia-soldi',
+    corsia: 'risate',
+    nome: 'Amici, Vacanze & Conti',
+    emoji: '💸',
+    sottotitolo: 'Conti alla romana, favori & case condivise',
+    descrizione: 'Le micro-tensioni comiche e verissime quando si dividono spese, vacanze di gruppo, passaggi e regali.',
+    tappe: [
+      { id: 1, key: 'basi', nome: 'Al Ristorante', emoji: '🍕', sottotitolo: 'Conti & mance', descrizione: 'Alla romana o ognuno il suo? L’inizio di ogni guerra fredda.' },
+      { id: 2, key: 'bivi', nome: 'Vacanza di Gruppo', emoji: '🏖️', sottotitolo: 'Convivenza forzata', descrizione: 'Spesa comune, aria condizionata, orari e stanze migliori.' },
+      { id: 3, key: 'legami', nome: 'Prestiti & Favori', emoji: '🤝', sottotitolo: '«Poi te li ridò»', descrizione: 'Passaggi in auto, regali collettivi e soldi mai tornati.' },
+      { id: 4, key: 'bilanci', nome: 'Sopravvivere al Gruppo', emoji: '🍻', sottotitolo: 'Amicizia vs portafoglio', descrizione: 'Dove finisce la generosità e inizia il braccino corto.' },
+    ],
+  },
+  {
+    id: 'bussola',
+    corsia: 'direzione',
+    nome: 'Bussola di Vita',
+    emoji: '🧭',
+    sottotitolo: 'Priorità, coraggio & direzione',
+    descrizione: 'Domande che aprono gli occhi su come stai usando il tuo tempo, cosa rimandi e dove stai andando.',
+    tappe: TAPPE,
+  },
+  {
+    id: 'carriera-soldi',
+    corsia: 'direzione',
+    nome: 'Ambizione, Carriera & Soldi',
+    emoji: '🚀',
+    sottotitolo: 'Libertà, rischio & compromessi',
+    descrizione: 'Lavoro vs vita vera, sicurezza vs salto nel vuoto, etica del successo e prezzo dell’ambizione.',
+    tappe: [
+      { id: 1, key: 'basi', nome: 'Il Punto di Partenza', emoji: '💼', sottotitolo: 'Talento & sicurezza', descrizione: 'Stipendio sicuro o strada tua? Le prime scelte.' },
+      { id: 2, key: 'bivi', nome: 'Il Prezzo della Crescita', emoji: '📈', sottotitolo: 'Tempo vs denaro', descrizione: 'Quanto sei disposto a sacrificare per salire?' },
+      { id: 3, key: 'legami', nome: 'Integrità & Potere', emoji: '🤝', sottotitolo: 'Etica al lavoro', descrizione: 'Scelte difficili tra risultati, colleghi e coscienza.' },
+      { id: 4, key: 'bilanci', nome: 'Libertà Vera', emoji: '🦅', sottotitolo: 'Abbastanza o sempre di più?', descrizione: 'Cosa significa davvero aver vinto nel lavoro.' },
+    ],
+  },
+  {
+    id: 'rompere-schemi',
+    corsia: 'direzione',
+    nome: 'Rompere gli Schemi',
+    emoji: '💡',
+    sottotitolo: 'Nuove possibilità & punti ciechi',
+    descrizione: 'Domande progettate per smontare il pilota automatico, riconoscere le paure invisibili e vedere alternative.',
+    tappe: [
+      { id: 1, key: 'basi', nome: 'Lo Specchio', emoji: '🪞', sottotitolo: 'Abitudini automatiche', descrizione: 'Cosa fai per inerzia senza chiederti più il perché.' },
+      { id: 2, key: 'bivi', nome: 'L’Attrito', emoji: '⚡', sottotitolo: 'Uscire dalla comfort zone', descrizione: 'Il costo nascosto del restare dove sei.' },
+      { id: 3, key: 'legami', nome: 'Il Cambio di Rotta', emoji: '🔄', sottotitolo: 'Nuove lenti', descrizione: 'Guardare i tuoi problemi con gli occhi di un altro.' },
+      { id: 4, key: 'bilanci', nome: 'Possibilità Aperte', emoji: '✨', sottotitolo: 'Da domani', descrizione: 'Una scelta concreta che cambia la tua traiettoria.' },
+    ],
+  },
+  {
+    id: 'direzione-tempo-digitale',
+    corsia: 'direzione',
+    nome: 'Tempo, Attenzione & Digitale',
+    emoji: '📵',
+    sottotitolo: 'Presenza reale vs pilota automatico',
+    descrizione: 'Chi possiede davvero le tue ore? Notifiche, vetrina social, reperibilità continua e recupero della presenza.',
+    tappe: [
+      { id: 1, key: 'basi', nome: 'L’Attenzione Rubata', emoji: '📱', sottotitolo: 'Schermi & riflessi', descrizione: 'Quanto spesso prendi il telefono senza nemmeno volerlo.' },
+      { id: 2, key: 'bivi', nome: 'Vetrina vs Realtà', emoji: '🪞', sottotitolo: 'Confronto continuo', descrizione: 'Vivere momenti veri o documentarli per chi guarda.' },
+      { id: 3, key: 'legami', nome: 'Reperibilità & Confini', emoji: '🔕', sottotitolo: 'Sempre connessi', descrizione: 'Il diritto di sparire senza sentirsi in colpa.' },
+      { id: 4, key: 'bilanci', nome: 'Riprendersi il Tempo', emoji: '⏳', sottotitolo: 'Scelte di presenza', descrizione: 'Tagliare il rumore per tornare padroni delle proprie giornate.' },
+    ],
+  },
+  {
+    id: 'direzione-coraggio-paure',
+    corsia: 'direzione',
+    nome: 'Coraggio, Rischio & Paure',
+    emoji: '🦁',
+    sottotitolo: 'Sbloccare ciò che rimandi da anni',
+    descrizione: 'Il prezzo nascosto dell’immobilismo, la paura del giudizio altrui e il confine tra prudenza e resa.',
+    tappe: [
+      { id: 1, key: 'basi', nome: 'Il Freno a Mano', emoji: '🛑', sottotitolo: 'Paure quotidiane', descrizione: 'Le scuse eleganti con cui rimandi ciò che conta.' },
+      { id: 2, key: 'bivi', nome: 'Il Giudizio Altrui', emoji: '👀', sottotitolo: 'Sguardi & aspettative', descrizione: 'Quanto decidi per te e quanto per non deludere gli altri.' },
+      { id: 3, key: 'legami', nome: 'Il Salto Calcolato', emoji: '🪂', sottotitolo: 'Errore vs rimpianto', descrizione: 'Meglio fallire provandoci o restare al sicuro a metà?' },
+      { id: 4, key: 'bilanci', nome: 'Il Primo Passo', emoji: '🦁', sottotitolo: 'Azione concreta', descrizione: 'La decisione coraggiosa che cambia tutto il resto.' },
+    ],
+  },
+  {
+    id: 'legami-verita',
+    corsia: 'serio',
+    nome: 'Legami, Amore & Verità',
+    emoji: '❤️',
+    sottotitolo: 'Affetti, confini & sincerità',
+    descrizione: 'Discorsi seri su amore, famiglia, lealtà, perdono e tutto ciò che spesso non ci si dice.',
+    tappe: [
+      { id: 1, key: 'basi', nome: 'Presenza', emoji: '🫶', sottotitolo: 'Essere davvero lì', descrizione: 'Attenzione, ascolto e piccole verità nelle relazioni.' },
+      { id: 2, key: 'bivi', nome: 'Confini', emoji: '🛡️', sottotitolo: 'Io vs noi', descrizione: 'Dove finisce l’amore e inizia il perdersi.' },
+      { id: 3, key: 'legami', nome: 'Lealtà & Sacrificio', emoji: '🤝', sottotitolo: 'Scelte che pesano', descrizione: 'Famiglia, amicizie storiche e verità scomode.' },
+      { id: 4, key: 'bilanci', nome: 'Perdono & Verità', emoji: '🕊️', sottotitolo: 'Cosa resta', descrizione: 'Ciò che vale la pena salvare, e ciò che va lasciato andare.' },
+    ],
+  },
+  {
+    id: 'bilanci-senso',
+    corsia: 'serio',
+    nome: 'Bilanci, Senso & Eredità',
+    emoji: '🌅',
+    sottotitolo: 'Identità, rimpianti & valore',
+    descrizione: 'Le domande profonde che mettono in prospettiva tutta una vita: cosa conta quando togli il rumore.',
+    tappe: [
+      { id: 1, key: 'basi', nome: 'Il Tempo', emoji: '⏳', sottotitolo: 'Come lo spendi', descrizione: 'La differenza tra essere occupati ed essere vivi.' },
+      { id: 2, key: 'bivi', nome: 'L’Identità', emoji: '🧩', sottotitolo: 'Chi sei senza ruoli', descrizione: 'Cosa resta di te se togli lavoro, soldi e status.' },
+      { id: 3, key: 'legami', nome: 'I Rimpianti', emoji: '🌊', sottotitolo: 'Cose non dette o non fatte', descrizione: 'Guardare in faccia ciò che ancora puoi cambiare.' },
+      { id: 4, key: 'bilanci', nome: 'L’Eredità', emoji: '🌅', sottotitolo: 'Il segno che lasci', descrizione: 'Come vuoi essere ricordato da chi hai amato.' },
+    ],
+  },
+  {
+    id: 'etica-estremi',
+    corsia: 'serio',
+    nome: 'Etica, Potere & Scelte Estreme',
+    emoji: '⚖️',
+    sottotitolo: 'Dilemmi morali & coscienza',
+    descrizione: 'Scenari limite dove non esiste una risposta facile: giustizia, responsabilità e principi non negoziabili.',
+    tappe: [
+      { id: 1, key: 'basi', nome: 'Regole vs Coscienza', emoji: '📜', sottotitolo: 'Piccoli test morali', descrizione: 'Quando la legge e ciò che è giusto non coincidono.' },
+      { id: 2, key: 'bivi', nome: 'Il Bene Maggiore', emoji: '⚖️', sottotitolo: 'Uno o molti', descrizione: 'Responsabilità verso gli sconosciuti vs chi ami.' },
+      { id: 3, key: 'legami', nome: 'Potere & Verità', emoji: '🕯️', sottotitolo: 'Cosa faresti al comando', descrizione: 'Il peso delle decisioni irreversibili.' },
+      { id: 4, key: 'bilanci', nome: 'Principi Ultimi', emoji: '🏛️', sottotitolo: 'La linea che non superi', descrizione: 'Scoprire fino a dove arrivano davvero i tuoi valori.' },
+    ],
+  },
+  {
+    id: 'serio-famiglia-radici',
+    corsia: 'serio',
+    nome: 'Famiglia, Radici & Aspettative',
+    emoji: '🏡',
+    sottotitolo: 'Eredità emotiva, confini & perdono',
+    descrizione: 'Il rapporto con chi ti ha cresciuto: onorare le radici senza restarne prigionieri, verità taciute e cura.',
+    tappe: [
+      { id: 1, key: 'basi', nome: 'Le Aspettative', emoji: '🎒', sottotitolo: 'Sogni ereditati', descrizione: 'Quando la strada scelta è davvero tua e quando è un debito verso casa.' },
+      { id: 2, key: 'bivi', nome: 'La Distanza Giusta', emoji: '🚪', sottotitolo: 'Autonomia & sensi di colpa', descrizione: 'Mettere confini sani senza rompere il legame.' },
+      { id: 3, key: 'legami', nome: 'Verità di Casa', emoji: '🕯️', sottotitolo: 'Non detti & ruoli', descrizione: 'Affrontare ciò che in famiglia si è sempre preferito tacere.' },
+      { id: 4, key: 'bilanci', nome: 'Perdono & Cura', emoji: '🏡', sottotitolo: 'Pace con le origini', descrizione: 'Accettare i limiti di chi ti ha cresciuto e scegliere come ricambiare.' },
+    ],
+  },
+];
+
+export function getPercorsoMeta(id?: string | null): PercorsoMeta {
+  return PERCORSI_CATALOG.find((p) => p.id === id) ?? PERCORSI_CATALOG.find((p) => p.id === 'bussola')!;
+}
+
+export type PercorsoCounts = Record<string, TappaCounts>;
+export type CoppieIntensity = 'complicita' | 'piccante' | 'profondo';
+export type InfiltratoTono = 'risate' | 'profondo' | 'misto';
 
 /** Duration presets (mirror server percorso.ts). */
 export const DURATE = ['corto', 'medio', 'lungo'] as const;
@@ -295,9 +523,31 @@ export const MIN_PLAYERS_TO_START = 3;
 export const GAME_MODES = ['gruppo', 'duello'] as const;
 export type GameMode = (typeof GAME_MODES)[number];
 
-/** The 4 revamped viral party modes. */
-export const PARTY_MODES = ['flash', 'infiltrato', 'coppie', 'assurdo'] as const;
+/** The revamped viral party modes (including Serata Mix variable rotation). */
+export const PARTY_MODES = ['flash', 'infiltrato', 'coppie', 'assurdo', 'mix'] as const;
 export type PartyMode = (typeof PARTY_MODES)[number];
+
+export interface HotTakePromptPayload {
+  id: string;
+  text: string;
+  lowLabel?: string;
+  highLabel?: string;
+}
+
+export interface HotTakePlayerScorePayload {
+  playerId: string;
+  nickname: string;
+  score: number;
+}
+
+export interface HotTakeRevealPayload {
+  prompt: HotTakePromptPayload;
+  average: number;
+  scores: HotTakePlayerScorePayload[];
+  lowest: HotTakePlayerScorePayload | null;
+  highest: HotTakePlayerScorePayload | null;
+  spread: number;
+}
 
 export type PartyIntensity = 'complicita' | 'piccante';
 
@@ -380,6 +630,21 @@ export const MOOD_LABELS: Record<Mood, { nome: string; descr: string }> = {
   profonda: { nome: '🌊 Profonda', descr: 'si va a fondo' },
 };
 
+/** Group familiarity setting (mirror of server deck.ts `Familiarita`). */
+export const FAMILIARITA_VALUES = ['vecchi_amici', 'nuove_conoscenze'] as const;
+export type Familiarita = (typeof FAMILIARITA_VALUES)[number] | 'misto';
+
+export const FAMILIARITA_LABELS: Record<'vecchi_amici' | 'nuove_conoscenze', { nome: string; descr: string }> = {
+  vecchi_amici: {
+    nome: '🫂 Vecchi amici',
+    descr: 'Vi conoscete già: niente convenevoli, dinamiche vere e non detti',
+  },
+  nuove_conoscenze: {
+    nome: '✨ Nuove conoscenze',
+    descr: 'Gruppo nuovo o misto: rompete il ghiaccio senza imbarazzi',
+  },
+};
+
 /** The leader's "caos" dial (4.3): how often a dilemma round draws a surprise
  * mechanical twist at DEFENSE. Mirror of the server's twists.ts `Caos`. */
 export const CAOS_LEVELS = ['assente', 'basso', 'alto'] as const;
@@ -395,7 +660,14 @@ export const CAOS_LABELS: Record<Caos, { nome: string; descr: string }> = {
 /** A surprise mechanical twist drawn for a dilemma round (4.3), mirror of the
  * server's twists.ts `Twist`. */
 export interface Twist {
-  id: 'difesa-lampo' | 'interventi-vietati' | 'doppio-difensore';
+  id:
+    | 'difesa-lampo'
+    | 'interventi-vietati'
+    | 'doppio-difensore'
+    | 'avvocato-opposto'
+    | 'duello-botta-risposta'
+    | 'voto-pesato'
+    | 'dieci-parole';
   label: string;
   description: string;
 }
@@ -438,6 +710,9 @@ export type GamePhase =
   | 'WRITE'
   | 'WRITE_VOTE'
   | 'WRITE_REVEAL'
+  // "Termometro (Hot Take 1–10)" slider mini-game.
+  | 'HOT_TAKE_VOTE'
+  | 'HOT_TAKE_REVEAL'
   // "Percorso" mode chapter framing (mirror server phases.ts).
   | 'TAPPA_INTRO'
   | 'TAPPA_RECAP'
@@ -582,6 +857,8 @@ export interface PublicDilemma {
   complessita?: Complessita;
   /** Insegnamento per il mondo reale: spunto psicologico / pratico rivelato ai risultati. */
   lezioneReale?: string;
+  /** Domanda di rilancio post-voto per stimolare il confronto dal vivo tra amici. */
+  domandaRilancio?: string;
 }
 
 /** Aggregate A vs B vote counts. No identities — counts only. */
@@ -826,6 +1103,7 @@ export interface PercorsoTappaProgress {
 
 /** Secret-safe percorso view (mirror server PercorsoView); null in classic. */
 export interface PercorsoView {
+  percorsoId?: PercorsoId;
   startTappa: number;
   durata: Durata;
   currentTappa: number | null;
@@ -863,6 +1141,7 @@ export interface StoriaCatalogItem {
   durataStimaMin: number;
   /** Number of crossroads (debate rounds) in the story. */
   scene: number;
+  familiarita?: 'vecchi_amici' | 'nuove_conoscenze' | 'tutti';
 }
 
 /** Secret-safe storia view (mirror server StoriaView); null in classic/percorso. */
@@ -893,6 +1172,8 @@ export interface GameStatePayload {
   percorso: PercorsoView | null;
   /** Available dilemmas per tappa — static setup data for the percorso estimate. */
   tappaCounts: TappaCounts;
+  /** Available dilemmas per percorsoId & tappa. */
+  percorsoCounts?: PercorsoCounts;
   /** Storia narrative view (prose + progress), or null in classic/percorso. */
   storia: StoriaView | null;
   /** The story catalog — static setup data for the storia picker. */
@@ -999,6 +1280,14 @@ export interface GameStatePayload {
   twist: Twist | null;
   /** The room's caos dial (4.3), chosen at start. */
   caos: Caos;
+  /** Termometro (Hot Take 1–10) prompt in HOT_TAKE_VOTE/HOT_TAKE_REVEAL; null otherwise. */
+  hotTakePrompt?: HotTakePromptPayload | null;
+  /** Termometro (Hot Take 1–10) reveal data in HOT_TAKE_REVEAL; null otherwise. */
+  hotTakeReveal?: HotTakeRevealPayload | null;
+  /** How many have submitted a Termometro score (aggregate only). */
+  hotTakeSubmittedCount?: number;
+  /** Nicknames still missing in HOT_TAKE_VOTE; null otherwise. */
+  missingHotTakers?: string[] | null;
   /**
    * The swing + per-defender attribution, shown only in PHASE_RESULTS; null
    * otherwise. Aggregate counts only — never who voted what.
@@ -1246,6 +1535,7 @@ export interface PlayerSwingBetErrorPayload {
 
 /** Max dilemmas a single player may write in the lobby (mirror of server). */
 export const MAX_SUBMISSIONS_PER_PLAYER = 2;
+export const MAX_SUBMISSIONS_PER_ACCOUNT = 5;
 
 export interface PlayerSubmitDilemmaPayload {
   text: string;
@@ -1443,6 +1733,8 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   WRITE: 'In altre parole',
   WRITE_VOTE: 'Votate la risposta migliore',
   WRITE_REVEAL: 'Chi ha scritto cosa',
+  HOT_TAKE_VOTE: 'Termometro 1–10',
+  HOT_TAKE_REVEAL: 'Gli estremi del gruppo',
   TAPPA_INTRO: 'Nuova tappa',
   TAPPA_RECAP: 'Fine tappa',
   STORY_INTRO: 'La storia',

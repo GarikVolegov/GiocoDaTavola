@@ -213,4 +213,13 @@ describe('catalogo storie — contenuti reali (sci-fi, bivi reali)', () => {
       expect(s.protagonist.trim()).not.toBe('');
     }
   });
+
+  it('include la storia la-casa-sul-lago per vecchi_amici e preserva familiarita nel catalogo', () => {
+    const target = stories.find((s) => s.id === 'la-casa-sul-lago');
+    expect(target).toBeDefined();
+    expect(target?.familiarita).toBe('vecchi_amici');
+    const catalog = storieCatalog(stories);
+    const entry = catalog.find((c) => c.id === 'la-casa-sul-lago');
+    expect(entry?.familiarita).toBe('vecchi_amici');
+  });
 });

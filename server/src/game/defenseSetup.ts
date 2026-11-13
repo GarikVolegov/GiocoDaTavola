@@ -5,7 +5,7 @@ import type { Room, Defender, VoteChoice } from './rooms';
 import { DEFENSE_MIN_MS, INTERVENTO_MIN_MS, INTERVENTI_MAX_MS, TURN_BOT_MS } from './phases';
 import { countGiocatori, rulesForGiocatoriCount } from './ruleset';
 import { botDefenseArgument } from './botDefense';
-import { TWIST_DEFENSE_LAMPO_MS } from './twists';
+import { TWIST_DEFENSE_LAMPO_MS, TWIST_DUELLO_MS } from './twists';
 import * as devilAdvocate from './devilAdvocate';
 import * as defenseTurns from './defenseTurns';
 
@@ -19,14 +19,21 @@ export function armTurn(room: Room, now: number): void {
   const interventi = room.phase === 'INTERVENTI';
   const speakerId = defenseTurns.currentSpeakerId(room);
   const speaker = speakerId ? room.players.get(speakerId) : undefined;
-  const defenseMax = room.currentTwist?.id === 'difesa-lampo' ? TWIST_DEFENSE_LAMPO_MS : room.defenseMaxMs;
+  const twistId = room.currentTwist?.id;
+  const defenseMax =
+    twistId === 'difesa-lampo'
+      ? TWIST_DEFENSE_LAMPO_MS
+      : twistId === 'duello-botta-risposta'
+        ? TWIST_DUELLO_MS
+        : room.defenseMaxMs;
+  const defenseMin = twistId === 'duello-botta-risposta' ? INTERVENTO_MIN_MS : DEFENSE_MIN_MS;
   room.turnStartedAt = now;
   room.turnReactionTally = {};
   // Each new turn is a fresh sabotage opportunity (4.5) — the decoy from the
   // PREVIOUS speaker's turn doesn't carry over.
   room.infiltratoDecoySpunto = null;
   if (speaker && !speaker.isBot && speaker.connected !== false) {
-    room.turnMinEndsAt = now + (interventi ? INTERVENTO_MIN_MS : DEFENSE_MIN_MS);
+    room.turnMinEndsAt = now + (interventi ? INTERVENTO_MIN_MS : defenseMin);
     room.phaseExpiresAt = now + (interventi ? INTERVENTI_MAX_MS : defenseMax);
   } else {
     room.turnMinEndsAt = null;
@@ -45,6 +52,7 @@ export function armTurn(room: Room, now: number): void {
  */
 export function selectDefenders(room: Room, rng: () => number): Defender[] {
   const devil = devilAdvocate.isDevilRound(room);
+  const invertSide = devil || room.currentTwist?.id === 'avvocato-opposto';
   // The "doppio-difensore" twist (4.3) forces pairs regardless of group size.
   const perSide =
     room.currentTwist?.id === 'doppio-difensore'
@@ -66,11 +74,10 @@ export function selectDefenders(room: Room, rng: () => number): Defender[] {
       const player = room.players.get(chosen);
       if (!player) continue;
       room.defenseCounts.set(chosen, (room.defenseCounts.get(chosen) ?? 0) + 1);
-      if (devil) {
-        // "Avvocato del Diavolo": argue the OPPOSITE side. Everything downstream keys
-        // off `side` = the side being argued, so no other code needs to know.
+      if (invertSide) {
+        // "Avvocato del Diavolo" / "avvocato-opposto": argue the OPPOSITE side.
         const argued: VoteChoice = side === 'A' ? 'B' : 'A';
-        defenders.push({ id: player.id, nickname: player.nickname, side: argued, devil: true });
+        defenders.push({ id: player.id, nickname: player.nickname, side: argued, devil: devil || undefined });
       } else {
         defenders.push({ id: player.id, nickname: player.nickname, side });
       }

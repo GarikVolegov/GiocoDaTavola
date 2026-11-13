@@ -2428,6 +2428,39 @@ describe('PlayerApp', () => {
     );
   });
 
+  it('lets the leader switch between "Vecchi amici" and "Nuove conoscenze" and sends familiarita', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        player: { id: 'p1', nickname: 'Ada', connected: true },
+        token: 'tok',
+      });
+      serverEmit('lobby:update', {
+        players: [
+          { id: 'p1', nickname: 'Ada', connected: true },
+          { id: 'p2', nickname: 'Bob', connected: true },
+          { id: 'p3', nickname: 'Cid', connected: true },
+        ],
+      });
+      serverEmit('game:state', {
+        phase: 'LOBBY',
+        phaseExpiresAt: null,
+        dilemmaIndex: 0,
+        dilemmaCount: 0,
+        leaderId: 'p1',
+      });
+    });
+    const famGroup = screen.getByRole('group', { name: 'Con chi giochi' });
+    fireEvent.click(within(famGroup).getByRole('button', { name: /nuove conoscenze/i }));
+    fireEvent.click(screen.getByRole('button', { name: /inizia la festa/i }));
+    expect(emitSpy).toHaveBeenCalledWith(
+      'leader:startGame',
+      expect.objectContaining({ familiarita: 'nuove_conoscenze' }),
+    );
+  });
+
   it('offers Duello as a first-level "Tipo di partita" pill, no 2-human hint needed (4.4)', () => {
     const emitSpy = vi.spyOn(fakeSocket, 'emit');
     render(<PlayerApp />);
@@ -2517,8 +2550,9 @@ describe('PlayerApp', () => {
       });
     });
     fireEvent.click(screen.getByRole('button', { name: /modalità classica/i }));
-    expect(screen.getByText('Mistero · Dramma umano')).toBeInTheDocument();
-    expect(screen.queryByText(/racconti sci-fi/i)).toBeNull();
+    const storieBtn = screen.getByRole('button', { name: /storie:/i });
+    expect(storieBtn).toHaveAttribute('aria-label', expect.stringContaining('Mistero · Dramma umano'));
+    expect(storieBtn).toHaveAttribute('aria-label', expect.not.stringMatching(/racconti sci-fi/i));
   });
 
   it('offers the "2 umani + 2 bot" preset with exactly 2 humans and adds two bots', () => {

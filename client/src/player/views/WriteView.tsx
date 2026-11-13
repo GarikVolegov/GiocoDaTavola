@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { PHASE_LABELS, type WritePrompt } from '../../shared/events';
 import { Button, TextInput } from '../../shared/ui';
-import { wrap, formatWaitingList } from './layout';
+import { formatWaitingList } from './layout';
+import MobilePhaseShell from './MobilePhaseShell';
+import { vibrateTick } from '../../shared/haptics';
 
 interface WriteViewProps {
   prompt: WritePrompt | null;
@@ -18,37 +20,23 @@ interface WriteViewProps {
 // answer to the same prompt in parallel, then votes anonymously in the next
 // phase. Presentational — the parent owns the draft state and socket emit.
 export default function WriteView({ prompt, remaining, text, submitted, onTextChange, onSubmit, progress, skipButton }: WriteViewProps) {
-  return (
-    <main style={wrap}>
-      <h1 style={{ fontSize: '1.5rem', margin: 0 }}>✍️ {PHASE_LABELS.WRITE}</h1>
-      {prompt && (
-        <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>{prompt.text}</p>
-      )}
-      {remaining != null && (
-        <div
-          aria-label="Tempo rimanente"
-          style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+  const dock = (
+    <>
+      {!submitted && (
+        <Button
+          variant="primary"
+          size="lg"
+          onClick={() => {
+            vibrateTick();
+            onSubmit();
+          }}
+          disabled={text.trim() === ''}
+          style={{ width: '100%' }}
         >
-          {remaining}s
-        </div>
+          Invia
+        </Button>
       )}
-      {submitted ? (
-        <p style={{ opacity: 0.8, margin: 0 }}>Hai scritto: <strong>{submitted}</strong></p>
-      ) : (
-        <>
-          <TextInput
-            aria-label="La tua risposta"
-            placeholder="Scrivi qui…"
-            value={text}
-            onChange={(e) => onTextChange(e.target.value)}
-            style={{ width: 'min(90vw, 22rem)' }}
-          />
-          <Button variant="primary" onClick={onSubmit} disabled={text.trim() === ''}>
-            Invia
-          </Button>
-        </>
-      )}
-      <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
+      <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem' }}>
         {progress && progress.missingNicknames.length > 0
           ? `Aspettiamo ${formatWaitingList(progress.missingNicknames)}…`
           : progress
@@ -56,6 +44,25 @@ export default function WriteView({ prompt, remaining, text, submitted, onTextCh
             : null}
       </p>
       {skipButton}
-    </main>
+    </>
+  );
+
+  return (
+    <MobilePhaseShell title={`✍️ ${PHASE_LABELS.WRITE}`} remaining={remaining} dock={dock}>
+      {prompt && (
+        <p style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, maxWidth: '22rem', lineHeight: 1.35 }}>{prompt.text}</p>
+      )}
+      {submitted ? (
+        <p style={{ opacity: 0.85, margin: 0 }}>Hai scritto: <strong>{submitted}</strong></p>
+      ) : (
+        <TextInput
+          aria-label="La tua risposta"
+          placeholder="Scrivi qui…"
+          value={text}
+          onChange={(e) => onTextChange(e.target.value)}
+          style={{ width: '100%' }}
+        />
+      )}
+    </MobilePhaseShell>
   );
 }

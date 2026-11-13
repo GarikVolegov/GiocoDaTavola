@@ -1,0 +1,158 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  width: 100%;
+  padding-top: max(var(--space-3), env(safe-area-inset-top, 0px));
+  padding-left: max(var(--space-4), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--space-4), env(safe-area-inset-right, 0px));
+}
+
+.topBar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  width: 100%;
+  max-width: 26rem;
+  margin: 0 auto;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  background: rgba(10, 14, 28, 0.86);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.phaseTitle {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.roundPill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+}
+
+.timerPill {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  font-weight: 900;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: rgba(62, 130, 252, 0.18);
+  color: var(--text);
+  border: 1px solid rgba(62, 130, 252, 0.35);
+}
+
+.timerPill.warn {
+  background: rgba(229, 193, 88, 0.2);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.timerPill.danger {
+  background: rgba(255, 82, 82, 0.25);
+  border-color: var(--danger);
+  color: #ff8a8a;
+}
+
+.progressTrack {
+  margin-top: var(--space-2);
+  height: 4px;
+  width: 100%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--faction-a), var(--gold));
+  transition: width 350ms linear, background-color 200ms ease;
+}
+
+.progressFill.warn {
+  background: var(--gold);
+}
+
+.progressFill.danger {
+  background: var(--danger);
+}
+
+.stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 26rem;
+  margin: 0 auto;
+  padding: var(--space-4) 0;
+  animation: mobileStageEnter var(--dur-med, 280ms) var(--ease, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+@keyframes mobileStageEnter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage {
+    animation: none;
+  }
+}
+
+.dock {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-floating);
+  width: 100%;
+  max-width: 26rem;
+  margin: 0 auto;
+  padding: var(--space-3) 0 max(var(--space-4), env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, rgba(7, 10, 20, 0) 0%, rgba(7, 10, 20, 0.92) 22%, rgba(7, 10, 20, 0.98) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}

@@ -3,8 +3,10 @@
 // rooms.ts keep it cycle-free.
 import type { Room, SubmitDilemmaResult } from './rooms';
 
-/** Max player-submitted dilemmas a single player may add in the lobby. */
+/** Max player-submitted dilemmas a guest player may add in the lobby. */
 export const MAX_SUBMISSIONS_PER_PLAYER = 2;
+/** Max player-submitted dilemmas a signed-in account may add in the lobby. */
+export const MAX_SUBMISSIONS_PER_ACCOUNT = 5;
 /** Length caps for a player-submitted dilemma (prompt / each option). */
 const SUBMISSION_TEXT_MAX = 200;
 const SUBMISSION_OPTION_MAX = 100;
@@ -29,7 +31,8 @@ export function submitDilemma(
   }
   if (a.toLowerCase() === b.toLowerCase()) return { ok: false, error: 'SAME_OPTIONS' };
   const mine = [...room.dilemmaAuthors.values()].filter((v) => v === playerId).length;
-  if (mine >= MAX_SUBMISSIONS_PER_PLAYER) return { ok: false, error: 'LIMIT_REACHED' };
+  const cap = player.clerkUserId ? MAX_SUBMISSIONS_PER_ACCOUNT : MAX_SUBMISSIONS_PER_PLAYER;
+  if (mine >= cap) return { ok: false, error: 'LIMIT_REACHED' };
   const id = `usr-${playerId}-${mine + 1}`;
   room.submittedDilemmas.push({
     id,

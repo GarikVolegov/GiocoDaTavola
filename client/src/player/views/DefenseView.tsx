@@ -4,7 +4,8 @@ import { formatMSS } from '../../shared/time';
 import ReactionSwarm from '../../shared/ReactionSwarm';
 import ReactionBar from './ReactionBar';
 import { Button, Card } from '../../shared/ui';
-import { wrap } from './layout';
+import MobilePhaseShell from './MobilePhaseShell';
+import { vibrateTick } from '../../shared/haptics';
 
 interface DefenseDilemma {
   text: string;
@@ -99,8 +100,62 @@ export default function DefenseView({
     </>
   );
 
+  const canRaiseHand =
+    phase === 'DEFENSE' &&
+    d?.speakerId != null &&
+    !isPubblico &&
+    twist?.id !== 'interventi-vietati' &&
+    twist?.id !== 'duello-botta-risposta';
+
+  const dock = myTurn ? (
+    <>
+      {finishButton}
+      {skipButton}
+    </>
+  ) : (
+    <>
+      {canRaiseHand && (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              vibrateTick();
+              onToggleHand();
+            }}
+            aria-pressed={handRaised}
+            style={{
+              width: '100%',
+              minHeight: '3rem',
+              fontSize: '1.05rem',
+              fontWeight: 700,
+              padding: '0.75rem 1.4rem',
+              borderRadius: 'var(--radius-pill)',
+              border: handRaised ? '2px solid var(--gold)' : '2px solid var(--border-strong)',
+              background: handRaised ? 'var(--gold-soft)' : 'rgba(255, 255, 255, 0.06)',
+              color: 'inherit',
+              cursor: 'pointer',
+              transition: 'all var(--dur-fast) var(--ease-spring)',
+              boxShadow: handRaised ? 'var(--glow-accent)' : 'none',
+            }}
+          >
+            {handRaised ? '✋ Abbassa la mano' : '✋ Alza la mano'}
+          </button>
+          <p style={{ fontSize: '0.85rem', opacity: 0.72, margin: 0 }}>
+            {raiseHandError
+              ? raiseHandError
+              : handRaised
+                ? '✋ Mano alzata — potrai intervenire dopo le difese'
+                : 'Alza la mano per intervenire dopo'}
+          </p>
+        </>
+      )}
+      <ReactionBar onReact={(emoji) => { vibrateTick(); onReact(emoji); }} />
+      {skipButton}
+    </>
+  );
+
   return (
-    <main style={wrap}>
+    <MobilePhaseShell title={PHASE_LABELS[phase]} remaining={remaining} dock={dock}>
       <ReactionSwarm />
       {lastTurnApplause && (
         <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, opacity: 0.9 }}>
@@ -110,7 +165,6 @@ export default function DefenseView({
             .join(' ')}
         </p>
       )}
-      <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
 
       {myTurn ? (
         <>
@@ -186,7 +240,6 @@ export default function DefenseView({
               {formatMSS(speakerElapsed ?? 0)}
             </div>
           )}
-          {finishButton}
         </>
       ) : speaker == null && phase === 'DEFENSE' ? (
         <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
@@ -231,36 +284,6 @@ export default function DefenseView({
             </>
           )}
 
-          {phase === 'DEFENSE' && d?.speakerId != null && !isPubblico && twist?.id !== 'interventi-vietati' && (
-            <button
-              type="button"
-              onClick={onToggleHand}
-              aria-pressed={handRaised}
-              style={{
-                fontSize: '1.05rem',
-                fontWeight: 700,
-                padding: '0.8rem 1.6rem',
-                borderRadius: 'var(--radius-pill)',
-                border: handRaised ? '2px solid var(--gold)' : '2px solid var(--border-strong)',
-                background: handRaised ? 'var(--gold-soft)' : 'rgba(255, 255, 255, 0.05)',
-                color: 'inherit',
-                cursor: 'pointer',
-                transition: 'all var(--dur-fast) var(--ease-spring)',
-                boxShadow: handRaised ? 'var(--glow-accent)' : 'none',
-              }}
-            >
-              {handRaised ? '✋ Abbassa la mano' : '✋ Alza la mano'}
-            </button>
-          )}
-          {phase === 'DEFENSE' && d?.speakerId != null && !isPubblico && twist?.id !== 'interventi-vietati' && (
-            <p style={{ fontSize: '0.9rem', opacity: 0.7, margin: 0 }}>
-              {raiseHandError
-                ? raiseHandError
-                : handRaised
-                  ? '✋ Mano alzata — potrai intervenire dopo le difese'
-                  : 'Alza la mano per intervenire dopo'}
-            </p>
-          )}
           {phase === 'INTERVENTI' && myQueuePos >= 0 && (
             <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0 }}>
               Sei in coda: {myQueuePos + 1}º
@@ -296,11 +319,8 @@ export default function DefenseView({
               </p>
             </>
           )}
-
-          <ReactionBar onReact={onReact} />
         </>
       )}
-      {skipButton}
-    </main>
+    </MobilePhaseShell>
   );
 }

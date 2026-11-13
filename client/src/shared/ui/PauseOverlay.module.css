@@ -24,8 +24,10 @@
 }
 .title {
   margin: 0;
-  font-family: var(--font-serif);
-  letter-spacing: var(--tracking-serif);
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-display, 0.04em);
   font-size: 1.6rem;
 }
 .hint {

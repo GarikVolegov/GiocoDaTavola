@@ -3,7 +3,7 @@ import styles from '../Landing.module.css';
 
 export default function Awards() {
   return (
-    <div className={`${styles.wrap} ${styles.section}`}>
+    <div className={`${styles.wrap} ${styles.section}`} id="premi">
       <p className={styles.kicker}>Cerimonia finale</p>
       <h2 className={styles.h2}>Premi per tutti, a modo loro</h2>
       <div className={styles.awards}>
