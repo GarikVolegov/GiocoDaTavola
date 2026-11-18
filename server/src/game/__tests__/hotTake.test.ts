@@ -68,5 +68,22 @@ describe('HotTake (Termometro 1-10)', () => {
     expect(reveal.highest?.nickname).toBe('Bob');
     expect(reveal.highest?.score).toBe(9);
     expect(reveal.spread).toBe(7);
+    expect(reveal.communityAverage).toBeUndefined();
+  });
+
+  it('includes a deterministic communityAverage benchmark for 1-player solo Hot Take reveals', () => {
+    const store = makeStore();
+    const { code } = store.create();
+    store.join(code, 'p1', 'Solo');
+    store.startGame(code, 3);
+    const room = store.get(code)!;
+    room.phase = 'HOT_TAKE_VOTE';
+    room.currentHotTakePrompt = HOT_TAKE_PROMPTS[0];
+
+    store.submitHotTake(code, 'p1', 8);
+    room.phase = 'HOT_TAKE_REVEAL';
+    const reveal = buildHotTakeReveal(room)!;
+    expect(reveal.communityAverage).toBeGreaterThanOrEqual(3.2);
+    expect(reveal.communityAverage).toBeLessThanOrEqual(7.8);
   });
 });

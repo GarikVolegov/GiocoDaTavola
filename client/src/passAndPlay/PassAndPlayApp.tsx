@@ -76,12 +76,17 @@ const STORAGE_ACTIVE_STATE_KEY = 'schierati:passActiveState';
 const STORAGE_DECK_CACHE_PREFIX = 'schierati:passDeckCache:';
 const MAX_CACHED_CARDS_PER_MODE = 60;
 
+function isGroupDrinkPenalty(text?: string | null): boolean {
+  if (!text) return false;
+  return /minoranza|beve|bevete|sorso|sorsi|al tavolo|penitenza collettiva/i.test(text);
+}
+
 const MODE_OPTIONS: Array<{ id: PassMode; label: string; desc: string }> = [
   { id: 'flash', label: '⚡ Flash', desc: 'Zero passaggi · Scelta immediata tra due posizioni e confronto al volo' },
   { id: 'classico', label: '🎭 Classico', desc: 'Dilemmi schietti · Scegli la tua posizione e approfondisci con il rilancio' },
   { id: 'infiltrato', label: '🕵️ L’Infiltrato', desc: '1 giro segreto per la domanda, poi 3-2-1 punta il dito!' },
   { id: 'assurdo', label: '🤪 Assurdo', desc: 'Prove di dignità e gogna al tavolo' },
-  { id: 'coppie', label: '🔥 Coppie', desc: 'Tutti i numeri (anche dispari!), match e sfide' },
+  { id: 'coppie', label: '🔥 Coppie', desc: 'Per fidanzati: intesa, verità e sfide di coppia' },
   {
     id: 'cruciverba',
     label: '🧩 Cruciverba',
@@ -593,6 +598,10 @@ export default function PassAndPlayApp() {
     const minP = minPlayersForMode(selectedMode);
     if (effectivePlayers.length < minP) {
       setSetupError(`Servono almeno ${minP} giocatori per questa modalità.`);
+      return;
+    }
+    if (selectedMode === 'coppie' && effectivePlayers.length % 2 !== 0) {
+      setSetupError('Coppie è pensata per fidanzati: aggiungi o rimuovi 1 giocatore per formare coppie complete (2, 4, 6 o 8).');
       return;
     }
     setSetupError(null);
@@ -1224,7 +1233,7 @@ export default function PassAndPlayApp() {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                         <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#fbcfe8', textTransform: 'uppercase' }}>
-                          💕 {players.length % 2 === 0 ? 'Coppie del tavolo' : 'Abbinamenti dinamici'}
+                          💕 Coppie di fidanzati
                         </span>
                         {players.length >= 4 && players.length % 2 === 0 && (
                           <button
@@ -1256,7 +1265,7 @@ export default function PassAndPlayApp() {
                       </div>
                       {players.length % 2 !== 0 ? (
                         <p style={{ margin: 0, fontSize: '0.78rem', color: '#fbcfe8', fontWeight: 600 }}>
-                          Siete in {players.length} (dispari): a ogni round sorteggiamo una coppia diversa!
+                          Coppie è pensata per fidanzati: aggiungi o rimuovi 1 giocatore per formare coppie complete (2, 4, 6 o 8).
                         </p>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
@@ -1317,7 +1326,11 @@ export default function PassAndPlayApp() {
               <Button
                 variant="primary"
                 size="lg"
-                disabled={loadingDeck || effectivePlayers.length < minPlayersForMode(selectedMode)}
+                disabled={
+                  loadingDeck ||
+                  effectivePlayers.length < minPlayersForMode(selectedMode) ||
+                  (selectedMode === 'coppie' && effectivePlayers.length % 2 !== 0)
+                }
                 onClick={() => void handleStartGame()}
               >
                 {loadingDeck ? 'Preparo le carte...' : 'Inizia la partita ▶'}
@@ -1455,9 +1468,10 @@ export default function PassAndPlayApp() {
                 isPreferirestiCard(currentCard) && (
                   <>
                     <h2 className={styles.promptHero}>{currentCard.prompt}</h2>
-                    {currentCard.penalty && (
-                      <div className={styles.penaltyBox}>{currentCard.penalty}</div>
-                    )}
+                    {currentCard.penalty &&
+                      !(state.players.length === 1 && isGroupDrinkPenalty(currentCard.penalty)) && (
+                        <div className={styles.penaltyBox}>{currentCard.penalty}</div>
+                      )}
                     <p className={styles.liveCue}>
                       {state.players.length > 1
                         ? 'Toccate l’alternativa che ha convinto il tavolo:'
@@ -1777,7 +1791,9 @@ export default function PassAndPlayApp() {
                       {targetWord && (
                         <>
                           <p className={styles.liveCue}>
-                            Leggi l’indizio al tavolo ({targetWord.word.length} lettere):
+                            {state.players.length === 1
+                              ? `Leggi l’indizio e trova la parola (${targetWord.word.length} lettere):`
+                              : `Leggi l’indizio al tavolo (${targetWord.word.length} lettere):`}
                           </p>
                           <h2 className={styles.promptHero}>{targetWord.clue}</h2>
                           <div className={styles.letterSlotsRow} aria-label="Lettere sbloccate">
@@ -1814,7 +1830,9 @@ export default function PassAndPlayApp() {
                               }
                             }}
                           >
-                            ✓ Indovinata dal tavolo!
+                            {state.players.length === 1
+                              ? '✓ L’ho indovinata!'
+                              : '✓ Indovinata dal tavolo!'}
                           </Button>
                           <div className={styles.verdictGrid2}>
                             <Button
@@ -1987,7 +2005,7 @@ export default function PassAndPlayApp() {
             </Card>
           )}
 
-          {/* ROUND RESULT (SOLO DOVE C'È UNA RIVELAZIONE / PENITENZA) */}
+          {/* ROUND RESULT (RIVELAZIONE / CONFRONTO SOLO / PENITENZA GRUPPO) */}
           {state.phase === 'ROUND_RESULT' && state.roundOutcome && currentCard && (
             <Card glow="accent" className={styles.card}>
               {(state.roundOutcome.kind === 'split' || state.roundOutcome.kind === 'swing') && (
@@ -1995,6 +2013,155 @@ export default function PassAndPlayApp() {
                   <h2 className={styles.promptHero}>
                     {state.roundOutcome.liveVerdictLabel ?? 'Scelta fatta'}
                   </h2>
+
+                  {state.players.length === 1 && state.roundOutcome.soloMode && (
+                    <div
+                      data-testid="solo-crowd-compass"
+                      style={{
+                        width: '100%',
+                        padding: '0.8rem 0.9rem',
+                        borderRadius: '14px',
+                        background: 'rgba(15, 23, 42, 0.55)',
+                        border: '1px solid rgba(251, 191, 36, 0.35)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.55rem',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          🧭 Tu vs La Bussola del Mondo
+                        </span>
+                        {typeof state.roundOutcome.crowdPctForChoice === 'number' && (
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 800,
+                              padding: '0.18rem 0.5rem',
+                              borderRadius: '999px',
+                              background:
+                                state.roundOutcome.crowdPctForChoice >= 55
+                                  ? 'rgba(16, 185, 129, 0.22)'
+                                  : state.roundOutcome.crowdPctForChoice <= 45
+                                    ? 'rgba(245, 158, 11, 0.25)'
+                                    : 'rgba(56, 189, 248, 0.2)',
+                              color:
+                                state.roundOutcome.crowdPctForChoice >= 55
+                                  ? '#6ee7b7'
+                                  : state.roundOutcome.crowdPctForChoice <= 45
+                                    ? '#fcd34d'
+                                    : '#7dd3fc',
+                            }}
+                          >
+                            {state.roundOutcome.soloFlipped
+                              ? `🦋 Prospettiva ribaltata · ${state.roundOutcome.crowdPctForChoice}%`
+                              : state.roundOutcome.crowdPctForChoice >= 55
+                                ? `🎯 In Sintonia · ${state.roundOutcome.crowdPctForChoice}%`
+                                : state.roundOutcome.crowdPctForChoice <= 45
+                                  ? `⚡ Controcorrente · ${state.roundOutcome.crowdPctForChoice}%`
+                                  : `⚖️ Sul Filo · ${state.roundOutcome.crowdPctForChoice}%`}
+                          </span>
+                        )}
+                      </div>
+
+                      {isPreferirestiCard(currentCard) && state.roundOutcome.crowdSplitPcts ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          {currentCard.options.slice(0, 4).map((opt, idx) => {
+                            const pct = state.roundOutcome?.crowdSplitPcts?.[idx] ?? 25;
+                            const isMine = state.roundOutcome?.chosenOptionIndex === idx;
+                            return (
+                              <div key={opt} style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: isMine ? 800 : 500 }}>
+                                  <span>
+                                    {isMine ? '👈 ' : ''}
+                                    {opt}
+                                  </span>
+                                  <span>{pct}%</span>
+                                </div>
+                                <div style={{ height: '7px', borderRadius: '999px', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: `${pct}%`,
+                                      height: '100%',
+                                      background: isMine ? '#fbbf24' : 'rgba(148, 163, 184, 0.55)',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: '0.86rem', opacity: 0.92 }}>
+                            Il <strong>{state.roundOutcome.crowdPctForChoice ?? state.roundOutcome.countA}%</strong> dei giocatori ha scelto la tua stessa posizione.
+                          </div>
+                          {isFlashOrClassicoCard(currentCard) && state.roundOutcome.crowdSplitPcts && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                              <div style={{ height: '9px', borderRadius: '999px', overflow: 'hidden', display: 'flex', background: 'rgba(255,255,255,0.1)' }}>
+                                <div
+                                  style={{
+                                    width: `${state.roundOutcome.crowdSplitPcts[0]}%`,
+                                    background: state.roundOutcome.chosenSide === 'A' ? '#fbbf24' : '#38bdf8',
+                                  }}
+                                />
+                                <div
+                                  style={{
+                                    width: `${state.roundOutcome.crowdSplitPcts[1]}%`,
+                                    background: state.roundOutcome.chosenSide === 'B' ? '#fbbf24' : '#fb7185',
+                                  }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', opacity: 0.8, gap: '0.5rem' }}>
+                                <span>
+                                  {state.roundOutcome.chosenSide === 'A' ? '👈 ' : ''}
+                                  {currentCard.optionA}: {state.roundOutcome.crowdSplitPcts[0]}%
+                                </span>
+                                <span style={{ textAlign: 'right' }}>
+                                  {state.roundOutcome.chosenSide === 'B' ? '👈 ' : ''}
+                                  {currentCard.optionB}: {state.roundOutcome.crowdSplitPcts[1]}%
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {state.roundOutcome.counterArgument && (
+                        <div
+                          data-testid="solo-devils-advocate"
+                          style={{
+                            marginTop: '0.2rem',
+                            padding: '0.55rem 0.65rem',
+                            borderRadius: '10px',
+                            background: 'rgba(244, 63, 94, 0.12)',
+                            border: '1px solid rgba(244, 63, 94, 0.3)',
+                            fontSize: '0.84rem',
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          <strong style={{ display: 'block', marginBottom: '0.15rem', color: '#fda4af' }}>
+                            😈 L’Avvocato del Diavolo
+                          </strong>
+                          <span>{state.roundOutcome.counterArgument}</span>
+                        </div>
+                      )}
+
+                      {state.roundOutcome.chosenSide && !state.roundOutcome.soloFlipped && (
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            vibrateTick();
+                            dispatch({ type: 'SOLO_FLIP_AFTER_OBJECTION' });
+                          }}
+                        >
+                          🔄 Questa obiezione mi ha convinto: cambio scelta
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
                   {isFlashOrClassicoCard(currentCard) && currentCard.storyScene && (
                     <>
                       <div className={styles.spuntiBox} style={{ textAlign: 'left' }}>
@@ -2036,9 +2203,11 @@ export default function PassAndPlayApp() {
                       <div>{currentCard.lezioneReale}</div>
                     </div>
                   )}
-                  {'penalty' in currentCard && currentCard.penalty && (
-                    <div className={styles.penaltyBox}>{currentCard.penalty}</div>
-                  )}
+                  {'penalty' in currentCard &&
+                    currentCard.penalty &&
+                    !(state.players.length === 1 && isGroupDrinkPenalty(currentCard.penalty)) && (
+                      <div className={styles.penaltyBox}>{currentCard.penalty}</div>
+                    )}
                 </>
               )}
 
@@ -2062,11 +2231,40 @@ export default function PassAndPlayApp() {
                   <h2 className={styles.promptHero}>
                     {state.roundOutcome.liveVerdictLabel ?? 'Verdetto'}
                   </h2>
-                  {(currentCard as PassAssurdoCard).sentenza && (
-                    <div className={styles.penaltyBox}>
-                      {(currentCard as PassAssurdoCard).sentenza}
+                  {state.players.length === 1 && state.roundOutcome.soloMode && (
+                    <div
+                      data-testid="solo-crowd-compass"
+                      style={{
+                        width: '100%',
+                        padding: '0.8rem 0.9rem',
+                        borderRadius: '14px',
+                        background: 'rgba(15, 23, 42, 0.55)',
+                        border: '1px solid rgba(251, 191, 36, 0.35)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.45rem',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase' }}>
+                        🧭 Tu vs La Bussola del Mondo · {state.roundOutcome.crowdPctForChoice ?? 50}% con te
+                      </span>
+                      {state.roundOutcome.counterArgument && (
+                        <div style={{ fontSize: '0.84rem', color: '#fda4af' }}>
+                          <strong>😈 L’Avvocato del Diavolo:</strong> {state.roundOutcome.counterArgument}
+                        </div>
+                      )}
                     </div>
                   )}
+                  {(currentCard as PassAssurdoCard).sentenza &&
+                    !(
+                      state.players.length === 1 &&
+                      isGroupDrinkPenalty((currentCard as PassAssurdoCard).sentenza)
+                    ) && (
+                      <div className={styles.penaltyBox}>
+                        {(currentCard as PassAssurdoCard).sentenza}
+                      </div>
+                    )}
                 </>
               )}
 
@@ -2149,8 +2347,12 @@ export default function PassAndPlayApp() {
                         </strong>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                           {state.cruciverbaState?.solvedBy[w.id]
-                            ? `Indovinata da ${state.cruciverbaState.solvedBy[w.id]}`
-                            : 'Svelata al tavolo'}
+                            ? state.players.length === 1
+                              ? '✓ Indovinata da te'
+                              : `Indovinata da ${state.cruciverbaState.solvedBy[w.id]}`
+                            : state.players.length === 1
+                              ? 'Svelata con indizio'
+                              : 'Svelata al tavolo'}
                         </div>
                       </div>
                     ))}

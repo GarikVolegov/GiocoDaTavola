@@ -133,4 +133,57 @@ describe('StatusView SPLIT_REVEAL UX improvements', () => {
     expect(screen.getByText(/1 voto · Opzione Beta/i)).toBeInTheDocument();
     expect(screen.queryByText(/dilemma che non deve ripetersi nella split/i)).not.toBeInTheDocument();
   });
+
+  it('shows Bussola del Mondo and Avvocato del Diavolo in SPLIT_REVEAL when playing Solo (1 player)', () => {
+    const soloGame: GameStatePayload = {
+      code: 'SOLO',
+      phase: 'SPLIT_REVEAL',
+      dilemmaIndex: 1,
+      dilemmaCount: 3,
+      format: 'classic',
+      phaseExpiresAt: null,
+      dilemma: {
+        id: 'd_solo',
+        text: 'Dilemma in solitaria?',
+        optionA: 'Scelta Audace',
+        optionB: 'Scelta Sicura',
+        spuntiA: ['Spunto A'],
+        spuntiB: ['Spunto B contro-argomento'],
+        register: 'vita',
+        complessita: 'sorbetto',
+      },
+      split: { A: 1, B: 0 },
+      votedCount: 1,
+      confirmedCount: 0,
+      leaderId: 'p1',
+      players: [],
+    };
+
+    render(
+      <MemoryRouter>
+        <StatusView
+          phase="SPLIT_REVEAL"
+          game={soloGame}
+          remaining={null}
+          playerId="p1"
+          isLeader={true}
+          players={[{ id: 'p1', nickname: 'Solo', avatar: '🦊', isBot: false, connected: true, role: 'giocatore' }]}
+          onAdvance={vi.fn()}
+          onRematch={vi.fn()}
+          infiltratoRole={null}
+          predictionResult={null}
+          swingBetResult={null}
+          knowResult={null}
+          groupMindResult={null}
+          blindSpot={null}
+          myVote="A"
+          skipButton={null}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText(/l’avvocato del diavolo/i)).toBeInTheDocument();
+    expect(screen.getByText(/spunto b contro-argomento/i)).toBeInTheDocument();
+    expect(screen.queryByText(/ecco come si è diviso il gruppo/i)).toBeNull();
+  });
 });

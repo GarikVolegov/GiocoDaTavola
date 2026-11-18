@@ -1514,6 +1514,7 @@ export default function PlayerApp() {
           knowResult={knowResult}
           groupMindResult={groupMindResult}
           blindSpot={blindSpot}
+          myVote={vote}
           skipButton={discardButton}
         />
       </>

@@ -69,8 +69,8 @@ export const PARTY_MODES_INFO: PartyModeInfo[] = [
   {
     id: 'coppie',
     name: 'Coppie & Scintille',
-    tag: 'Complicità / 18+',
-    desc: 'Allineamento cieco, verità senza filtri e sfide ad alta tensione.',
+    tag: 'Per fidanzati · 18+',
+    desc: 'Domande, complicità e sfide ad alta tensione pensate per fidanzati.',
   },
   {
     id: 'assurdo',

@@ -121,6 +121,12 @@ export interface RoundOutcome {
   tribunaleAccusaVotes?: number;
   tribunaleDifesaVotes?: number;
   chosenSide?: 'A' | 'B';
+  chosenOptionIndex?: number;
+  crowdPctForChoice?: number;
+  crowdSplitPcts?: number[];
+  counterArgument?: string;
+  soloFlipped?: boolean;
+  soloMode?: boolean;
 }
 
 export interface PlayerPassStats {
@@ -162,6 +168,9 @@ export interface PassRoundHighlight {
   cruciverbaSolvedCount?: number;
   cruciverbaTotalCount?: number;
   tribunaleWinnerIds?: string[];
+  crowdPctForChoice?: number;
+  soloMode?: boolean;
+  soloFlipped?: boolean;
   momentBadge: PassMomentBadge;
 }
 
@@ -244,6 +253,7 @@ export type PassAction =
   | { type: 'RESOLVE_FLASH'; result: 'A' | 'B' | 'SPLIT' | 'UNANIMOUS'; rng?: () => number }
   | { type: 'RESOLVE_PREFERIRESTI'; choice: 'A' | 'B' | 'C' | 'D' | 'SPLIT'; rng?: () => number }
   | { type: 'RESOLVE_CLASSICO'; outcome: 'CONVINCE_A' | 'CONVINCE_B' | 'FLIP' | 'STEADY'; rng?: () => number }
+  | { type: 'SOLO_FLIP_AFTER_OBJECTION' }
   | { type: 'RESOLVE_INFILTRATO_ACCUSATION'; accusedId: string | null }
   | { type: 'RESOLVE_GOGNA'; targetId: string | null }
   | { type: 'RESOLVE_DIGNITA'; outcome: 'YES' | 'SPLIT' | 'NO' }
@@ -583,7 +593,94 @@ function cardPromptForHighlight(card: PassCard | null): string {
   return '';
 }
 
+function deterministicHash(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Deterministic community vote distribution for solo rounds ("Tu vs La Bussola del Mondo").
+ * Always sums to 100 and produces realistic splits instead of a flat 100% vs 0% (1 vote).
+ */
+export function computeSoloCrowdSplit(cardId: string, optionCount = 2): number[] {
+  const h = deterministicHash(cardId || 'schierati');
+  if (optionCount <= 2) {
+    const pctA = 28 + (h % 47); // 28..74
+    return [pctA, 100 - pctA];
+  }
+  if (optionCount === 3) {
+    const base3 = [
+      [48, 33, 19],
+      [42, 37, 21],
+      [52, 31, 17],
+    ][h % 3];
+    const shift = (h >>> 3) % 3;
+    return [0, 1, 2].map((i) => base3[(i + shift) % 3]);
+  }
+  const base4 = [
+    [41, 28, 19, 12],
+    [36, 31, 21, 12],
+    [44, 26, 18, 12],
+    [34, 29, 24, 13],
+  ][h % 4];
+  const shift = (h >>> 2) % 4;
+  return [0, 1, 2, 3].map((i) => base4[(i + shift) % 4]);
+}
+
+function soloCounterForFlash(
+  card: PassFlashCard | undefined,
+  side: 'A' | 'B' | undefined,
+): string | undefined {
+  if (!card) return undefined;
+  if (side === 'A') {
+    if (card.spuntiB && card.spuntiB.length > 0) return card.spuntiB[0];
+    return `Chi sceglie «${card.optionB}» risponderebbe che la tua scelta trascura un effetto collaterale reale: qual è il punto più fragile della tua tesi?`;
+  }
+  if (side === 'B') {
+    if (card.spuntiA && card.spuntiA.length > 0) return card.spuntiA[0];
+    return `Chi difende «${card.optionA}» sostiene che restare prudenti qui è la mossa più lucida: cosa ti ha fatto scartare quella strada?`;
+  }
+  return card.spuntiA?.[0] ?? card.spuntiB?.[0];
+}
+
+function soloCounterForPreferiresti(
+  options: string[],
+  splitPcts: number[],
+  chosenIdx: number | undefined,
+): string | undefined {
+  if (options.length === 0) return undefined;
+  let bestAltIdx = -1;
+  let bestAltPct = -1;
+  for (let i = 0; i < options.length; i++) {
+    if (i === chosenIdx) continue;
+    const pct = splitPcts[i] ?? 0;
+    if (pct > bestAltPct) {
+      bestAltPct = pct;
+      bestAltIdx = i;
+    }
+  }
+  if (bestAltIdx < 0) return undefined;
+  return `Il ${bestAltPct}% dei giocatori invece preferisce «${options[bestAltIdx]}»: cosa vedi in meno in quell’alternativa?`;
+}
+
 function computeMomentBadge(outcome: RoundOutcome): PassMomentBadge {
+  if (outcome.soloMode && (outcome.kind === 'split' || outcome.kind === 'swing' || outcome.kind === 'dignita')) {
+    const pct = outcome.crowdPctForChoice ?? 50;
+    if (outcome.soloFlipped) {
+      return { emoji: '🦋', label: 'Prospettiva Ribaltata!', tone: 'gold' };
+    }
+    if (pct >= 55) {
+      return { emoji: '🎯', label: `In Sintonia (${pct}%)`, tone: 'success' };
+    }
+    if (pct <= 45) {
+      return { emoji: '⚡', label: `Controcorrente (${pct}%)`, tone: 'gold' };
+    }
+    return { emoji: '⚖️', label: `Sul Filo (${pct}%)`, tone: 'b' };
+  }
   if (outcome.kind === 'swing') {
     if ((outcome.swingDelta ?? 0) >= 1) {
       return {
@@ -670,6 +767,9 @@ function upsertRoundHighlight(state: PassState, outcome: RoundOutcome): PassRoun
     cruciverbaSolvedCount: outcome.cruciverbaSolvedCount,
     cruciverbaTotalCount: outcome.cruciverbaTotalCount,
     tribunaleWinnerIds: outcome.tribunaleWinnerIds,
+    crowdPctForChoice: outcome.crowdPctForChoice,
+    soloMode: outcome.soloMode,
+    soloFlipped: outcome.soloFlipped,
     momentBadge: computeMomentBadge(outcome),
   };
   const prev = state.roundHistory ?? [];
@@ -802,48 +902,78 @@ export function passReducer(state: PassState, action: PassAction): PassState {
       const n = state.players.length;
       const optA = card && isFlashOrClassicoCard(card) ? card.optionA : 'Prima scelta';
       const optB = card && isFlashOrClassicoCard(card) ? card.optionB : 'Seconda scelta';
+      const isSolo = n === 1;
       let countA = 0;
       let countB = 0;
       let liveVerdictLabel = 'Scelta condivisa';
       let chosenSide: 'A' | 'B' | undefined;
-
-      if (action.result === 'UNANIMOUS') {
-        countA = Math.max(1, n);
-        countB = 0;
-        liveVerdictLabel = 'Tutti d’accordo';
-        chosenSide = 'A';
-      } else if (action.result === 'SPLIT') {
-        const effN = Math.max(2, n);
-        countA = Math.ceil(effN / 2);
-        countB = effN - countA;
-        liveVerdictLabel = 'Spaccati a metà!';
-      } else if (action.result === 'A') {
-        if (n <= 1) {
-          countA = 1;
-          countB = 0;
-        } else {
-          countA = Math.max(1, Math.ceil(n * 0.7));
-          countB = Math.max(1, n - countA);
-        }
-        liveVerdictLabel = optA;
-        chosenSide = 'A';
-      } else {
-        if (n <= 1) {
-          countB = 1;
-          countA = 0;
-        } else {
-          countB = Math.max(1, Math.ceil(n * 0.7));
-          countA = Math.max(1, n - countB);
-        }
-        liveVerdictLabel = optB;
-        chosenSide = 'B';
-      }
+      let crowdPctForChoice: number | undefined;
+      let crowdSplitPcts: number[] | undefined;
+      let counterArgument: string | undefined;
 
       const nextStats = incrementAllPlayersRound(state.stats, state.players);
       const reader = getCurrentReaderPlayer(state);
-      if (reader && action.result !== 'SPLIT') {
-        const cur = readStat(nextStats, reader.id);
-        nextStats[reader.id] = { ...cur, majorityCount: (cur.majorityCount ?? 0) + 1 };
+
+      if (isSolo) {
+        const splitPcts = computeSoloCrowdSplit(card?.id ?? `flash_${state.roundIndex}`, 2);
+        crowdSplitPcts = splitPcts;
+        countA = splitPcts[0];
+        countB = splitPcts[1];
+        if (action.result === 'SPLIT') {
+          crowdPctForChoice = 50;
+          liveVerdictLabel = 'Combattuto tra le due scelte';
+          if (reader) {
+            const cur = readStat(nextStats, reader.id);
+            nextStats[reader.id] = {
+              ...cur,
+              flips: cur.flips + 1,
+              minorityCount: cur.minorityCount + 1,
+            };
+          }
+        } else {
+          chosenSide = action.result === 'B' ? 'B' : 'A';
+          liveVerdictLabel = chosenSide === 'A' ? optA : optB;
+          crowdPctForChoice = chosenSide === 'A' ? splitPcts[0] : splitPcts[1];
+          counterArgument =
+            card && isFlashOrClassicoCard(card) ? soloCounterForFlash(card, chosenSide) : undefined;
+          if (reader) {
+            const cur = readStat(nextStats, reader.id);
+            const inMajority = crowdPctForChoice >= 50;
+            nextStats[reader.id] = {
+              ...cur,
+              majorityCount: (cur.majorityCount ?? 0) + (inMajority ? 1 : 0),
+              minorityCount: cur.minorityCount + (inMajority ? 0 : 1),
+              steadyCount: (cur.steadyCount ?? 0) + 1,
+            };
+          }
+        }
+      } else {
+        if (action.result === 'UNANIMOUS') {
+          countA = Math.max(1, n);
+          countB = 0;
+          liveVerdictLabel = 'Tutti d’accordo';
+          chosenSide = 'A';
+        } else if (action.result === 'SPLIT') {
+          const effN = Math.max(2, n);
+          countA = Math.ceil(effN / 2);
+          countB = effN - countA;
+          liveVerdictLabel = 'Spaccati a metà!';
+        } else if (action.result === 'A') {
+          countA = Math.max(1, Math.ceil(n * 0.7));
+          countB = Math.max(1, n - countA);
+          liveVerdictLabel = optA;
+          chosenSide = 'A';
+        } else {
+          countB = Math.max(1, Math.ceil(n * 0.7));
+          countA = Math.max(1, n - countB);
+          liveVerdictLabel = optB;
+          chosenSide = 'B';
+        }
+
+        if (reader && action.result !== 'SPLIT') {
+          const cur = readStat(nextStats, reader.id);
+          nextStats[reader.id] = { ...cur, majorityCount: (cur.majorityCount ?? 0) + 1 };
+        }
       }
 
       const roundOutcome: RoundOutcome = {
@@ -852,6 +982,10 @@ export function passReducer(state: PassState, action: PassAction): PassState {
         countB,
         liveVerdictLabel,
         ...(chosenSide ? { chosenSide } : {}),
+        ...(crowdPctForChoice !== undefined ? { crowdPctForChoice } : {}),
+        ...(crowdSplitPcts ? { crowdSplitPcts } : {}),
+        ...(counterArgument ? { counterArgument } : {}),
+        ...(isSolo ? { soloMode: true } : {}),
       };
       const updated: PassState = {
         ...state,
@@ -862,9 +996,10 @@ export function passReducer(state: PassState, action: PassAction): PassState {
           (state.storyChoicesA ?? 0) + (cardMode === 'storia' && chosenSide === 'A' ? 1 : 0),
       };
       if (
-        card &&
-        isFlashOrClassicoCard(card) &&
-        (card.storyScene || card.domandaRilancio || card.lezioneReale || card.penalty)
+        isSolo ||
+        (card &&
+          isFlashOrClassicoCard(card) &&
+          (card.storyScene || card.domandaRilancio || card.lezioneReale || card.penalty))
       ) {
         return {
           ...updated,
@@ -878,42 +1013,88 @@ export function passReducer(state: PassState, action: PassAction): PassState {
       if (state.phase !== 'DEBATE') return state;
       const card = getCurrentCard(state);
       const n = state.players.length;
+      const isSolo = n === 1;
+      const opts = card && isPreferirestiCard(card) ? card.options.slice(0, 4) : [];
       let countA = 0;
       let countB = 0;
       let liveVerdictLabel = 'Tutte scelte diverse!';
-
-      if (action.choice === 'SPLIT') {
-        const effN = Math.max(2, n);
-        countA = Math.ceil(effN / 2);
-        countB = effN - countA;
-      } else {
-        const idx = (['A', 'B', 'C', 'D'] as const).indexOf(action.choice);
-        const optionText = card && isPreferirestiCard(card) ? card.options[idx] : undefined;
-        liveVerdictLabel = optionText ?? 'Scelta del tavolo';
-        if (n <= 1) {
-          countA = action.choice === 'A' || action.choice === 'C' ? 1 : 0;
-          countB = 1 - countA;
-        } else if (action.choice === 'A' || action.choice === 'C') {
-          countA = Math.max(1, Math.ceil(n * 0.7));
-          countB = Math.max(1, n - countA);
-        } else {
-          countB = Math.max(1, Math.ceil(n * 0.7));
-          countA = Math.max(1, n - countB);
-        }
-      }
+      let chosenOptionIndex: number | undefined;
+      let crowdPctForChoice: number | undefined;
+      let crowdSplitPcts: number[] | undefined;
+      let counterArgument: string | undefined;
 
       const nextStats = incrementAllPlayersRound(state.stats, state.players);
       const reader = getCurrentReaderPlayer(state);
-      if (reader) {
-        const cur = readStat(nextStats, reader.id);
+
+      if (isSolo) {
+        const splitPcts = computeSoloCrowdSplit(
+          card?.id ?? `pref_${state.roundIndex}`,
+          Math.max(2, opts.length || 4),
+        );
+        crowdSplitPcts = splitPcts;
         if (action.choice === 'SPLIT') {
-          nextStats[reader.id] = {
-            ...cur,
-            flips: cur.flips + 1,
-            minorityCount: cur.minorityCount + 1,
-          };
+          crowdPctForChoice = 50;
+          countA = 50;
+          countB = 50;
+          liveVerdictLabel = 'Combattuto tra più alternative';
+          if (reader) {
+            const cur = readStat(nextStats, reader.id);
+            nextStats[reader.id] = {
+              ...cur,
+              flips: cur.flips + 1,
+              minorityCount: cur.minorityCount + 1,
+            };
+          }
         } else {
-          nextStats[reader.id] = { ...cur, majorityCount: (cur.majorityCount ?? 0) + 1 };
+          const idx = (['A', 'B', 'C', 'D'] as const).indexOf(action.choice);
+          chosenOptionIndex = idx >= 0 ? idx : 0;
+          const optionText = opts[chosenOptionIndex];
+          liveVerdictLabel = optionText ?? 'La tua scelta';
+          crowdPctForChoice = splitPcts[chosenOptionIndex] ?? splitPcts[0];
+          countA = crowdPctForChoice;
+          countB = 100 - crowdPctForChoice;
+          const topPct = Math.max(...splitPcts);
+          counterArgument = soloCounterForPreferiresti(opts, splitPcts, chosenOptionIndex);
+          if (reader) {
+            const cur = readStat(nextStats, reader.id);
+            const inMajority = crowdPctForChoice >= topPct || crowdPctForChoice >= 30;
+            nextStats[reader.id] = {
+              ...cur,
+              majorityCount: (cur.majorityCount ?? 0) + (inMajority ? 1 : 0),
+              minorityCount: cur.minorityCount + (inMajority ? 0 : 1),
+              steadyCount: (cur.steadyCount ?? 0) + 1,
+            };
+          }
+        }
+      } else {
+        if (action.choice === 'SPLIT') {
+          const effN = Math.max(2, n);
+          countA = Math.ceil(effN / 2);
+          countB = effN - countA;
+        } else {
+          const idx = (['A', 'B', 'C', 'D'] as const).indexOf(action.choice);
+          const optionText = opts[idx];
+          liveVerdictLabel = optionText ?? 'Scelta del tavolo';
+          if (action.choice === 'A' || action.choice === 'C') {
+            countA = Math.max(1, Math.ceil(n * 0.7));
+            countB = Math.max(1, n - countA);
+          } else {
+            countB = Math.max(1, Math.ceil(n * 0.7));
+            countA = Math.max(1, n - countB);
+          }
+        }
+
+        if (reader) {
+          const cur = readStat(nextStats, reader.id);
+          if (action.choice === 'SPLIT') {
+            nextStats[reader.id] = {
+              ...cur,
+              flips: cur.flips + 1,
+              minorityCount: cur.minorityCount + 1,
+            };
+          } else {
+            nextStats[reader.id] = { ...cur, majorityCount: (cur.majorityCount ?? 0) + 1 };
+          }
         }
       }
 
@@ -922,6 +1103,11 @@ export function passReducer(state: PassState, action: PassAction): PassState {
         countA,
         countB,
         liveVerdictLabel,
+        ...(chosenOptionIndex !== undefined ? { chosenOptionIndex } : {}),
+        ...(crowdPctForChoice !== undefined ? { crowdPctForChoice } : {}),
+        ...(crowdSplitPcts ? { crowdSplitPcts } : {}),
+        ...(counterArgument ? { counterArgument } : {}),
+        ...(isSolo ? { soloMode: true } : {}),
       };
       const updated: PassState = {
         ...state,
@@ -929,7 +1115,7 @@ export function passReducer(state: PassState, action: PassAction): PassState {
         roundOutcome,
         roundHistory: upsertRoundHighlight(state, roundOutcome),
       };
-      if (card && isPreferirestiCard(card) && card.penalty) {
+      if (isSolo || (card && isPreferirestiCard(card) && card.penalty)) {
         return {
           ...updated,
           phase: 'ROUND_RESULT',
@@ -944,6 +1130,7 @@ export function passReducer(state: PassState, action: PassAction): PassState {
       const cardMode = effectivePassCardMode(state.mode, card);
       const cs = state.classicoState;
       const n = state.players.length;
+      const isSolo = n === 1;
       const effN = Math.max(2, n);
       const nextStats = incrementAllPlayersRound(state.stats, state.players);
       let countA = Math.ceil(effN / 2);
@@ -952,13 +1139,49 @@ export function passReducer(state: PassState, action: PassAction): PassState {
       let winnerId: string | null = null;
       let liveVerdictLabel = 'Tutti irremovibili';
       let chosenSide: 'A' | 'B' | undefined;
+      let crowdPctForChoice: number | undefined;
+      let crowdSplitPcts: number[] | undefined;
+      let counterArgument: string | undefined;
 
       const optA = card && isFlashOrClassicoCard(card) ? card.optionA : 'Prima scelta';
       const optB = card && isFlashOrClassicoCard(card) ? card.optionB : 'Seconda scelta';
 
-      if (action.outcome === 'CONVINCE_A' && cs) {
-        countA = n <= 1 ? 1 : Math.max(1, Math.ceil(n * 0.7));
-        countB = n <= 1 ? 0 : Math.max(1, n - countA);
+      if (isSolo) {
+        const splitPcts = computeSoloCrowdSplit(card?.id ?? `classico_${state.roundIndex}`, 2);
+        crowdSplitPcts = splitPcts;
+        countA = splitPcts[0];
+        countB = splitPcts[1];
+        const sole = state.players[0];
+        if (action.outcome === 'CONVINCE_A' || action.outcome === 'CONVINCE_B') {
+          chosenSide = action.outcome === 'CONVINCE_A' ? 'A' : 'B';
+          liveVerdictLabel = chosenSide === 'A' ? optA : optB;
+          crowdPctForChoice = chosenSide === 'A' ? splitPcts[0] : splitPcts[1];
+          counterArgument =
+            card && isFlashOrClassicoCard(card) ? soloCounterForFlash(card, chosenSide) : undefined;
+          winnerId = sole.id;
+          const cur = readStat(nextStats, sole.id);
+          const inMaj = crowdPctForChoice >= 50;
+          nextStats[sole.id] = {
+            ...cur,
+            majorityCount: (cur.majorityCount ?? 0) + (inMaj ? 1 : 0),
+            minorityCount: cur.minorityCount + (inMaj ? 0 : 1),
+            steadyCount: (cur.steadyCount ?? 0) + 1,
+          };
+        } else if (action.outcome === 'FLIP') {
+          swingDelta = 2;
+          crowdPctForChoice = 50;
+          liveVerdictLabel = 'Cambio di prospettiva!';
+          const cur = readStat(nextStats, sole.id);
+          nextStats[sole.id] = { ...cur, flips: cur.flips + 1 };
+        } else {
+          crowdPctForChoice = 50;
+          liveVerdictLabel = 'Posizione confermata';
+          const cur = readStat(nextStats, sole.id);
+          nextStats[sole.id] = { ...cur, steadyCount: (cur.steadyCount ?? 0) + 1 };
+        }
+      } else if (action.outcome === 'CONVINCE_A' && cs) {
+        countA = Math.max(1, Math.ceil(n * 0.7));
+        countB = Math.max(1, n - countA);
         swingDelta = 1;
         winnerId = cs.defenderAId;
         chosenSide = 'A';
@@ -970,8 +1193,8 @@ export function passReducer(state: PassState, action: PassAction): PassState {
           nextStats[cs.defenderBId] = { ...lCur, minorityCount: lCur.minorityCount + 1 };
         }
       } else if (action.outcome === 'CONVINCE_B' && cs) {
-        countB = n <= 1 ? 1 : Math.max(1, Math.ceil(n * 0.7));
-        countA = n <= 1 ? 0 : Math.max(1, n - countB);
+        countB = Math.max(1, Math.ceil(n * 0.7));
+        countA = Math.max(1, n - countB);
         swingDelta = 1;
         winnerId = cs.defenderBId;
         chosenSide = 'B';
@@ -1006,6 +1229,10 @@ export function passReducer(state: PassState, action: PassAction): PassState {
         classicoWinnerId: winnerId,
         liveVerdictLabel,
         ...(chosenSide ? { chosenSide } : {}),
+        ...(crowdPctForChoice !== undefined ? { crowdPctForChoice } : {}),
+        ...(crowdSplitPcts ? { crowdSplitPcts } : {}),
+        ...(counterArgument ? { counterArgument } : {}),
+        ...(isSolo ? { soloMode: true } : {}),
       };
       const updated: PassState = {
         ...state,
@@ -1016,9 +1243,10 @@ export function passReducer(state: PassState, action: PassAction): PassState {
           (state.storyChoicesA ?? 0) + (cardMode === 'storia' && chosenSide === 'A' ? 1 : 0),
       };
       if (
-        card &&
-        isFlashOrClassicoCard(card) &&
-        (card.storyScene || card.domandaRilancio || card.lezioneReale || card.penalty)
+        isSolo ||
+        (card &&
+          isFlashOrClassicoCard(card) &&
+          (card.storyScene || card.domandaRilancio || card.lezioneReale || card.penalty))
       ) {
         return {
           ...updated,
@@ -1026,6 +1254,70 @@ export function passReducer(state: PassState, action: PassAction): PassState {
         };
       }
       return advanceToNextRound(updated, action.rng ?? Math.random);
+    }
+
+    case 'SOLO_FLIP_AFTER_OBJECTION': {
+      if (state.phase !== 'ROUND_RESULT' || state.players.length !== 1 || !state.roundOutcome) {
+        return state;
+      }
+      const prev = state.roundOutcome;
+      if (prev.soloFlipped || !prev.chosenSide) return state;
+      const card = getCurrentCard(state);
+      const cardMode = effectivePassCardMode(state.mode, card);
+      const splitPcts = prev.crowdSplitPcts ?? [prev.countA, prev.countB];
+      const oldSide = prev.chosenSide;
+      const newSide: 'A' | 'B' = oldSide === 'A' ? 'B' : 'A';
+      const oldPct = oldSide === 'A' ? splitPcts[0] : splitPcts[1];
+      const newPct = newSide === 'A' ? splitPcts[0] : splitPcts[1];
+      const newLabel =
+        card && isFlashOrClassicoCard(card)
+          ? newSide === 'A'
+            ? card.optionA
+            : card.optionB
+          : card && isAssurdoCard(card)
+            ? newSide === 'A'
+              ? (card.optionA ?? 'Accetto!')
+              : (card.optionB ?? 'Mai nella vita')
+            : newSide === 'A'
+              ? 'Prima scelta'
+              : 'Seconda scelta';
+
+      const sole = state.players[0];
+      const cur = readStat(state.stats, sole.id);
+      const wasMaj = oldPct >= 50;
+      const nowMaj = newPct >= 50;
+      const nextStats: Record<string, PlayerPassStats> = {
+        ...state.stats,
+        [sole.id]: {
+          ...cur,
+          flips: cur.flips + 1,
+          steadyCount: Math.max(0, (cur.steadyCount ?? 0) - 1),
+          majorityCount: Math.max(0, (cur.majorityCount ?? 0) + (wasMaj ? -1 : 0) + (nowMaj ? 1 : 0)),
+          minorityCount: Math.max(0, cur.minorityCount + (wasMaj ? 0 : -1) + (nowMaj ? 0 : 1)),
+        },
+      };
+
+      const nextCounter =
+        card && isFlashOrClassicoCard(card) ? soloCounterForFlash(card, newSide) : undefined;
+      const nextOutcome: RoundOutcome = {
+        ...prev,
+        chosenSide: newSide,
+        liveVerdictLabel: newLabel,
+        crowdPctForChoice: newPct,
+        counterArgument: nextCounter,
+        swingDelta: Math.max(1, prev.swingDelta ?? 1),
+        soloFlipped: true,
+      };
+      const storyDelta =
+        cardMode === 'storia' ? (newSide === 'A' ? 1 : -1) : 0;
+
+      return {
+        ...state,
+        stats: nextStats,
+        roundOutcome: nextOutcome,
+        roundHistory: upsertRoundHighlight(state, nextOutcome),
+        storyChoicesA: Math.max(0, (state.storyChoicesA ?? 0) + storyDelta),
+      };
     }
 
     case 'RESOLVE_INFILTRATO_ACCUSATION': {
@@ -1103,19 +1395,48 @@ export function passReducer(state: PassState, action: PassAction): PassState {
       const optA = card && isAssurdoCard(card) && card.optionA ? card.optionA : 'Accetto!';
       const optB = card && isAssurdoCard(card) && card.optionB ? card.optionB : 'Mai nella vita';
       const n = state.players.length;
+      const isSolo = n === 1;
       const nextStats = incrementAllPlayersRound(state.stats, state.players);
       let countA = 0;
       let countB = 0;
       let liveVerdictLabel = 'Tavolo spaccato';
+      let chosenSide: 'A' | 'B' | undefined;
+      let crowdPctForChoice: number | undefined;
+      let crowdSplitPcts: number[] | undefined;
+      let counterArgument: string | undefined;
 
-      if (action.outcome === 'YES') {
+      if (isSolo && action.outcome !== 'SPLIT') {
+        const splitPcts = computeSoloCrowdSplit(card?.id ?? `dig_${state.roundIndex}`, 2);
+        crowdSplitPcts = splitPcts;
+        countA = splitPcts[0];
+        countB = splitPcts[1];
+        chosenSide = action.outcome === 'YES' ? 'A' : 'B';
+        liveVerdictLabel = chosenSide === 'A' ? optA : optB;
+        crowdPctForChoice = chosenSide === 'A' ? splitPcts[0] : splitPcts[1];
+        const oppPct = chosenSide === 'A' ? splitPcts[1] : splitPcts[0];
+        counterArgument =
+          chosenSide === 'A'
+            ? `Il ${oppPct}% risponderebbe invece «${optB}»: dov’è il tuo limite reale?`
+            : `Il ${oppPct}% accetterebbe («${optA}») pur di non tirarsi indietro: sei sicuro del tuo no?`;
+        const sole = state.players[0];
+        const cur = readStat(nextStats, sole.id);
+        const inMaj = crowdPctForChoice >= 50;
+        nextStats[sole.id] = {
+          ...cur,
+          majorityCount: (cur.majorityCount ?? 0) + (inMaj ? 1 : 0),
+          minorityCount: cur.minorityCount + (inMaj ? 0 : 1),
+          steadyCount: (cur.steadyCount ?? 0) + 1,
+        };
+      } else if (action.outcome === 'YES') {
         countA = Math.max(1, n);
         countB = 0;
         liveVerdictLabel = optA;
+        chosenSide = 'A';
       } else if (action.outcome === 'NO') {
         countA = 0;
         countB = Math.max(1, n);
         liveVerdictLabel = optB;
+        chosenSide = 'B';
       } else {
         const effN = Math.max(2, n);
         countA = Math.ceil(effN / 2);
@@ -1128,6 +1449,11 @@ export function passReducer(state: PassState, action: PassAction): PassState {
         countA,
         countB,
         liveVerdictLabel,
+        ...(chosenSide ? { chosenSide } : {}),
+        ...(crowdPctForChoice !== undefined ? { crowdPctForChoice } : {}),
+        ...(crowdSplitPcts ? { crowdSplitPcts } : {}),
+        ...(counterArgument ? { counterArgument } : {}),
+        ...(isSolo ? { soloMode: true } : {}),
       };
 
       return {
@@ -1279,11 +1605,14 @@ export function passReducer(state: PassState, action: PassAction): PassState {
       );
 
       const nextStats = { ...state.stats };
+      const effectiveSolverId =
+        action.solverId ?? (state.players.length === 1 ? state.players[0]?.id ?? null : null);
       const solverName =
-        (action.solverId && state.players.find((p) => p.id === action.solverId)?.name) || 'Tavolo';
-      if (action.solverId) {
-        const cur = readStat(nextStats, action.solverId);
-        nextStats[action.solverId] = { ...cur, coopWins: cur.coopWins + 1 };
+        (effectiveSolverId && state.players.find((p) => p.id === effectiveSolverId)?.name) ||
+        (state.players.length === 1 ? 'Tu' : 'Tavolo');
+      if (effectiveSolverId) {
+        const cur = readStat(nextStats, effectiveSolverId);
+        nextStats[effectiveSolverId] = { ...cur, coopWins: cur.coopWins + 1 };
       }
 
       const pending = cs.board.words.filter((w) => nextStatus[w.id] === 'pending');
@@ -1565,32 +1894,10 @@ const JOLLY_AWARDS: ReadonlyArray<{ id: string; emoji: string; title: string; de
   },
 ];
 
-function deterministicHash(seed: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
 /** Computes fun social awards at the end of a Pass & Play session. */
 export function computePassAwards(state: PassState): PassAward[] {
   if (state.players.length === 0) return [];
   const awards: PassAward[] = [];
-
-  const pickTop = (metric: (s: PlayerPassStats) => number): PassPlayer | null => {
-    let best: PassPlayer | null = null;
-    let bestVal = 0;
-    for (const p of state.players) {
-      const val = metric(readStat(state.stats, p.id));
-      if (val > bestVal) {
-        bestVal = val;
-        best = p;
-      }
-    }
-    return best;
-  };
 
   const pushAward = (
     spec: Omit<PassAward, 'winnerId' | 'winnerName' | 'winnerAvatar'>,
@@ -1603,6 +1910,95 @@ export function computePassAwards(state: PassState): PassAward[] {
       winnerName: winner.name,
       winnerAvatar: winner.avatar,
     });
+  };
+
+  if (state.players.length === 1) {
+    const sole = state.players[0];
+    const s = readStat(state.stats, sole.id);
+    const maj = s.majorityCount ?? 0;
+    const min = s.minorityCount;
+    const steady = s.steadyCount ?? 0;
+
+    if (s.flips > 0) {
+      pushAward(
+        {
+          id: 'mente_aperta',
+          emoji: '🦋',
+          title: 'Mente Flessibile',
+          description: `Hai cambiato prospettiva ${s.flips} ${s.flips === 1 ? 'volta' : 'volte'} dopo l’obiezione opposta.`,
+        },
+        sole,
+      );
+    }
+    if (min > maj && min >= 1) {
+      pushAward(
+        {
+          id: 'controcorrente',
+          emoji: '⚡',
+          title: 'Pensatore Controcorrente',
+          description: 'Hai scelto spesso l’alternativa che solo una minoranza avrebbe difeso.',
+        },
+        sole,
+      );
+    }
+    if (steady > 0 && s.flips === 0) {
+      pushAward(
+        {
+          id: 'bussola',
+          emoji: '🧭',
+          title: 'Bussola Autonoma',
+          description: 'Coerenza salda dall’inizio alla fine anche davanti all’Avvocato del Diavolo.',
+        },
+        sole,
+      );
+    }
+    if (s.coopWins > 0) {
+      pushAward(
+        {
+          id: 'solutore',
+          emoji: '🧩',
+          title: 'Solutore Solitario',
+          description: `Hai risolto ${s.coopWins} ${s.coopWins === 1 ? 'parola' : 'parole'} nel Cruciverba Show.`,
+        },
+        sole,
+      );
+    }
+    if (maj >= 2 && maj >= min) {
+      pushAward(
+        {
+          id: 'sintonia_mondo',
+          emoji: '🔮',
+          title: 'In Sintonia col Mondo',
+          description: 'Il tuo istinto si è spesso allineato con la maggioranza dei giocatori.',
+        },
+        sole,
+      );
+    }
+    if (awards.length === 0) {
+      pushAward(
+        {
+          id: 'bussola',
+          emoji: '🧭',
+          title: 'Bussola Autonoma',
+          description: 'Hai affrontato ogni scelta con il tuo punto di vista personale.',
+        },
+        sole,
+      );
+    }
+    return awards;
+  }
+
+  const pickTop = (metric: (s: PlayerPassStats) => number): PassPlayer | null => {
+    let best: PassPlayer | null = null;
+    let bestVal = 0;
+    for (const p of state.players) {
+      const val = metric(readStat(state.stats, p.id));
+      if (val > bestVal) {
+        bestVal = val;
+        best = p;
+      }
+    }
+    return best;
   };
 
   pushAward(
@@ -1775,6 +2171,7 @@ function computePassPlayerProfile(
   stats: PlayerPassStats,
   awardsWon: PassAward[],
   playerIndex: number,
+  isSolo = false,
 ): PassPlayerProfile {
   const rounds = Math.max(stats.rounds ?? 0, 0);
   const maj = stats.majorityCount ?? 0;
@@ -1814,7 +2211,9 @@ function computePassPlayerProfile(
       emoji: '⚖️',
       title: 'L’Equilibrista Strategico',
       motto: '«Solo chi non ascolta non cambia mai idea.»',
-      description: 'Sa mettere in discussione la propria scelta iniziale quando sente un argomento convincente.',
+      description: isSolo
+        ? 'Sai rimettere in discussione il tuo istinto iniziale quando leggi un’obiezione solida.'
+        : 'Sa mettere in discussione la propria scelta iniziale quando sente un argomento convincente.',
       lesson: 'Nel mondo reale: la flessibilità mentale è la competenza #1 per navigare contesti che cambiano.',
     };
   } else if (stats.gognaHits >= 2) {
@@ -1832,7 +2231,9 @@ function computePassPlayerProfile(
       emoji: '🦅',
       title: 'Il Dissidente Lucido',
       motto: '«La maggioranza non ha sempre ragione.»',
-      description: 'Non segue la corrente per comodità: difende la sua visione anche da solo contro tutti.',
+      description: isSolo
+        ? 'Non segui la corrente per comodità: scegli ciò in cui credi anche contro la maggioranza.'
+        : 'Non segue la corrente per comodità: difende la sua visione anche da solo contro tutti.',
       lesson: 'Nel mondo reale: il coraggio di essere contrarian genera valore quando lo accompagni con argomenti chiari.',
     };
   } else if (steady > 0 && stats.flips === 0) {
@@ -1841,7 +2242,9 @@ function computePassPlayerProfile(
       emoji: '🛡️',
       title: 'La Roccia dei Principi',
       motto: '«Radici profonde non temono il dibattito.»',
-      description: 'Resta fedele alla prima scelta anche sotto la pressione delle difese altrui.',
+      description: isSolo
+        ? 'Resti fedele alla tua prima intuizione anche davanti agli spunti dell’Avvocato del Diavolo.'
+        : 'Resta fedele alla prima scelta anche sotto la pressione delle difese altrui.',
       lesson: 'Nel mondo reale: la coerenza ispira fiducia, purché resti aperta a verificare i propri presupposti.',
     };
   } else if (maj >= 2 && min === 0) {
@@ -1849,18 +2252,24 @@ function computePassPlayerProfile(
       id: 'sintonia',
       emoji: '🔮',
       title: 'Il Lettore di Risonanze',
-      motto: '«Sente il battito del gruppo prima che parli.»',
-      description: 'Ha un intuito naturale per cogliere dove converge la sensibilità degli amici.',
-      lesson: 'Nel mondo reale: capire il sentiment collettivo ti rende un facilitatore nato nei gruppi.',
+      motto: isSolo
+        ? '«Cogli al volo dove batte la sensibilità comune.»'
+        : '«Sente il battito del gruppo prima che parli.»',
+      description: isSolo
+        ? 'Hai un intuito naturale per capire dove converge la scelta della maggioranza.'
+        : 'Ha un intuito naturale per cogliere dove converge la sensibilità degli amici.',
+      lesson: 'Nel mondo reale: capire il sentiment collettivo ti rende un facilitatore nato.',
     };
   } else if ((stats.coopWins ?? 0) > 0 || (stats.coppieMatches ?? 0) > 0) {
     chosen = {
       id: 'connesso',
       emoji: '🤝',
-      title: 'Il Ponte Telepatico',
+      title: isSolo ? 'Il Solutore Lucidissimo' : 'Il Ponte Telepatico',
       motto: '«Pochi indizi, massima intesa.»',
-      description: 'Sa collegare i segnali degli altri per far vincere tutta la squadra.',
-      lesson: 'Nel mondo reale: il successo collettivo nasce da chi amplifica le idee altrui invece di competere.',
+      description: isSolo
+        ? 'Colleghi gli indizi al volo e arrivi dritto alla soluzione.'
+        : 'Sa collegare i segnali degli altri per far vincere tutta la squadra.',
+      lesson: 'Nel mondo reale: la lucidità sotto pressione trasforma gli indizi sparsi in decisioni chiare.',
     };
   } else {
     chosen = ARCHETYPE_POOL[playerIndex % ARCHETYPE_POOL.length];
@@ -1868,11 +2277,11 @@ function computePassPlayerProfile(
 
   const statPills: PassPlayerStatPill[] = [];
   if (maj > 0 || min > 0) {
-    statPills.push({ label: 'Intese', value: maj });
+    statPills.push({ label: isSolo ? 'In Sintonia' : 'Intese', value: maj });
     statPills.push({ label: 'Controcorrente', value: min });
   }
   if (stats.flips > 0 || steady > 0) {
-    statPills.push({ label: 'Ribaltoni', value: stats.flips });
+    statPills.push({ label: isSolo ? 'Cambi d’idea' : 'Ribaltoni', value: stats.flips });
   }
   if (stats.gognaHits > 0) {
     statPills.push({ label: 'Gogne', value: stats.gognaHits });
@@ -1921,6 +2330,7 @@ export function computePassFinaleSummary(state: PassState): PassFinaleSummary {
   const moments = state.roundHistory ?? [];
   const roundsPlayed = Math.max(moments.length, state.cards.length);
   const playerCount = state.players.length;
+  const isSolo = playerCount === 1;
 
   let sparksCount = 0;
   let consensusCount = 0;
@@ -1930,53 +2340,79 @@ export function computePassFinaleSummary(state: PassState): PassFinaleSummary {
   let alignmentRatioSum = 0;
   let alignmentRatioSamples = 0;
 
-  for (const m of moments) {
-    const total = m.countA + m.countB;
-    if ((m.swingDelta ?? 0) > 0) {
-      sparksCount += m.swingDelta ?? 0;
-      totalFlips += m.swingDelta ?? 0;
-    }
-    if (m.kind === 'split' || m.kind === 'swing' || m.kind === 'dignita' || m.kind === 'coppie_align') {
-      if (total >= 2) {
-        const ratio = Math.max(m.countA, m.countB) / total;
-        alignmentRatioSum += ratio;
-        alignmentRatioSamples++;
-        if (m.countA === 0 || m.countB === 0) {
-          consensusCount++;
-        } else {
-          sparksCount++;
+  if (isSolo) {
+    const sole = state.players[0];
+    const s = sole ? readStat(state.stats, sole.id) : emptyPlayerStats();
+    const maj = s.majorityCount ?? 0;
+    const min = s.minorityCount;
+    totalFlips = s.flips;
+    consensusCount = maj;
+    sparksCount = min + s.flips;
+    const decisionTotal = maj + min;
+    if (decisionTotal > 0) {
+      alignmentRatioSum = maj / decisionTotal;
+      alignmentRatioSamples = 1;
+    } else {
+      for (const m of moments) {
+        if (m.kind === 'cruciverba') {
+          const totWords = Math.max(1, m.cruciverbaTotalCount ?? 4);
+          const solved = m.cruciverbaSolvedCount ?? 0;
+          alignmentRatioSamples++;
+          alignmentRatioSum += Math.max(0.35, solved / totWords);
+          if (solved >= totWords) consensusCount++;
+          else sparksCount++;
         }
       }
-    } else if (m.kind === 'cruciverba') {
-      alignmentRatioSamples++;
-      const totWords = Math.max(1, m.cruciverbaTotalCount ?? 4);
-      const solved = m.cruciverbaSolvedCount ?? 0;
-      if (solved >= totWords) {
-        consensusCount++;
-        alignmentRatioSum += 1;
-      } else {
-        alignmentRatioSum += Math.max(0.35, solved / totWords);
+    }
+  } else {
+    for (const m of moments) {
+      const total = m.countA + m.countB;
+      if ((m.swingDelta ?? 0) > 0) {
+        sparksCount += m.swingDelta ?? 0;
+        totalFlips += m.swingDelta ?? 0;
       }
-    } else if (m.kind === 'tribunale') {
-      alignmentRatioSamples++;
-      sparksCount++;
-      alignmentRatioSum += 0.65;
-    } else if (m.kind === 'infiltrato') {
-      alignmentRatioSamples++;
-      if (m.infiltratoCaught) {
-        consensusCount++;
-        alignmentRatioSum += 0.85;
-      } else {
-        infiltratoEscapes++;
+      if (m.kind === 'split' || m.kind === 'swing' || m.kind === 'dignita' || m.kind === 'coppie_align') {
+        if (total >= 2) {
+          const ratio = Math.max(m.countA, m.countB) / total;
+          alignmentRatioSum += ratio;
+          alignmentRatioSamples++;
+          if (m.countA === 0 || m.countB === 0) {
+            consensusCount++;
+          } else {
+            sparksCount++;
+          }
+        }
+      } else if (m.kind === 'cruciverba') {
+        alignmentRatioSamples++;
+        const totWords = Math.max(1, m.cruciverbaTotalCount ?? 4);
+        const solved = m.cruciverbaSolvedCount ?? 0;
+        if (solved >= totWords) {
+          consensusCount++;
+          alignmentRatioSum += 1;
+        } else {
+          alignmentRatioSum += Math.max(0.35, solved / totWords);
+        }
+      } else if (m.kind === 'tribunale') {
+        alignmentRatioSamples++;
         sparksCount++;
-        alignmentRatioSum += 0.35;
+        alignmentRatioSum += 0.65;
+      } else if (m.kind === 'infiltrato') {
+        alignmentRatioSamples++;
+        if (m.infiltratoCaught) {
+          consensusCount++;
+          alignmentRatioSum += 0.85;
+        } else {
+          infiltratoEscapes++;
+          sparksCount++;
+          alignmentRatioSum += 0.35;
+        }
+      } else if (m.kind === 'gogna') {
+        gognaRounds++;
+        sparksCount++;
+      } else if (m.kind === 'coppie_challenge') {
+        if (m.coppieMatched) consensusCount++;
+        else sparksCount++;
       }
-    } else if (m.kind === 'gogna') {
-      gognaRounds++;
-      sparksCount++;
-    } else if (m.kind === 'coppie_challenge') {
-      if (m.coppieMatched) consensusCount++;
-      else sparksCount++;
     }
   }
 
@@ -1990,7 +2426,33 @@ export function computePassFinaleSummary(state: PassState): PassFinaleSummary {
     'chemistryPct' | 'chemistryLabel' | 'roundsPlayed' | 'playerCount' | 'sparksCount' | 'consensusCount'
   >;
 
-  if (infiltratoEscapes >= 1 && state.mode === 'infiltrato') {
+  if (isSolo) {
+    if (totalFlips >= 2 || (totalFlips >= 1 && moments.some((m) => m.soloFlipped))) {
+      verdict = {
+        emoji: '⚖️',
+        title: 'Esploratore Flessibile',
+        subtitle: 'Hai messo alla prova il tuo istinto davanti alle obiezioni dell’Avvocato del Diavolo.',
+      };
+    } else if (sparksCount > consensusCount && sparksCount >= 2) {
+      verdict = {
+        emoji: '⚡',
+        title: 'Percorso Controcorrente',
+        subtitle: 'Scegli con testa tua anche quando la maggioranza va nella direzione opposta.',
+      };
+    } else if (consensusCount >= Math.max(1, Math.ceil(roundsPlayed * 0.6)) && chemistryPct >= 65) {
+      verdict = {
+        emoji: '🎯',
+        title: 'Istinto in Sintonia',
+        subtitle: 'Hai un radar preciso su ciò che convince e orienta le decisioni comuni.',
+      };
+    } else {
+      verdict = {
+        emoji: '🧭',
+        title: 'Specchio Decisionale',
+        subtitle: 'Ogni risposta ha tracciato una mappa autentica di come ragioni sotto pressione.',
+      };
+    }
+  } else if (infiltratoEscapes >= 1 && state.mode === 'infiltrato') {
     verdict = {
       emoji: '🕵️',
       title: 'Covo di Doppiogiochisti',
@@ -2022,8 +2484,13 @@ export function computePassFinaleSummary(state: PassState): PassFinaleSummary {
     };
   }
 
-  const chemistryLabel =
-    chemistryPct >= 80
+  const chemistryLabel = isSolo
+    ? chemistryPct >= 70
+      ? `Sintonia col mondo: ${chemistryPct}%`
+      : chemistryPct >= 45
+        ? `Equilibrio critico (${chemistryPct}% sintonia)`
+        : `Indice Controcorrente: ${100 - chemistryPct}%`
+    : chemistryPct >= 80
       ? `Sintonia altissima (${chemistryPct}%)`
       : chemistryPct >= 55
         ? `Equilibrio vivo (${chemistryPct}% intesa)`
@@ -2034,31 +2501,41 @@ export function computePassFinaleSummary(state: PassState): PassFinaleSummary {
   const playerProfiles: PassPlayerProfile[] = state.players.map((p, idx) => {
     const pStats = readStat(state.stats, p.id);
     const won = awards.filter((a) => a.winnerId === p.id);
-    return computePassPlayerProfile(p, pStats, won, idx);
+    return computePassPlayerProfile(p, pStats, won, idx, isSolo);
   });
 
   const closingChallenges: string[] = [];
-  if (mvp) {
+  if (isSolo) {
     closingChallenges.push(
-      `🥂 Brindisi ufficiale: ${mvp.winnerAvatar ?? '🏆'} ${mvp.winnerName} (${mvp.title}) sceglie il brindisi o la musica del prossimo giro!`,
+      '🧭 Riguarda i round in cui sei andato Controcorrente: qual è l’argomento che gli altri sottovalutano?',
+      totalFlips > 0
+        ? `🦋 Hai cambiato scelta ${totalFlips} ${totalFlips === 1 ? 'volta' : 'volte'} dopo l’obiezione opposta: ottimo riflesso critico!`
+        : '🛡️ Sei rimasto fedele al tuo istinto dall’inizio alla fine: prova un giro mettendo in dubbio la tua prima scelta.',
+      '🎭 Prova «Storie», «Percorso» o «Preferiresti» da solo per esplorare un nuovo scenario!',
+    );
+  } else {
+    if (mvp) {
+      closingChallenges.push(
+        `🥂 Brindisi ufficiale: ${mvp.winnerAvatar ?? '🏆'} ${mvp.winnerName} (${mvp.title}) sceglie il brindisi o la musica del prossimo giro!`,
+      );
+    }
+    const bastion = awards.find((a) => a.id === 'bastian');
+    if (bastion) {
+      closingChallenges.push(
+        `🏴‍☠️ Sfida della Staffa per ${bastion.winnerName}: difendi l’opinione più inaspettata che hai sostenuto stasera!`,
+      );
+    }
+    const spy = awards.find((a) => a.id === 'spia');
+    if (spy) {
+      closingChallenges.push(
+        `🕵️ Rivincita d’onore: ${spy.winnerName} ha bluffato tutto il tavolo. Chi lo sfida faccia a faccia nel prossimo round?`,
+      );
+    }
+    closingChallenges.push(
+      '🎭 Giro finale a voce: ogni giocatore dice in una sola frase qual è stata la scelta più difficile della serata.',
+      '🔥 Alzate la posta: fate un ultimo giro in «Serata Mix» o passate alla modalità più piccante!',
     );
   }
-  const bastion = awards.find((a) => a.id === 'bastian');
-  if (bastion) {
-    closingChallenges.push(
-      `🏴‍☠️ Sfida della Staffa per ${bastion.winnerName}: difendi l’opinione più inaspettata che hai sostenuto stasera!`,
-    );
-  }
-  const spy = awards.find((a) => a.id === 'spia');
-  if (spy) {
-    closingChallenges.push(
-      `🕵️ Rivincita d’onore: ${spy.winnerName} ha bluffato tutto il tavolo. Chi lo sfida faccia a faccia nel prossimo round?`,
-    );
-  }
-  closingChallenges.push(
-    '🎭 Giro finale a voce: ogni giocatore dice in una sola frase qual è stata la scelta più difficile della serata.',
-    '🔥 Alzate la posta: fate un ultimo giro in «Serata Mix» o passate alla modalità più piccante!',
-  );
 
   const awardLines = awards
     .slice(0, 5)
@@ -2066,8 +2543,8 @@ export function computePassFinaleSummary(state: PassState): PassFinaleSummary {
     .join('\n');
   const shareText = [
     `${verdict.emoji} SCHIERATI — ${verdict.title.toUpperCase()}`,
-    `📊 ${roundsPlayed} round · ${playerCount === 1 ? '1 giocatore' : `${playerCount} amici`} · ${chemistryLabel}`,
-    awardLines ? `\n🏆 I Premi della Serata:\n${awardLines}` : '',
+    `📊 ${roundsPlayed} round · ${isSolo ? '1 giocatore (Solo)' : `${playerCount} amici`} · ${chemistryLabel}`,
+    awardLines ? `\n🏆 ${isSolo ? 'I Tuoi Tratti' : 'I Premi della Serata'}:\n${awardLines}` : '',
     '\nGioca anche tu su schierati!',
   ]
     .filter(Boolean)

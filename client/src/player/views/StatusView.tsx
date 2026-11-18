@@ -21,6 +21,7 @@ import { pickIronicTitle, WRONG_PREDICTION_TITLES, WRONG_SWING_BET_TITLES, WRONG
 import { wrap } from './layout';
 import { narrationFor } from '../../host/audio/narrator';
 import { getStoryAudioUrl } from '../../host/audio/storyAudioPlayer';
+import { computeSoloCrowdSplit } from '../../passAndPlay/passAndPlayEngine';
 
 interface StatusViewProps {
   phase: GameStatePayload['phase'];
@@ -37,6 +38,7 @@ interface StatusViewProps {
   knowResult: PlayerKnowGuessResultPayload | null;
   groupMindResult: PlayerGroupMindResultPayload | null;
   blindSpot: BlindSpot | null;
+  myVote?: string | null;
   skipButton: ReactNode;
 }
 
@@ -59,8 +61,36 @@ export default function StatusView({
   knowResult,
   groupMindResult,
   blindSpot,
+  myVote = null,
   skipButton,
 }: StatusViewProps) {
+  const totalParticipants = Math.max(
+    players.length,
+    game?.votedCount ?? 0,
+    game?.split ? game.split.A + game.split.B : 0,
+  );
+  const isSolo = players.length === 1 && totalParticipants <= 1;
+  const soloSeed =
+    game?.dilemma?.id ?? game?.partyCard?.prompt ?? `round_${game?.dilemmaIndex ?? 1}`;
+  const soloBinarySplit = useMemo(() => computeSoloCrowdSplit(soloSeed, 2), [soloSeed]);
+  const soloCounterArgument = useMemo(() => {
+    const d = game?.dilemma;
+    const optA = d?.optionA ?? game?.partyCard?.optionA ?? 'Prima scelta';
+    const optB = d?.optionB ?? game?.partyCard?.optionB ?? 'Seconda scelta';
+    if (myVote === 'A') {
+      return (
+        d?.spuntiB?.[0] ??
+        `Chi sceglie «${optB}» risponderebbe che la tua scelta sottovaluta un rischio concreto: cosa non stai considerando?`
+      );
+    }
+    if (myVote === 'B') {
+      return (
+        d?.spuntiA?.[0] ??
+        `Chi difende «${optA}» sostiene che sia la strada più solida qui: qual è il limite principale di quella tesi?`
+      );
+    }
+    return d?.spuntiA?.[0] ?? d?.spuntiB?.[0] ?? null;
+  }, [game?.dilemma, game?.partyCard?.optionA, game?.partyCard?.optionB, myVote]);
   // useAuth keeps the <Show when="signed-out"> gate working inside this view.
   useAuth();
   // A wrong guess gets a funny title instead of a flat X (2.4) — memoized on
@@ -322,29 +352,108 @@ export default function StatusView({
             Nessun voto ricevuto in questo round.
           </p>
         ) : game?.partyCard?.mode === 'flash' && game.partyCard.flashResult ? (
-          <>
-            {game?.split && (
+          isSolo ? (
+            <>
               <SplitBar
-                split={game.split}
-                optionA={game.dilemma?.optionA}
-                optionB={game.dilemma?.optionB}
+                split={{ A: soloBinarySplit[0], B: soloBinarySplit[1] }}
+                optionA={game.dilemma?.optionA ?? game.partyCard.optionA}
+                optionB={game.dilemma?.optionB ?? game.partyCard.optionB}
               />
-            )}
-            <p style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: '#fbbf24', maxWidth: '22rem' }}>
-              {game.partyCard.flashResult.isUnanimous
-                ? '🍻 Unanimità! Tutti dalla stessa parte!'
-                : game.partyCard.flashResult.isTie
-                  ? '⚔️ Guerra civile (50% vs 50%)! Difendetevi ora!'
-                  : game.partyCard.flashResult.minorityNicknames.length > 0
-                    ? `🍺 In minoranza: ${game.partyCard.flashResult.minorityNicknames.join(', ')} — tocca a voi difendervi!`
-                    : 'Ecco come si è diviso il gruppo'}
-            </p>
-          </>
+              {(() => {
+                const minePct =
+                  myVote === 'A'
+                    ? soloBinarySplit[0]
+                    : myVote === 'B'
+                      ? soloBinarySplit[1]
+                      : soloBinarySplit[0];
+                const badge =
+                  minePct >= 55
+                    ? `🎯 In Sintonia col Mondo (${minePct}% come te)`
+                    : minePct <= 45
+                      ? `⚡ Controcorrente (solo il ${minePct}% come te)`
+                      : `⚖️ Sul Filo del Rasoio (${minePct}%)`;
+                return (
+                  <p style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: '#fbbf24', maxWidth: '22rem' }}>
+                    🧭 {badge}
+                  </p>
+                );
+              })()}
+              {soloCounterArgument && (
+                <Card style={{ width: 'min(90vw, 22rem)', padding: '0.75rem 0.9rem', textAlign: 'left', borderColor: 'rgba(244, 63, 94, 0.35)' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fda4af', marginBottom: '0.2rem' }}>
+                    😈 L’Avvocato del Diavolo
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.88rem', opacity: 0.92 }}>{soloCounterArgument}</p>
+                </Card>
+              )}
+            </>
+          ) : (
+            <>
+              {game?.split && (
+                <SplitBar
+                  split={game.split}
+                  optionA={game.dilemma?.optionA}
+                  optionB={game.dilemma?.optionB}
+                />
+              )}
+              <p style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: '#fbbf24', maxWidth: '22rem' }}>
+                {game.partyCard.flashResult.isUnanimous
+                  ? '🍻 Unanimità! Tutti dalla stessa parte!'
+                  : game.partyCard.flashResult.isTie
+                    ? '⚔️ Guerra civile (50% vs 50%)! Difendetevi ora!'
+                    : game.partyCard.flashResult.minorityNicknames.length > 0
+                      ? `🍺 In minoranza: ${game.partyCard.flashResult.minorityNicknames.join(', ')} — tocca a voi difendervi!`
+                      : 'Ecco come si è diviso il gruppo'}
+              </p>
+            </>
+          )
         ) : game?.partyCard?.mode === 'preferiresti' && game.partyCard.preferirestiResult ? (
           game.partyCard.preferirestiResult.isEmpty ? (
             <p style={{ fontSize: '1rem', fontWeight: 700, opacity: 0.85, margin: 0 }}>
               Nessun voto ricevuto in questo round.
             </p>
+          ) : isSolo ? (
+            (() => {
+              const opts = game.partyCard.preferirestiResult.options;
+              const pcts = computeSoloCrowdSplit(soloSeed, opts.length);
+              const myIdx = opts.findIndex((o) => o.letter === myVote || o.count > 0);
+              const myPct = myIdx >= 0 ? pcts[myIdx] : pcts[0];
+              const topPct = Math.max(...pcts);
+              return (
+                <>
+                  <p style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fbbf24', margin: 0, textTransform: 'uppercase' }}>
+                    🧭 Tu vs La Bussola del Mondo · {myPct >= topPct ? '🎯 In Sintonia' : '⚡ Controcorrente'} ({myPct}%)
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', width: 'min(90vw, 22rem)' }}>
+                    {opts.map((opt, idx) => {
+                      const pct = pcts[idx] ?? 25;
+                      const isMine = idx === myIdx;
+                      return (
+                        <div
+                          key={opt.letter}
+                          style={{
+                            padding: '0.55rem 0.75rem',
+                            borderRadius: 'var(--radius-sm)',
+                            background: isMine ? 'rgba(251, 191, 36, 0.16)' : 'rgba(255,255,255,0.06)',
+                            border: isMine ? '1.5px solid #fbbf24' : '1px solid rgba(255,255,255,0.14)',
+                            textAlign: 'left',
+                            fontSize: '0.88rem',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: isMine ? 800 : 600 }}>
+                            <span>
+                              {isMine ? '👈 ' : ''}
+                              {opt.label}
+                            </span>
+                            <span>{pct}%</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()
           ) : (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', width: 'min(90vw, 22rem)' }}>
@@ -397,6 +506,41 @@ export default function StatusView({
               </p>
             )}
           </Card>
+        ) : isSolo ? (
+          <>
+            <SplitBar
+              split={{ A: soloBinarySplit[0], B: soloBinarySplit[1] }}
+              optionA={game?.dilemma?.optionA ?? game?.partyCard?.optionA}
+              optionB={game?.dilemma?.optionB ?? game?.partyCard?.optionB}
+            />
+            {(() => {
+              const minePct =
+                myVote === 'A'
+                  ? soloBinarySplit[0]
+                  : myVote === 'B'
+                    ? soloBinarySplit[1]
+                    : soloBinarySplit[0];
+              const badge =
+                minePct >= 55
+                  ? `🎯 In Sintonia col Mondo (${minePct}% come te)`
+                  : minePct <= 45
+                    ? `⚡ Controcorrente (solo il ${minePct}% come te)`
+                    : `⚖️ Sul Filo del Rasoio (${minePct}%)`;
+              return (
+                <p style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: '#fbbf24', maxWidth: '22rem' }}>
+                  🧭 {badge}
+                </p>
+              );
+            })()}
+            {soloCounterArgument && (
+              <Card style={{ width: 'min(90vw, 22rem)', padding: '0.75rem 0.9rem', textAlign: 'left', borderColor: 'rgba(244, 63, 94, 0.35)' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fda4af', marginBottom: '0.2rem' }}>
+                  😈 L’Avvocato del Diavolo
+                </div>
+                <p style={{ margin: 0, fontSize: '0.88rem', opacity: 0.92 }}>{soloCounterArgument}</p>
+              </Card>
+            )}
+          </>
         ) : (
           <>
             {game?.split && (
@@ -416,35 +560,79 @@ export default function StatusView({
           </>
         )
       ) : phase === 'PHASE_RESULTS' ? (
-        <>
-          {game?.swing && <ResultsPanel swing={game.swing} dilemma={game?.dilemma} />}
-          {game?.dilemmaAuthor && (
-            <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
-              Indovinate chi l'ha scritto… ✍️ <strong>{game.dilemmaAuthor}</strong>!
-            </p>
-          )}
-          {predictionResult && (
-            <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-              {predictionResult.actual == null
-                ? '🔮 Pareggio: nessun pronostico vince.'
-                : predictionResult.correct
-                  ? '✅ Pronostico azzeccato!'
-                  : wrongPredictionTitle}
-            </p>
-          )}
-          {swingBetResult && (
-            <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-              {swingBetResult.correct
-                ? `🎰 Ribaltone ${swingBetResult.flipped ? 'sì' : 'no'}: scommessa vinta!`
-                : wrongSwingBetTitle}
-            </p>
-          )}
-          {knowResult && (
-            <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-              {knowResult.correct ? '🔮 Conosci bene il tuo amico!' : wrongKnowTitle}
-            </p>
-          )}
-        </>
+        isSolo ? (
+          <>
+            <SplitBar
+              split={{ A: soloBinarySplit[0], B: soloBinarySplit[1] }}
+              optionA={game?.dilemma?.optionA}
+              optionB={game?.dilemma?.optionB}
+            />
+            {(() => {
+              const minePct =
+                myVote === 'A'
+                  ? soloBinarySplit[0]
+                  : myVote === 'B'
+                    ? soloBinarySplit[1]
+                    : soloBinarySplit[0];
+              return (
+                <p style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: '#fbbf24', maxWidth: '22rem' }}>
+                  {minePct >= 55
+                    ? `🎯 In Sintonia col Mondo (${minePct}% ha scelto come te)`
+                    : minePct <= 45
+                      ? `⚡ Controcorrente (solo il ${minePct}% ha scelto come te)`
+                      : `⚖️ Sul Filo del Rasoio (${minePct}% come te)`}
+                </p>
+              );
+            })()}
+            {soloCounterArgument && (
+              <Card style={{ width: 'min(90vw, 22rem)', padding: '0.75rem 0.9rem', textAlign: 'left', borderColor: 'rgba(244, 63, 94, 0.35)' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fda4af', marginBottom: '0.2rem' }}>
+                  😈 L’Avvocato del Diavolo
+                </div>
+                <p style={{ margin: 0, fontSize: '0.88rem', opacity: 0.92 }}>{soloCounterArgument}</p>
+              </Card>
+            )}
+            <RilancioCard domanda={game?.dilemma?.domandaRilancio} />
+            {game?.dilemma?.lezioneReale && (
+              <Card style={{ width: 'min(90vw, 22rem)', padding: '0.75rem 0.9rem', textAlign: 'left' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--gold)', marginBottom: '0.2rem' }}>
+                  🧭 Spunto di riflessione
+                </div>
+                <p style={{ margin: 0, fontSize: '0.88rem', opacity: 0.92 }}>{game.dilemma.lezioneReale}</p>
+              </Card>
+            )}
+          </>
+        ) : (
+          <>
+            {game?.swing && <ResultsPanel swing={game.swing} dilemma={game?.dilemma} />}
+            {game?.dilemmaAuthor && (
+              <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
+                Indovinate chi l'ha scritto… ✍️ <strong>{game.dilemmaAuthor}</strong>!
+              </p>
+            )}
+            {predictionResult && (
+              <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+                {predictionResult.actual == null
+                  ? '🔮 Pareggio: nessun pronostico vince.'
+                  : predictionResult.correct
+                    ? '✅ Pronostico azzeccato!'
+                    : wrongPredictionTitle}
+              </p>
+            )}
+            {swingBetResult && (
+              <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+                {swingBetResult.correct
+                  ? `🎰 Ribaltone ${swingBetResult.flipped ? 'sì' : 'no'}: scommessa vinta!`
+                  : wrongSwingBetTitle}
+              </p>
+            )}
+            {knowResult && (
+              <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+                {knowResult.correct ? '🔮 Conosci bene il tuo amico!' : wrongKnowTitle}
+              </p>
+            )}
+          </>
+        )
       ) : phase === 'GROUP_MIND_REVEAL' ? (
         <>
           {game?.groupMindQuestion && game?.groupMindTally && (
@@ -542,7 +730,7 @@ export default function StatusView({
               </p>
             </Card>
           )}
-          {game?.podium && game.podium.length > 0 && (
+          {!isSolo && game?.podium && game.podium.length > 0 && (
             <>
               {(() => {
                 const me = game.podium.find((e) => e.player.id === playerId);
@@ -555,8 +743,8 @@ export default function StatusView({
               <PodiumPanel podium={game.podium} meId={playerId} />
             </>
           )}
-          {game?.namedMoments && <NamedMomentsPanel moments={game.namedMoments} />}
-          {game?.awards && <AwardsPanel awards={game.awards} />}
+          {!isSolo && game?.namedMoments && <NamedMomentsPanel moments={game.namedMoments} />}
+          {!isSolo && game?.awards && <AwardsPanel awards={game.awards} />}
           {personalArchetype && (
             <Card
               glow="accent"
@@ -577,7 +765,7 @@ export default function StatusView({
                   fontWeight: 800,
                 }}
               >
-                🌟 Il Tuo Archetipo nel Mondo Reale
+                {isSolo ? '🧭 Il Tuo Specchio Decisionale' : '🌟 Il Tuo Archetipo nel Mondo Reale'}
               </div>
               <div style={{ fontSize: '2.5rem' }}>{personalArchetype.emoji}</div>
               <h3 style={{ margin: 0, fontSize: '1.4rem' }}>{personalArchetype.title}</h3>
@@ -629,7 +817,7 @@ export default function StatusView({
           </Card>
           {isLeader && (
             <Button variant="primary" onClick={onRematch} style={{ marginTop: '0.25rem' }}>
-              Giocate ancora ▶
+              {isSolo ? 'Nuova Partita ▶' : 'Giocate ancora ▶'}
             </Button>
           )}
           {blindSpot && (

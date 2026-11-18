@@ -16,11 +16,61 @@ import { detectNamedMoments } from './namedMoments';
  * PHASE_RESULTS, while votes1 (first vote), votes (second) and defenders are still
  * intact for this round.
  */
+function deterministicHash(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Deterministic community majority side for solo benchmark ("Tu vs La Bussola del Mondo").
+ * Mirrors `computeSoloCrowdSplit` on the client so server awards & UI stay consistent.
+ */
+export function computeSoloMajoritySide(seed: string): VoteChoice {
+  const pctA = 28 + (deterministicHash(seed || 'schierati') % 47);
+  return pctA >= 50 ? 'A' : 'B';
+}
+
+export function computeSoloPreferirestiTopIndex(seed: string, optionCount: number): number {
+  const h = deterministicHash(seed || 'schierati');
+  if (optionCount <= 2) {
+    return 28 + (h % 47) >= 50 ? 0 : 1;
+  }
+  if (optionCount === 3) {
+    const base3 = [
+      [48, 33, 19],
+      [42, 37, 21],
+      [52, 31, 17],
+    ][h % 3];
+    const shift = (h >>> 3) % 3;
+    const pcts = [0, 1, 2].map((i) => base3[(i + shift) % 3]);
+    return pcts.indexOf(Math.max(...pcts));
+  }
+  const base4 = [
+    [41, 28, 19, 12],
+    [36, 31, 21, 12],
+    [44, 26, 18, 12],
+    [34, 29, 24, 13],
+  ][h % 4];
+  const shift = (h >>> 2) % 4;
+  const pcts = [0, 1, 2, 3].map((i) => base4[(i + shift) % 4]);
+  return pcts.indexOf(Math.max(...pcts));
+}
+
 export function recordRoundStats(room: Room): void {
   const first = tally(room.votes1);
   const second = tally(room.votes);
-  const majoritySide: VoteChoice | null =
-    second.A > second.B ? 'A' : second.B > second.A ? 'B' : null;
+  const isSolo = room.players.size === 1 && room.votes1.size <= 1;
+  const majoritySide: VoteChoice | null = isSolo
+    ? computeSoloMajoritySide(room.currentDilemma?.id ?? `r${room.dilemmaIndex}`)
+    : second.A > second.B
+      ? 'A'
+      : second.B > second.A
+        ? 'B'
+        : null;
   // room.votes1 is a Map, which preserves insertion order — its first key is
   // whoever cast VOTE_1 first this round (the jolly ⚡ "Il Fulmine" award).
   // Bots always vote first (castBotFirstVotes runs on VOTE_1 entry, before any

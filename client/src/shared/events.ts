@@ -575,6 +575,7 @@ export interface HotTakeRevealPayload {
   lowest: HotTakePlayerScorePayload | null;
   highest: HotTakePlayerScorePayload | null;
   spread: number;
+  communityAverage?: number;
 }
 
 export interface CruciverbaWordPayload {
@@ -1040,6 +1041,9 @@ export interface PublicDilemma {
   optionB: string;
   /** Debate-complexity tier; shown as a small badge. May be absent on legacy data. */
   complessita?: Complessita;
+  /** Punti di vista per A/B (usati anche per il contro-argomento in Solo). */
+  spuntiA?: string[];
+  spuntiB?: string[];
   /** Insegnamento per il mondo reale: spunto psicologico / pratico rivelato ai risultati. */
   lezioneReale?: string;
   /** Domanda di rilancio post-voto per stimolare il confronto dal vivo tra amici. */

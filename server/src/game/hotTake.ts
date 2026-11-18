@@ -135,6 +135,16 @@ export interface HotTakePlayerScore {
   score: number;
 }
 
+function deterministicPromptAverage(promptId: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < promptId.length; i++) {
+    h ^= promptId.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const tenths = 32 + ((h >>> 0) % 47); // 3.2 .. 7.8
+  return Math.round(tenths) / 10;
+}
+
 export interface HotTakeReveal {
   prompt: HotTakePrompt;
   average: number;
@@ -142,6 +152,7 @@ export interface HotTakeReveal {
   lowest: HotTakePlayerScore | null;
   highest: HotTakePlayerScore | null;
   spread: number;
+  communityAverage?: number;
 }
 
 export function buildHotTakeReveal(room: Room): HotTakeReveal | null {
@@ -166,6 +177,10 @@ export function buildHotTakeReveal(room: Room): HotTakeReveal | null {
   const average = Math.round((sum / entries.length) * 10) / 10;
   const lowest = entries[0];
   const highest = entries[entries.length - 1];
+  const isSolo = room.players.size === 1 && entries.length === 1;
+  const communityAverage = isSolo
+    ? deterministicPromptAverage(room.currentHotTakePrompt.id)
+    : undefined;
   return {
     prompt: room.currentHotTakePrompt,
     average,
@@ -173,5 +188,6 @@ export function buildHotTakeReveal(room: Room): HotTakeReveal | null {
     lowest,
     highest,
     spread: highest.score - lowest.score,
+    ...(communityAverage !== undefined ? { communityAverage } : {}),
   };
 }

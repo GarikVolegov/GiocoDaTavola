@@ -336,23 +336,25 @@ Rispondi con un JSON array di oggetti:
     case 'coppie': {
       const intensityDesc =
         intensity === 'piccante'
-          ? 'piccante (18+ sensuale, doppio senso, senza filtri)'
+          ? 'piccante (18+ sensuale tra fidanzati, desiderio, attrazione, vita sotto le lenzuola — MAI per semplici amici)'
           : intensity === 'profondo'
-            ? 'profondo (domande intime e consapevoli: paure, gratitudine non detta, futuro, confini, cosa conta davvero nel legame)'
-            : 'complicita (gelosia, abitudini, dinamiche di coppia)';
+            ? 'profondo (domande intime di relazione tra fidanzati: paure sul futuro insieme, convivenza, gratitudine affettiva, confini di coppia)'
+            : 'complicita (gelosia amorosa, primo appuntamento, anniversari, piccole abitudini da fidanzati)';
       prompt = `Genera ${count} carte per la modalità "COPPIE & SCINTILLE" a intensità "${intensityDesc}".
+IMPORTANTE: Questa modalità è ESCLUSIVAMENTE per FIDANZATI / PARTNER SENTIMENTALI.
+Non generare MAI domande generiche adatte a semplici amici, colleghi o gruppi: ogni singola carta deve riguardare la relazione amorosa tra due partner ("il tuo partner", "la vostra storia", "gelosia", "primo bacio", "convivenza", "intimità di coppia", "futuro insieme").
 Alterna carte di 3 tipi:
-1. "allineamento": "Al 3 indicate chi dei due..."
-2. "verita": domanda diretta ${intensity === 'profondo' ? 'autentica e profonda' : 'scomoda'} sulla relazione
-3. "obbligo": ${intensity === 'profondo' ? 'gesto di ascolto, sincerità o connessione immediata' : 'sfida fisica o contatto immediato'}
+1. "allineamento": "Al 3 indicate chi dei due..." (sul rapporto tra i due fidanzati)
+2. "verita": domanda diretta ${intensity === 'profondo' ? 'autentica e profonda' : 'scomoda o complice'} sulla vita da fidanzati
+3. "obbligo": ${intensity === 'profondo' ? 'gesto di ascolto, sincerità o tenerezza tra partner' : 'sfida romantica, bacio o contatto diretto tra fidanzati'}
 Rispondi con un JSON array di oggetti:
 [
   {
     "id": "gen_cp_1",
     "cardType": "allineamento",
     "intensity": "${intensity || 'complicita'}",
-    "prompt": "Al 3 indicate chi dei due chiede scusa per primo dopo una lite.",
-    "penalty": "Non siete d'accordo! 1 sorso a testa."
+    "prompt": "Al 3 indicate chi dei due chiede scusa per primo dopo una litigata di coppia.",
+    "penalty": "Non siete d'accordo! Abbraccio di 5 secondi tra fidanzati."
   }
 ]`;
       break;

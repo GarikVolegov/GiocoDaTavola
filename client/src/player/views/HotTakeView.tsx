@@ -41,6 +41,55 @@ export default function HotTakeView({
   const activeScore = myScore ?? draft;
 
   if (phase === 'HOT_TAKE_REVEAL' && reveal) {
+    if (reveal.communityAverage != null && reveal.scores.length === 1) {
+      const mine = reveal.scores[0].score;
+      const avg = reveal.communityAverage;
+      const delta = mine - avg;
+      const badge =
+        Math.abs(delta) <= 1.5
+          ? '🎯 In Sintonia con la Media'
+          : delta < 0
+            ? '❄️ Più Freddo della Media'
+            : '🔥 Più Caldo della Media';
+      return (
+        <MobilePhaseShell
+          title="🧭 Tu vs Il Mondo"
+          dock={skipButton}
+        >
+          <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, opacity: 0.92 }}>
+            {reveal.prompt.text}
+          </p>
+
+          <Card glow="accent" style={{ width: '100%', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.75 }}>
+              {badge}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', width: '100%' }}>
+              <div>
+                <div style={{ fontSize: '0.72rem', opacity: 0.75, fontWeight: 700 }}>IL TUO VOTO</div>
+                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: 'var(--gold)', lineHeight: 1.1 }}>
+                  {mine} <span style={{ fontSize: '0.95rem', opacity: 0.6 }}>/ 10</span>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', opacity: 0.75, fontWeight: 700 }}>🌍 MEDIA DEL MONDO</div>
+                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#7dd3fc', lineHeight: 1.1 }}>
+                  {avg.toFixed(1)} <span style={{ fontSize: '0.95rem', opacity: 0.6 }}>/ 10</span>
+                </div>
+              </div>
+            </div>
+            <p style={{ fontSize: '0.85rem', opacity: 0.8, margin: '0.25rem 0 0' }}>
+              {Math.abs(delta) <= 1.5
+                ? 'La tua temperatura emotiva su questo tema coincide quasi esattamente col sentimento comune.'
+                : delta < 0
+                  ? 'Sei molto più scettico della media su questo punto: difendi il tuo no interiore.'
+                  : 'Senti questo tema con più intensità della maggior parte delle persone.'}
+            </p>
+          </Card>
+        </MobilePhaseShell>
+      );
+    }
+
     return (
       <MobilePhaseShell
         title={PHASE_LABELS.HOT_TAKE_REVEAL}
@@ -110,13 +159,13 @@ export default function HotTakeView({
       >
         {myScore != null ? `Aggiorna voto (${activeScore}/10) ✓` : `Invia ${activeScore}/10 ▶`}
       </Button>
-      {missingHotTakers && missingHotTakers.length > 0 ? (
+      {missingHotTakers && missingHotTakers.length > 0 && playerCount > 1 ? (
         <p style={{ opacity: 0.65, margin: 0, fontSize: '0.85rem' }}>
           Aspettiamo {formatWaitingList(missingHotTakers)}…
         </p>
       ) : (
         <p style={{ opacity: 0.65, margin: 0, fontSize: '0.85rem' }}>
-          Votato {submittedCount}/{playerCount}
+          {playerCount <= 1 ? 'Scegli d’impulso senza timer' : `Votato ${submittedCount}/${playerCount}`}
         </p>
       )}
       {skipButton}

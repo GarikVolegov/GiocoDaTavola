@@ -2014,172 +2014,172 @@
         "id": "cc01",
         "cardType": "allineamento",
         "intensity": "complicita",
-        "prompt": "Al 3 indicate chi dei due chiede scusa per primo dopo una litigata.",
-        "penalty": "Non siete d'accordo! Penitenza: 1 sorso ciascuno + abbraccio di 5 secondi."
+        "prompt": "Al 3 indicate chi dei due chiede scusa per primo dopo una litigata di coppia.",
+        "penalty": "Non siete d'accordo! Abbraccio di 5 secondi tra fidanzati."
       },
       {
         "id": "cc02",
         "cardType": "verita",
         "intensity": "complicita",
-        "prompt": "Qual è la piccola abitudine dell'altro che ti fa impazzire ma non gli dici mai?",
-        "penalty": "Se non rispondi sincero entro 10s, doppio shot!"
+        "prompt": "Qual è una piccola abitudine quotidiana del tuo partner che ti fa impazzire ma non gli dici mai?",
+        "penalty": "Se non rispondi sincero entro 10s, bacio sul collo!"
       },
       {
         "id": "cc03",
         "cardType": "obbligo",
         "intensity": "complicita",
-        "prompt": "Guardatevi fissi negli occhi per 20 secondi senza ridere né distogliere lo sguardo.",
-        "penalty": "Chi ride o gira la testa per primo beve!"
+        "prompt": "Guardatevi fissi negli occhi come coppia per 20 secondi senza ridere né distogliere lo sguardo, poi baciatevi.",
+        "penalty": "Chi ride per primo paga pegno!"
       },
       {
         "id": "cc04",
         "cardType": "allineamento",
         "intensity": "complicita",
-        "prompt": "Al 3 indicate chi dei due è più geloso ma fa finta di essere rilassato.",
-        "penalty": "Disaccordo! Chi ha detto l'altro beve un sorso."
+        "prompt": "Al 3 indicate chi dei due è più geloso quando qualcuno ci prova col proprio partner, anche se fa finta di niente.",
+        "penalty": "Disaccordo! Ammettete l'ultimo episodio di gelosia."
       },
       {
         "id": "cc05",
         "cardType": "verita",
         "intensity": "complicita",
-        "prompt": "Hai mai controllato il telefono o le visualizzazioni social dell'altro di nascosto?",
-        "penalty": "Confessione obbligatoria o mostra l'ultima ricerca Instagram!"
+        "prompt": "Hai mai controllato il telefono, le chat o i social del tuo partner per un pizzico di gelosia?",
+        "penalty": "Confessione obbligatoria o svela cosa temevi di trovare!"
       },
       {
         "id": "cc06",
         "cardType": "obbligo",
         "intensity": "complicita",
-        "prompt": "Mostra all'altro le ultime 3 persone che hai cercato su Instagram.",
+        "prompt": "Fai vedere al tuo partner la tua ultima foto o chat salvata che parla di voi due come coppia.",
         "penalty": "Rifiuti? Penitenza doppia!"
       },
       {
         "id": "cc07",
         "cardType": "allineamento",
         "intensity": "complicita",
-        "prompt": "Al 3 indicate chi dei due ha fatto la prima mossa peggiore o più goffa.",
-        "penalty": "Non coincide! Raccontate subito come è andata davvero."
+        "prompt": "Al 3 indicate chi dei due ha fatto la mossa più goffa o tenera al vostro primo appuntamento.",
+        "penalty": "Non coincide! Raccontate subito quel primo appuntamento."
       },
       {
         "id": "cc08",
         "cardType": "verita",
         "intensity": "complicita",
-        "prompt": "Qual è il regalo più brutto o inutile che ti ha fatto l'altro (o un ex)?",
+        "prompt": "Qual è il regalo più buffo, sbagliato o inaspettato che ti ha fatto il tuo partner da quando state insieme?",
         "penalty": "Senza filtri: niente bugie diplomatiche!"
       },
       {
         "id": "cc09",
         "cardType": "obbligo",
         "intensity": "complicita",
-        "prompt": "Fai un massaggio vero alle spalle dell'altro per 30 secondi senza parlare.",
-        "penalty": "Se ti fermi prima bevi!"
+        "prompt": "Fai un massaggio lento alle spalle del tuo partner per 30 secondi e poi dagli un bacio dietro l'orecchio.",
+        "penalty": "Se ti fermi prima paghi pegno!"
       },
       {
         "id": "cc10",
         "cardType": "allineamento",
         "intensity": "complicita",
-        "prompt": "Al 3 indicate chi dei due spende più soldi in cazzate inutili.",
-        "penalty": "Non siete d'accordo! Paghi tu il prossimo giro."
+        "prompt": "Al 3 indicate chi dei due farebbe più fatica a gestire i conti insieme in una convivenza.",
+        "penalty": "Non siete d'accordo! Paghi tu la prossima cena romantica."
       },
       {
         "id": "cc11",
         "cardType": "verita",
         "intensity": "complicita",
-        "prompt": "Qual è la cosa che pensavi dell'altro prima di conoscerlo bene che poi era falsissima?",
+        "prompt": "Qual è il momento preciso del vostro inizio in cui hai capito che il tuo partner non era una semplice cotta ma qualcosa di serio?",
         "penalty": "Risposta sincera entro 10 secondi!"
       },
       {
         "id": "cc12",
         "cardType": "obbligo",
         "intensity": "complicita",
-        "prompt": "Bacia l'altro sulla guancia o sul collo tenendo le mani dietro la schiena.",
-        "penalty": "Se ti vergogni, sorso doppio!"
+        "prompt": "Bacia il tuo partner sulle labbra o sul collo tenendo le mani dietro la schiena per 10 secondi.",
+        "penalty": "Se ti tiri indietro, penitenza doppia!"
       },
       {
         "id": "cc13",
         "cardType": "allineamento",
         "intensity": "complicita",
-        "prompt": "Al 3 indicate chi dei due si addormenta sempre per primo guardando un film.",
-        "penalty": "Disaccordo! Penitenza per entrambi."
+        "prompt": "Al 3 indicate chi dei due ruba sempre le coperte e si addormenta per primo a letto insieme.",
+        "penalty": "Disaccordo! Bacio di pace per entrambi."
       },
       {
         "id": "cc14",
         "cardType": "verita",
         "intensity": "complicita",
-        "prompt": "C'è un messaggio che hai ricevuto questa settimana che non faresti vedere subito all'altro?",
-        "penalty": "O rispondi sì/no vero, o bevi!"
+        "prompt": "C'è un ex del passato su cui non hai ancora raccontato tutta la verità al tuo partner?",
+        "penalty": "O rispondi con sincerità, o sveli chi era!"
       },
       {
         "id": "cc15",
         "cardType": "obbligo",
         "intensity": "complicita",
-        "prompt": "Imita per 15 secondi l'altro quando è arrabbiato o geloso.",
-        "penalty": "Se l'altro non ride, bevi!"
+        "prompt": "Imita per 15 secondi come il tuo partner ti tiene il muso quando è geloso o offeso dopo una discussione.",
+        "penalty": "Se il tuo partner non ride, paga pegno!"
       },
       {
         "id": "cc16",
         "cardType": "allineamento",
         "intensity": "complicita",
-        "prompt": "Al 3 indicate chi dei due è più geloso ma fa finta di non esserlo.",
-        "penalty": "Non siete d’accordo! Ammettete entrambi l’ultima piccola scenata."
+        "prompt": "Al 3 indicate chi dei due è più permaloso per una battuta fatta in coppia.",
+        "penalty": "Non siete d’accordo! Raccontate l’ultima piccola scenata."
       },
       {
         "id": "cc17",
         "cardType": "allineamento",
         "intensity": "complicita",
-        "prompt": "Al 3 indicate chi dei due spende di più in cose inutili.",
-        "penalty": "Disaccordo! Ognuno mostra l’ultimo acquisto online."
+        "prompt": "Al 3 indicate chi dei due ricorda meglio le date importanti, i mensiversari e il vostro primo bacio.",
+        "penalty": "Disaccordo! Chi sbaglia prepara la prossima colazione a letto."
       },
       {
         "id": "cc18",
         "cardType": "verita",
         "intensity": "complicita",
-        "prompt": "Qual è la piccola abitudine dell’altro che ti fa impazzire ma trovi tenera?",
-        "penalty": "Se non rispondi entro 10s bevi 1 sorso!"
+        "prompt": "Qual è il gesto quotidiano del tuo partner che ti fa ancora battere il cuore senza che lui/lei lo sappia?",
+        "penalty": "Se non rispondi entro 10s, bacio immediato!"
       },
       {
         "id": "cc19",
         "cardType": "verita",
         "intensity": "complicita",
-        "prompt": "Qual è stata la prima impressione sbagliata che avevi dell’altro?",
+        "prompt": "Cosa ti faceva dubitare all’inizio della vostra relazione e oggi invece ami alla follia del tuo partner?",
         "penalty": "Racconta senza filtri!"
       },
       {
         "id": "cc20",
         "cardType": "obbligo",
         "intensity": "complicita",
-        "prompt": "Guardatevi negli occhi in silenzio per 15 secondi senza ridere.",
-        "penalty": "Chi ride per primo paga pegno!"
+        "prompt": "Tieni la mano del tuo partner, guardalo negli occhi e digli cosa ami di più del vostro stare insieme.",
+        "penalty": "Chi si imbarazza per primo paga pegno!"
       },
       {
         "id": "cp_va_c1",
         "cardType": "allineamento",
         "intensity": "complicita",
-        "prompt": "Al 3 indicate chi dei due si lascia influenzare di più dal giudizio degli amici storici.",
-        "penalty": "Non siete d’accordo! Un sorso e spiegate il perché.",
+        "prompt": "Al 3 indicate chi dei due si è innamorato per primo nella vostra storia.",
+        "penalty": "Non siete d’accordo! Raccontate quando lo avete capito entrambi.",
         "familiarita": "vecchi_amici"
       },
       {
         "id": "cp_va_c2",
         "cardType": "verita",
         "intensity": "complicita",
-        "prompt": "Qual è l’abitudine dell’altro che gli amici di sempre notano subito e su cui vi prendono in giro?",
-        "penalty": "Se non rispondi entro 10 secondi, 1 sorso!",
+        "prompt": "Qual è il momento più romantico vissuto col tuo partner che non scorderai mai nemmeno tra 20 anni?",
+        "penalty": "Se non rispondi entro 10 secondi, bacio lungo!",
         "familiarita": "vecchi_amici"
       },
       {
         "id": "cp_va_c3",
         "cardType": "allineamento",
         "intensity": "complicita",
-        "prompt": "Al 3 indicate chi dei due difenderebbe l’altro davanti al gruppo anche quando ha palesemente torto.",
-        "penalty": "Dissonanza! 1 sorso a testa.",
+        "prompt": "Al 3 indicate chi dei due soffre di più la mancanza quando dormite lontani per qualche notte.",
+        "penalty": "Dissonanza! Abbraccio di 10 secondi.",
         "familiarita": "vecchi_amici"
       },
       {
         "id": "cp_va_c4",
         "cardType": "obbligo",
         "intensity": "complicita",
-        "prompt": "Racconta in 15 secondi un momento in cui l’altro ti ha sorpreso davanti a persone che vi conoscono da anni.",
-        "penalty": "Rifiuto = 2 sorsi!",
+        "prompt": "Racconta in 15 secondi al tuo partner il dettaglio fisico o il sorriso che ti ha fatto perdere la testa quando vi siete conosciuti.",
+        "penalty": "Rifiuto = doppia penitenza romantica!",
         "familiarita": "vecchi_amici"
       }
     ],
@@ -2188,172 +2188,172 @@
         "id": "cp01",
         "cardType": "allineamento",
         "intensity": "piccante",
-        "prompt": "Al 3 indicate chi dei due ha le fantasie più spinte tra le lenzuola.",
-        "penalty": "Non coincide! Raccontate una fantasia ciascuno o bevete doppio."
+        "prompt": "Al 3 indicate chi dei due ha le fantasie più spinte sotto le lenzuola.",
+        "penalty": "Non coincide! Raccontatevi una fantasia di coppia ciascuno."
       },
       {
         "id": "cp02",
         "cardType": "verita",
         "intensity": "piccante",
-        "prompt": "Qual è la cosa che vorresti provare a letto ma non hai ancora avuto il coraggio di chiedere?",
-        "penalty": "Niente scuse: dillo ora o doppia penitenza!"
+        "prompt": "Qual è una fantasia a letto che vorresti realizzare col tuo partner ma non hai ancora proposto ad alta voce?",
+        "penalty": "Niente scuse: dillo ora al tuo partner!"
       },
       {
         "id": "cp03",
         "cardType": "obbligo",
         "intensity": "piccante",
-        "prompt": "Sussurra all'orecchio dell'altro cosa gli faresti stasera appena tornate a casa.",
-        "penalty": "Se diventi rosso o rifiuti, doppio shot!"
+        "prompt": "Sussurra all'orecchio del tuo partner cosa gli faresti stasera appena restate soli a letto.",
+        "penalty": "Se diventi rosso o rifiuti, doppia penitenza!"
       },
       {
         "id": "cp04",
         "cardType": "allineamento",
         "intensity": "piccante",
-        "prompt": "Al 3 indicate chi dei due resisterebbe di meno senza sesso per un mese.",
-        "penalty": "Disaccordo! Chi ha perso beve."
+        "prompt": "Al 3 indicate chi dei due resisterebbe di meno senza intimità di coppia per un mese.",
+        "penalty": "Disaccordo! Chi perde paga pegno al partner."
       },
       {
         "id": "cp05",
         "cardType": "verita",
         "intensity": "piccante",
-        "prompt": "Hai mai finto di raggiungere il piacere o finto che ti piacesse qualcosa a letto?",
-        "penalty": "La sincerità salva, la bugia fa bere!"
+        "prompt": "Qual è il momento intimo più travolgente che hai vissuto col tuo partner finora?",
+        "penalty": "La sincerità accende, l'omertà paga pegno!"
       },
       {
         "id": "cp06",
         "cardType": "obbligo",
         "intensity": "piccante",
-        "prompt": "Bacio lento sul collo dell'altro per 10 secondi senza usare le mani.",
+        "prompt": "Bacio lento sul collo e sulla mascella del tuo partner per 10 secondi senza usare le mani.",
         "penalty": "Obbligo o penitenza doppia!"
       },
       {
         "id": "cp07",
         "cardType": "allineamento",
         "intensity": "piccante",
-        "prompt": "Al 3 indicate chi dei due prende quasi sempre l'iniziativa sotto le coperte.",
-        "penalty": "Non coincide! Fate pace con un bacio da 10 secondi."
+        "prompt": "Al 3 indicate chi dei due prende quasi sempre l'iniziativa fisica a letto.",
+        "penalty": "Non coincide! Fate pace con un bacio appassionato da 10 secondi."
       },
       {
         "id": "cp08",
         "cardType": "verita",
         "intensity": "piccante",
-        "prompt": "Qual è il posto più assurdo o rischioso dove l'hai fatto (con o senza l'altro)?",
-        "penalty": "Racconta il posto esatto!"
+        "prompt": "Qual è il posto più rischioso o insolito dove hai fatto l'amore col tuo partner (o dove vorresti portarlo)?",
+        "penalty": "Confessa il posto esatto!"
       },
       {
         "id": "cp09",
         "cardType": "obbligo",
         "intensity": "piccante",
-        "prompt": "Togliti un accessorio o un indumento a scelta, oppure bacia l'altro con passione per 10 secondi.",
+        "prompt": "Bacia il tuo partner sulle labbra con passione per 10 secondi senza staccarti per primo.",
         "penalty": "Niente fughe!"
       },
       {
         "id": "cp10",
         "cardType": "allineamento",
         "intensity": "piccante",
-        "prompt": "Al 3 indicate chi dei due è più bravo a baciare davvero.",
+        "prompt": "Al 3 indicate chi dei due bacia in modo più travolgente nei momenti intimi.",
         "penalty": "Disaccordo! Test immediato di 10 secondi per decidere."
       },
       {
         "id": "cp11",
         "cardType": "verita",
         "intensity": "piccante",
-        "prompt": "Qual è la parte del corpo dell'altro che ti eccita in due secondi?",
-        "penalty": "Indicala e baciala, o bevi!"
+        "prompt": "Qual è la parte del corpo del tuo partner che ti accende desiderio in due secondi?",
+        "penalty": "Indicala e baciala subito!"
       },
       {
         "id": "cp12",
         "cardType": "obbligo",
         "intensity": "piccante",
-        "prompt": "Manda un messaggio piccante o ambiguo all'altro seduti uno davanti all'altro mentre vi guardate.",
-        "penalty": "Se ridi bevi!"
+        "prompt": "Scrivi sul telefono un messaggio bollente per il tuo partner guardandolo fisso negli occhi finché non lo legge.",
+        "penalty": "Se distogli lo sguardo paghi pegno!"
       },
       {
         "id": "cp13",
         "cardType": "allineamento",
         "intensity": "piccante",
-        "prompt": "Al 3 indicate chi dei due guarderebbe volentieri un film per adulti insieme.",
-        "penalty": "Non coincide! Penitenza di coppia."
+        "prompt": "Al 3 indicate chi dei due proporrebbe per primo una serata diversa o un gioco di ruolo in camera da letto.",
+        "penalty": "Non coincide! Scegliete insieme il prossimo scenario."
       },
       {
         "id": "cp14",
         "cardType": "verita",
         "intensity": "piccante",
-        "prompt": "Qual è stata la cosa più trasgressiva che hai mai fatto di notte?",
+        "prompt": "Qual è l'outfit o il dettaglio con cui il tuo partner ti fa perdere completamente la testa?",
         "penalty": "Confessione istantanea!"
       },
       {
         "id": "cp15",
         "cardType": "obbligo",
         "intensity": "piccante",
-        "prompt": "Passa un dito lento lungo il collo o il braccio dell'altro guardandolo fisso negli occhi per 15s.",
+        "prompt": "Sfiora lentamente il collo e il viso del tuo partner guardandolo negli occhi per 15 secondi prima di baciarlo.",
         "penalty": "Chi cede prima fa penitenza!"
       },
       {
         "id": "cp16",
         "cardType": "allineamento",
         "intensity": "piccante",
-        "prompt": "Al 3 indicate chi dei due prende più spesso l’iniziativa sotto le lenzuola.",
-        "penalty": "Non coincide! Brindisi obbligato."
+        "prompt": "Al 3 indicate chi dei due cerca di più i baci e il contatto fisico durante una serata fuori.",
+        "penalty": "Non coincide! Bacio istantaneo!"
       },
       {
         "id": "cp17",
         "cardType": "verita",
         "intensity": "piccante",
-        "prompt": "Qual è il posto più assurdo dove vorresti farlo almeno una volta?",
-        "penalty": "Se censuri, doppio sorso!"
+        "prompt": "Qual è il posto più audace dove vorresti fare l'amore col tuo partner almeno una volta nella vita?",
+        "penalty": "Niente censure!"
       },
       {
         "id": "cp18",
         "cardType": "verita",
         "intensity": "piccante",
-        "prompt": "Qual è la cosa che ti accende all’istante nell’altro senza nemmeno sfiorarti?",
+        "prompt": "Qual è il gesto del tuo partner che ti accende desiderio all’istante ancora prima di sfiorarti?",
         "penalty": "Risposta secca in 5 secondi!"
       },
       {
         "id": "cp19",
         "cardType": "obbligo",
         "intensity": "piccante",
-        "prompt": "Sussurra all’orecchio dell’altro cosa vorresti fare stasera una volta a casa.",
-        "penalty": "Niente risatine timide!"
+        "prompt": "Sussurra al tuo partner il tuo punto preferito dove essere baciato e fatti dare subito un bacio lì.",
+        "penalty": "Niente timidezza!"
       },
       {
         "id": "cp20",
         "cardType": "allineamento",
         "intensity": "piccante",
-        "prompt": "Al 3 indicate chi dei due farebbe più fatica a resistere un mese intero.",
-        "penalty": "Disaccordo! Penitenza doppia."
+        "prompt": "Al 3 indicate chi dei due è più imprevedibile e passionale nei preliminari.",
+        "penalty": "Disaccordo! Penitenza di coppia."
       },
       {
         "id": "cp_va_p1",
         "cardType": "verita",
         "intensity": "piccante",
-        "prompt": "C’è qualcosa nella vostra intimità o complicità che nessuno di questo gruppo sospetterebbe mai?",
-        "penalty": "Scena muta = 2 sorsi!",
+        "prompt": "Qual è una cosa della vostra intimità di coppia che vorresti ripetere molto più spesso col tuo partner?",
+        "penalty": "Scena muta = penitenza doppia!",
         "familiarita": "vecchi_amici"
       },
       {
         "id": "cp_va_p2",
         "cardType": "allineamento",
         "intensity": "piccante",
-        "prompt": "Al 3 indicate chi dei due ha raccontato meno dettagli della propria vita privata agli amici storici.",
-        "penalty": "Non siete d’accordo! 1 sorso a testa.",
+        "prompt": "Al 3 indicate chi dei due si spoglia con lo sguardo prima quando uscite a cena eleganti.",
+        "penalty": "Non siete d’accordo! Bacio sul collo.",
         "familiarita": "vecchi_amici"
       },
       {
         "id": "cp_va_p3",
         "cardType": "verita",
         "intensity": "piccante",
-        "prompt": "Qual è il segreto più divertente o piccante che condividete e che non avete mai detto al tavolo?",
-        "penalty": "Censura = 2 sorsi!",
+        "prompt": "Qual è il momento più hot che avete vissuto insieme in vacanza o fuori casa?",
+        "penalty": "Censura = pegno doppio!",
         "familiarita": "vecchi_amici"
       },
       {
         "id": "cp_va_p4",
         "cardType": "obbligo",
         "intensity": "piccante",
-        "prompt": "Sussurra all’altro una cosa che vorresti fare stasera appena tornate a casa da soli.",
-        "penalty": "Rifiuto = 2 sorsi!",
+        "prompt": "Avvicinati all’orecchio del tuo partner e digli esattamente come vuoi che inizi la vostra nottata stasera.",
+        "penalty": "Rifiuto = penitenza immediata!",
         "familiarita": "vecchi_amici"
       }
     ],
@@ -2362,91 +2362,91 @@
         "id": "cpr01",
         "cardType": "allineamento",
         "intensity": "profondo",
-        "prompt": "Al 3 indicate chi dei due ha più paura di mostrarsi davvero fragile.",
-        "penalty": "Non coincide! Raccontatevi un momento recente in cui vi siete sentiti vulnerabili."
+        "prompt": "Al 3 indicate chi dei due ha più paura di mostrarsi fragile davanti al partner durante una crisi.",
+        "penalty": "Non coincide! Raccontatevi un momento recente in cui vi siete sentiti vulnerabili nella coppia."
       },
       {
         "id": "cpr02",
         "cardType": "verita",
         "intensity": "profondo",
-        "prompt": "Qual è una cosa che non mi hai mai detto chiaramente per paura di ferirmi o di cambiare gli equilibri?"
+        "prompt": "Qual è una cosa che non hai ancora detto chiaramente al tuo partner sulla vostra relazione per paura di ferirlo?"
       },
       {
         "id": "cpr03",
         "cardType": "obbligo",
         "intensity": "profondo",
-        "prompt": "Guardatevi negli occhi per 20 secondi in silenzio, poi dite una cosa per cui siete grati all’altro oggi."
+        "prompt": "Guardatevi negli occhi come fidanzati per 20 secondi in silenzio, poi dì al tuo partner una cosa per cui sei grato di averlo nella tua vita oggi."
       },
       {
         "id": "cpr04",
         "cardType": "allineamento",
         "intensity": "profondo",
-        "prompt": "Al 3 indicate chi dei due tende a rimandare le conversazioni importanti.",
-        "penalty": "Non siete d’accordo! Ognuno nomini un tema su cui sente che si potrebbe parlare di più."
+        "prompt": "Al 3 indicate chi dei due tende a rimandare i discorsi importanti sul futuro di coppia.",
+        "penalty": "Non siete d’accordo! Nominate un tema di coppia su cui parlare con più calma."
       },
       {
         "id": "cpr05",
         "cardType": "verita",
         "intensity": "profondo",
-        "prompt": "In cosa senti che siamo cresciuti insieme nell’ultimo anno, e in cosa invece ci stiamo allontanando?"
+        "prompt": "In cosa senti che la vostra coppia è cresciuta di più nell’ultimo anno, e dove invece dovete proteggervi di più?"
       },
       {
         "id": "cpr06",
         "cardType": "verita",
         "intensity": "profondo",
-        "prompt": "Qual è il sogno personale che stai tenendo in sospeso e in che modo posso aiutarti a non rimandarlo?"
+        "prompt": "Qual è il tuo sogno personale che vorresti realizzare avendo il tuo partner accanto, e come può sostenerti?"
       },
       {
         "id": "cpr07",
         "cardType": "obbligo",
         "intensity": "profondo",
-        "prompt": "Dì all’altro una qualità che ammiri in lui/lei e che secondo te non riconosce abbastanza a se stesso/a."
+        "prompt": "Dì al tuo partner una qualità profonda che ami in lui/lei e che secondo te sottovaluta di se stesso/a."
       },
       {
         "id": "cpr08",
         "cardType": "allineamento",
         "intensity": "profondo",
-        "prompt": "Al 3 indicate chi dei due ha più bisogno di sentirsi rassicurato nei momenti di silenzio.",
-        "penalty": "Ditevi come preferite essere ascoltati quando siete giù."
+        "prompt": "Al 3 indicate chi dei due ha più bisogno di conferme e rassicurazioni affettive nei momenti difficili.",
+        "penalty": "Spiegate al partner come vi fa sentire amati nei momenti no."
       },
       {
         "id": "cpr09",
         "cardType": "verita",
         "intensity": "profondo",
-        "prompt": "Quale confine personale è per te sacro e non vuoi mai che venga superato?"
+        "prompt": "Quale confine o valore nella vostra storia d’amore è per te sacro e non deve mai mancare?"
       },
       {
         "id": "cpr10",
         "cardType": "verita",
         "intensity": "profondo",
-        "prompt": "Se tra 5 anni guardassimo indietro a oggi, di quale scelta insieme vorresti essere più fiero/a?"
+        "prompt": "Se tra 5 anni conviveste o costruiste casa insieme, qual è l'abitudine di oggi che vorresti portare intatta con voi?"
       },
       {
         "id": "cpr11",
         "cardType": "obbligo",
         "intensity": "profondo",
-        "prompt": "Chiedi scusa per una piccola cosa recente che forse hai sottovalutato, senza aggiungere \"ma\"."
+        "prompt": "Chiedi scusa al tuo partner per una piccola disattenzione recente verso di lui/lei, senza aggiungere nessun \"ma\"."
       },
       {
         "id": "cpr12",
         "cardType": "allineamento",
         "intensity": "profondo",
-        "prompt": "Al 3 indicate chi dei due sogna più in grande per il futuro.",
-        "penalty": "Raccontate un obiettivo che vi spaventa ammettere ad alta voce."
+        "prompt": "Al 3 indicate chi dei due immagina e progetta di più il vostro futuro insieme (casa, viaggi, famiglia).",
+        "penalty": "Raccontate un desiderio sul vostro futuro che vi emoziona."
       },
       {
         "id": "cp_va_d1",
         "cardType": "verita",
         "intensity": "profondo",
-        "prompt": "In cosa senti che questa persona ti conosce meglio di quanto ti conoscano gli amici di una vita?",
-        "penalty": "Prenditi 15 secondi per dirglielo guardandola negli occhi.",
+        "prompt": "In cosa senti che il tuo partner ti capisce come nessun altro nella tua vita è mai riuscito a fare?",
+        "penalty": "Prenditi 15 secondi per dirglielo guardandolo negli occhi.",
         "familiarita": "vecchi_amici"
       },
       {
         "id": "cp_va_d2",
         "cardType": "allineamento",
         "intensity": "profondo",
-        "prompt": "Al 3 indicate chi dei due fa più fatica a chiedere aiuto quando sta davvero male.",
+        "prompt": "Al 3 indicate chi dei due fa più fatica a lasciarsi consolare dal partner quando qualcosa va storto.",
         "penalty": "Se non siete d’accordo, raccontatevi il perché in 20 secondi.",
         "familiarita": "vecchi_amici"
       },
@@ -2454,16 +2454,16 @@
         "id": "cp_va_d3",
         "cardType": "verita",
         "intensity": "profondo",
-        "prompt": "Qual è una paura sul vostro futuro che non hai ancora detto ad alta voce nemmeno alle persone più vicine?",
-        "penalty": "Condivisione libera — zero penitenza, solo ascolto.",
+        "prompt": "Qual è una paura sul vostro futuro da fidanzati (cambiamenti, lavoro, distanza, convivenza) che non hai ancora condiviso del tutto?",
+        "penalty": "Condivisione libera — zero penitenza, solo ascolto di coppia.",
         "familiarita": "vecchi_amici"
       },
       {
         "id": "cp_va_d4",
         "cardType": "obbligo",
         "intensity": "profondo",
-        "prompt": "Di’ all’altro una cosa per cui gli sei grato oggi e che nella fretta quotidiana dai per scontata.",
-        "penalty": "Un abbraccio sincero di almeno 5 secondi.",
+        "prompt": "Dì al tuo partner qualcosa che ami della vostra relazione oggi e che nella routine rischi di dare per scontato.",
+        "penalty": "Un abbraccio stretto e bacio sulla fronte.",
         "familiarita": "vecchi_amici"
       }
     ]

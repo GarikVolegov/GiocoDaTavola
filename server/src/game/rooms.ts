@@ -2393,11 +2393,13 @@ export class RoomStore {
           (room.currentPartyCard as AssurdoCard | undefined)?.cardType === 'gogna' &&
           room.gognaTargetNickname != null;
         const isActiveFlashDefense =
+          room.players.size >= 2 &&
           sub === 'flash' &&
           room.flashResult != null &&
           !room.flashResult.isEmpty &&
           !room.flashResult.isUnanimous;
         const isActivePreferirestiDefense =
+          room.players.size >= 2 &&
           sub === 'preferiresti' &&
           room.preferirestiResult != null &&
           !room.preferirestiResult.isEmpty &&
@@ -2812,12 +2814,18 @@ export class RoomStore {
         const countA = [...room.votes.values()].filter((v) => v === 'A').length;
         const countB = [...room.votes.values()].filter((v) => v === 'B').length;
         const totalVotes = countA + countB;
+        const isSoloRoom = room.players.size === 1 && totalVotes === 1;
         const isEmpty = totalVotes === 0;
-        const isUnanimous = !isEmpty && (countA === 0 || countB === 0);
-        const isTie = !isEmpty && countA === countB;
+        const isUnanimous = !isEmpty && !isSoloRoom && (countA === 0 || countB === 0);
+        const isTie = !isEmpty && !isSoloRoom && countA === countB;
         let minoritySide: VoteChoice | null = null;
         let majoritySide: VoteChoice | null = null;
-        if (!isEmpty && !isUnanimous && !isTie) {
+        if (isSoloRoom) {
+          majoritySide = roundStats.computeSoloMajoritySide(
+            room.currentPartyCard?.id ?? room.currentDilemma?.id ?? `flash_${transition.dilemmaIndex}`,
+          );
+          minoritySide = majoritySide === 'A' ? 'B' : 'A';
+        } else if (!isEmpty && !isUnanimous && !isTie) {
           minoritySide = countA < countB ? 'A' : 'B';
           majoritySide = countA > countB ? 'A' : 'B';
         }
@@ -3020,15 +3028,24 @@ export class RoomStore {
         }
 
         const totalVotes = optionTallies.reduce((sum, o) => sum + o.count, 0);
+        const isSoloRoom = room.players.size === 1 && totalVotes === 1;
         const isEmpty = totalVotes === 0;
         const activeOptions = optionTallies.filter((o) => o.count > 0);
         const maxCount = activeOptions.reduce((m, o) => Math.max(m, o.count), 0);
-        const isUnanimous = !isEmpty && activeOptions.length === 1;
-        const isTie = !isEmpty && activeOptions.length > 1 && activeOptions.every((o) => o.count === maxCount);
-        const winningChoices: PreferirestiChoice[] =
+        const isUnanimous = !isEmpty && !isSoloRoom && activeOptions.length === 1;
+        const isTie = !isEmpty && !isSoloRoom && activeOptions.length > 1 && activeOptions.every((o) => o.count === maxCount);
+        let winningChoices: PreferirestiChoice[] =
           !isEmpty && !isTie
             ? activeOptions.filter((o) => o.count === maxCount).map((o) => o.letter)
             : [];
+        if (isSoloRoom) {
+          const topIdx = roundStats.computeSoloPreferirestiTopIndex(
+            room.currentPartyCard?.id ?? `pref_${transition.dilemmaIndex}`,
+            optLabels.length,
+          );
+          const topLetter = PREFERIRESTI_CHOICES[topIdx] ?? 'A';
+          winningChoices = [topLetter];
+        }
         const winningSet = new Set<PreferirestiChoice>(winningChoices);
 
         const minorityNicknames: string[] = [];
@@ -3202,19 +3219,22 @@ export class RoomStore {
     if (transition.phase === 'HOT_TAKE_REVEAL') {
       const reveal = hotTake.buildHotTakeReveal(room);
       if (reveal && reveal.scores.length > 0) {
+        const refAvg = reveal.communityAverage ?? reveal.average;
         for (const entry of reveal.scores) {
           const st = ensureStats(room, entry.playerId);
           st.rounds++;
-          if (Math.abs(entry.score - reveal.average) <= 1.5) {
+          if (Math.abs(entry.score - refAvg) <= 1.5) {
             st.majorityCount++;
             room.partyScores.set(entry.playerId, (room.partyScores.get(entry.playerId) ?? 0) + 50);
           } else {
             st.minorityCount++;
           }
         }
-        if (reveal.lowest) ensureStats(room, reveal.lowest.playerId).defendedCount++;
-        if (reveal.highest && reveal.highest.playerId !== reveal.lowest?.playerId) {
-          ensureStats(room, reveal.highest.playerId).defendedCount++;
+        if (room.players.size >= 2) {
+          if (reveal.lowest) ensureStats(room, reveal.lowest.playerId).defendedCount++;
+          if (reveal.highest && reveal.highest.playerId !== reveal.lowest?.playerId) {
+            ensureStats(room, reveal.highest.playerId).defendedCount++;
+          }
         }
       }
     }

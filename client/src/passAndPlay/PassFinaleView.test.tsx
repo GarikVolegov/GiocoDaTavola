@@ -112,4 +112,34 @@ describe('PassFinaleView', () => {
     expect(writeText).toHaveBeenCalledTimes(1);
     expect(writeText.mock.calls[0][0]).toContain('SCHIERATI');
   });
+
+  it('renders dedicated Specchio Decisionale finale when playing Solo (1 player)', () => {
+    let solo = createInitialPassState();
+    solo = passReducer(solo, {
+      type: 'START_GAME',
+      mode: 'flash',
+      players: [PLAYERS[0]],
+      cards: FALLBACK_DECKS.flash.slice(0, 2),
+    });
+    solo = passReducer(solo, { type: 'RESOLVE_FLASH', result: 'A' });
+    solo = passReducer(solo, { type: 'NEXT_ROUND' });
+    solo = passReducer(solo, { type: 'RESOLVE_FLASH', result: 'B' });
+    solo = passReducer(solo, { type: 'NEXT_ROUND' });
+
+    render(
+      <PassFinaleView
+        state={solo}
+        recordSavedCode={null}
+        onReplay={() => {}}
+        onHome={() => {}}
+      />,
+    );
+
+    expect(screen.getByText(/specchio decisionale/i)).toBeInTheDocument();
+    expect(screen.getByText(/la tua bussola vs il mondo/i)).toBeInTheDocument();
+    expect(screen.getByText(/il tuo archetipo decisionale/i)).toBeInTheDocument();
+    expect(screen.getByText(/il tuo spunto finale/i)).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /pagelle/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /nuova partita/i })).toBeInTheDocument();
+  });
 });

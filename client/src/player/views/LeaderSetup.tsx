@@ -47,7 +47,7 @@ const PARTY_MODE_CARDS: Array<{
   { id: 'classico', label: '🎭 Classico', desc: 'Dilemmi classici con discussione aperta, secondo voto e rilancio finale', soloOk: true },
   { id: 'infiltrato', label: '🕵️ L’Infiltrato', desc: 'Domande segrete sui telefoni, 1 parola a testa e accusa al volo', soloOk: false },
   { id: 'assurdo', label: '🤪 Assurdo', desc: 'Prove di dignità e gogna al tavolo senza timer', soloOk: true },
-  { id: 'coppie', label: '🔥 Coppie', desc: 'Coppie da 2 su nomi reali e sfide a punti', soloOk: false },
+  { id: 'coppie', label: '🔥 Coppie', desc: 'Per fidanzati: intesa, verità e sfide di coppia', soloOk: false },
   { id: 'preferiresti', label: '🔀 Preferiresti', desc: 'Quattro alternative assurde tra cui scegliere e confrontarsi', soloOk: true },
   { id: 'cruciverba', label: '🧩 Cruciverba', desc: 'Cruciverba cooperativo a turni senza fretta né timer', soloOk: true },
   { id: 'tribunale', label: '⚖️ Tribunale', desc: 'Arringhe faccia a faccia tra Accusa e Difesa davanti alla giuria', soloOk: false },
@@ -405,7 +405,7 @@ export default function LeaderSetup({
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                     <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#fbcfe8', textTransform: 'uppercase' }}>
-                      💕 Coppie della serata
+                      💕 Coppie di fidanzati
                     </span>
                     {players.length >= 4 && players.length % 2 === 0 && onShuffleCouples && (
                       <button

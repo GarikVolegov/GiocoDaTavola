@@ -118,14 +118,17 @@ describe('PassAndPlayApp UI', () => {
     });
   });
 
-  it('allows starting Coppie with odd player count (3 players)', async () => {
+  it('requires even pairs of partners for Coppie (fidanzati) and starts cleanly when paired', async () => {
     renderPassApp();
     fireEvent.click(screen.getByRole('button', { name: /scegli singolo gioco/i }));
     fireEvent.click(screen.getByRole('button', { name: /🔥 coppie/i }));
     addPlayers(['Marco', 'Giulia', 'Luca']);
 
-    expect(screen.getByText(/siete in 3 \(dispari\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/coppie è pensata per fidanzati/i)).toBeInTheDocument();
     const startBtn = screen.getByRole('button', { name: /inizia la partita/i });
+    expect(startBtn).toBeDisabled();
+
+    addPlayers(['Elena']);
     expect(startBtn).not.toBeDisabled();
 
     fireEvent.click(startBtn);
@@ -179,14 +182,48 @@ describe('PassAndPlayApp UI', () => {
     });
   });
 
-  it('starts solo play (Da solo) immediately without adding extra players', async () => {
+  it('starts solo play (Da solo) immediately, shows Bussola del Mondo + Avvocato del Diavolo, allows flip, and reaches Specchio Decisionale finale', async () => {
     renderPassApp();
     fireEvent.click(screen.getByRole('button', { name: /👤 da solo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /scegli singolo gioco/i }));
+    fireEvent.click(screen.getByRole('button', { name: /⚡ flash/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /opzioni serata/i }));
+    fireEvent.click(screen.getByRole('button', { name: /3 round/i }));
+
     const startBtn = screen.getByRole('button', { name: /inizia la partita/i });
     expect(startBtn).not.toBeDisabled();
     fireEvent.click(startBtn);
     await waitFor(() => {
-      expect(screen.getByText(/round 1\/5/i)).toBeInTheDocument();
+      expect(screen.getByText(/round 1\/3/i)).toBeInTheDocument();
+    });
+
+    const firstOpt = document.querySelector<HTMLButtonElement>('button[class*="_option_"]');
+    expect(firstOpt).not.toBeNull();
+    fireEvent.click(firstOpt!);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('solo-crowd-compass')).toBeInTheDocument();
+      expect(screen.getByTestId('solo-devils-advocate')).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/minoranza beve/i)).toBeNull();
+
+    // Test changing mind after reading the counter-argument
+    fireEvent.click(screen.getByRole('button', { name: /questa obiezione mi ha convinto/i }));
+    expect(screen.getByText(/prospettiva ribaltata/i)).toBeInTheDocument();
+
+    // Finish rounds 2 and 3 -> Solo Finale
+    for (let i = 0; i < 2; i++) {
+      fireEvent.click(screen.getByRole('button', { name: /prossimo round|scopri il gran finale/i }));
+      const opt = document.querySelector<HTMLButtonElement>('button[class*="_option_"]');
+      expect(opt).not.toBeNull();
+      fireEvent.click(opt!);
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: /scopri il gran finale/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/specchio decisionale/i)).toBeInTheDocument();
+      expect(screen.getByText(/il tuo archetipo decisionale/i)).toBeInTheDocument();
     });
   });
 });

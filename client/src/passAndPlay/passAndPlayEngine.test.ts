@@ -6,6 +6,7 @@ import {
   passReducer,
   computePassAwards,
   computePassFinaleSummary,
+  computeSoloCrowdSplit,
   getCurrentReaderPlayer,
   type PassPlayer,
 } from './passAndPlayEngine';
@@ -333,20 +334,66 @@ describe('passAndPlayEngine', () => {
     expect(summary.moments[1].liveVerdictLabel).not.toMatch(/strad|opzione/i);
   });
 
-  it('supports solo (1 player) in solo-compatible modes', () => {
+  it('supports solo (1 player) with simulated crowd split, Avvocato del Diavolo flip, and solo finale', () => {
+    const split2 = computeSoloCrowdSplit(FALLBACK_DECKS.flash[0].id, 2);
+    expect(split2).toHaveLength(2);
+    expect(split2[0] + split2[1]).toBe(100);
+
     let s = createInitialPassState();
     s = passReducer(s, {
       type: 'START_GAME',
       mode: 'flash',
       players: [PLAYERS_3[0]],
-      cards: FALLBACK_DECKS.flash.slice(0, 1),
+      cards: FALLBACK_DECKS.flash.slice(0, 2),
     });
     expect(s.phase).toBe('DEBATE');
     expect(getCurrentReaderPlayer(s)?.id).toBe('p1');
+
+    // Solo Flash always enters ROUND_RESULT with crowd comparison + counterArgument
     s = passReducer(s, { type: 'RESOLVE_FLASH', result: 'A' });
-    if (s.phase === 'ROUND_RESULT') {
-      s = passReducer(s, { type: 'NEXT_ROUND' });
-    }
+    expect(s.phase).toBe('ROUND_RESULT');
+    expect(s.roundOutcome?.soloMode).toBe(true);
+    expect(s.roundOutcome?.crowdPctForChoice).toBe(split2[0]);
+    expect(s.roundOutcome?.counterArgument).toBeTruthy();
+
+    // Flipping after reading the objection records a real flip and toggles chosenSide
+    s = passReducer(s, { type: 'SOLO_FLIP_AFTER_OBJECTION' });
+    expect(s.phase).toBe('ROUND_RESULT');
+    expect(s.roundOutcome?.soloFlipped).toBe(true);
+    expect(s.roundOutcome?.chosenSide).toBe('B');
+    expect(s.stats.p1.flips).toBe(1);
+
+    s = passReducer(s, { type: 'NEXT_ROUND' });
+    expect(s.phase).toBe('DEBATE');
+    s = passReducer(s, { type: 'RESOLVE_FLASH', result: 'B' });
+    expect(s.phase).toBe('ROUND_RESULT');
+    s = passReducer(s, { type: 'NEXT_ROUND' });
+    expect(s.phase).toBe('FINAL_AWARDS');
+
+    const soloAwards = computePassAwards(s);
+    expect(soloAwards.some((a) => a.id === 'mente_aperta')).toBe(true);
+    const soloSummary = computePassFinaleSummary(s);
+    expect(soloSummary.verdict.playerCount).toBe(1);
+    expect(soloSummary.verdict.title).toBeTruthy();
+  });
+
+  it('supports solo Preferiresti (4 choices) with 4-way crowd distribution', () => {
+    const split4 = computeSoloCrowdSplit(FALLBACK_DECKS.preferiresti[0].id, 4);
+    expect(split4).toHaveLength(4);
+    expect(split4.reduce((a, b) => a + b, 0)).toBe(100);
+
+    let s = createInitialPassState();
+    s = passReducer(s, {
+      type: 'START_GAME',
+      mode: 'preferiresti',
+      players: [PLAYERS_3[0]],
+      cards: FALLBACK_DECKS.preferiresti.slice(0, 1),
+    });
+    s = passReducer(s, { type: 'RESOLVE_PREFERIRESTI', choice: 'B' });
+    expect(s.phase).toBe('ROUND_RESULT');
+    expect(s.roundOutcome?.chosenOptionIndex).toBe(1);
+    expect(s.roundOutcome?.crowdSplitPcts).toEqual(split4);
+    s = passReducer(s, { type: 'NEXT_ROUND' });
     expect(s.phase).toBe('FINAL_AWARDS');
   });
 });
