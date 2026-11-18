@@ -14,7 +14,7 @@ export default function FinalCta({ onCreate }: FinalCtaProps) {
       </h2>
       <p className={styles.finalP}>Apri lo schermo grande, fai inquadrare il QR agli amici e via.</p>
       <div className={styles.finalSwing}>
-        <Swing animated width={240} height={14} labels />
+        <Swing animated width={240} height={14} />
       </div>
       <Button variant="primary" size="lg" onClick={onCreate}>Crea una partita</Button>
       <p className={styles.northstarNote}>

@@ -2,7 +2,7 @@
 // phase change, with no Web Audio dependency so it stays unit-testable. `sfx.ts` turns
 // the returned name into an actual sound.
 
-import type { GamePhase } from '../../shared/events';
+import type { GamePhase, PartyMode } from '../../shared/events';
 
 export type SfxName =
   | 'reveal'
@@ -25,6 +25,8 @@ export interface CueGame {
     convinced: readonly unknown[];
     vacillare: readonly { received: 0 | 1 | 2 }[];
   } | null;
+  partyMode?: PartyMode;
+  partyCard?: { mode?: PartyMode } | null;
 }
 
 /** The sting to play when the host moves from `prev` to `next`, or null for a quiet change. */
@@ -54,6 +56,27 @@ export function sfxForTransition(
       const scored = !!r && (r.convinced.length > 0 || r.vacillare.some((v) => v.received > 0));
       return scored ? 'win' : 'reveal';
     }
+    case 'STORY_INTRO':
+    case 'SCENE_INTRO':
+    case 'TAPPA_RECAP':
+      return 'warp';
+    case 'DEFENSE': {
+      const mode = game.partyCard?.mode ?? game.partyMode;
+      // Infiltrato plays its emergency siren via HostApp instead of a debate clash.
+      return mode === 'infiltrato' ? null : 'clash';
+    }
+    case 'DUO_ARGUE':
+    case 'TRIBUNALE_ARGUE':
+      return 'clash';
+    case 'SCENE_CONSEQUENCE':
+    case 'STORY_EPILOGUE':
+    case 'GROUP_MIND_REVEAL':
+    case 'WRITE_REVEAL':
+    case 'HOT_TAKE_REVEAL':
+    case 'CRUCIVERBA_REVEAL':
+    case 'TRIBUNALE_REVEAL':
+    case 'TELEPATHY_REVEAL':
+      return 'insight';
     case 'FINAL_AWARDS':
     case 'DUO_PORTRAIT':
       return 'awards';

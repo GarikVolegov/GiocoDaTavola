@@ -75,6 +75,8 @@ interface LeaderSetupProps {
   setSquadreOn: Dispatch<SetStateAction<boolean>>;
   tappaCounts: TappaCounts | null | undefined;
   humanCount: number;
+  playMode?: 'solo' | 'gruppo';
+  setPlayMode?: Dispatch<SetStateAction<'solo' | 'gruppo'>>;
   canStart: boolean;
   onStart: () => void;
   startError: string | null;
@@ -88,6 +90,10 @@ interface LeaderSetupProps {
   setFamiliarita?: Dispatch<SetStateAction<Familiarita>>;
   theme?: string;
   setTheme?: Dispatch<SetStateAction<string>>;
+  players?: Array<{ id: string; nickname: string }>;
+  couplePairs?: Array<[string, string]>;
+  onShuffleCouples?: () => void;
+  onSwapCoupleMembers?: (idA: string, idB: string) => void;
 }
 
 function durataLabel(min: number): string {
@@ -108,8 +114,8 @@ export default function LeaderSetup({
   setCaos,
   delicatoOptIn,
   setDelicatoOptIn,
-  serataLunga,
-  setSerataLunga,
+  serataLunga: _serataLunga,
+  setSerataLunga: _setSerataLunga,
   format,
   setFormat,
   percorsoId = 'bussola',
@@ -129,10 +135,12 @@ export default function LeaderSetup({
   setSquadreOn,
   tappaCounts,
   humanCount,
+  playMode = 'gruppo',
+  setPlayMode,
   canStart,
   onStart,
   startError,
-  partyMode = 'flash',
+  partyMode = 'mix',
   setPartyMode,
   partyIntensity = 'complicita',
   setPartyIntensity,
@@ -142,9 +150,15 @@ export default function LeaderSetup({
   setFamiliarita,
   theme = '',
   setTheme,
+  players = [],
+  couplePairs = [],
+  onShuffleCouples,
+  onSwapCoupleMembers,
 }: LeaderSetupProps) {
   const [activeTab, setActiveTab] = useState<'party' | 'classica'>('party');
+  const [showSingleModes, setShowSingleModes] = useState(false);
   const [openInfo, setOpenInfo] = useState<string | null>(null);
+  const [swapSelectionId, setSwapSelectionId] = useState<string | null>(null);
   const toggleInfo = (id: string) => setOpenInfo((cur) => (cur === id ? null : id));
 
   const renderInfoBtn = (id: string, _label: string) => {
@@ -190,8 +204,9 @@ export default function LeaderSetup({
   const selectPartyMode = (mode: PartyMode) => {
     setPartyMode?.(mode);
     setTipoPartita('classica');
-    setGameMode(mode === 'coppie' && humanCount === 2 ? 'duello' : 'gruppo');
+    setGameMode('gruppo');
     setInfiltratoOn(mode === 'infiltrato');
+    if (mode === 'mix') setShowSingleModes(false);
   };
 
   const switchToClassic = () => {
@@ -201,7 +216,7 @@ export default function LeaderSetup({
 
   const switchToParty = () => {
     setActiveTab('party');
-    if (!partyMode) setPartyMode?.('flash');
+    if (!partyMode) setPartyMode?.('mix');
   };
 
   return (
@@ -217,6 +232,74 @@ export default function LeaderSetup({
       }}
     >
       <h2 style={{ fontSize: '1.05rem', margin: 0 }}>Sei il leader — componi la serata</h2>
+
+      {setPlayMode && (
+        <div
+          role="group"
+          aria-label="Modalità di partecipazione"
+          style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}
+        >
+          <div
+            style={{
+              fontSize: '0.7rem',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              color: 'var(--muted)',
+              fontWeight: 700,
+            }}
+          >
+            Come giochi?
+          </div>
+          <div style={{ display: 'flex', gap: '0.45rem', width: '100%' }}>
+            <button
+              type="button"
+              aria-pressed={playMode === 'solo'}
+              onClick={() => {
+                setPlayMode('solo');
+                if (partyMode === 'infiltrato' || partyMode === 'coppie' || partyMode === 'tribunale') {
+                  setPartyMode?.('mix');
+                }
+                if (gameMode === 'duello') setGameMode('gruppo');
+                setInfiltratoOn(false);
+                setSquadreOn(false);
+              }}
+              style={{
+                flex: 1,
+                minHeight: '2.75rem',
+                padding: '0.45rem 0.65rem',
+                borderRadius: '0.7rem',
+                border: playMode === 'solo' ? '1.5px solid var(--gold)' : '1px solid rgba(255, 255, 255, 0.14)',
+                background: playMode === 'solo' ? 'rgba(229, 193, 88, 0.14)' : 'rgba(255, 255, 255, 0.04)',
+                color: '#fff',
+                cursor: 'pointer',
+                fontWeight: 800,
+                fontSize: '0.82rem',
+              }}
+            >
+              👤 Da solo
+            </button>
+            <button
+              type="button"
+              aria-pressed={playMode === 'gruppo'}
+              onClick={() => setPlayMode('gruppo')}
+              style={{
+                flex: 1,
+                minHeight: '2.75rem',
+                padding: '0.45rem 0.65rem',
+                borderRadius: '0.7rem',
+                border: playMode === 'gruppo' ? '1.5px solid var(--gold)' : '1px solid rgba(255, 255, 255, 0.14)',
+                background: playMode === 'gruppo' ? 'rgba(229, 193, 88, 0.14)' : 'rgba(255, 255, 255, 0.04)',
+                color: '#fff',
+                cursor: 'pointer',
+                fontWeight: 800,
+                fontSize: '0.82rem',
+              }}
+            >
+              👥 In gruppo
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Group Familiarity Selector: Vecchi amici vs Nuove conoscenze */}
       <div
@@ -335,17 +418,18 @@ export default function LeaderSetup({
 
       {activeTab === 'party' ? (
         <>
-          {/* Hero Party Mode Buttons (titles only; details behind ⓘ) */}
-          <div className={lobbyStyles.partyGrid} role="group" aria-label="Modalità party">
-            {/* Modalità 0: Serata Mix Variabile */}
-            <div className={lobbyStyles.partyFeatured} style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
+          {/* Hero Default Mode: Serata Mix + Optional Single-Game Picker */}
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem' }} role="group" aria-label="Modalità party">
+            {/* Hero: Serata Mix Variabile */}
+            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch', width: '100%' }}>
               <button
                 type="button"
+                aria-pressed={partyMode === 'mix'}
                 onClick={() => selectPartyMode('mix')}
                 style={{
                   flex: 1,
-                  minHeight: '2.9rem',
-                  padding: '0.55rem 0.8rem',
+                  minHeight: '3.25rem',
+                  padding: '0.7rem 0.85rem',
                   borderRadius: 'var(--radius-md)',
                   border: partyMode === 'mix' ? '2px solid var(--gold)' : '1px solid rgba(229, 193, 88, 0.35)',
                   background: partyMode === 'mix'
@@ -355,147 +439,306 @@ export default function LeaderSetup({
                   cursor: 'pointer',
                   textAlign: 'left',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.55rem',
+                  flexDirection: 'column',
+                  gap: '0.3rem',
                   boxShadow: partyMode === 'mix' ? '0 0 14px rgba(229, 193, 88, 0.32)' : undefined,
                 }}
               >
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.55rem', fontSize: '0.92rem', fontWeight: 900, color: 'var(--gold)' }}>
-                  <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🎲</span>
-                  SERATA MIX
-                </span>
-                <span style={{ fontSize: '0.66rem', padding: '0.12rem 0.4rem', borderRadius: '4px', background: 'rgba(229, 193, 88, 0.2)', color: 'var(--gold)', fontWeight: 700 }}>
-                  Consigliata
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.55rem', width: '100%' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.94rem', fontWeight: 900, color: 'var(--gold)' }}>
+                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🎲</span>
+                    SERATA MIX · Tutti i giochi casuali
+                  </span>
+                  <span style={{ fontSize: '0.66rem', padding: '0.12rem 0.45rem', borderRadius: '4px', background: 'rgba(229, 193, 88, 0.2)', color: 'var(--gold)', fontWeight: 700, flexShrink: 0 }}>
+                    Consigliata
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.75rem', opacity: 0.85, lineHeight: 1.3 }}>
+                  Ogni round cambia giochino a sorpresa senza timer: Flash, Preferiresti, Assurdo, Cruciverba, Termometro, Telepatia, Mente del Gruppo, Coppie, Tribunale e Infiltrato!
                 </span>
               </button>
               {renderInfoBtn('party-mix', 'Serata Mix')}
             </div>
 
-            {/* Modalità 1: Flash */}
-            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
-              <button
-                type="button"
-                onClick={() => selectPartyMode('flash')}
-                style={{
-                  flex: 1,
-                  minHeight: '2.9rem',
-                  padding: '0.55rem 0.7rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: partyMode === 'flash' ? '2px solid #f59e0b' : '1px solid rgba(245, 158, 11, 0.3)',
-                  background: partyMode === 'flash'
-                    ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(30, 25, 15, 0.8) 100%)'
-                    : 'rgba(25, 25, 40, 0.6)',
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  boxShadow: partyMode === 'flash' ? '0 0 14px rgba(245, 158, 11, 0.35)' : undefined,
-                }}
-              >
-                <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>⚡</span>
-                <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#f59e0b' }}>SCHIERATI FLASH</span>
-              </button>
-              {renderInfoBtn('party-flash', 'Schierati Flash')}
-            </div>
+            {/* Collapsible Toggle for Individual Games */}
+            <button
+              type="button"
+              className={lobbyStyles.accordionTrigger}
+              aria-expanded={showSingleModes || (partyMode !== null && partyMode !== 'mix')}
+              onClick={() => setShowSingleModes((v) => !v)}
+            >
+              <span>🎯 Scegli singolo gioco (opzionale)</span>
+              <span style={{ fontSize: '0.76rem', opacity: 0.78, fontWeight: 600 }}>
+                {partyMode && partyMode !== 'mix'
+                  ? `Attivo: ${partyMode.toUpperCase()} ▲`
+                  : showSingleModes
+                    ? 'Nascondi ▲'
+                    : 'Mostra ▼'}
+              </span>
+            </button>
 
-            {/* Modalità 2: Infiltrato */}
-            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
-              <button
-                type="button"
-                onClick={() => selectPartyMode('infiltrato')}
-                style={{
-                  flex: 1,
-                  minHeight: '2.9rem',
-                  padding: '0.55rem 0.7rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: partyMode === 'infiltrato' ? '2px solid #a78bfa' : '1px solid rgba(167, 139, 250, 0.3)',
-                  background: partyMode === 'infiltrato'
-                    ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(25, 20, 45, 0.8) 100%)'
-                    : 'rgba(25, 25, 40, 0.6)',
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  boxShadow: partyMode === 'infiltrato' ? '0 0 14px rgba(139, 92, 246, 0.35)' : undefined,
-                }}
-              >
-                <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🕵️</span>
-                <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#c084fc' }}>L'INFILTRATO</span>
-              </button>
-              {renderInfoBtn('party-infiltrato', "L'Infiltrato")}
-            </div>
+            {(showSingleModes || (partyMode !== null && partyMode !== 'mix')) && (
+              <div className={lobbyStyles.partyGrid}>
+                {/* Modalità 1: Flash */}
+                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
+                  <button
+                    type="button"
+                    aria-pressed={partyMode === 'flash'}
+                    onClick={() => selectPartyMode('flash')}
+                    style={{
+                      flex: 1,
+                      minHeight: '2.9rem',
+                      padding: '0.55rem 0.7rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: partyMode === 'flash' ? '2px solid #f59e0b' : '1px solid rgba(245, 158, 11, 0.3)',
+                      background: partyMode === 'flash'
+                        ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(30, 25, 15, 0.8) 100%)'
+                        : 'rgba(25, 25, 40, 0.6)',
+                      color: 'var(--text)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      boxShadow: partyMode === 'flash' ? '0 0 14px rgba(245, 158, 11, 0.35)' : undefined,
+                    }}
+                  >
+                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>⚡</span>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#f59e0b' }}>SCHIERATI FLASH</span>
+                  </button>
+                  {renderInfoBtn('party-flash', 'Schierati Flash')}
+                </div>
 
-            {/* Modalità 3: Coppie & Scintille */}
-            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
-              <button
-                type="button"
-                onClick={() => selectPartyMode('coppie')}
-                style={{
-                  flex: 1,
-                  minHeight: '2.9rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: partyMode === 'coppie' ? '2px solid #f472b6' : '1px solid rgba(244, 114, 182, 0.3)',
-                  background: partyMode === 'coppie'
-                    ? 'linear-gradient(135deg, rgba(236, 72, 153, 0.22) 0%, rgba(40, 15, 30, 0.8) 100%)'
-                    : 'rgba(25, 25, 40, 0.6)',
-                  padding: '0.55rem 0.7rem',
-                  boxShadow: partyMode === 'coppie' ? '0 0 14px rgba(236, 72, 153, 0.35)' : undefined,
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
-              >
-                <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🌶️</span>
-                <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#f472b6' }}>COPPIE & SCINTILLE</span>
-              </button>
-              {renderInfoBtn('party-coppie', 'Coppie & Scintille')}
-            </div>
+                {/* Modalità 2: Infiltrato */}
+                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
+                  <button
+                    type="button"
+                    disabled={playMode === 'solo'}
+                    aria-pressed={partyMode === 'infiltrato'}
+                    onClick={() => selectPartyMode('infiltrato')}
+                    style={{
+                      flex: 1,
+                      minHeight: '2.9rem',
+                      padding: '0.55rem 0.7rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: partyMode === 'infiltrato' ? '2px solid #a78bfa' : '1px solid rgba(167, 139, 250, 0.3)',
+                      background: partyMode === 'infiltrato'
+                        ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(25, 20, 45, 0.8) 100%)'
+                        : 'rgba(25, 25, 40, 0.6)',
+                      color: 'var(--text)',
+                      cursor: playMode === 'solo' ? 'not-allowed' : 'pointer',
+                      opacity: playMode === 'solo' ? 0.45 : 1,
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      boxShadow: partyMode === 'infiltrato' ? '0 0 14px rgba(139, 92, 246, 0.35)' : undefined,
+                    }}
+                  >
+                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🕵️</span>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#c084fc' }}>L'INFILTRATO</span>
+                  </button>
+                  {renderInfoBtn('party-infiltrato', "L'Infiltrato")}
+                </div>
 
-            {/* Modalità 4: Assurdo ma Semplice */}
-            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
-              <button
-                type="button"
-                onClick={() => selectPartyMode('assurdo')}
-                style={{
-                  flex: 1,
-                  minHeight: '2.9rem',
-                  padding: '0.55rem 0.7rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: partyMode === 'assurdo' ? '2px solid #34d399' : '1px solid rgba(52, 211, 153, 0.3)',
-                  background: partyMode === 'assurdo'
-                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(15, 35, 25, 0.8) 100%)'
-                    : 'rgba(25, 25, 40, 0.6)',
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  boxShadow: partyMode === 'assurdo' ? '0 0 14px rgba(52, 211, 153, 0.35)' : undefined,
-                }}
-              >
-                <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🤡</span>
-                <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#34d399' }}>ASSURDO MA SEMPLICE</span>
-              </button>
-              {renderInfoBtn('party-assurdo', 'Assurdo ma Semplice')}
-            </div>
+                {/* Modalità 3: Coppie & Scintille */}
+                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
+                  <button
+                    type="button"
+                    disabled={playMode === 'solo'}
+                    aria-pressed={partyMode === 'coppie'}
+                    onClick={() => selectPartyMode('coppie')}
+                    style={{
+                      flex: 1,
+                      minHeight: '2.9rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: partyMode === 'coppie' ? '2px solid #f472b6' : '1px solid rgba(244, 114, 182, 0.3)',
+                      background: partyMode === 'coppie'
+                        ? 'linear-gradient(135deg, rgba(236, 72, 153, 0.22) 0%, rgba(40, 15, 30, 0.8) 100%)'
+                        : 'rgba(25, 25, 40, 0.6)',
+                      padding: '0.55rem 0.7rem',
+                      boxShadow: partyMode === 'coppie' ? '0 0 14px rgba(236, 72, 153, 0.35)' : undefined,
+                      color: 'var(--text)',
+                      cursor: playMode === 'solo' ? 'not-allowed' : 'pointer',
+                      opacity: playMode === 'solo' ? 0.45 : 1,
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🌶️</span>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#f472b6' }}>COPPIE & SCINTILLE</span>
+                  </button>
+                  {renderInfoBtn('party-coppie', 'Coppie & Scintille')}
+                </div>
+
+                {/* Modalità 4: Assurdo ma Semplice */}
+                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
+                  <button
+                    type="button"
+                    aria-pressed={partyMode === 'assurdo'}
+                    onClick={() => selectPartyMode('assurdo')}
+                    style={{
+                      flex: 1,
+                      minHeight: '2.9rem',
+                      padding: '0.55rem 0.7rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: partyMode === 'assurdo' ? '2px solid #34d399' : '1px solid rgba(52, 211, 153, 0.3)',
+                      background: partyMode === 'assurdo'
+                        ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(15, 35, 25, 0.8) 100%)'
+                        : 'rgba(25, 25, 40, 0.6)',
+                      color: 'var(--text)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      boxShadow: partyMode === 'assurdo' ? '0 0 14px rgba(52, 211, 153, 0.35)' : undefined,
+                    }}
+                  >
+                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🤡</span>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#34d399' }}>ASSURDO MA SEMPLICE</span>
+                  </button>
+                  {renderInfoBtn('party-assurdo', 'Assurdo ma Semplice')}
+                </div>
+
+                {/* Modalità 5: Preferiresti che... */}
+                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
+                  <button
+                    type="button"
+                    aria-pressed={partyMode === 'preferiresti'}
+                    onClick={() => selectPartyMode('preferiresti')}
+                    style={{
+                      flex: 1,
+                      minHeight: '2.9rem',
+                      padding: '0.55rem 0.7rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: partyMode === 'preferiresti' ? '2px solid #38bdf8' : '1px solid rgba(56, 189, 248, 0.3)',
+                      background: partyMode === 'preferiresti'
+                        ? 'linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(15, 30, 50, 0.85) 100%)'
+                        : 'rgba(25, 25, 40, 0.6)',
+                      color: 'var(--text)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      boxShadow: partyMode === 'preferiresti' ? '0 0 14px rgba(56, 189, 248, 0.35)' : undefined,
+                    }}
+                  >
+                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🔀</span>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#38bdf8' }}>PREFERIRESTI CHE...</span>
+                  </button>
+                  {renderInfoBtn('party-preferiresti', 'Preferiresti che...')}
+                </div>
+
+                {/* Modalità 6: Cruciverba Show */}
+                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
+                  <button
+                    type="button"
+                    aria-pressed={partyMode === 'cruciverba'}
+                    onClick={() => selectPartyMode('cruciverba')}
+                    style={{
+                      flex: 1,
+                      minHeight: '2.9rem',
+                      padding: '0.55rem 0.7rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: partyMode === 'cruciverba' ? '2px solid #2dd4bf' : '1px solid rgba(45, 212, 191, 0.3)',
+                      background: partyMode === 'cruciverba'
+                        ? 'linear-gradient(135deg, rgba(45, 212, 191, 0.24) 0%, rgba(15, 35, 35, 0.85) 100%)'
+                        : 'rgba(25, 25, 40, 0.6)',
+                      color: 'var(--text)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      boxShadow: partyMode === 'cruciverba' ? '0 0 14px rgba(45, 212, 191, 0.35)' : undefined,
+                    }}
+                  >
+                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🧩</span>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#2dd4bf' }}>CRUCIVERBA SHOW</span>
+                  </button>
+                  {renderInfoBtn('party-cruciverba', 'Cruciverba Show')}
+                </div>
+
+                {/* Modalità 7: Tribunale degli Amici */}
+                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
+                  <button
+                    type="button"
+                    disabled={playMode === 'solo'}
+                    aria-pressed={partyMode === 'tribunale'}
+                    onClick={() => selectPartyMode('tribunale')}
+                    style={{
+                      flex: 1,
+                      minHeight: '2.9rem',
+                      padding: '0.55rem 0.7rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: partyMode === 'tribunale' ? '2px solid #fbbf24' : '1px solid rgba(251, 191, 36, 0.3)',
+                      background: partyMode === 'tribunale'
+                        ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.22) 0%, rgba(40, 30, 15, 0.85) 100%)'
+                        : 'rgba(25, 25, 40, 0.6)',
+                      color: 'var(--text)',
+                      cursor: playMode === 'solo' ? 'not-allowed' : 'pointer',
+                      opacity: playMode === 'solo' ? 0.45 : 1,
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      boxShadow: partyMode === 'tribunale' ? '0 0 14px rgba(251, 191, 36, 0.35)' : undefined,
+                    }}
+                  >
+                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>⚖️</span>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#fbbf24' }}>TRIBUNALE DEGLI AMICI</span>
+                  </button>
+                  {renderInfoBtn('party-tribunale', 'Tribunale degli Amici')}
+                </div>
+
+                {/* Modalità 8: Classico */}
+                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
+                  <button
+                    type="button"
+                    aria-pressed={partyMode === 'classico'}
+                    onClick={() => selectPartyMode('classico')}
+                    style={{
+                      flex: 1,
+                      minHeight: '2.9rem',
+                      padding: '0.55rem 0.7rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: partyMode === 'classico' ? '2px solid #e5c158' : '1px solid rgba(229, 193, 88, 0.3)',
+                      background: partyMode === 'classico'
+                        ? 'linear-gradient(135deg, rgba(229, 193, 88, 0.22) 0%, rgba(25, 25, 40, 0.85) 100%)'
+                        : 'rgba(25, 25, 40, 0.6)',
+                      color: 'var(--text)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      boxShadow: partyMode === 'classico' ? '0 0 14px rgba(229, 193, 88, 0.35)' : undefined,
+                    }}
+                  >
+                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🎭</span>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: 'var(--gold)' }}>CLASSICO</span>
+                  </button>
+                  {renderInfoBtn('party-classico', 'Classico')}
+                </div>
+              </div>
+            )}
           </div>
 
           {openInfo?.startsWith('party-') && (
             <p style={{ width: '100%', margin: 0, padding: '0.5rem 0.7rem', borderRadius: '0.55rem', background: 'rgba(255,255,255,0.06)', fontSize: '0.78rem', opacity: 0.92, lineHeight: 1.3 }}>
-              {openInfo === 'party-mix' && 'Variabile · Ogni round cambia gioco: Flash, Termometro 1–10, Mente del Gruppo, Gogna, Scrivi e Infiltrato!'}
-              {openInfo === 'party-flash' && '3s voto · 15s blitz: dilemmi quotidiani divisivi. Chi è in minoranza paga pegno e si difende al volo!'}
-              {openInfo === 'party-infiltrato' && '60s paranoia & accusa: domande segrete sui telefoni, 1 parola a testa, 60s di dibattito e accusa al volo!'}
-              {openInfo === 'party-coppie' && 'Allineamento & Obbligo: al 3 indicate chi dei due... Coppia al centro o 1v1 con scommesse Matchano/Scoppiano!'}
+              {openInfo === 'party-mix' && 'Variabile senza timer · Ogni round cambia gioco: Cruciverba Show, Tribunale degli Amici, Flash, Preferiresti che..., Termometro 1–10, Telepatia, Mente del Gruppo, Gogna, Scrivi e Infiltrato!'}
+              {openInfo === 'party-flash' && 'Dilemmi quotidiani divisivi senza timer: voti sul telefono e poi confronto dal vivo!'}
+              {openInfo === 'party-infiltrato' && 'Paranoia & accusa senza timer: domande segrete sui telefoni, 1 parola a testa, dibattito libero e accusa al volo!'}
+              {openInfo === 'party-coppie' && 'Coppie fisse da 2 (2, 4, 6 o 8 giocatori): tutte le coppie giocano insieme su nomi reali dei partner e sfide a punti!'}
               {openInfo === 'party-assurdo' && 'La Gogna & 500€: "Chi tradirebbe tutti dopo 5 minuti?". Vota l\'amico e incoronalo con la Sentenza dell\'App!'}
+              {openInfo === 'party-preferiresti' && 'Quattro scelte assurde o scomode: ognuno vota sul telefono, poi chi è in minoranza difende la propria scelta senza timer!'}
+              {openInfo === 'party-cruciverba' && 'Cruciverba cooperativo a turni senza fretta né timer: indovinate insieme il tabellone!'}
+              {openInfo === 'party-tribunale' && 'Dispute assurde tra Accusa e Difesa davanti alla giuria del gruppo, senza limiti di tempo!'}
+              {openInfo === 'party-classico' && 'Dilemmi classici con discussione aperta, secondo voto e rilancio finale senza timer.'}
             </p>
           )}
 
@@ -530,61 +773,172 @@ export default function LeaderSetup({
           )}
 
           {partyMode === 'coppie' && (
-            <div style={{ width: '100%', display: 'flex', gap: '0.4rem', padding: '0.4rem 0.5rem', background: 'rgba(236, 72, 153, 0.12)', borderRadius: 'var(--radius-sm)' }}>
-              <button
-                type="button"
-                onClick={() => setPartyIntensity?.('complicita')}
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ width: '100%', display: 'flex', gap: '0.4rem', padding: '0.4rem 0.5rem', background: 'rgba(236, 72, 153, 0.12)', borderRadius: 'var(--radius-sm)' }}>
+                <button
+                  type="button"
+                  onClick={() => setPartyIntensity?.('complicita')}
+                  style={{
+                    flex: 1,
+                    minHeight: '2.75rem',
+                    padding: '0.4rem',
+                    borderRadius: 'var(--radius-sm)',
+                    border: partyIntensity === 'complicita' ? '1.5px solid #ec4899' : '1px solid rgba(255,255,255,0.1)',
+                    background: partyIntensity === 'complicita' ? 'rgba(236, 72, 153, 0.35)' : 'rgba(0,0,0,0.2)',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '0.76rem',
+                    fontWeight: 800,
+                  }}
+                >
+                  💞 Complicità
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPartyIntensity?.('piccante')}
+                  style={{
+                    flex: 1,
+                    minHeight: '2.75rem',
+                    padding: '0.4rem',
+                    borderRadius: 'var(--radius-sm)',
+                    border: partyIntensity === 'piccante' ? '1.5px solid #ef4444' : '1px solid rgba(255,255,255,0.1)',
+                    background: partyIntensity === 'piccante' ? 'rgba(239, 68, 68, 0.35)' : 'rgba(0,0,0,0.2)',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '0.76rem',
+                    fontWeight: 800,
+                  }}
+                >
+                  🔞 Piccante 18+
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPartyIntensity?.('profondo')}
+                  style={{
+                    flex: 1,
+                    minHeight: '2.75rem',
+                    padding: '0.4rem',
+                    borderRadius: 'var(--radius-sm)',
+                    border: partyIntensity === 'profondo' ? '1.5px solid #38bdf8' : '1px solid rgba(255,255,255,0.1)',
+                    background: partyIntensity === 'profondo' ? 'rgba(56, 189, 248, 0.3)' : 'rgba(0,0,0,0.2)',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '0.76rem',
+                    fontWeight: 800,
+                  }}
+                >
+                  🧭 Profondo
+                </button>
+              </div>
+
+              {/* Fixed Pairs Builder / Odd-Count Guard */}
+              <div
                 style={{
-                  flex: 1,
-                  minHeight: '2.75rem',
-                  padding: '0.4rem',
-                  borderRadius: 'var(--radius-sm)',
-                  border: partyIntensity === 'complicita' ? '1.5px solid #ec4899' : '1px solid rgba(255,255,255,0.1)',
-                  background: partyIntensity === 'complicita' ? 'rgba(236, 72, 153, 0.35)' : 'rgba(0,0,0,0.2)',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  fontSize: '0.76rem',
-                  fontWeight: 800,
+                  padding: '0.6rem 0.7rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(236, 72, 153, 0.08)',
+                  border: '1px solid rgba(236, 72, 153, 0.3)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.45rem',
                 }}
               >
-                💞 Complicità
-              </button>
-              <button
-                type="button"
-                onClick={() => setPartyIntensity?.('piccante')}
-                style={{
-                  flex: 1,
-                  minHeight: '2.75rem',
-                  padding: '0.4rem',
-                  borderRadius: 'var(--radius-sm)',
-                  border: partyIntensity === 'piccante' ? '1.5px solid #ef4444' : '1px solid rgba(255,255,255,0.1)',
-                  background: partyIntensity === 'piccante' ? 'rgba(239, 68, 68, 0.35)' : 'rgba(0,0,0,0.2)',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  fontSize: '0.76rem',
-                  fontWeight: 800,
-                }}
-              >
-                🔞 Piccante 18+
-              </button>
-              <button
-                type="button"
-                onClick={() => setPartyIntensity?.('profondo')}
-                style={{
-                  flex: 1,
-                  minHeight: '2.75rem',
-                  padding: '0.4rem',
-                  borderRadius: 'var(--radius-sm)',
-                  border: partyIntensity === 'profondo' ? '1.5px solid #38bdf8' : '1px solid rgba(255,255,255,0.1)',
-                  background: partyIntensity === 'profondo' ? 'rgba(56, 189, 248, 0.3)' : 'rgba(0,0,0,0.2)',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  fontSize: '0.76rem',
-                  fontWeight: 800,
-                }}
-              >
-                🧭 Profondo
-              </button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#fbcfe8', textTransform: 'uppercase' }}>
+                    💕 Coppie della serata (2 per coppia)
+                  </span>
+                  {players.length >= 4 && players.length % 2 === 0 && onShuffleCouples && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSwapSelectionId(null);
+                        onShuffleCouples();
+                      }}
+                      style={{
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        color: '#fff',
+                        borderRadius: '8px',
+                        padding: '0.25rem 0.55rem',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      🔀 Mescola
+                    </button>
+                  )}
+                </div>
+
+                {players.length < 2 || players.length % 2 !== 0 ? (
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#fda4af', fontWeight: 700 }}>
+                    ⚠️ Servono un numero pari di giocatori (2, 4, 6 o 8). Ora siete in {players.length}.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    {couplePairs.map(([idA, idB], idx) => {
+                      const nameA = players.find((p) => p.id === idA)?.nickname ?? idA;
+                      const nameB = players.find((p) => p.id === idB)?.nickname ?? idB;
+                      const renderMemberChip = (pid: string, name: string) => {
+                        const selected = swapSelectionId === pid;
+                        return (
+                          <button
+                            key={pid}
+                            type="button"
+                            onClick={() => {
+                              if (!onSwapCoupleMembers) return;
+                              if (!swapSelectionId) setSwapSelectionId(pid);
+                              else if (swapSelectionId === pid) setSwapSelectionId(null);
+                              else {
+                                onSwapCoupleMembers(swapSelectionId, pid);
+                                setSwapSelectionId(null);
+                              }
+                            }}
+                            style={{
+                              padding: '0.25rem 0.55rem',
+                              borderRadius: '8px',
+                              border: selected ? '1.5px solid #fbbf24' : '1px solid rgba(255,255,255,0.18)',
+                              background: selected ? 'rgba(251, 191, 36, 0.25)' : 'rgba(0,0,0,0.28)',
+                              color: '#fff',
+                              fontSize: '0.78rem',
+                              fontWeight: 700,
+                              cursor: onSwapCoupleMembers ? 'pointer' : 'default',
+                            }}
+                          >
+                            {name}
+                          </button>
+                        );
+                      };
+                      return (
+                        <div
+                          key={`${idA}-${idB}`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.4rem',
+                            fontSize: '0.76rem',
+                          }}
+                        >
+                          <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>
+                            Coppia {idx + 1}
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            {renderMemberChip(idA, nameA)}
+                            <span>❤️</span>
+                            {renderMemberChip(idB, nameB)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {players.length >= 4 && (
+                      <span style={{ fontSize: '0.7rem', opacity: 0.72 }}>
+                        Tocca 2 nomi per scambiarli di coppia prima di iniziare.
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -693,11 +1047,17 @@ export default function LeaderSetup({
 
             {!canStart && (
               <p style={{ opacity: 0.75, margin: 0, fontSize: '0.78rem', textAlign: 'center' }}>
-                {partyMode === 'infiltrato' && humanCount < 3
-                  ? "L'Infiltrato richiede almeno 3 giocatori per divertirsi!"
-                  : humanCount < 1
-                    ? 'Serve almeno un giocatore reale.'
-                    : `Servono almeno ${MIN_PLAYERS_TO_START} partecipanti: aggiungi amici o bot 🤖`}
+                {partyMode === 'coppie' && (players.length < 2 || players.length % 2 !== 0)
+                  ? 'Coppie & Scintille richiede un numero pari di giocatori (2, 4, 6 o 8)!'
+                  : partyMode === 'infiltrato' && humanCount < 3
+                    ? "L'Infiltrato richiede almeno 3 giocatori per divertirsi!"
+                    : partyMode === 'tribunale' && players.length < 3
+                      ? 'Il Tribunale richiede almeno 3 partecipanti!'
+                      : humanCount < 1
+                        ? 'Serve almeno un giocatore reale.'
+                        : playMode === 'gruppo' && players.length < 2
+                          ? 'In gruppo servono almeno 2 partecipanti (aggiungi amici o bot 🤖, oppure passa a Da solo 👤)'
+                          : `Servono almeno ${MIN_PLAYERS_TO_START} partecipanti!`}
               </p>
             )}
 
@@ -719,20 +1079,22 @@ export default function LeaderSetup({
                   setTipoPartita('classica');
                   setGameMode('gruppo');
                 }}
-                aria-label="Gruppo: 3, 5 o 7 dilemmi, 3-8 persone"
+                aria-label="Gruppo: dilemmi classici, 1-8 persone"
               >
                 <span style={{ fontWeight: 700 }}>{MODE_LABELS.gruppo.nome}</span>
               </Pill>
-              <Pill
-                selected={isDuello}
-                onClick={() => {
-                  setTipoPartita('classica');
-                  setGameMode('duello');
-                }}
-                aria-label="1v1 Duello, 2 giocatori"
-              >
-                <span style={{ fontWeight: 700 }}>{MODE_LABELS.duello.nome}</span>
-              </Pill>
+              {playMode !== 'solo' && (
+                <Pill
+                  selected={isDuello}
+                  onClick={() => {
+                    setTipoPartita('classica');
+                    setGameMode('duello');
+                  }}
+                  aria-label="1v1 Duello, 2 giocatori"
+                >
+                  <span style={{ fontWeight: 700 }}>{MODE_LABELS.duello.nome}</span>
+                </Pill>
+              )}
               <Pill
                 selected={isPercorso}
                 onClick={() => {
@@ -757,7 +1119,7 @@ export default function LeaderSetup({
             </div>
             {openInfo === 'cls-tipo' && (
               <div style={{ marginTop: '0.45rem', padding: '0.5rem 0.65rem', borderRadius: '0.55rem', background: 'rgba(255,255,255,0.06)', fontSize: '0.75rem', opacity: 0.9, lineHeight: 1.4 }}>
-                <div><strong>{MODE_LABELS.gruppo.nome}</strong>: 3 · 5 · 7 dilemmi (3–8 giocatori)</div>
+                <div><strong>{MODE_LABELS.gruppo.nome}</strong>: 3 · 5 · 7 dilemmi (1–8 giocatori)</div>
                 <div><strong>{MODE_LABELS.duello.nome}</strong>: {MODE_LABELS.duello.descr}</div>
                 <div><strong>🧗 Percorso</strong>: salita a tappe · 1–3h</div>
                 <div><strong>📖 Storie</strong>: {storieSubtitle}</div>
@@ -1058,20 +1420,7 @@ export default function LeaderSetup({
                   </div>
                 )}
 
-                <div style={{ width: '100%' }}>
-                  <Pill
-                    selected={serataLunga}
-                    onClick={() => setSerataLunga((v) => !v)}
-                    aria-label="Serata lunga: 180s per difesa invece di 90s"
-                  >
-                    🕰️ Serata lunga {serataLunga ? 'ON' : 'OFF'}
-                  </Pill>
-                  <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
-                    {serataLunga ? '180s per difesa — più tempo per approfondire.' : '90s per difesa (default).'}
-                  </p>
-                </div>
-
-                {showSpecial && (
+                {showSpecial && playMode !== 'solo' && (
                   <div style={{ width: '100%' }}>
                     <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità speciale</p>
                     <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -1117,7 +1466,9 @@ export default function LeaderSetup({
                   ? 'Il 1v1 richiede esattamente 2 giocatori.'
                   : humanCount < 1
                     ? 'Serve almeno una persona (i bot da soli non bastano).'
-                    : `Servono almeno ${MIN_PLAYERS_TO_START} partecipanti: aggiungi giocatori o bot 🤖`}
+                    : playMode === 'gruppo' && players.length < 2
+                      ? 'In gruppo servono almeno 2 partecipanti (aggiungi amici o bot 🤖, oppure passa a Da solo 👤)'
+                      : `Servono almeno ${MIN_PLAYERS_TO_START} partecipanti!`}
               </p>
             )}
             {startError && <Alert>{startError}</Alert>}

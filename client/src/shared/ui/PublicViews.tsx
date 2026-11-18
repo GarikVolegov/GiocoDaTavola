@@ -31,12 +31,10 @@ export function DilemmaCard({ dilemma }: { dilemma: PublicDilemma }) {
 
       <div className={styles.optionsGrid}>
         <div className={styles.optionCardA}>
-          <span className={styles.letterBadgeA}>A</span>
           <span className={styles.optionLabel}>{dilemma.optionA}</span>
         </div>
 
         <div className={styles.optionCardB}>
-          <span className={styles.letterBadgeB}>B</span>
           <span className={styles.optionLabel}>{dilemma.optionB}</span>
         </div>
       </div>
@@ -45,7 +43,15 @@ export function DilemmaCard({ dilemma }: { dilemma: PublicDilemma }) {
 }
 
 /** The aggregate A/B split as a proportional bar + counts (SPLIT_REVEAL). */
-export function SplitBar({ split }: { split: VoteSplit }) {
+export function SplitBar({
+  split,
+  optionA,
+  optionB,
+}: {
+  split: VoteSplit;
+  optionA?: string;
+  optionB?: string;
+}) {
   const total = split.A + split.B || 1;
   const pctA = Math.round((split.A / total) * 100);
   const pctB = 100 - pctA;
@@ -63,10 +69,10 @@ export function SplitBar({ split }: { split: VoteSplit }) {
       </div>
       <div className={styles.splitLabelsRow}>
         <span className={styles.splitLabelA}>
-          Lato A · {split.A} {split.A === 1 ? 'voto' : 'voti'}
+          {optionA ? `${optionA} · ` : ''}{split.A} {split.A === 1 ? 'voto' : 'voti'}
         </span>
         <span className={styles.splitLabelB}>
-          {split.B} {split.B === 1 ? 'voto' : 'voti'} · Lato B
+          {split.B} {split.B === 1 ? 'voto' : 'voti'}{optionB ? ` · ${optionB}` : ''}
         </span>
       </div>
     </div>
@@ -167,7 +173,8 @@ export function ResultsPanel({ swing, dilemma }: { swing: PublicSwing; dilemma?:
           {swing.attribution.map((imp) => (
             <p key={imp.defender.id} style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>
               Le difese di <span style={{ color: 'var(--gold)' }}>{imp.defender.nickname}</span> hanno spostato{' '}
-              {imp.votes} {imp.votes === 1 ? 'voto' : 'voti'} verso {imp.defender.side}
+              {imp.votes} {imp.votes === 1 ? 'voto' : 'voti'} verso{' '}
+              {dilemma ? (imp.defender.side === 'A' ? dilemma.optionA : dilemma.optionB) : 'la sua scelta'}
             </p>
           ))}
         </div>

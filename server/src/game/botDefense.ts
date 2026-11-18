@@ -29,6 +29,11 @@ export function botDefenseArgument(
   rng: () => number,
 ): string {
   const opt = side === 'A' ? dilemma.optionA : dilemma.optionB;
+  const spunti = (side === 'A' ? dilemma.spuntiA : dilemma.spuntiB)?.filter((s) => s.trim().length > 0) ?? [];
+  if (spunti.length > 0) {
+    const spunto = spunti[Math.floor(rng() * spunti.length)] ?? spunti[0];
+    return `${OPENERS[persona]} ${spunto}`;
+  }
   const closer = CLOSERS[Math.floor(rng() * CLOSERS.length)] ?? CLOSERS[0];
   return `${OPENERS[persona]} ${closer(opt)}`;
 }

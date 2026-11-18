@@ -46,7 +46,7 @@ export function narrationFor(
       case 'DILEMMA_REVEAL':
       case 'VOTE_1': {
         if (!dilemma) return null;
-        return `Al bivio: ${dilemma.text} Opzione A: ${dilemma.optionA}. Opzione B: ${dilemma.optionB}.`.trim();
+        return `${dilemma.text} ${dilemma.optionA}, oppure ${dilemma.optionB}.`.trim();
       }
       case 'SCENE_CONSEQUENCE': {
         if (!storia.consequence) return null;
@@ -57,11 +57,7 @@ export function narrationFor(
             : choice === 'B'
               ? dilemma?.optionB
               : null;
-        const lead = choiceText
-          ? `Il gruppo ha scelto: ${choiceText}. `
-          : choice
-            ? `Il gruppo ha scelto l'opzione ${choice}. `
-            : '';
+        const lead = choiceText ? `Il gruppo ha scelto: ${choiceText}. ` : '';
         return `${lead}${storia.consequence}`.trim();
       }
       case 'STORY_EPILOGUE':
@@ -75,7 +71,7 @@ export function narrationFor(
   const readClassic = options?.readClassicDilemmas ?? true;
   if (readClassic && (phase === 'DILEMMA_REVEAL' || phase === 'VOTE_1')) {
     if (!dilemma) return null;
-    return `Dilemma: ${dilemma.text} Opzione A: ${dilemma.optionA}. Opzione B: ${dilemma.optionB}.`.trim();
+    return `${dilemma.text} ${dilemma.optionA}, oppure ${dilemma.optionB}.`.trim();
   }
 
   return null;
@@ -233,7 +229,7 @@ export function unlockSpeech(): void {
  *  - keeps activeUtterance reference in module scope to prevent GC mid-sentence;
  *  - uses a watchdog timer to recover if onend fails to fire.
  */
-export function speak(text: string | null | undefined, onDone?: () => void): void {
+export function speak(text: string | null | undefined, onDone?: () => void, rate = 1.0): void {
   const s = synth();
   const line = (text ?? '').trim();
   if (!s || isMuted() || !line) {
@@ -288,7 +284,7 @@ export function speak(text: string | null | undefined, onDone?: () => void): voi
       const u = new SpeechSynthesisUtterance(chunks[i]);
       activeUtterance = u; // Keep reference to prevent GC in Chrome
       u.lang = 'it-IT';
-      u.rate = 1.0;
+      u.rate = rate;
       u.pitch = 1.0;
       if (voice) u.voice = voice;
 

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   PHASE_LABELS,
   type HotTakePromptPayload,
@@ -13,7 +13,7 @@ interface HotTakeViewProps {
   phase: 'HOT_TAKE_VOTE' | 'HOT_TAKE_REVEAL';
   prompt: HotTakePromptPayload | null | undefined;
   reveal: HotTakeRevealPayload | null | undefined;
-  remaining: number | null;
+  remaining?: number | null;
   myScore: number | null;
   submittedCount: number;
   playerCount: number;
@@ -26,7 +26,7 @@ export default function HotTakeView({
   phase,
   prompt,
   reveal,
-  remaining,
+  remaining: _remaining = null,
   myScore,
   submittedCount,
   playerCount,
@@ -35,13 +35,15 @@ export default function HotTakeView({
   skipButton,
 }: HotTakeViewProps) {
   const [draft, setDraft] = useState<number>(myScore ?? 5);
+  useEffect(() => {
+    setDraft(myScore ?? 5);
+  }, [prompt?.id, prompt?.text, myScore]);
   const activeScore = myScore ?? draft;
 
   if (phase === 'HOT_TAKE_REVEAL' && reveal) {
     return (
       <MobilePhaseShell
         title={PHASE_LABELS.HOT_TAKE_REVEAL}
-        remaining={remaining}
         dock={skipButton}
       >
         <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, opacity: 0.92 }}>
@@ -89,7 +91,7 @@ export default function HotTakeView({
         )}
 
         <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.8 }}>
-          🗣️ I due estremi hanno 20s per giustificarsi dal vivo!
+          🗣️ I due estremi si giustificano dal vivo!
         </p>
       </MobilePhaseShell>
     );
@@ -124,7 +126,6 @@ export default function HotTakeView({
   return (
     <MobilePhaseShell
       title={PHASE_LABELS.HOT_TAKE_VOTE}
-      remaining={remaining}
       dock={dock}
     >
       <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.18rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-display, 0.03em)', margin: 0, lineHeight: 1.25 }}>

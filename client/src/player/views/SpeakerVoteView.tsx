@@ -5,7 +5,7 @@ import { wrap } from './layout';
 
 interface SpeakerVoteViewProps {
   candidates: Defender[]; // already filtered to exclude the viewer
-  remaining: number | null;
+  remaining?: number | null;
   speakerVote: string | null;
   onVote: (defenderId: string) => void;
   speakerVotedCount: number;
@@ -17,7 +17,7 @@ interface SpeakerVoteViewProps {
 // the parent owns the selection state and the socket emit.
 export default function SpeakerVoteView({
   candidates,
-  remaining,
+  remaining: _remaining = null,
   speakerVote,
   onVote,
   speakerVotedCount,
@@ -27,14 +27,6 @@ export default function SpeakerVoteView({
   return (
     <main style={wrap}>
       <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.SPEAKER_VOTE}?</h1>
-      {remaining != null && (
-        <div
-          aria-label="Tempo rimanente"
-          style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-        >
-          {remaining}s
-        </div>
-      )}
       {candidates.length === 0 ? (
         <p style={{ opacity: 0.8, margin: 0 }}>Hai parlato tu: guarda lo schermo.</p>
       ) : (
@@ -47,7 +39,6 @@ export default function SpeakerVoteView({
             <VoteOption
               key={d.id}
               faction={d.side === 'A' ? 'a' : 'b'}
-              letter={d.side}
               label={d.nickname}
               selected={speakerVote === d.id}
               onClick={() => onVote(d.id)}
@@ -57,7 +48,7 @@ export default function SpeakerVoteView({
         </div>
       )}
       {speakerVote && (
-        <p style={{ opacity: 0.8, margin: 0 }}>Voto registrato. Puoi cambiare finché c’è tempo.</p>
+        <p style={{ opacity: 0.8, margin: 0 }}>Voto registrato. Puoi cambiare prima della chiusura.</p>
       )}
       <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>
         Hanno votato {speakerVotedCount}/{playerCount}

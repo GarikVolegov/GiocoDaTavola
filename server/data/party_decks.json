@@ -2741,7 +2741,7 @@
       "prompt": "Lavoreresti 1 anno gratis nell’azienda dei tuoi sogni se alla fine hai il 50% di essere assunto?",
       "optionA": "Ci provo 💼",
       "optionB": "Il lavoro si paga 💸",
-      "penalty": "La minoranza difende il proprio punto in 15 secondi!",
+      "penalty": "La minoranza difende il proprio punto davanti al gruppo!",
       "familiarita": "tutti"
     },
     {
@@ -2814,7 +2814,7 @@
       "id": "as_va04",
       "cardType": "gogna",
       "prompt": "Se il gruppo aprisse un’azienda insieme domani, chi manderebbe tutto in bancarotta nel giro di 3 settimane?",
-      "penalty": "Il più votato spiega in 15 secondi quale ruolo si prenderebbe in azienda!",
+      "penalty": "Il più votato spiega quale ruolo si prenderebbe in azienda!",
       "familiarita": "vecchi_amici"
     },
     {
@@ -2837,6 +2837,308 @@
       "prompt": "Chi del gruppo conosce più segreti inconfessabili di tutti gli altri messi insieme?",
       "penalty": "La cassaforte del gruppo! Scegli qualcuno a cui fare una domanda scomoda.",
       "familiarita": "vecchi_amici"
+    }
+  ],
+  "preferiresti": [
+    {
+      "id": "pr01",
+      "prompt": "Preferiresti che per il resto della vita...",
+      "options": [
+        "Ogni tuo starnuto suonasse come una tromba da stadio",
+        "Tutte le tue bugie facessero diventare le tue orecchie fluorescenti",
+        "Dovessi cantare in falsetto ogni volta che ordini al ristorante",
+        "Il tuo cellulare leggesse ad alta voce l'ultimo messaggio appena lo sblocchi"
+      ],
+      "penalty": "Chi resta in minoranza difende la sua scelta davanti al tavolo o beve!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "pr02",
+      "prompt": "Preferiresti scoprire all'improvviso che...",
+      "options": [
+        "La tua prima cotta del liceo è diventata il tuo nuovo capo",
+        "I tuoi genitori hanno trovato e letto tutta la tua cronologia segreta",
+        "Il tuo ex ha scritto un libro bestseller pieno di tuoi difetti",
+        "Tutti i tuoi amici hanno una chat di gruppo segreta senza di te"
+      ],
+      "penalty": "Chi resta in minoranza si difende davanti al tavolo!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "pr03",
+      "prompt": "Per avere 100.000€ subito, preferiresti che...",
+      "options": [
+        "Il tuo ex scegliesse i tuoi outfit per tutto il prossimo anno",
+        "Ogni sabato sera dovessi andare a letto alle 21:30 per 2 anni",
+        "Non potessi più usare nessuna app di messaggistica per 12 mesi",
+        "Dovessi dire sempre e solo la verità assoluta ai tuoi colleghi per 6 mesi"
+      ],
+      "penalty": "Chi sceglie la risposta meno votata spiega perché è la mossa più furba!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "pr04",
+      "prompt": "Durante un primo appuntamento perfetto, preferiresti che...",
+      "options": [
+        "Ti scappasse un rutto fragoroso nel silenzio totale del locale",
+        "La persona ti chiamasse per sbaglio con il nome del suo ex tre volte",
+        "Ti accorgessi a fine cena di avere la carta bloccata e zero contanti",
+        "Arrivassero al tavolo accanto i tuoi genitori a salutarti entusiasti"
+      ],
+      "penalty": "Chi resta in minoranza difende la propria sopravvivenza sociale!",
+      "familiarita": "nuove_conoscenze"
+    },
+    {
+      "id": "pr05",
+      "prompt": "Se potessi avere un superpotere scomodo, preferiresti...",
+      "options": [
+        "Leggere i pensieri degli altri, ma solo quando parlano male di te",
+        "Diventare invisibile, ma solo quando trattieni completamente il respiro",
+        "Viaggiare nel tempo, ma solo tornando a momenti imbarazzanti della tua vita",
+        "Capire cosa dicono gli animali, ma scoprire che ti giudicano di continuo"
+      ],
+      "penalty": "Chi sceglie la risposta meno votata convince il tavolo!",
+      "familiarita": "nuove_conoscenze"
+    },
+    {
+      "id": "pr06",
+      "prompt": "In vacanza con questo gruppo per 10 giorni, preferiresti...",
+      "options": [
+        "Dormire in una stanza senza aria condizionata con chi russa più forte",
+        "Fare da tesoriere e litigare su ogni scontrino da 2 euro",
+        "Seguire un itinerario militare con sveglia alle 6:00 ogni mattina",
+        "Perdere la valigia il primo giorno e vestirti solo coi vestiti prestati dal gruppo"
+      ],
+      "penalty": "La minoranza si difende davanti ai compagni di viaggio!",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "pr07",
+      "prompt": "Preferiresti che per un anno intero...",
+      "options": [
+        "Ogni tua storia Instagram venisse pubblicata anche su LinkedIn",
+        "Tutti i tuoi vocali WhatsApp venissero trascritti in maiuscolo",
+        "Partisse la tua playlist più imbarazzante a tutto volume entrando nei bar",
+        "Dovessi mettere like obbligatorio a ogni post del tuo ex"
+      ],
+      "penalty": "Chi resta in minoranza giustifica la propria follia digitale!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "pr08",
+      "prompt": "Preferiresti vivere il resto della vita in un mondo dove...",
+      "options": [
+        "La pizza esiste solo con l'ananas sopra",
+        "Il caffè è stato vietato per legge in tutto il pianeta",
+        "Tutte le canzoni durano esattamente 15 secondi come su TikTok",
+        "Si può uscire di casa solo indossando infradito con i calzini bianchi"
+      ],
+      "penalty": "Chi sceglie la risposta meno gettonata difende il nuovo ordine mondiale!",
+      "familiarita": "nuove_conoscenze"
+    },
+    {
+      "id": "pr09",
+      "prompt": "Se uno di questo gruppo dovesse gestire tutti i tuoi risparmi, preferiresti...",
+      "options": [
+        "Scegliere l'amico più spendaccione perché almeno ti fa divertire",
+        "Scegliere il più tirchio che non ti fa comprare nemmeno l'acqua",
+        "Affidarli all'amico più distratto che perde il portafoglio ogni mese",
+        "Investirli tutti nell'idea imprenditoriale più assurda del tavolo"
+      ],
+      "penalty": "La minoranza giustifica la propria strategia finanziaria davanti al tavolo!",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "pr10",
+      "prompt": "Preferiresti dover scegliere per tutta la vita...",
+      "options": [
+        "Mangiare solo cibi freddi, mai nulla di caldo",
+        "Dormire sempre con un calzino bagnato a scelta",
+        "Avere sempre un piccolo sassolino nella scarpa destra",
+        "Sentire per sempre l'eco della tua voce con mezzo secondo di ritardo"
+      ],
+      "penalty": "Chi resta in minoranza difende la sua sopportazione eroica!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "pr11",
+      "prompt": "Al matrimonio del tuo migliore amico, preferiresti...",
+      "options": [
+        "Inciampare e far cadere la torta nuziale davanti a 150 invitati",
+        "Fare un discorso al microfono sbagliando completamente il nome dello sposo/a",
+        "Presentarti vestito di bianco esattamente come la sposa",
+        "Addormentarti rumorosamente durante i voti in prima fila"
+      ],
+      "penalty": "Chi è in minoranza spiega perché la sua figuraccia si perdona prima!",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "pr12",
+      "prompt": "Preferiresti che il tuo telefono...",
+      "options": [
+        "Avvisasse tutti quando fai uno screenshot di una chat",
+        "Mandasse un emoji cuore automatico a chiunque visualizzi la tua storia",
+        "Mostrasse in tempo reale agli amici quanti minuti passi sui social ogni giorno",
+        "Non potesse mai più mettere il silenzioso né la vibrazione"
+      ],
+      "penalty": "La minoranza difende la propria trasparenza tecnologica!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "pr13",
+      "prompt": "Se dovessi cambiare radicalmente vita domani, preferiresti...",
+      "options": [
+        "Aprire un chiringuito su un'isola sperduta senza Wi-Fi",
+        "Diventare famoso su internet ma per un meme ridicolo",
+        "Lavorare solo 2 ore al giorno con uno stipendio appena sufficiente",
+        "Lavorare 60 ore a settimana per andare in pensione milionario a 45 anni"
+      ],
+      "penalty": "Chi resta in minoranza difende la propria filosofia di vita!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "pr14",
+      "prompt": "Preferiresti avere un coinquilino che...",
+      "options": [
+        "Lascia sempre i piatti sporchi nel lavandino per 4 giorni",
+        "Cammina nudo per casa durante le tue videochiamate di lavoro",
+        "Invita sconosciuti a dormire sul divano ogni giovedì senza avvisare",
+        "Ti ruba sempre l'ultimo pezzo di cibo dal frigo giurando che non è stato lui"
+      ],
+      "penalty": "La minoranza spiega perché quel coinquilino è il male minore!",
+      "familiarita": "nuove_conoscenze"
+    },
+    {
+      "id": "pr15",
+      "prompt": "In una discussione accesa con il gruppo, preferiresti...",
+      "options": [
+        "Avere ragione ma passare per il più antipatico della stanza",
+        "Dare ragione a tutti pur di chiudere il discorso in 10 secondi",
+        "Scoprire a metà discorso che hai torto marcio ma continuare a bluffare",
+        "Cambiare argomento tirando fuori un gossip vecchio di 3 anni"
+      ],
+      "penalty": "Chi è in minoranza difende la sua tattica da dibattito!",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "pr16",
+      "prompt": "Preferiresti poter cancellare per sempre dalla tua vita...",
+      "options": [
+        "La sensazione di imbarazzo dopo una serata alcolica",
+        "Tutte le ore perse nel traffico e sui mezzi pubblici",
+        "La necessità di dormire 8 ore per funzionare",
+        "La paura di fare brutta figura davanti agli sconosciuti"
+      ],
+      "penalty": "Chi resta in minoranza difende il proprio super-upgrade quotidiano!",
+      "familiarita": "nuove_conoscenze"
+    },
+    {
+      "id": "pr17",
+      "prompt": "Preferiresti scoprire in questo momento che...",
+      "options": [
+        "Il tuo migliore amico ha baciato una tua ex fiamma anni fa",
+        "Un tuo collega prende il doppio di te facendo metà lavoro",
+        "Il tuo ristorante preferito usa ingredienti scaduti da sempre",
+        "Hai vinto 10.000€ alla lotteria ma il biglietto è scaduto ieri"
+      ],
+      "penalty": "Chi è in minoranza spiega quale colpo incasserebbe meglio!",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "pr18",
+      "prompt": "Se fossi obbligato a partecipare a un reality show, preferiresti...",
+      "options": [
+        "Sopravvivere su un'isola deserta mangiando solo cocco",
+        "Restare chiuso in una casa spiato h24 con il tuo ex e nuovi single",
+        "Cucinare piatti impossibili mentre uno chef ti urla a 5 cm",
+        "Ballare in diretta TV davanti a milioni di persone senza saper ballare"
+      ],
+      "penalty": "La minoranza difende la sua scelta televisiva!",
+      "familiarita": "nuove_conoscenze"
+    },
+    {
+      "id": "pr19",
+      "prompt": "Preferiresti che ogni volta che menti su un ritardo...",
+      "options": [
+        "Un drone trasmettesse la tua posizione esatta sul gruppo WhatsApp",
+        "Dovessi pagare automaticamente il caffè a chi ti sta aspettando",
+        "Suonasse una sirena della polizia dal tuo telefono per 10 secondi",
+        "Tutti ricevessero una foto istantanea di quello che stai davvero facendo"
+      ],
+      "penalty": "Chi resta in minoranza giustifica la propria punizione anti-ritardo!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "pr20",
+      "prompt": "Preferiresti poter sapere con esattezza...",
+      "options": [
+        "Chi in questa stanza ti ha sparlato alle spalle almeno una volta",
+        "Quale scelta passata ti avrebbe reso ricchissimo oggi",
+        "Quante persone si sono prese una cotta per te senza mai dirtelo",
+        "La data esatta in cui incontrerai l'amore della tua vita"
+      ],
+      "penalty": "Chi è in minoranza difende la propria curiosità!",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "pr21",
+      "prompt": "Per salvare il gruppo da un'emergenza assurda, preferiresti...",
+      "options": [
+        "Cantare una serenata a uno sconosciuto per strada adesso",
+        "Farti scegliere la prossima foto profilo da chi è alla tua sinistra",
+        "Mandare un vocale di 5 secondi con scritto 'Mi manchi' a un contatto a caso",
+        "Mangiare un cucchiaio di maionese mista a caffè senza fare smorfie"
+      ],
+      "penalty": "Chi sceglie la risposta meno votata dimostra di essere pronto a farlo!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "pr22",
+      "prompt": "Preferiresti che nel tuo gruppo di amici nessuno potesse mai più...",
+      "options": [
+        "Mandare vocali più lunghi di 20 secondi",
+        "Annullare un'uscita con meno di 3 ore di preavviso",
+        "Sparire quando si fidanza per poi ricomparire da single",
+        "Dividere il conto alla romana quando qualcuno ha preso 4 cocktail"
+      ],
+      "penalty": "Chi resta in minoranza difende la sua legge costituzionale!",
+      "familiarita": "vecchi_amici"
+    },
+    {
+      "id": "pr23",
+      "prompt": "Preferiresti avere a cena ogni venerdì sera...",
+      "options": [
+        "Una celebrità mondiale che parla solo di sé stessa",
+        "Un genio del futuro che non ti risponde mai chiaramente",
+        "Il tuo io di 10 anni fa pieno di domande imbarazzanti",
+        "Un comico che ti prende in giro davanti a tutti per due ore"
+      ],
+      "penalty": "La minoranza convince il tavolo che la sua cena sarebbe la migliore!",
+      "familiarita": "nuove_conoscenze"
+    },
+    {
+      "id": "pr24",
+      "prompt": "Preferiresti dimenticare completamente...",
+      "options": [
+        "Tutti i nomi delle persone che incontri dopo 30 secondi",
+        "Dove hai parcheggiato l'auto ogni singola volta",
+        "Le trame di tutti i tuoi film e serie preferite (così li rivedi da zero)",
+        "Le password di tutti i tuoi account una volta al mese"
+      ],
+      "penalty": "Chi resta in minoranza difende l'amnesia migliore!",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "pr25",
+      "prompt": "Se potessi premere un pulsante magico gratis, preferiresti...",
+      "options": [
+        "Non prendere mai più un raffreddore né mal di gola",
+        "Avere sempre parcheggio libero davanti a ogni locale",
+        "Trovare sempre 50€ nella tasca dei jeans che non metti da mesi",
+        "Svegliarti ogni mattina riposato al 100% dopo sole 4 ore di sonno"
+      ],
+      "penalty": "La minoranza difende il proprio superpotere quotidiano!",
+      "familiarita": "tutti"
     }
   ]
 }

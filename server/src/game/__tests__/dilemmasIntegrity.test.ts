@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   dilemmasForPercorso,
   dilemmasForPercorsoTappa,
+  ensureSpunti,
+  filterByFamiliarita,
   filterByMood,
   loadDilemmas,
   type Complessita,
@@ -68,5 +70,33 @@ describe('dilemmas.json dataset integrity', () => {
 
     const safePool = filterByMood(all, 'mista', false);
     expect(safePool.every((d) => !d.delicato)).toBe(true);
+  });
+
+  it('provides >= 10 dilemmas per percorso/tappa across every familiarita setting', () => {
+    for (const meta of PERCORSI_CATALOG) {
+      const pool = dilemmasForPercorso(all, meta.id, meta.corsia);
+      for (const fam of ['vecchi_amici', 'nuove_conoscenze', 'misto'] as const) {
+        for (const tappa of [1, 2, 3, 4] as Tappa[]) {
+          const stepPool = filterByFamiliarita(dilemmasForPercorsoTappa(pool, tappa), fam);
+          expect(
+            stepPool.length,
+            `${meta.id} tappa ${tappa} (${fam}) should have >= 10 dilemmas`,
+          ).toBeGreaterThanOrEqual(10);
+        }
+      }
+    }
+  });
+
+  it('ensureSpunti always returns at least 2 non-empty talking points per side', () => {
+    const out = ensureSpunti({
+      optionA: 'Restare',
+      optionB: 'Partire',
+      spuntiA: [],
+      spuntiB: ['Solo uno'],
+    });
+    expect(out.spuntiA.length).toBeGreaterThanOrEqual(2);
+    expect(out.spuntiB.length).toBeGreaterThanOrEqual(2);
+    expect(out.spuntiA.every((s) => s.trim().length > 0)).toBe(true);
+    expect(out.spuntiB.every((s) => s.trim().length > 0)).toBe(true);
   });
 });

@@ -23,8 +23,7 @@ function liveRoom(): Room {
   store.join(code, 'p1', 'Bob');
   store.join(code, 'p2', 'Cy');
   store.startGame(code, 3);
-  store.advancePhase(code); // DILEMMA_REVEAL (draws d1)
-  store.advancePhase(code); // VOTE_1
+  store.advancePhase(code); // VOTE_1 (draws d1)
   store.vote(code, 'p0', 'A');
   store.vote(code, 'p1', 'B');
   return store.get(code)!;

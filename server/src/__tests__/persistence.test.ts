@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { RoomStore } from '../game/rooms';
+import { computeAwards } from '../game/awards';
+import { computePodium } from '../game/podium';
 import { awardsToPersist, saveAwards, gamesToPersist, saveGameRecords } from '../persistence';
 import { dbEnabled } from '../db';
 
@@ -152,5 +154,134 @@ describe('duello persistence (Percorso in 2)', () => {
     const code = finishedDuoRoom(store, false);
     expect(awardsToPersist(store.get(code)!)).toEqual([]);
     expect(gamesToPersist(store.get(code)!)).toEqual([]);
+  });
+});
+
+function drivePartyRoom(store: RoomStore, partyMode: 'flash' | 'infiltrato' | 'coppie' | 'mix'): string {
+  const { code } = store.create();
+  store.join(code, 'p1', 'Ann');
+  store.join(code, 'p2', 'Bob');
+  store.join(code, 'p3', 'Cy');
+  if (partyMode === 'coppie') {
+    store.join(code, 'p4', 'Dan');
+  }
+  store.setPlayerUser(code, 'p1', 'user_ann');
+  store.setPlayerUser(code, 'p2', 'user_bob');
+  store.startGame(
+    code,
+    3,
+    'misto',
+    'gruppo',
+    false,
+    false,
+    undefined,
+    undefined,
+    'mista',
+    false,
+    false,
+    'assente',
+    [],
+    partyMode,
+  );
+  let guard = 0;
+  while (store.get(code)?.phase !== 'FINAL_AWARDS' && guard++ < 200) {
+    const room = store.get(code)!;
+    if (room.phase === 'VOTE_1' || room.phase === 'VOTE_2') {
+      // Ann & Bob side with A (majority), Cy sides with B (minority)
+      store.vote(code, 'p1', 'A');
+      store.vote(code, 'p2', 'A');
+      store.vote(code, 'p3', partyMode === 'coppie' ? 'A' : 'B');
+      if (room.players.has('p4')) store.vote(code, 'p4', 'A');
+    } else if (room.phase === 'ACCUSE' && room.infiltratorId) {
+      for (const p of room.players.values()) {
+        if (p.id !== room.infiltratorId) {
+          store.accuse(code, p.id, room.infiltratorId);
+        }
+      }
+    } else if (room.phase === 'HOT_TAKE_VOTE') {
+      store.submitHotTake(code, 'p1', 6);
+      store.submitHotTake(code, 'p2', 6);
+      store.submitHotTake(code, 'p3', 1);
+    } else if (room.phase === 'GROUP_MIND') {
+      store.groupMindSubmit(code, 'p1', 'A', 'A');
+      store.groupMindSubmit(code, 'p2', 'A', 'A');
+      store.groupMindSubmit(code, 'p3', 'B', 'B');
+    } else if (room.phase === 'WRITE') {
+      store.submitWrite(code, 'p1', 'Risposta Ann');
+      store.submitWrite(code, 'p2', 'Risposta Bob');
+      store.submitWrite(code, 'p3', 'Risposta Cy');
+    } else if (room.phase === 'WRITE_VOTE') {
+      const publicAnswers = store.publicWrittenAnswers(code) ?? [];
+      const p1Token = store.myWrittenAnswerToken(code, 'p1');
+      const otherToken = publicAnswers.find((a) => a.id !== p1Token)?.id;
+      if (otherToken) store.writeVote(code, 'p2', otherToken);
+      if (p1Token) {
+        store.writeVote(code, 'p2', p1Token);
+        store.writeVote(code, 'p3', p1Token);
+      }
+    }
+    store.advancePhase(code);
+  }
+  return code;
+}
+
+describe('party mode scoring, stats, podium and persistence', () => {
+  it('flash mode updates stats, partyScores, podium, awards and persists with party:flash', () => {
+    const store = new RoomStore();
+    const code = drivePartyRoom(store, 'flash');
+    const room = store.get(code)!;
+    expect(room.phase).toBe('FINAL_AWARDS');
+    expect((room.partyScores.get('p1') ?? 0)).toBeGreaterThan(0);
+    expect((room.partyScores.get('p3') ?? 0)).toBe(0);
+    expect(room.stats.get('p1')?.rounds).toBeGreaterThan(0);
+    expect(room.stats.get('p1')?.majorityCount).toBeGreaterThan(0);
+    expect(room.stats.get('p3')?.minorityCount).toBeGreaterThan(0);
+
+    const podium = computePodium(room);
+    expect(podium.length).toBe(3);
+    expect(podium[0].points).toBeGreaterThan(podium[2].points);
+
+    const awards = computeAwards(room);
+    expect(awards.length).toBeGreaterThan(0);
+
+    const persistedAwards = awardsToPersist(room);
+    for (const a of persistedAwards) {
+      expect(a.gameMode).toBe('party:flash');
+    }
+    const persistedGames = gamesToPersist(room);
+    expect(persistedGames.length).toBe(2);
+    const annGame = persistedGames.find((g) => g.clerkUserId === 'user_ann')!;
+    expect(annGame.mode).toBe('party:flash');
+    expect(annGame.rounds).toBeGreaterThan(0);
+    expect(annGame.persuasion).toBeGreaterThan(0);
+  });
+
+  it('infiltrato and coppie accumulate stats, partyScores and persist party modes', () => {
+    const store = new RoomStore();
+    const infCode = drivePartyRoom(store, 'infiltrato');
+    const infRoom = store.get(infCode)!;
+    expect(infRoom.phase).toBe('FINAL_AWARDS');
+    expect(infRoom.stats.get(infRoom.infiltratorId!)?.defendedCount).toBeGreaterThan(0);
+    const infGames = gamesToPersist(infRoom);
+    expect(infGames.every((g) => g.mode === 'party:infiltrato')).toBe(true);
+
+    const copCode = drivePartyRoom(store, 'coppie');
+    const copRoom = store.get(copCode)!;
+    expect(copRoom.phase).toBe('FINAL_AWARDS');
+    expect(copRoom.partyScores.get('p1')).toBeGreaterThan(0);
+    expect(copRoom.partyScores.get('p3')).toBeGreaterThan(0);
+    const copGames = gamesToPersist(copRoom);
+    expect(copGames.every((g) => g.mode === 'party:coppie')).toBe(true);
+    expect(copGames.every((g) => g.persuasion > 0)).toBe(true);
+  });
+
+  it('mix mode & breather rounds accumulate stats and partyScores', () => {
+    const store = new RoomStore();
+    const code = drivePartyRoom(store, 'mix');
+    const room = store.get(code)!;
+    expect(room.phase).toBe('FINAL_AWARDS');
+    expect((room.stats.get('p1')?.rounds ?? 0)).toBeGreaterThan(0);
+    const games = gamesToPersist(room);
+    expect(games.some((g) => g.mode === 'party:mix' && g.rounds > 0)).toBe(true);
   });
 });

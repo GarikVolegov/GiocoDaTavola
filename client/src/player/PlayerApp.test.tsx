@@ -169,7 +169,7 @@ describe('PlayerApp', () => {
       });
     });
     expect(screen.queryByText(/hai votato/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/tocca a o b per votare/i)).toBeInTheDocument();
+    expect(screen.getByText(/tocca la tua scelta per votare/i)).toBeInTheDocument();
   });
 
   it('shows the confirm affordance at VOTE_2', () => {
@@ -305,7 +305,8 @@ describe('PlayerApp', () => {
       });
     });
     expect(screen.getByText('Mare o montagna?')).toBeInTheDocument();
-    expect(screen.getByText(/difendendo.*mare/i)).toBeInTheDocument();
+    expect(screen.getByText(/sta difendendo:/i)).toBeInTheDocument();
+    expect(screen.getByText('Mare')).toBeInTheDocument();
   });
 
   it('shows the absurd defense constraint to a listener at DEFENSE', () => {
@@ -818,11 +819,11 @@ describe('PlayerApp', () => {
         leaderId: null,
       });
     });
-    expect(screen.getByText(/non è il tuo/i)).toBeInTheDocument(); // "difendi il lato B (non è il tuo!)"
+    expect(screen.getByText(/non è la tua/i)).toBeInTheDocument(); // "la stai difendendo per sfida (non è la tua!)"
     expect(screen.getByRole('button', { name: /ho finito/i })).toBeEnabled();
   });
 
-  it('locks the finish button before the floor lifts and flags the devil advocate', () => {
+  it('enables the finish button immediately (no minimum floor) and flags the devil advocate', () => {
     render(<PlayerApp />);
     act(() => {
       duoJoin();
@@ -839,15 +840,15 @@ describe('PlayerApp', () => {
           listenerId: 'p2',
           turn: 1,
           totalTurns: 1,
-          minEndsAt: Date.now() + 15_000,
-          canFinish: false,
+          minEndsAt: null,
+          canFinish: true,
           startedAt: Date.now(),
         },
         leaderId: null,
       });
     });
     expect(screen.getByText(/avvocato del diavolo/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /ho finito/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /ho finito/i })).toBeEnabled();
   });
 
   it('DUO_PICK_PREDICT: emits player:duoSync only once BOTH selections are in (any order)', () => {
@@ -1466,7 +1467,7 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/aspettiamo gli altri/i)).toBeInTheDocument();
   });
 
-  it('explains the minimum speaking time while the finish button is locked (DEFENSE)', () => {
+  it('allows finishing immediately in DEFENSE without minimum speaking time lock', () => {
     render(<PlayerApp />);
     act(() => {
       serverEmit('player:joined', {
@@ -1484,13 +1485,14 @@ describe('PlayerApp', () => {
           speakerId: 'p1',
           speaker: { id: 'p1', nickname: 'Alice', side: 'A' },
           startedAt: Date.now(),
-          minEndsAt: Date.now() + 30000,
+          minEndsAt: null,
+          canFinish: true,
         },
         leaderId: null,
       });
     });
-    expect(screen.getByRole('button', { name: /ho finito/i })).toBeDisabled();
-    expect(screen.getByText(/parla ancora/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ho finito/i })).toBeEnabled();
+    expect(screen.queryByText(/parla ancora/i)).not.toBeInTheDocument();
   });
 
   it('hints spectators they can raise their hand to intervene later (DEFENSE)', () => {
@@ -1658,7 +1660,7 @@ describe('PlayerApp', () => {
     expect(screen.getByText(/tra poco si vota/i)).toBeInTheDocument();
   });
 
-  it('buzzes when the phase timer is in its last 5 seconds', () => {
+  it('does not buzz on countdown timers (no phase countdown timers)', () => {
     const vibrateSpy = vi.fn();
     Object.defineProperty(navigator, 'vibrate', { value: vibrateSpy, configurable: true });
     render(<PlayerApp />);
@@ -1677,7 +1679,7 @@ describe('PlayerApp', () => {
         leaderId: null,
       });
     });
-    expect(vibrateSpy).toHaveBeenCalled();
+    expect(vibrateSpy).not.toHaveBeenCalled();
   });
 
   it('does not buzz for the countdown when there is more than 5s left', () => {
@@ -1702,7 +1704,7 @@ describe('PlayerApp', () => {
     expect(vibrateSpy).not.toHaveBeenCalled();
   });
 
-  it('shows a 3-2-1 suspense countdown in the first seconds of SPLIT_REVEAL, before the split', () => {
+  it('shows the split immediately in SPLIT_REVEAL without a 3-2-1 suspense countdown', () => {
     render(<PlayerApp />);
     act(() => {
       serverEmit('player:joined', {
@@ -1714,14 +1716,14 @@ describe('PlayerApp', () => {
         phase: 'SPLIT_REVEAL',
         dilemmaCount: 3,
         dilemmaIndex: 0,
-        phaseExpiresAt: Date.now() + 9_000, // just entered: 3s of suspense left
+        phaseExpiresAt: null,
         dilemma: { id: 'd1', text: 'Mare o montagna?', optionA: 'Mare', optionB: 'Montagna' },
         split: { A: 2, B: 1 },
         leaderId: null,
       });
     });
-    expect(screen.getByText('3')).toBeInTheDocument();
-    expect(screen.queryByText(/ora si difende/i)).toBeNull();
+    expect(screen.queryByText('3')).not.toBeInTheDocument();
+    expect(screen.getByText(/ora si difende/i)).toBeInTheDocument();
   });
 
   it('cues the next step at SPLIT_REVEAL once the suspense countdown ends (status view)', () => {
@@ -2361,7 +2363,7 @@ describe('PlayerApp', () => {
     );
   });
 
-  it('lets the leader opt into "serata lunga" (3.3) and sends it when starting', () => {
+  it('lets the leader toggle "Da solo" to start with 1 player and emits leader:startGame', () => {
     const emitSpy = vi.spyOn(fakeSocket, 'emit');
     render(<PlayerApp />);
     act(() => {
@@ -2371,11 +2373,7 @@ describe('PlayerApp', () => {
         player: { id: 'p1', nickname: 'Alice' },
       });
       serverEmit('lobby:update', {
-        players: [
-          { id: 'p1', nickname: 'Alice' },
-          { id: 'p2', nickname: 'Bea' },
-          { id: 'p3', nickname: 'Carlo' },
-        ],
+        players: [{ id: 'p1', nickname: 'Alice' }],
       });
       serverEmit('game:state', {
         phase: 'LOBBY',
@@ -2385,13 +2383,11 @@ describe('PlayerApp', () => {
         leaderId: 'p1',
       });
     });
-    fireEvent.click(screen.getByRole('button', { name: /modalità classica/i }));
-    fireEvent.click(screen.getByText(/altre opzioni/i));
-    fireEvent.click(screen.getByRole('button', { name: /serata lunga/i }));
+    fireEvent.click(screen.getByRole('button', { name: /da solo/i }));
     fireEvent.click(screen.getByRole('button', { name: /avvia partita/i }));
     expect(emitSpy).toHaveBeenCalledWith(
       'leader:startGame',
-      expect.objectContaining({ serataLunga: true }),
+      expect.objectContaining({ dilemmaCount: 5, serataLunga: false, partyMode: 'mix' }),
     );
   });
 
@@ -3009,6 +3005,7 @@ describe("Party Modes (Flash, Infiltrato, Coppie, Assurdo)", () => {
         { id: 'p1', nickname: 'Alice' },
         { id: 'p2', nickname: 'Bob' },
         { id: 'p3', nickname: 'Carlo' },
+        { id: 'p4', nickname: 'Diana' },
       ].slice(0, playerCount);
       serverEmit('lobby:update', { players });
       serverEmit('game:state', {
@@ -3021,11 +3018,31 @@ describe("Party Modes (Flash, Infiltrato, Coppie, Assurdo)", () => {
     });
   }
 
-  it('leader starts Flash mode with custom theme', () => {
+  it('defaults to Serata Mix in the lobby while hiding single modes until toggled', () => {
     const emitSpy = vi.spyOn(fakeSocket, 'emit');
     joinLeader(3);
 
-    expect(screen.getByRole('button', { name: /schierati flash/i })).toBeInTheDocument();
+    const mixBtn = screen.getByRole('button', { name: /serata mix/i });
+    expect(mixBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('button', { name: /schierati flash/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /inizia la festa/i }));
+    expect(emitSpy).toHaveBeenCalledWith(
+      'leader:startGame',
+      expect.objectContaining({
+        partyMode: 'mix',
+      })
+    );
+  });
+
+  it('leader starts Flash mode with custom theme after expanding single-game picker', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    joinLeader(3);
+
+    fireEvent.click(screen.getByRole('button', { name: /scegli singolo gioco/i }));
+    const flashBtn = screen.getByRole('button', { name: /schierati flash/i });
+    expect(flashBtn).toBeInTheDocument();
+    fireEvent.click(flashBtn);
     expect(screen.getByPlaceholderText(/es. addio al celibato/i)).toBeInTheDocument();
 
     const themeInput = screen.getByPlaceholderText(/es. addio al celibato/i);
@@ -3047,6 +3064,7 @@ describe("Party Modes (Flash, Infiltrato, Coppie, Assurdo)", () => {
     const emitSpy = vi.spyOn(fakeSocket, 'emit');
     joinLeader(3);
 
+    fireEvent.click(screen.getByRole('button', { name: /scegli singolo gioco/i }));
     const infiltratoBtn = screen.getByRole('button', { name: /l'infiltrato/i });
     fireEvent.click(infiltratoBtn);
 
@@ -3061,10 +3079,11 @@ describe("Party Modes (Flash, Infiltrato, Coppie, Assurdo)", () => {
     );
   });
 
-  it('leader can select Coppie and toggle Piccante 18+', () => {
+  it('leader can select Coppie and toggle Piccante 18+ when player count is even', () => {
     const emitSpy = vi.spyOn(fakeSocket, 'emit');
-    joinLeader(3);
+    joinLeader(4);
 
+    fireEvent.click(screen.getByRole('button', { name: /scegli singolo gioco/i }));
     const coppieBtn = screen.getByRole('button', { name: /coppie & scintille/i });
     fireEvent.click(coppieBtn);
 
@@ -3079,6 +3098,10 @@ describe("Party Modes (Flash, Infiltrato, Coppie, Assurdo)", () => {
       expect.objectContaining({
         partyMode: 'coppie',
         partyIntensity: 'piccante',
+        couples: [
+          ['p1', 'p2'],
+          ['p3', 'p4'],
+        ],
       })
     );
   });
@@ -3119,7 +3142,7 @@ describe("Party Modes (Flash, Infiltrato, Coppie, Assurdo)", () => {
     expect(screen.getAllByText('Qual è il peggior vizio che hai?').length).toBeGreaterThan(0);
   });
 
-  it('lets spectator bet in Coppie Hot-Seat mode', () => {
+  it('renders real partner names for parallel couples in Coppie & Scintille mode', () => {
     const emitSpy = vi.spyOn(fakeSocket, 'emit');
     render(<PlayerApp />);
     act(() => {
@@ -3136,28 +3159,434 @@ describe("Party Modes (Flash, Infiltrato, Coppie, Assurdo)", () => {
         partyMode: 'coppie',
         partyCard: {
           mode: 'coppie',
-          hotSeat: {
-            isActor: false,
-            coupleIds: ['p2', 'p3'],
-            coupleNicknames: ['Bob', 'Carlo'],
-          },
+          cardType: 'allineamento',
+          prompt: 'Al 3 indicate chi dei due è più geloso.',
+          couples: [
+            {
+              id: 'c1',
+              label: 'Alice & Bob',
+              memberAId: 'p1',
+              memberBId: 'p2',
+              memberAName: 'Alice',
+              memberBName: 'Bob',
+              score: 0,
+              matches: 0,
+              mismatches: 0,
+            },
+          ],
         },
         dilemma: {
           id: 'cop1',
-          text: 'Chi dei due è più geloso?',
-          optionA: 'Bob',
-          optionB: 'Carlo',
+          text: 'Al 3 indicate chi dei due è più geloso.',
+          optionA: 'Partner 1',
+          optionB: 'Partner 2',
         },
         votedCount: 0,
       });
     });
 
-    expect(screen.getByText(/coppia al centro/i)).toBeInTheDocument();
-    expect(screen.getByText(/scommetti/i)).toBeInTheDocument();
+    expect(screen.getByText(/in coppia con bob/i)).toBeInTheDocument();
+    const bobBtn = screen.getByRole('button', { name: /bob/i });
+    fireEvent.click(bobBtn);
 
-    const matchBtn = screen.getByRole('button', { name: /matchano/i });
-    fireEvent.click(matchBtn);
+    expect(emitSpy).toHaveBeenCalledWith('player:vote', { choice: 'B' });
+  });
 
-    expect(emitSpy).toHaveBeenCalledWith('player:hotSeatBet', { bet: 'match' });
+  it('clears saved answers and local drafts across rounds, rematches, and HotTake prompt changes', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'WRITE',
+        dilemmaCount: 4,
+        dilemmaIndex: 0,
+        phaseExpiresAt: Date.now() + 45000,
+        partyMode: 'mix',
+        writePrompt: {
+          id: 'w1',
+          text: 'Scusa più assurda per un ritardo?',
+        },
+        writeProgress: { done: 0, total: 3, missingNicknames: ['Bob', 'Carlo'] },
+      });
+    });
+
+    const textarea = screen.getByRole('textbox', { name: 'La tua risposta' }) as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: 'Mi ha rapito un piccione' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Invia' }));
+    expect(emitSpy).toHaveBeenCalledWith('player:write', { text: 'Mi ha rapito un piccione' });
+    act(() => {
+      serverEmit('player:writeSubmitted', { text: 'Mi ha rapito un piccione' });
+    });
+    expect(screen.getByText(/hai scritto/i)).toBeInTheDocument();
+
+    // Advance to next WRITE prompt -> submitted receipt & input must be cleared
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'WRITE',
+        dilemmaCount: 4,
+        dilemmaIndex: 1,
+        phaseExpiresAt: Date.now() + 45000,
+        partyMode: 'mix',
+        writePrompt: {
+          id: 'w2',
+          text: 'Regalo riciclato peggiore?',
+        },
+        writeProgress: { done: 0, total: 3, missingNicknames: ['Bob', 'Carlo'] },
+      });
+    });
+
+    expect(screen.queryByText(/Mi ha rapito un piccione/)).not.toBeInTheDocument();
+    const freshTextarea = screen.getByRole('textbox', { name: 'La tua risposta' }) as HTMLTextAreaElement;
+    expect(freshTextarea.value).toBe('');
+
+    // Verify HotTake rating draft also resets back to 5 when prompt changes
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'HOT_TAKE_VOTE',
+        dilemmaCount: 4,
+        dilemmaIndex: 2,
+        phaseExpiresAt: Date.now() + 45000,
+        hotTakePrompt: {
+          id: 'ht1',
+          statement: 'Il caffè senza zucchero è l’unico vero caffè.',
+          scaleMinLabel: 'Mai',
+          scaleMaxLabel: 'Sempre',
+        },
+        hotTakeProgress: { done: 0, total: 3, missingNicknames: ['Bob', 'Carlo'] },
+      });
+    });
+
+    const slider = screen.getByLabelText(/scala da 1 a 10/i) as HTMLInputElement;
+    fireEvent.change(slider, { target: { value: '9' } });
+    expect(slider.value).toBe('9');
+
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'HOT_TAKE_VOTE',
+        dilemmaCount: 4,
+        dilemmaIndex: 3,
+        phaseExpiresAt: Date.now() + 45000,
+        hotTakePrompt: {
+          id: 'ht2',
+          statement: 'Nuova affermazione diversa.',
+          scaleMinLabel: 'Mai',
+          scaleMaxLabel: 'Sempre',
+        },
+        hotTakeProgress: { done: 0, total: 3, missingNicknames: ['Bob', 'Carlo'] },
+      });
+    });
+    const slider2 = screen.getByLabelText(/scala da 1 a 10/i) as HTMLInputElement;
+    expect(slider2.value).toBe('5');
+  });
+
+  it('keeps secret question visible during Infiltrato DEFENSE and isolates it across rounds', () => {
+    render(<PlayerApp />);
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 0,
+        phaseExpiresAt: Date.now() + 60000,
+        partyMode: 'infiltrato',
+        partyCard: {
+          mode: 'infiltrato',
+          prompt: 'Rispondi a voce alla tua domanda segreta!',
+        },
+        votedCount: 0,
+      });
+      serverEmit('player:secretQuestion', {
+        question: 'Quante ore dormi di solito?',
+        isInfiltrator: true,
+        round: 0,
+      });
+    });
+
+    expect(screen.queryByText(/nessuna difesa per questo dilemma/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Quante ore dormi di solito?')).toBeInTheDocument();
+
+    // Round 1 must not show round 0 secret question
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 3,
+        dilemmaIndex: 1,
+        phaseExpiresAt: Date.now() + 60000,
+        partyMode: 'infiltrato',
+        partyCard: {
+          mode: 'infiltrato',
+          prompt: 'Nuovo giro!',
+        },
+        votedCount: 0,
+      });
+    });
+    expect(screen.queryByText('Quante ore dormi di solito?')).not.toBeInTheDocument();
+  });
+
+  it('renders CruciverbaView, TribunaleView, and TelepathyView across Serata Mix', () => {
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    render(<PlayerApp />);
+
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'CRUCIVERBA',
+        dilemmaCount: 5,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        turnExpiresAt: Date.now() + 15000,
+        partyMode: 'mix',
+        cruciverbaState: {
+          boardId: 'cb_aperitivo',
+          theme: 'Spritz & Chiacchiere',
+          rows: 2,
+          cols: 4,
+          activePlayerId: 'p1',
+          activePlayerName: 'Alice',
+          activeWordId: 'w1',
+          turnsTaken: 0,
+          maxTurns: 6,
+          words: [
+            {
+              id: 'w1',
+              number: 1,
+              direction: 'H',
+              row: 0,
+              col: 0,
+              length: 4,
+              clue: 'Bibita arancione delle 19',
+              status: 'pending',
+              solvedByName: null,
+            },
+          ],
+          cells: [
+            [
+              { letter: '', wordNumbers: [1] },
+              { letter: '', wordNumbers: [] },
+              { letter: '', wordNumbers: [] },
+              { letter: '', wordNumbers: [] },
+            ],
+            [null, null, null, null],
+          ],
+        },
+      });
+    });
+
+    expect(screen.getByText(/tocca a te!/i)).toBeInTheDocument();
+    expect(screen.getByText(/bibita arancione delle 19/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText(/scrivi la parola/i), {
+      target: { value: 'TAXI' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /invia parola/i }));
+    expect(emitSpy).toHaveBeenCalledWith('player:cruciverbaAttempt', {
+      guess: 'TAXI',
+      wordId: 'w1',
+    });
+    fireEvent.click(screen.getByRole('button', { name: /1 lettera/i }));
+    expect(emitSpy).toHaveBeenCalledWith('player:cruciverbaPass');
+
+    // Tribunale degli Amici juror voting
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'TRIBUNALE_VOTE',
+        dilemmaCount: 5,
+        dilemmaIndex: 2,
+        phaseExpiresAt: Date.now() + 20000,
+        partyMode: 'mix',
+        tribunaleState: {
+          caseData: {
+            id: 'tr_conto',
+            title: 'Il Caso del Conto',
+            scenario: 'Tutti dividono alla pari anche l’aragosta.',
+            accusaRole: 'Accusa: Pagare ognuno il suo',
+            difesaRole: 'Difesa: Alla romana per amicizia',
+            penalty: 'Offre un amaro',
+          },
+          accusaId: 'p2',
+          accusaName: 'Bob',
+          difesaId: 'p3',
+          difesaName: 'Carlo',
+          speakerIndex: 1,
+          activeSpeakerId: 'p3',
+          activeSpeakerName: 'Carlo',
+          votesCount: 0,
+          totalJurors: 1,
+          missingJurorNames: ['Alice'],
+        },
+      });
+    });
+
+    const accusaBtn = screen.getByRole('button', { name: /bob/i });
+    fireEvent.click(accusaBtn);
+    expect(emitSpy).toHaveBeenCalledWith('player:tribunaleVote', { choice: 'ACCUSA' });
+
+    // Telepathy 1-word submit
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'TELEPATHY',
+        dilemmaCount: 5,
+        dilemmaIndex: 3,
+        phaseExpiresAt: Date.now() + 25000,
+        partyMode: 'mix',
+        telepathyPrompt: {
+          id: 'tp1',
+          category: 'mare',
+          prompt: 'La prima cosa che porti in spiaggia?',
+        },
+        telepathyProgress: { done: 0, total: 3, missingNicknames: ['Alice', 'Bob', 'Carlo'] },
+      });
+    });
+
+    const teleInput = screen.getByRole('textbox', { name: /la tua parola segreta/i });
+    fireEvent.change(teleInput, { target: { value: 'Asciugamano' } });
+    fireEvent.click(screen.getByRole('button', { name: /invia in silenzio/i }));
+    expect(emitSpy).toHaveBeenCalledWith('player:telepathy', { word: 'Asciugamano' });
+  });
+
+  it('renders active UI immediately without reading window or timers in Tribunale, Cruciverba, and Flash DEFENSE', () => {
+    render(<PlayerApp />);
+
+    act(() => {
+      serverEmit('player:joined', {
+        code: 'ABCD',
+        token: 'tok',
+        player: { id: 'p1', nickname: 'Alice' },
+      });
+      serverEmit('game:state', {
+        phase: 'TRIBUNALE_ARGUE',
+        dilemmaCount: 5,
+        dilemmaIndex: 1,
+        phaseExpiresAt: null,
+        turnExpiresAt: null,
+        readingEndsAt: null,
+        partyMode: 'mix',
+        tribunaleState: {
+          caseData: {
+            id: 'tr_conto',
+            title: 'Il Caso del Conto',
+            scenario: 'Qualcuno ha ordinato aragosta e propone alla romana.',
+            accusaRole: 'Accusa: Pagare ognuno il suo',
+            difesaRole: 'Difesa: Alla romana per amicizia',
+            penalty: 'Offre un amaro',
+          },
+          accusaId: 'p1',
+          accusaName: 'Alice',
+          difesaId: 'p2',
+          difesaName: 'Bob',
+          speakerIndex: 0,
+          activeSpeakerId: 'p1',
+          activeSpeakerName: 'Alice',
+          votesCount: 0,
+          totalJurors: 1,
+          missingJurorNames: ['Carlo'],
+        },
+      });
+    });
+
+    expect(screen.queryByText(/leggi il caso/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ho finito l’arringa/i })).toBeInTheDocument();
+
+    // Cruciverba enters directly with word input ready
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'CRUCIVERBA',
+        dilemmaCount: 5,
+        dilemmaIndex: 2,
+        phaseExpiresAt: null,
+        turnExpiresAt: null,
+        readingEndsAt: null,
+        partyMode: 'mix',
+        cruciverbaState: {
+          boardId: 'cb_aperitivo',
+          theme: 'Spritz & Chiacchiere',
+          rows: 2,
+          cols: 4,
+          activePlayerId: 'p1',
+          activePlayerName: 'Alice',
+          activeWordId: 'w1',
+          turnsTaken: 0,
+          maxTurns: 6,
+          words: [
+            {
+              id: 'w1',
+              number: 1,
+              direction: 'H',
+              row: 0,
+              col: 0,
+              length: 4,
+              clue: 'Bibita arancione delle 19',
+              status: 'pending',
+              solvedByName: null,
+            },
+          ],
+          cells: [
+            [
+              { letter: '', wordNumbers: [1] },
+              { letter: '', wordNumbers: [] },
+              { letter: '', wordNumbers: [] },
+              { letter: '', wordNumbers: [] },
+            ],
+            [null, null, null, null],
+          ],
+        },
+      });
+    });
+
+    expect(screen.queryByText(/leggete il tabellone/i)).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/scrivi la parola/i)).toBeInTheDocument();
+
+    // Flash DEFENSE enters directly with dilemma text and minority
+    act(() => {
+      serverEmit('game:state', {
+        phase: 'DEFENSE',
+        dilemmaCount: 5,
+        dilemmaIndex: 3,
+        phaseExpiresAt: null,
+        turnExpiresAt: null,
+        readingEndsAt: null,
+        partyMode: 'flash',
+        dilemma: {
+          id: 'fl_1',
+          text: 'Meglio perdere il telefono o il portafoglio?',
+          optionA: 'Telefono',
+          optionB: 'Portafoglio',
+          register: 'vita',
+        },
+        partyCard: {
+          mode: 'flash',
+          cardType: 'dilemma',
+          prompt: 'Meglio perdere il telefono o il portafoglio?',
+          optionA: 'Telefono',
+          optionB: 'Portafoglio',
+          flashResult: {
+            isEmpty: false,
+            isUnanimous: false,
+            isTie: false,
+            minoritySide: 'B',
+            minorityNicknames: ['Alice'],
+            majorityNicknames: ['Bob', 'Carlo'],
+            unvotedNicknames: [],
+          },
+        },
+      });
+    });
+
+    expect(screen.getByText(/meglio perdere il telefono o il portafoglio\?/i)).toBeInTheDocument();
+    expect(screen.getByText(/in minoranza: alice/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ho letto, inizia subito/i })).not.toBeInTheDocument();
   });
 });

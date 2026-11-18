@@ -1,21 +1,22 @@
-import { useEffect, useReducer, useState, type FormEvent } from 'react';
+import { useEffect, useReducer, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@clerk/react';
 import {
   Button,
   Card,
-  Celebration,
   Logo,
   Pill,
-  SplitBar,
   TextInput,
-  VoteOption,
   Alert,
+  VoteOption,
 } from '../shared/ui';
 import { fetchWithTimeout } from '../shared/api';
+import { addSeenDilemmaIds, getSeenDilemmaIds } from '../shared/seenDilemmas';
 import { useOnlineStatus } from '../shared/useOnlineStatus';
 import { useIntensityTheme } from '../shared/useIntensityTheme';
 import { vibrateInfiltrator, vibrateTick } from '../shared/haptics';
-import { playFanfare, playGong, playTick } from '../host/audio/synthSfx';
+import { playFanfare, playGong, playSiren } from '../host/audio/synthSfx';
+import { play as playSfx } from '../host/audio/sfx';
 import { unlockAudio } from '../host/audio/engine';
 import { MuteButton } from '../host/MuteButton';
 import {
@@ -25,33 +26,49 @@ import {
   stopThematicMusic,
 } from '../host/audio/thematicMusic';
 import {
+  DURATE,
+  DURATA_LABELS,
   FAMILIARITA_VALUES,
   FAMILIARITA_LABELS,
+  PERCORSI_CATALOG,
+  STORY_GENRE_LABELS,
+  type CoppieIntensity,
+  type Durata,
   type Familiarita,
+  type InfiltratoTono,
+  type StoriaCatalogItem,
 } from '../shared/events';
 import {
   FALLBACK_DECKS,
   type PassAssurdoCard,
   type PassCard,
-  type PassCoppieCard,
+  type PassCardOriginMode,
   type PassFlashCard,
   type PassInfiltratoCard,
   type PassMode,
 } from './fallbackDeck';
 import {
   PASS_AVATARS,
+  PASS_STATE_VERSION,
+  buildPassCouples,
   computePassAwards,
   createInitialPassState,
+  effectivePassCardMode,
   getCurrentCard,
+  getCurrentReaderPlayer,
   getCurrentTurnPlayer,
   isAssurdoCard,
   isCoppieCard,
+  isCruciverbaCard,
   isFlashOrClassicoCard,
   isInfiltratoCard,
+  isTribunaleCard,
+  isPreferirestiCard,
   minPlayersForMode,
   passReducer,
   type PassPlayer,
 } from './passAndPlayEngine';
+import PassFinaleView from './PassFinaleView';
 import styles from './PassAndPlayApp.module.css';
 
 const STORAGE_PLAYERS_KEY = 'schierati:passPlayers';
@@ -60,11 +77,53 @@ const STORAGE_DECK_CACHE_PREFIX = 'schierati:passDeckCache:';
 const MAX_CACHED_CARDS_PER_MODE = 60;
 
 const MODE_OPTIONS: Array<{ id: PassMode; label: string; desc: string }> = [
-  { id: 'flash', label: '⚡ Flash', desc: 'Dilemmi secchi, voto segreto e dibattito lampo' },
-  { id: 'infiltrato', label: '🕵️ L’Infiltrato', desc: '1 domanda diversa: scopri chi sta bluffando' },
-  { id: 'assurdo', label: '🤪 Assurdo', desc: 'La Gogna sugli amici e sfide di dignità' },
-  { id: 'coppie', label: '🔥 Coppie', desc: 'Allineamento, verità e obblighi per 2+' },
-  { id: 'classico', label: '🎭 Classico', desc: 'Doppio voto e persuasione dal vivo' },
+  { id: 'flash', label: '⚡ Flash', desc: 'Zero passaggi · Scelta immediata tra due posizioni e confronto al volo' },
+  { id: 'classico', label: '🎭 Classico', desc: 'Dilemmi schietti · Scegli la tua posizione e approfondisci con il rilancio' },
+  { id: 'infiltrato', label: '🕵️ L’Infiltrato', desc: '1 giro segreto per la domanda, poi 3-2-1 punta il dito!' },
+  { id: 'assurdo', label: '🤪 Assurdo', desc: 'Prove di dignità e gogna al tavolo' },
+  { id: 'coppie', label: '🔥 Coppie', desc: 'Tutti i numeri (anche dispari!), match e sfide' },
+  {
+    id: 'cruciverba',
+    label: '🧩 Cruciverba',
+    desc: 'Cruciverba cooperativo senza timer · Chi legge dà gli indizi',
+  },
+  {
+    id: 'tribunale',
+    label: '⚖️ Tribunale',
+    desc: 'Arringhe faccia a faccia senza timer e verdetto della giuria',
+  },
+  {
+    id: 'preferiresti',
+    label: '🔀 Preferiresti',
+    desc: 'Quattro alternative assurde tra cui scegliere subito',
+  },
+  {
+    id: 'percorso',
+    label: '🧗 Percorso',
+    desc: 'Viaggio a tappe dalle scelte leggere fino ai bilanci profondi',
+  },
+  {
+    id: 'storia',
+    label: '📖 Storie',
+    desc: 'Racconti interattivi a bivi con conseguenze ed epilogo finale',
+  },
+  {
+    id: 'mix',
+    label: '🎲 Serata Mix · Tutti i giochi casuali',
+    desc: 'Ogni round cambia giochino a sorpresa: Flash, Preferiresti, Assurdo, Cruciverba, Tribunale, Coppie, Classico e Infiltrato!',
+  },
+];
+
+const FALLBACK_STORIES_CATALOG: StoriaCatalogItem[] = [
+  {
+    id: 'bussola-notturna',
+    title: 'La Stazione di Mezza Notte',
+    genre: 'dramma',
+    emoji: '🧭',
+    hook: 'Dieci anni di vita davanti a una valigia pronta e un biglietto di sola andata.',
+    durataStimaMin: 15,
+    scene: 2,
+  },
 ];
 
 const ROUND_COUNTS = [3, 5, 8] as const;
@@ -134,6 +193,111 @@ function saveCachedDeck(mode: PassMode, cards: PassCard[]): void {
   }
 }
 
+function pickPassCards(
+  fallbackPool: PassCard[],
+  count: number,
+  seenSet: Set<string>,
+  familiarita: Familiarita,
+  coppieIntensity?: CoppieIntensity,
+): PassCard[] {
+  const unseenPool = fallbackPool.filter((c) => !seenSet.has(c.id));
+  const basePool = unseenPool.length >= count ? unseenPool : fallbackPool;
+  const byIntensity = coppieIntensity
+    ? basePool.filter((c) => !('intensity' in c) || c.intensity === coppieIntensity)
+    : basePool;
+  const intensityPool = byIntensity.length > 0 ? byIntensity : basePool;
+  const filtered =
+    familiarita === 'vecchi_amici'
+      ? intensityPool.filter((c) => c.familiarita !== 'nuove_conoscenze')
+      : familiarita === 'nuove_conoscenze'
+        ? intensityPool.filter((c) => c.familiarita !== 'vecchi_amici')
+        : intensityPool;
+  const primary = shuffleSlice(filtered.length > 0 ? filtered : intensityPool, count);
+  if (primary.length < count) {
+    const pickedIds = new Set(primary.map((c) => c.id));
+    const extraFromIntensity = shuffleSlice(
+      intensityPool.filter((c) => !pickedIds.has(c.id)),
+      count - primary.length,
+    );
+    for (const c of extraFromIntensity) {
+      primary.push(c);
+      pickedIds.add(c.id);
+    }
+    if (primary.length < count) {
+      const extraFromAll = shuffleSlice(
+        fallbackPool.filter((c) => !pickedIds.has(c.id)),
+        count - primary.length,
+      );
+      primary.push(...extraFromAll);
+    }
+  }
+  return primary;
+}
+
+function buildOfflineMixDeck(
+  roundCount: number,
+  playerCount: number,
+  seenSet: Set<string>,
+  familiarita: Familiarita,
+  intensity: CoppieIntensity,
+): PassCard[] {
+  const subModes: PassCardOriginMode[] =
+    playerCount >= 2
+      ? ['flash', 'preferiresti', 'assurdo', 'coppie', 'cruciverba', 'classico']
+      : ['flash', 'preferiresti', 'assurdo', 'cruciverba', 'classico'];
+  if (playerCount >= 3) {
+    subModes.push('infiltrato', 'tribunale');
+  }
+
+  const cachedMixBySub = new Map<PassCardOriginMode, PassCard[]>();
+  for (const c of loadCachedDeck('mix')) {
+    const sub = effectivePassCardMode('mix', c);
+    const list = cachedMixBySub.get(sub) ?? [];
+    list.push(c);
+    cachedMixBySub.set(sub, list);
+  }
+
+  const shuffledModes = shuffleSlice(subModes, subModes.length);
+  const buckets = shuffledModes
+    .map((sub) => {
+      const byId = new Map<string, PassCard>();
+      for (const c of [
+        ...(cachedMixBySub.get(sub) ?? []),
+        ...loadCachedDeck(sub),
+        ...FALLBACK_DECKS[sub],
+      ]) {
+        if (playerCount < 2 && sub === 'assurdo' && isAssurdoCard(c) && c.cardType !== 'dignita') {
+          continue;
+        }
+        if (!byId.has(c.id)) byId.set(c.id, c);
+      }
+      const picked = pickPassCards(
+        [...byId.values()],
+        Math.max(1, roundCount),
+        seenSet,
+        familiarita,
+        sub === 'coppie' ? intensity : undefined,
+      ).map((c) => ({ ...c, cardMode: sub }) as PassCard);
+      return { sub, cards: picked, cursor: 0 };
+    })
+    .filter((b) => b.cards.length > 0);
+
+  const mixed: PassCard[] = [];
+  let lastSub: PassCardOriginMode | null = null;
+  while (mixed.length < roundCount) {
+    const eligible = buckets.filter((b) => b.cursor < b.cards.length && b.sub !== lastSub);
+    const pool = eligible.length > 0 ? eligible : buckets.filter((b) => b.cursor < b.cards.length);
+    if (pool.length === 0) break;
+    // Prefer buckets furthest behind in cursor count so games cycle evenly, with randomized tie-breaking
+    const minCursor = Math.min(...pool.map((b) => b.cursor));
+    const nextCandidates = pool.filter((b) => b.cursor === minCursor);
+    const chosen = nextCandidates[Math.floor(Math.random() * nextCandidates.length)];
+    mixed.push(chosen.cards[chosen.cursor++]);
+    lastSub = chosen.sub;
+  }
+  return mixed;
+}
+
 function loadActivePassState(): ReturnType<typeof createInitialPassState> | null {
   try {
     const raw = sessionStorage.getItem(STORAGE_ACTIVE_STATE_KEY);
@@ -142,6 +306,7 @@ function loadActivePassState(): ReturnType<typeof createInitialPassState> | null
     if (
       parsed &&
       typeof parsed === 'object' &&
+      parsed.version === PASS_STATE_VERSION &&
       parsed.phase !== 'SETUP' &&
       Array.isArray(parsed.players) &&
       Array.isArray(parsed.cards) &&
@@ -158,6 +323,7 @@ function loadActivePassState(): ReturnType<typeof createInitialPassState> | null
 export default function PassAndPlayApp() {
   const navigate = useNavigate();
   const online = useOnlineStatus();
+  const { isSignedIn, getToken } = useAuth();
   const [state, dispatch] = useReducer(
     passReducer,
     undefined,
@@ -165,89 +331,218 @@ export default function PassAndPlayApp() {
   );
 
   // Setup local state
-  const [selectedMode, setSelectedMode] = useState<PassMode>('flash');
+  const [playMode, setPlayMode] = useState<'solo' | 'gruppo'>(() =>
+    loadSavedPlayers().length === 1 ? 'solo' : 'gruppo',
+  );
+  const [soloName, setSoloName] = useState<string>(() => loadSavedPlayers()[0]?.name || 'Tu');
+  const [setupTab, setSetupTab] = useState<'party' | 'classica'>('party');
+  const [classicSub, setClassicSub] = useState<'classico' | 'percorso' | 'storia'>('classico');
+  const [percorsoId, setPercorsoId] = useState<string>(PERCORSI_CATALOG[0]?.id ?? 'bussola');
+  const [startTappa, setStartTappa] = useState<number>(1);
+  const [durata, setDurata] = useState<Durata>('corto');
+  const [storiesCatalog, setStoriesCatalog] = useState<StoriaCatalogItem[]>(FALLBACK_STORIES_CATALOG);
+  const [storyId, setStoryId] = useState<string>(FALLBACK_STORIES_CATALOG[0]?.id ?? 'bussola-notturna');
+  const [selectedMode, setSelectedMode] = useState<PassMode>('mix');
+  const [showSingleModes, setShowSingleModes] = useState(false);
   const [familiarita, setFamiliarita] = useState<Familiarita>('vecchi_amici');
-  const [intensity, setIntensity] = useState<'complicita' | 'piccante'>('complicita');
+  const [intensity, setIntensity] = useState<CoppieIntensity>('complicita');
+  const [infiltratoTono, setInfiltratoTono] = useState<InfiltratoTono>('risate');
   const [roundCount, setRoundCount] = useState<number>(5);
   const [theme, setTheme] = useState('');
+  const [showAdvancedSetup, setShowAdvancedSetup] = useState(false);
   const [players, setPlayers] = useState<PassPlayer[]>(() => loadSavedPlayers());
   const [nameInput, setNameInput] = useState('');
   const [loadingDeck, setLoadingDeck] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
-  const [openInfo, setOpenInfo] = useState<string | null>(null);
-  const toggleInfo = (id: string) => setOpenInfo((cur) => (cur === id ? null : id));
+  const [recordSavedCode, setRecordSavedCode] = useState<string | null>(null);
+  const recordedSessionKeyRef = useRef<string | null>(null);
 
-  // Suspense & debate local timers
-  const [suspenseLeft, setSuspenseLeft] = useState(3);
-  const [debateLeft, setDebateLeft] = useState(30);
-  const [debatePaused, setDebatePaused] = useState(false);
+  // Transient live-turn selections (no countdown timers)
+  const [pickingCruciverbaSolver, setPickingCruciverbaSolver] = useState(false);
+  const [selectedCoppieMatches, setSelectedCoppieMatches] = useState<string[]>([]);
+  const [swapCoupleId, setSwapCoupleId] = useState<string | null>(null);
 
-  const activePassMode = state.phase === 'SETUP' ? selectedMode : state.mode;
+  const effectivePlayers: PassPlayer[] =
+    playMode === 'solo'
+      ? [
+          {
+            id: 'solo_player',
+            name: soloName.trim() || 'Tu',
+            avatar: PASS_AVATARS[0],
+          },
+        ]
+      : players;
+
+  useEffect(() => {
+    if (!online) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetchWithTimeout('/api/pass-and-play/stories', {}, 3000);
+        if (!res.ok) return;
+        const json = (await res.json()) as { stories?: StoriaCatalogItem[] };
+        if (!cancelled && Array.isArray(json.stories) && json.stories.length > 0) {
+          setStoriesCatalog(json.stories);
+          setStoryId((cur) =>
+            json.stories!.some((s) => s.id === cur) ? cur : json.stories![0].id,
+          );
+        }
+      } catch {
+        // Fallback story catalog already present
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [online]);
+
+  const currentPassCard = getCurrentCard(state);
+  const activePassMode: PassMode =
+    state.phase === 'SETUP'
+      ? selectedMode
+      : effectivePassCardMode(state.mode, currentPassCard);
   useIntensityTheme({
-    partyMode: activePassMode === 'classico' ? null : activePassMode,
+    partyMode:
+      activePassMode === 'classico' ||
+      activePassMode === 'cruciverba' ||
+      activePassMode === 'tribunale' ||
+      activePassMode === 'percorso' ||
+      activePassMode === 'storia'
+        ? null
+        : activePassMode,
     partyIntensity: activePassMode === 'coppie' ? intensity : null,
-    mood: activePassMode === 'classico' ? 'profonda' : undefined,
+    mood:
+      activePassMode === 'classico' ||
+      activePassMode === 'percorso' ||
+      activePassMode === 'storia'
+        ? 'profonda'
+        : activePassMode === 'cruciverba'
+          ? 'leggera'
+          : undefined,
   });
+
+  // Reset transient per-round UI helpers on round/phase/turn changes
+  useEffect(() => {
+    setPickingCruciverbaSolver(false);
+    setSelectedCoppieMatches([]);
+  }, [state.roundIndex, state.phase, state.cruciverbaState?.turnsTaken]);
 
   // Sync saved players back to setup on rematch
   useEffect(() => {
     if (state.phase === 'SETUP' && state.players.length > 0 && players.length === 0) {
-      setPlayers(state.players);
+      if (state.players.length === 1) {
+        setPlayMode('solo');
+        setSoloName(state.players[0].name);
+      } else {
+        setPlayers(state.players);
+      }
     }
   }, [state.phase, state.players, players.length]);
 
-  // 3-2-1 suspense beat before revealing the split
+  // Themed SFX on phase transitions
   useEffect(() => {
-    if (state.phase !== 'REVEAL_SUSPENSE') return;
-    setSuspenseLeft(3);
-    playTick();
-    const t1 = window.setTimeout(() => {
-      setSuspenseLeft(2);
-      playTick();
-    }, 750);
-    const t2 = window.setTimeout(() => {
-      setSuspenseLeft(1);
-      playTick();
-    }, 1500);
-    const t3 = window.setTimeout(() => {
-      playGong();
-      dispatch({ type: 'FINISH_SUSPENSE' });
-    }, 2250);
+    if (state.phase === 'FINAL_AWARDS') {
+      playFanfare();
+      return;
+    }
+    if (state.phase === 'DEBATE') {
+      if (effectivePassCardMode(state.mode, currentPassCard) === 'infiltrato') playSiren();
+      else playSfx('reveal');
+      return;
+    }
+    if (state.phase === 'ROUND_RESULT' && state.roundOutcome) {
+      const o = state.roundOutcome;
+      if (o.infiltratoCaught || o.coppieMatched) {
+        playFanfare();
+      } else if (o.kind === 'gogna') {
+        playGong();
+      } else {
+        playSfx('reveal');
+      }
+    }
+  }, [state.phase, state.mode, state.roundIndex, state.roundOutcome, currentPassCard]);
+
+  // Unlock audio on first gesture in case user reloads mid-game
+  useEffect(() => {
+    const onGesture = () => unlockAudio();
+    window.addEventListener('pointerdown', onGesture, { once: true });
+    window.addEventListener('keydown', onGesture, { once: true });
     return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-      window.clearTimeout(t3);
+      window.removeEventListener('pointerdown', onGesture);
+      window.removeEventListener('keydown', onGesture);
     };
-  }, [state.phase]);
+  }, []);
 
-  // Debate countdown timer
+  // Persist completed Pass & Play run for signed-in users
   useEffect(() => {
-    if (state.phase !== 'DEBATE') return;
-    setDebateLeft(state.debateDurationSec);
-    setDebatePaused(false);
-  }, [state.phase, state.roundIndex, state.debateDurationSec]);
+    if (state.phase === 'SETUP') {
+      recordedSessionKeyRef.current = null;
+      setRecordSavedCode(null);
+      return;
+    }
+    if (state.phase !== 'FINAL_AWARDS' || !online || !isSignedIn || state.cards.length === 0) {
+      return;
+    }
+    const sessionKey = `${state.mode}:${state.cards.map((c) => c.id).join(',')}:${state.players.length}`;
+    if (recordedSessionKeyRef.current === sessionKey) return;
+    recordedSessionKeyRef.current = sessionKey;
 
-  useEffect(() => {
-    if (state.phase !== 'DEBATE' || debatePaused || debateLeft <= 0) return;
-    const id = window.setTimeout(() => setDebateLeft((s) => Math.max(0, s - 1)), 1000);
-    return () => window.clearTimeout(id);
-  }, [state.phase, debatePaused, debateLeft]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const token = await getToken();
+        if (!token || cancelled) return;
+        const awards = computePassAwards(state);
+        const res = await fetchWithTimeout('/api/me/pass-and-play-record', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            partyMode: state.mode,
+            rounds: state.cards.length,
+            playerCount: state.players.length,
+            nickname: state.players[0]?.name || 'Capo Tavolo',
+            score: awards.length,
+          }),
+        });
+        if (!res.ok) return;
+        const json = (await res.json()) as { ok?: boolean; gameCode?: string };
+        if (!cancelled && json.ok) {
+          setRecordSavedCode(json.gameCode ?? 'OK');
+        }
+      } catch {
+        // Best-effort history recording; never interrupt the party screen
+      }
+    })();
 
-  // Fanfare on final awards
-  useEffect(() => {
-    if (state.phase === 'FINAL_AWARDS') playFanfare();
-  }, [state.phase]);
+    return () => {
+      cancelled = true;
+    };
+  }, [state.phase, state.mode, state.cards, state.players, online, isSignedIn, getToken, state]);
 
   // Thematic background music for Pass & Play
-  const currentCardId = getCurrentCard(state)?.id;
+  const currentCardId = currentPassCard?.id;
   useEffect(() => {
     if (state.phase === 'SETUP') {
       stopThematicMusic();
       return;
     }
-    startThematicMusic(pickMusicThemeForPass(state.mode, currentCardId, state.phase));
+    startThematicMusic(
+      pickMusicThemeForPass(
+        effectivePassCardMode(state.mode, currentPassCard),
+        currentCardId,
+        state.phase,
+        {
+          intensity: intensity === 'profondo' ? null : intensity,
+          infiltratoTono,
+          roundIndex: state.roundIndex,
+        },
+      ),
+    );
     setThematicIntensity(state.phase === 'DEBATE' ? 'soft' : 'full');
-  }, [state.phase, state.mode, currentCardId]);
+  }, [state.phase, state.mode, currentPassCard, currentCardId, intensity, infiltratoTono, state.roundIndex]);
 
   useEffect(() => () => stopThematicMusic(), []);
 
@@ -296,13 +591,14 @@ export default function PassAndPlayApp() {
 
   const handleStartGame = async () => {
     const minP = minPlayersForMode(selectedMode);
-    if (players.length < minP) {
+    if (effectivePlayers.length < minP) {
       setSetupError(`Servono almeno ${minP} giocatori per questa modalità.`);
       return;
     }
     setSetupError(null);
     setLoadingDeck(true);
 
+    const seenIds = getSeenDilemmaIds();
     let cards: PassCard[] = [];
     if (online) {
       try {
@@ -314,9 +610,16 @@ export default function PassAndPlayApp() {
             body: JSON.stringify({
               mode: selectedMode,
               count: roundCount,
+              playerCount: effectivePlayers.length,
               intensity,
+              infiltratoTono,
               familiarita,
               theme: theme.trim() || undefined,
+              percorsoId: selectedMode === 'percorso' ? percorsoId : undefined,
+              startTappa: selectedMode === 'percorso' ? startTappa : undefined,
+              durata: selectedMode === 'percorso' ? durata : undefined,
+              storyId: selectedMode === 'storia' ? storyId : undefined,
+              excludeIds: seenIds.slice(-200),
             }),
           },
           4500,
@@ -325,7 +628,9 @@ export default function PassAndPlayApp() {
           const json = (await res.json()) as { cards?: PassCard[] };
           if (Array.isArray(json.cards) && json.cards.length > 0) {
             cards = json.cards;
-            saveCachedDeck(selectedMode, cards);
+            if (selectedMode !== 'storia' && selectedMode !== 'percorso') {
+              saveCachedDeck(selectedMode, cards);
+            }
           }
         }
       } catch {
@@ -334,33 +639,54 @@ export default function PassAndPlayApp() {
     }
 
     if (cards.length === 0) {
-      const mergedById = new Map<string, PassCard>();
-      for (const c of [...loadCachedDeck(selectedMode), ...FALLBACK_DECKS[selectedMode]]) {
-        if (!mergedById.has(c.id)) mergedById.set(c.id, c);
+      const seenSet = new Set(seenIds);
+      if (selectedMode === 'mix') {
+        cards = buildOfflineMixDeck(
+          roundCount,
+          effectivePlayers.length,
+          seenSet,
+          familiarita,
+          intensity,
+        );
+      } else if (selectedMode === 'storia' || selectedMode === 'percorso') {
+        cards = [...FALLBACK_DECKS[selectedMode]];
+      } else {
+        const mergedById = new Map<string, PassCard>();
+        for (const c of [...loadCachedDeck(selectedMode), ...FALLBACK_DECKS[selectedMode]]) {
+          if (
+            effectivePlayers.length < 2 &&
+            selectedMode === 'assurdo' &&
+            isAssurdoCard(c) &&
+            c.cardType !== 'dignita'
+          ) {
+            continue;
+          }
+          if (!mergedById.has(c.id)) mergedById.set(c.id, c);
+        }
+        cards = pickPassCards(
+          [...mergedById.values()],
+          roundCount,
+          seenSet,
+          familiarita,
+          selectedMode === 'coppie' ? intensity : undefined,
+        );
       }
-      const fallbackPool = [...mergedById.values()];
-      const byIntensity =
-        selectedMode === 'coppie'
-          ? fallbackPool.filter((c) => !('intensity' in c) || c.intensity === intensity)
-          : fallbackPool;
-      const intensityPool = byIntensity.length > 0 ? byIntensity : fallbackPool;
-      const filtered =
-        familiarita === 'vecchi_amici'
-          ? intensityPool.filter((c) => c.familiarita !== 'nuove_conoscenze')
-          : familiarita === 'nuove_conoscenze'
-            ? intensityPool.filter((c) => c.familiarita !== 'vecchi_amici')
-            : intensityPool;
-      cards = shuffleSlice(filtered.length > 0 ? filtered : intensityPool, roundCount);
     }
 
+    addSeenDilemmaIds(cards.map((c) => c.id));
     setLoadingDeck(false);
     unlockAudio();
-    dispatch({ type: 'START_GAME', mode: selectedMode, players, cards });
+    dispatch({ type: 'START_GAME', mode: selectedMode, players: effectivePlayers, cards });
   };
 
   const currentCard = getCurrentCard(state);
   const currentPlayer = getCurrentTurnPlayer(state);
+  const readerPlayer = getCurrentReaderPlayer(state);
   const playerName = (id: string) => state.players.find((p) => p.id === id)?.name ?? 'Amico';
+  const playerAvatar = (id: string) => state.players.find((p) => p.id === id)?.avatar ?? '🎲';
+  const nextInfiltratoPlayer =
+    state.turnIndex + 1 < state.players.length ? state.players[state.turnIndex + 1] : null;
+  const advancedSummary = `${roundCount} round · ${FAMILIARITA_LABELS[familiarita === 'nuove_conoscenze' ? 'nuove_conoscenze' : 'vecchi_amici'].nome}${theme.trim() ? ` · "${theme.trim()}"` : ''}`;
 
   return (
     <main className={styles.page}>
@@ -369,8 +695,12 @@ export default function PassAndPlayApp() {
           type="button"
           className={styles.backBtn}
           onClick={() => {
-            if (state.phase === 'SETUP') navigate(-1);
-            else dispatch({ type: 'RESET_TO_SETUP' });
+            if (state.phase === 'SETUP') {
+              if (window.history.length > 1) navigate(-1);
+              else navigate('/');
+            } else {
+              dispatch({ type: 'RESET_TO_SETUP' });
+            }
           }}
         >
           {state.phase === 'SETUP' ? '← Indietro' : '✕ Esci'}
@@ -385,352 +715,658 @@ export default function PassAndPlayApp() {
             <span className={styles.roundBadge}>
               Round {state.roundIndex + 1}/{state.cards.length}
             </span>
-            <MuteButton />
+            <MuteButton inline />
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span className={styles.roundBadge}>Fine Serata</span>
-            <MuteButton />
+            <MuteButton inline />
           </div>
         )}
       </header>
 
-      {/* SETUP */}
+      {/* SETUP IN 2 PASSI */}
       {state.phase === 'SETUP' && (
         <Card glow="accent" className={styles.setupCard}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+          <div className={styles.setupHeader}>
             <h1 className={styles.title}>📱 Passa il Telefono</h1>
-            <button
-              type="button"
-              aria-label="Dettagli modalità"
-              aria-expanded={openInfo === 'header'}
-              className={`${styles.infoBtn} ${openInfo === 'header' ? styles.infoBtnActive : ''}`}
-              onClick={() => toggleInfo('header')}
-            >
-              ⓘ
-            </button>
-          </div>
-          {openInfo === 'header' && (
-            <p className={styles.infoBox} style={{ marginTop: '-0.3rem', textAlign: 'center' }}>
-              Un solo dispositivo per tutto il tavolo. Niente codici, niente QR.
+            <p className={styles.setupSub}>
+              Guardate gli amici, non lo schermo · Un lettore a turno, esiti con 1 tocco
             </p>
-          )}
+          </div>
 
           <div className={styles.setupGrid}>
             <div className={styles.setupCol}>
-              <div>
-                <div className={styles.sectionHeader}>
-                  <div className={styles.sectionLabel} style={{ marginBottom: 0 }}>Con chi giochi?</div>
+              {/* 1A. SOLO VS GRUPPO */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <div className={styles.sectionLabel}>Come giochi?</div>
+                <div className={styles.segmentGrid2}>
                   <button
                     type="button"
-                    aria-label="Dettagli gruppo"
-                    aria-expanded={openInfo === 'familiarita'}
-                    className={`${styles.infoBtn} ${openInfo === 'familiarita' ? styles.infoBtnActive : ''}`}
-                    onClick={() => toggleInfo('familiarita')}
+                    aria-pressed={playMode === 'solo'}
+                    className={`${styles.segmentBtn} ${playMode === 'solo' ? styles.segmentBtnActive : ''}`}
+                    onClick={() => {
+                      setPlayMode('solo');
+                      if (minPlayersForMode(selectedMode) > 1) {
+                        setSelectedMode('mix');
+                      }
+                    }}
                   >
-                    ⓘ
+                    👤 Da solo
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={playMode === 'gruppo'}
+                    className={`${styles.segmentBtn} ${playMode === 'gruppo' ? styles.segmentBtnActive : ''}`}
+                    onClick={() => setPlayMode('gruppo')}
+                  >
+                    👥 In gruppo
                   </button>
                 </div>
-                <div className={styles.pillRow}>
-                  {FAMILIARITA_VALUES.map((fam) => (
-                    <Pill key={fam} selected={familiarita === fam} onClick={() => setFamiliarita(fam)}>
-                      {FAMILIARITA_LABELS[fam].nome}
-                    </Pill>
-                  ))}
-                </div>
-                {openInfo === 'familiarita' && (
-                  <div className={styles.infoBox}>
-                    {FAMILIARITA_VALUES.map((fam) => (
-                      <div key={fam}>
-                        <strong>{FAMILIARITA_LABELS[fam].nome}</strong>: {FAMILIARITA_LABELS[fam].descr}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
-              <div>
-                <div className={styles.sectionLabel}>1. Scegli la modalità</div>
-                <div className={styles.modeGrid}>
-                  {MODE_OPTIONS.map((m) => (
-                    <div key={m.id} className={styles.modeCell}>
+              {/* 1B. PARTY MODE VS MODALITÀ CLASSICA TABS */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div className={styles.sectionLabel}>1. Modalità di gioco</div>
+                <div className={styles.segmentGrid2}>
+                  <button
+                    type="button"
+                    aria-pressed={setupTab === 'party'}
+                    className={`${styles.segmentBtn} ${setupTab === 'party' ? styles.segmentBtnActive : ''}`}
+                    onClick={() => {
+                      setSetupTab('party');
+                      if (selectedMode === 'percorso' || selectedMode === 'storia') {
+                        setSelectedMode('mix');
+                      }
+                    }}
+                  >
+                    🔥 Party Mode
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={setupTab === 'classica'}
+                    className={`${styles.segmentBtn} ${setupTab === 'classica' ? styles.segmentBtnActive : ''}`}
+                    onClick={() => {
+                      setSetupTab('classica');
+                      setSelectedMode(classicSub);
+                    }}
+                  >
+                    🏛️ Modalità Classica
+                  </button>
+                </div>
+
+                {setupTab === 'party' ? (
+                  <>
+                    <button
+                      type="button"
+                      aria-pressed={selectedMode === 'mix'}
+                      onClick={() => {
+                        setSelectedMode('mix');
+                        setShowSingleModes(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        minHeight: '3.25rem',
+                        padding: '0.75rem 0.9rem',
+                        borderRadius: 'var(--radius-md, 10px)',
+                        border:
+                          selectedMode === 'mix'
+                            ? '2px solid var(--gold)'
+                            : '1px solid rgba(229, 193, 88, 0.35)',
+                        background:
+                          selectedMode === 'mix'
+                            ? 'linear-gradient(135deg, rgba(229, 193, 88, 0.22) 0%, rgba(20, 26, 52, 0.85) 100%)'
+                            : 'rgba(255, 255, 255, 0.04)',
+                        color: 'var(--text)',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.3rem',
+                        boxShadow:
+                          selectedMode === 'mix' ? '0 0 0 1px rgba(229, 193, 88, 0.28)' : undefined,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.5rem',
+                          width: '100%',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontWeight: 900,
+                            fontSize: '0.95rem',
+                            color: 'var(--gold)',
+                            textTransform: 'uppercase',
+                          }}
+                        >
+                          🎲 Serata Mix · Tutti i giochi casuali
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.68rem',
+                            padding: '0.12rem 0.45rem',
+                            borderRadius: '4px',
+                            background: 'rgba(229, 193, 88, 0.2)',
+                            color: 'var(--gold)',
+                            fontWeight: 700,
+                            flexShrink: 0,
+                          }}
+                        >
+                          Consigliata
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.78rem', opacity: 0.88, lineHeight: 1.35 }}>
+                        Ogni round un giochino diverso a sorpresa senza timer!
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={styles.optionsToggleBtn}
+                      aria-expanded={showSingleModes || selectedMode !== 'mix'}
+                      onClick={() => setShowSingleModes((v) => !v)}
+                    >
+                      <span>🎯 Scegli singolo gioco</span>
+                      <span className={styles.optionsSummary}>
+                        {selectedMode !== 'mix'
+                          ? `${MODE_OPTIONS.find((m) => m.id === selectedMode)?.label ?? selectedMode} ▲`
+                          : showSingleModes
+                            ? 'Nascondi ▲'
+                            : 'Mostra ▼'}
+                      </span>
+                    </button>
+
+                    {(showSingleModes || selectedMode !== 'mix') && (
+                      <>
+                        <div className={styles.modeGrid}>
+                          {MODE_OPTIONS.filter(
+                            (m) =>
+                              m.id !== 'mix' &&
+                              m.id !== 'percorso' &&
+                              m.id !== 'storia' &&
+                              (playMode === 'gruppo' || minPlayersForMode(m.id) <= 1),
+                          ).map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              className={`${styles.modeBtn} ${selectedMode === m.id ? styles.modeBtnActive : ''}`}
+                              onClick={() => setSelectedMode(m.id)}
+                            >
+                              <span className={styles.modeBtnTitle}>{m.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                        {selectedMode !== 'mix' && (
+                          <p className={styles.modeDescBox}>
+                            {MODE_OPTIONS.find((m) => m.id === selectedMode)?.desc}
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                    <div className={styles.segmentGrid3}>
                       <button
                         type="button"
-                        className={`${styles.modeBtn} ${selectedMode === m.id ? styles.modeBtnActive : ''}`}
-                        onClick={() => setSelectedMode(m.id)}
+                        className={`${styles.segmentBtn} ${classicSub === 'classico' ? styles.segmentBtnActive : ''}`}
+                        onClick={() => {
+                          setClassicSub('classico');
+                          setSelectedMode('classico');
+                        }}
                       >
-                        <span className={styles.modeBtnTitle}>{m.label}</span>
+                        🎭 Dilemmi
                       </button>
                       <button
                         type="button"
-                        aria-label="Dettagli opzione"
-                        aria-expanded={openInfo === `mode-${m.id}`}
-                        className={`${styles.infoBtn} ${openInfo === `mode-${m.id}` ? styles.infoBtnActive : ''}`}
-                        onClick={() => toggleInfo(`mode-${m.id}`)}
+                        className={`${styles.segmentBtn} ${classicSub === 'percorso' ? styles.segmentBtnActive : ''}`}
+                        onClick={() => {
+                          setClassicSub('percorso');
+                          setSelectedMode('percorso');
+                        }}
                       >
-                        ⓘ
+                        🧗 Percorso
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.segmentBtn} ${classicSub === 'storia' ? styles.segmentBtnActive : ''}`}
+                        onClick={() => {
+                          setClassicSub('storia');
+                          setSelectedMode('storia');
+                        }}
+                      >
+                        📖 Storie
                       </button>
                     </div>
-                  ))}
-                </div>
-                {openInfo?.startsWith('mode-') && (
-                  <p className={styles.infoBox}>
-                    {MODE_OPTIONS.find((m) => `mode-${m.id}` === openInfo)?.desc}
-                  </p>
+
+                    {classicSub === 'percorso' && (
+                      <div className={styles.optionsPanel}>
+                        <div className={styles.sectionLabel}>Tema del percorso</div>
+                        <div className={styles.modeGrid}>
+                          {PERCORSI_CATALOG.map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              className={`${styles.modeBtn} ${percorsoId === p.id ? styles.modeBtnActive : ''}`}
+                              onClick={() => setPercorsoId(p.id)}
+                            >
+                              <span className={styles.modeBtnTitle}>
+                                {p.emoji} {p.nome}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                        <div className={styles.sectionLabel}>Tappa di partenza</div>
+                        <div className={styles.segmentGrid2}>
+                          {[1, 2, 3, 4].map((t) => (
+                            <button
+                              key={t}
+                              type="button"
+                              className={`${styles.segmentBtn} ${startTappa === t ? styles.segmentBtnActive : ''}`}
+                              onClick={() => setStartTappa(t)}
+                            >
+                              Tappa {t}
+                            </button>
+                          ))}
+                        </div>
+                        <div className={styles.sectionLabel}>Lunghezza</div>
+                        <div className={styles.segmentGrid3}>
+                          {DURATE.map((d) => (
+                            <button
+                              key={d}
+                              type="button"
+                              className={`${styles.segmentBtn} ${durata === d ? styles.segmentBtnActive : ''}`}
+                              onClick={() => setDurata(d)}
+                            >
+                              {DURATA_LABELS[d].nome}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {classicSub === 'storia' && (
+                      <div className={styles.optionsPanel}>
+                        <div className={styles.sectionLabel}>Scegli la storia</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                          {storiesCatalog.map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              className={`${styles.modeBtn} ${storyId === s.id ? styles.modeBtnActive : ''}`}
+                              onClick={() => setStoryId(s.id)}
+                              style={{ textAlign: 'left', flexDirection: 'column', alignItems: 'flex-start', gap: '0.2rem' }}
+                            >
+                              <span className={styles.modeBtnTitle}>
+                                {s.emoji} {s.title} · {STORY_GENRE_LABELS[s.genre]}
+                              </span>
+                              <span style={{ fontSize: '0.75rem', opacity: 0.85, fontWeight: 400 }}>
+                                {s.hook} ({s.scene} bivi)
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {classicSub === 'classico' && (
+                      <p className={styles.modeDescBox}>
+                        Dilemmi classici schietti con domanda di rilancio e riflessione finale, senza timer.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {selectedMode === 'coppie' && (
-                <div>
-                  <div className={styles.sectionLabel}>Intensità</div>
-                  <div className={styles.pillRow}>
-                    <Pill selected={intensity === 'complicita'} onClick={() => setIntensity('complicita')}>
-                      🥂 Complicità
-                    </Pill>
-                    <Pill selected={intensity === 'piccante'} onClick={() => setIntensity('piccante')}>
-                      🌶️ Piccante
-                    </Pill>
-                  </div>
-                </div>
-              )}
-
               <div>
-                <div className={styles.sectionLabel}>2. Quanti round?</div>
-                <div className={styles.pillRow}>
-                  {ROUND_COUNTS.map((n) => (
-                    <Pill key={n} selected={roundCount === n} onClick={() => setRoundCount(n)}>
-                      {n} round
-                    </Pill>
-                  ))}
-                </div>
+                <button
+                  type="button"
+                  className={styles.optionsToggleBtn}
+                  aria-expanded={showAdvancedSetup}
+                  onClick={() => setShowAdvancedSetup((v) => !v)}
+                >
+                  <span>⚙️ Opzioni serata</span>
+                  <span className={styles.optionsSummary}>
+                    {advancedSummary} {showAdvancedSetup ? '▲' : '▼'}
+                  </span>
+                </button>
+
+                {showAdvancedSetup && (
+                  <div className={styles.optionsPanel} style={{ marginTop: '0.55rem' }}>
+                    {selectedMode !== 'percorso' && selectedMode !== 'storia' && (
+                      <div>
+                        <div className={styles.sectionLabel}>Quanti round?</div>
+                        <div className={styles.segmentGrid3}>
+                          {ROUND_COUNTS.map((n) => (
+                            <button
+                              key={n}
+                              type="button"
+                              className={`${styles.segmentBtn} ${roundCount === n ? styles.segmentBtnActive : ''}`}
+                              onClick={() => setRoundCount(n)}
+                            >
+                              {n} round
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <div className={styles.sectionLabel}>Con chi giochi?</div>
+                      <div className={styles.segmentGrid2}>
+                        {FAMILIARITA_VALUES.map((fam) => (
+                          <button
+                            key={fam}
+                            type="button"
+                            className={`${styles.segmentBtn} ${familiarita === fam ? styles.segmentBtnActive : ''}`}
+                            onClick={() => setFamiliarita(fam)}
+                          >
+                            {FAMILIARITA_LABELS[fam].nome}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {(selectedMode === 'coppie' || selectedMode === 'mix') && (
+                      <div>
+                        <div className={styles.sectionLabel}>Intensità Coppie</div>
+                        <div className={styles.segmentGrid3}>
+                          <button
+                            type="button"
+                            className={`${styles.segmentBtn} ${intensity === 'complicita' ? styles.segmentBtnActive : ''}`}
+                            onClick={() => setIntensity('complicita')}
+                          >
+                            🥂 Complicità
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.segmentBtn} ${intensity === 'piccante' ? styles.segmentBtnActive : ''}`}
+                            onClick={() => setIntensity('piccante')}
+                          >
+                            🌶️ Piccante
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.segmentBtn} ${intensity === 'profondo' ? styles.segmentBtnActive : ''}`}
+                            onClick={() => setIntensity('profondo')}
+                          >
+                            🌊 Profondo
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {(selectedMode === 'infiltrato' || selectedMode === 'mix') && (
+                      <div>
+                        <div className={styles.sectionLabel}>Tono Infiltrato</div>
+                        <div className={styles.segmentGrid3}>
+                          <button
+                            type="button"
+                            className={`${styles.segmentBtn} ${infiltratoTono === 'risate' ? styles.segmentBtnActive : ''}`}
+                            onClick={() => setInfiltratoTono('risate')}
+                          >
+                            😂 Risate
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.segmentBtn} ${infiltratoTono === 'profondo' ? styles.segmentBtnActive : ''}`}
+                            onClick={() => setInfiltratoTono('profondo')}
+                          >
+                            🌊 Profondo
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.segmentBtn} ${infiltratoTono === 'misto' ? styles.segmentBtnActive : ''}`}
+                            onClick={() => setInfiltratoTono('misto')}
+                          >
+                            🎲 Misto
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedMode !== 'classico' && (
+                      <div>
+                        <label htmlFor="pass-theme-input" className={styles.sectionLabel} style={{ display: 'block' }}>
+                          Tema personalizzato (opzionale)
+                        </label>
+                        <TextInput
+                          id="pass-theme-input"
+                          name="passTheme"
+                          style={{ width: '100%' }}
+                          value={theme}
+                          onChange={(e) => setTheme(e.target.value)}
+                          placeholder="Es. vacanza, coinquilini, ex..."
+                          maxLength={60}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
             <div className={styles.setupCol}>
-              {selectedMode !== 'classico' && (
+              {playMode === 'solo' ? (
                 <div>
-                  <label htmlFor="pass-theme-input" className={styles.sectionLabel} style={{ display: 'block' }}>
-                    Tema della serata (opzionale)
+                  <label htmlFor="pass-solo-name" className={styles.sectionLabel} style={{ display: 'block' }}>
+                    2. Chi gioca? (Da solo · senza timer)
                   </label>
                   <TextInput
-                    id="pass-theme-input"
-                    name="passTheme"
+                    id="pass-solo-name"
+                    name="soloName"
                     style={{ width: '100%' }}
-                    value={theme}
-                    onChange={(e) => setTheme(e.target.value)}
-                    placeholder="Es. vacanza al mare, coinquilini, ex..."
-                    maxLength={60}
-                  />
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="pass-player-input" className={styles.sectionLabel} style={{ display: 'block' }}>
-                  3. Chi gioca? ({players.length}/10 · min {minPlayersForMode(selectedMode)})
-                </label>
-                <form onSubmit={handleAddPlayer} className={styles.rosterInputRow}>
-                  <TextInput
-                    id="pass-player-input"
-                    name="playerName"
-                    style={{ width: '100%' }}
-                    value={nameInput}
-                    onChange={(e) => setNameInput(e.target.value)}
-                    placeholder="Nome amico..."
+                    value={soloName}
+                    onChange={(e) => setSoloName(e.target.value)}
+                    placeholder="Il tuo nome..."
                     maxLength={18}
                   />
-                  <Button type="submit" variant="ghost">
-                    + Aggiungi
-                  </Button>
-                </form>
-                {players.length > 0 && (
-                  <div className={styles.chips} style={{ marginTop: '0.65rem' }}>
-                    {players.map((p) => (
-                      <span key={p.id} className={styles.chip}>
-                        <span>{p.avatar}</span>
-                        <span>{p.name}</span>
-                        <button
-                          type="button"
-                          className={styles.chipRemove}
-                          aria-label={`Rimuovi ${p.name}`}
-                          onClick={() => handleRemovePlayer(p.id)}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
+                  <p style={{ margin: '0.5rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    Scegli d’impulso senza fretta: a fine partita riceverai il tuo profilo personalizzato.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <label htmlFor="pass-player-input" className={styles.sectionLabel} style={{ display: 'block' }}>
+                    2. Chi gioca? ({players.length}/10 · min {minPlayersForMode(selectedMode)})
+                  </label>
+                  <form onSubmit={handleAddPlayer} className={styles.rosterInputRow}>
+                    <TextInput
+                      id="pass-player-input"
+                      name="playerName"
+                      style={{ width: '100%' }}
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      placeholder="Nome amico..."
+                      maxLength={18}
+                    />
+                    <Button type="submit" variant="ghost">
+                      + Aggiungi
+                    </Button>
+                  </form>
+                  {players.length > 0 && (
+                    <div className={styles.chips} style={{ marginTop: '0.65rem' }}>
+                      {players.map((p) => (
+                        <span key={p.id} className={styles.chip}>
+                          <span>{p.avatar}</span>
+                          <span>{p.name}</span>
+                          <button
+                            type="button"
+                            className={styles.chipRemove}
+                            aria-label={`Rimuovi ${p.name}`}
+                            onClick={() => handleRemovePlayer(p.id)}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {selectedMode === 'coppie' && players.length >= 2 && (
+                    <div
+                      style={{
+                        marginTop: '0.7rem',
+                        padding: '0.65rem 0.75rem',
+                        borderRadius: '12px',
+                        background: 'rgba(236, 72, 153, 0.1)',
+                        border: '1px solid rgba(236, 72, 153, 0.35)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.4rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#fbcfe8', textTransform: 'uppercase' }}>
+                          💕 {players.length % 2 === 0 ? 'Coppie del tavolo' : 'Abbinamenti dinamici'}
+                        </span>
+                        {players.length >= 4 && players.length % 2 === 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSwapCoupleId(null);
+                              const copy = [...players];
+                              for (let i = copy.length - 1; i > 0; i--) {
+                                const j = Math.floor(Math.random() * (i + 1));
+                                [copy[i], copy[j]] = [copy[j], copy[i]];
+                              }
+                              setPlayers(copy);
+                              savePlayers(copy);
+                            }}
+                            style={{
+                              background: 'rgba(255,255,255,0.08)',
+                              border: '1px solid rgba(255,255,255,0.2)',
+                              color: '#fff',
+                              borderRadius: '8px',
+                              padding: '0.2rem 0.5rem',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            🔀 Mescola
+                          </button>
+                        )}
+                      </div>
+                      {players.length % 2 !== 0 ? (
+                        <p style={{ margin: 0, fontSize: '0.78rem', color: '#fbcfe8', fontWeight: 600 }}>
+                          Siete in {players.length} (dispari): a ogni round sorteggiamo una coppia diversa!
+                        </p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                          {buildPassCouples(players).map((c, idx) => (
+                            <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                              <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>Coppia {idx + 1}</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                {[c.memberAId, c.memberBId].map((pid) => {
+                                  const pl = players.find((p) => p.id === pid);
+                                  if (!pl) return null;
+                                  const isSel = swapCoupleId === pid;
+                                  return (
+                                    <button
+                                      key={pid}
+                                      type="button"
+                                      onClick={() => {
+                                        if (!swapCoupleId) setSwapCoupleId(pid);
+                                        else if (swapCoupleId === pid) setSwapCoupleId(null);
+                                        else {
+                                          const iA = players.findIndex((x) => x.id === swapCoupleId);
+                                          const iB = players.findIndex((x) => x.id === pid);
+                                          if (iA !== -1 && iB !== -1) {
+                                            const copy = [...players];
+                                            [copy[iA], copy[iB]] = [copy[iB], copy[iA]];
+                                            setPlayers(copy);
+                                            savePlayers(copy);
+                                          }
+                                          setSwapCoupleId(null);
+                                        }
+                                      }}
+                                      style={{
+                                        padding: '0.2rem 0.5rem',
+                                        borderRadius: '8px',
+                                        border: isSel ? '1.5px solid #fbbf24' : '1px solid rgba(255,255,255,0.2)',
+                                        background: isSel ? 'rgba(251, 191, 36, 0.25)' : 'rgba(0,0,0,0.25)',
+                                        color: '#fff',
+                                        fontSize: '0.78rem',
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      {pl.avatar} {pl.name}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {setupError && <Alert tone="danger">{setupError}</Alert>}
 
               <Button
                 variant="primary"
                 size="lg"
-                disabled={loadingDeck || players.length < minPlayersForMode(selectedMode)}
+                disabled={loadingDeck || effectivePlayers.length < minPlayersForMode(selectedMode)}
                 onClick={() => void handleStartGame()}
               >
-                {loadingDeck ? 'Preparo le carte...' : 'Inizia la serata ▶'}
+                {loadingDeck ? 'Preparo le carte...' : 'Inizia la partita ▶'}
               </Button>
             </div>
           </div>
         </Card>
       )}
 
-      {/* CARD INTRO */}
-      {state.phase === 'CARD_INTRO' && currentCard && (
-        <Card glow="accent" className={styles.card}>
-          <p className={styles.subtitle}>Leggete ad alta voce al tavolo</p>
-          {state.mode === 'infiltrato' ? (
-            <>
-              <h2 className={styles.title}>🕵️ Giro delle Domande Segrete</h2>
-              <p className={styles.subtitle}>
-                Tutti riceveranno la stessa domanda, tranne <strong>1 Infiltrato</strong> che
-                riceverà una domanda simile ma diversa. Passate il telefono in cerchio!
-              </p>
-            </>
-          ) : (
-            <>
-              <h2 className={styles.title}>
-                {isFlashOrClassicoCard(currentCard)
-                  ? currentCard.text
-                  : isAssurdoCard(currentCard) || isCoppieCard(currentCard)
-                    ? currentCard.prompt
-                    : ''}
-              </h2>
-              {isFlashOrClassicoCard(currentCard) && (
-                <div className={styles.spuntiGrid}>
-                  <div className={styles.spuntiBox}>
-                    <strong>A:</strong> {currentCard.optionA}
-                  </div>
-                  <div className={styles.spuntiBox}>
-                    <strong>B:</strong> {currentCard.optionB}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          <Button variant="primary" size="lg" onClick={() => dispatch({ type: 'BEGIN_ROUND' })}>
-            {state.mode === 'coppie' &&
-            isCoppieCard(currentCard) &&
-            currentCard.cardType !== 'allineamento'
-              ? 'Mostra la sfida ▶'
-              : 'Inizia il giro segreto 🔒'}
-          </Button>
-        </Card>
-      )}
-
-      {/* PRIVACY CURTAIN */}
-      {state.phase === 'PASS_CURTAIN' && currentPlayer && (
-        <Card glow="accent" className={styles.curtain}>
-          <div className={styles.curtainAvatar} aria-hidden="true">
-            {currentPlayer.avatar}
-          </div>
-          <p className={styles.subtitle}>Passa il telefono a</p>
-          <h2 className={styles.curtainName}>{currentPlayer.name}</h2>
-          <p className={styles.subtitle}>
-            Assicurati che nessun altro stia guardando lo schermo.
-          </p>
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={() => {
-              vibrateTick();
-              dispatch({ type: 'UNLOCK_TURN' });
-            }}
-          >
-            Sono {currentPlayer.name} · Sblocca 🔓
-          </Button>
-        </Card>
-      )}
-
-      {/* SECRET TURN */}
-      {state.phase === 'SECRET_TURN' && currentPlayer && currentCard && (
-        <Card className={styles.card}>
-          <div style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--gold)', fontWeight: 700 }}>
-            {currentPlayer.avatar} Turno segreto di {currentPlayer.name}
-          </div>
-
-          {(state.secretKind === 'vote1' ||
-            state.secretKind === 'vote2' ||
-            state.secretKind === 'coppie_align') && (
-            <>
-              <h2 className={styles.title}>
-                {isFlashOrClassicoCard(currentCard)
-                  ? currentCard.text
-                  : (currentCard as PassAssurdoCard | PassCoppieCard).prompt}
-              </h2>
-              <div className={styles.optionsStack}>
-                <VoteOption
-                  faction="a"
-                  letter="A"
-                  label={
-                    (currentCard as PassFlashCard | PassAssurdoCard | PassCoppieCard).optionA ??
-                    'Opzione A'
-                  }
-                  onClick={() => {
-                    vibrateTick();
-                    dispatch({ type: 'SUBMIT_VOTE', choice: 'A' });
-                  }}
-                />
-                <VoteOption
-                  faction="b"
-                  letter="B"
-                  label={
-                    (currentCard as PassFlashCard | PassAssurdoCard | PassCoppieCard).optionB ??
-                    'Opzione B'
-                  }
-                  onClick={() => {
-                    vibrateTick();
-                    dispatch({ type: 'SUBMIT_VOTE', choice: 'B' });
-                  }}
-                />
+      {state.phase !== 'SETUP' && (
+        <div
+          className={`${styles.stage} ${state.phase === 'FINAL_AWARDS' ? styles.stageTop : ''}`}
+        >
+          {/* PRIVACY CURTAIN (SOLO L'INFILTRATO) */}
+          {state.phase === 'PASS_CURTAIN' && currentPlayer && (
+            <Card glow="accent" className={styles.curtain}>
+              <div className={styles.curtainAvatar} aria-hidden="true">
+                {currentPlayer.avatar}
               </div>
-            </>
-          )}
-
-          {(state.secretKind === 'gogna' || state.secretKind === 'infiltrato_accuse') && (
-            <>
-              <h2 className={styles.title}>
-                {state.secretKind === 'gogna'
-                  ? (currentCard as PassAssurdoCard).prompt
-                  : 'Chi è secondo te L’Infiltrato?'}
-              </h2>
-              <div className={styles.optionsStack}>
-                {state.players
-                  .filter((p) =>
-                    state.secretKind === 'infiltrato_accuse' && state.players.length > 2
-                      ? p.id !== currentPlayer.id
-                      : true,
-                  )
-                  .map((p) => (
-                    <VoteOption
-                      key={p.id}
-                      faction="accent"
-                      label={`${p.avatar} ${p.name}`}
-                      onClick={() => {
-                        vibrateTick();
-                        dispatch({ type: 'SUBMIT_TARGET', targetId: p.id });
-                      }}
-                    />
-                  ))}
-              </div>
-            </>
-          )}
-
-          {state.secretKind === 'infiltrato_read' && isInfiltratoCard(currentCard) && (
-            <>
+              <p className={styles.subtitle}>Passa il telefono a</p>
+              <h2 className={styles.curtainName}>{currentPlayer.name}</h2>
               <p className={styles.subtitle}>
-                Leggi la tua domanda e memorizzala. Non mostrarla a nessuno!
+                Assicurati che nessun altro guardi lo schermo ({state.turnIndex + 1}/{state.players.length})
               </p>
-              <div className={styles.penaltyBox}>
-                <strong>La tua domanda segreta:</strong>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, marginTop: '0.5rem' }}>
-                  {currentPlayer.id === state.infiltratoId
-                    ? currentCard.impostorQuestion
-                    : currentCard.groupQuestion}
-                </div>
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={() => {
+                  vibrateTick();
+                  dispatch({ type: 'UNLOCK_TURN' });
+                }}
+              >
+                Sono {currentPlayer.name} · Leggi domanda 👀
+              </Button>
+            </Card>
+          )}
+
+          {/* SECRET TURN (SOLO LETTURA DOMANDA INFILTRATO) */}
+          {state.phase === 'SECRET_TURN' && currentPlayer && currentCard && isInfiltratoCard(currentCard) && (
+            <Card className={styles.card}>
+              <div className={styles.readerPill}>
+                <span>{currentPlayer.avatar}</span>
+                <span>Solo per {currentPlayer.name}</span>
+              </div>
+              <p className={styles.subtitle}>Memorizzala e non mostrarla a nessuno!</p>
+              <div className={styles.secretBox}>
+                {currentPlayer.id === state.infiltratoId
+                  ? currentCard.impostorQuestion
+                  : currentCard.groupQuestion}
               </div>
               <Button
                 variant="primary"
@@ -741,257 +1377,821 @@ export default function PassAndPlayApp() {
                   dispatch({ type: 'ACK_SECRET' });
                 }}
               >
-                Ho memorizzato, nascondi 🙈
+                {nextInfiltratoPlayer
+                  ? `Fatto, passa a ${nextInfiltratoPlayer.name} 🙈`
+                  : 'Tutti pronti · Via al tavolo! 🗣️'}
               </Button>
-            </>
-          )}
-        </Card>
-      )}
-
-      {/* REVEAL SUSPENSE */}
-      {state.phase === 'REVEAL_SUSPENSE' && (
-        <Card className={styles.curtain}>
-          <p className={styles.subtitle}>Tutti hanno votato. Tra poco il verdetto...</p>
-          <div className={styles.suspenseNum}>{suspenseLeft}</div>
-        </Card>
-      )}
-
-      {/* DEBATE */}
-      {state.phase === 'DEBATE' && currentCard && (
-        <Card className={styles.card}>
-          {state.mode === 'infiltrato' && (
-            <>
-              <h2 className={styles.title}>🗣️ Giro di risposte & Dibattito</h2>
-              <p className={styles.subtitle}>
-                Ognuno dice ad alta voce la propria risposta alla domanda segreta. Chi sembra
-                fuori luogo?
-              </p>
-              <div className={styles.timerBox}>
-                <span>Timer dibattito</span>
-                <span className={styles.timerValue}>{debateLeft}s</span>
-                <Button size="md" variant="ghost" onClick={() => setDebatePaused((p) => !p)}>
-                  {debatePaused ? 'Riprendi' : 'Pausa'}
-                </Button>
-              </div>
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={() => dispatch({ type: 'START_ACCUSE' })}
-              >
-                Vota l’Infiltrato in segreto 🕵️
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => dispatch({ type: 'REVEAL_INFILTRATO_NOW' })}
-              >
-                Punta il dito al 3 · Rivela subito
-              </Button>
-            </>
+            </Card>
           )}
 
-          {state.mode === 'coppie' && isCoppieCard(currentCard) && (
-            <>
-              <span className={styles.roundBadge} style={{ alignSelf: 'center' }}>
-                {currentCard.cardType === 'verita' ? '💬 Verità' : '⚡ Obbligo'}
-              </span>
-              <h2 className={styles.title}>{currentCard.prompt}</h2>
-              {currentCard.penalty && (
-                <div className={styles.penaltyBox}>{currentCard.penalty}</div>
-              )}
-              <Button variant="primary" size="lg" onClick={() => dispatch({ type: 'NEXT_ROUND' })}>
-                Fatto · Prossima Carta ▶
-              </Button>
-            </>
-          )}
-
-          {state.mode !== 'infiltrato' &&
-            state.mode !== 'coppie' &&
-            state.roundOutcome && (
-              <>
-                <h2 className={styles.title}>
-                  {isFlashOrClassicoCard(currentCard)
-                    ? currentCard.text
-                    : (currentCard as PassAssurdoCard).prompt}
-                </h2>
-                <SplitBar split={{ A: state.roundOutcome.countA, B: state.roundOutcome.countB }} />
-
-                <div className={styles.timerBox}>
-                  <span>Difendete la scelta!</span>
-                  <span className={styles.timerValue}>{debateLeft}s</span>
-                  <Button size="md" variant="ghost" onClick={() => setDebatePaused((p) => !p)}>
-                    {debatePaused ? 'Riprendi' : 'Pausa'}
-                  </Button>
+          {/* DEBATE / LIVE TABLE PHASE */}
+          {state.phase === 'DEBATE' && currentCard && (
+            <Card glow="accent" className={styles.card}>
+              {readerPlayer && (
+                <div className={styles.readerPill}>
+                  <span>📱 Legge {readerPlayer.avatar}</span>
+                  <span>{readerPlayer.name}</span>
                 </div>
+              )}
 
-                {isFlashOrClassicoCard(currentCard) &&
-                  (currentCard.spuntiA?.length || currentCard.spuntiB?.length) && (
-                    <div className={styles.spuntiGrid}>
-                      {currentCard.spuntiA && currentCard.spuntiA.length > 0 && (
-                        <div className={styles.spuntiBox}>
-                          <strong>Spunti A ({currentCard.optionA}):</strong>
-                          <ul>
-                            {currentCard.spuntiA.map((sp) => (
-                              <li key={sp}>{sp}</li>
-                            ))}
-                          </ul>
+              {/* ⚡ FLASH / 🎭 CLASSICO / 🧗 PERCORSO / 📖 STORIA (Scelta diretta senza lettere o pulsanti meta) */}
+              {(effectivePassCardMode(state.mode, currentCard) === 'flash' ||
+                effectivePassCardMode(state.mode, currentCard) === 'classico' ||
+                effectivePassCardMode(state.mode, currentCard) === 'percorso' ||
+                effectivePassCardMode(state.mode, currentCard) === 'storia') &&
+                isFlashOrClassicoCard(currentCard) && (
+                  <>
+                    {(currentCard as PassFlashCard).tappaNome && (
+                      <span className={styles.twistBadge}>
+                        🧗 {(currentCard as PassFlashCard).tappaNome}
+                      </span>
+                    )}
+                    {(currentCard as PassFlashCard).storyScene && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', width: '100%' }}>
+                        <span className={styles.twistBadge}>
+                          📖 {(currentCard as PassFlashCard).storyScene!.title} ·{' '}
+                          {(currentCard as PassFlashCard).storyScene!.actTitle}
+                        </span>
+                        {(currentCard as PassFlashCard).storyScene!.premessa && (
+                          <div className={styles.spuntiBox} style={{ textAlign: 'left' }}>
+                            <strong>Prologo · {(currentCard as PassFlashCard).storyScene!.protagonist}</strong>
+                            <div>{(currentCard as PassFlashCard).storyScene!.premessa}</div>
+                          </div>
+                        )}
+                        <p className={styles.subtitle} style={{ textAlign: 'left', margin: 0 }}>
+                          {(currentCard as PassFlashCard).storyScene!.sceneNarration}
+                        </p>
+                      </div>
+                    )}
+                    <h2 className={styles.promptHero}>{currentCard.text}</h2>
+                    <p className={styles.liveCue}>
+                      {state.players.length > 1
+                        ? 'Discutete dal vivo e toccate la scelta del tavolo:'
+                        : 'Scegli subito la tua posizione:'}
+                    </p>
+                    <div className={styles.optionsStack}>
+                      <VoteOption
+                        faction="a"
+                        label={currentCard.optionA}
+                        onClick={() => {
+                          vibrateTick();
+                          dispatch({ type: 'RESOLVE_FLASH', result: 'A' });
+                        }}
+                      />
+                      <VoteOption
+                        faction="b"
+                        label={currentCard.optionB}
+                        onClick={() => {
+                          vibrateTick();
+                          dispatch({ type: 'RESOLVE_FLASH', result: 'B' });
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
+
+              {/* 🔀 PREFERIRESTI CHE... (Scelte dirette senza lettere) */}
+              {effectivePassCardMode(state.mode, currentCard) === 'preferiresti' &&
+                isPreferirestiCard(currentCard) && (
+                  <>
+                    <h2 className={styles.promptHero}>{currentCard.prompt}</h2>
+                    {currentCard.penalty && (
+                      <div className={styles.penaltyBox}>{currentCard.penalty}</div>
+                    )}
+                    <p className={styles.liveCue}>
+                      {state.players.length > 1
+                        ? 'Toccate l’alternativa che ha convinto il tavolo:'
+                        : 'Scegli quale preferiresti:'}
+                    </p>
+                    <div className={styles.optionsStack}>
+                      {currentCard.options.slice(0, 4).map((opt, idx) => {
+                        const choice = (['A', 'B', 'C', 'D'] as const)[idx];
+                        return (
+                          <VoteOption
+                            key={choice}
+                            faction={idx % 2 === 0 ? 'a' : 'b'}
+                            label={opt}
+                            onClick={() => {
+                              vibrateTick();
+                              dispatch({ type: 'RESOLVE_PREFERIRESTI', choice });
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+
+              {/* 🕵️ L'INFILTRATO: DIBATTITO LIBERO + 1-TAP ACCUSA */}
+              {effectivePassCardMode(state.mode, currentCard) === 'infiltrato' && (
+                <>
+                  <h2 className={styles.promptHero}>🗣️ Tutti rispondono a voce!</h2>
+                  <p className={styles.liveCue}>
+                    Finito il giro, contate «3, 2, 1… punta il dito!» poi tocca chi avete accusato:
+                  </p>
+                  <div className={styles.playerTapGrid}>
+                    {state.players.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className={styles.playerTapBtn}
+                        onClick={() => {
+                          vibrateTick();
+                          dispatch({ type: 'RESOLVE_INFILTRATO_ACCUSATION', accusedId: p.id });
+                        }}
+                      >
+                        <span>{p.avatar}</span>
+                        <span>{p.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      vibrateTick();
+                      dispatch({ type: 'RESOLVE_INFILTRATO_ACCUSATION', accusedId: null });
+                    }}
+                  >
+                    🤷 Indecisi / Nessuno · Rivela l’Infiltrato
+                  </Button>
+                </>
+              )}
+
+              {/* 🤪 ASSURDO */}
+              {effectivePassCardMode(state.mode, currentCard) === 'assurdo' &&
+                isAssurdoCard(currentCard) && (
+                  <>
+                    <h2 className={styles.promptHero}>{currentCard.prompt}</h2>
+                    {currentCard.cardType === 'gogna' ? (
+                      <>
+                        <p className={styles.liveCue}>
+                          3, 2, 1… puntate il dito! Chi è stato scelto?
+                        </p>
+                        <div className={styles.playerTapGrid}>
+                          {state.players.map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              className={styles.playerTapBtn}
+                              onClick={() => {
+                                vibrateTick();
+                                dispatch({ type: 'RESOLVE_GOGNA', targetId: p.id });
+                              }}
+                            >
+                              <span>{p.avatar}</span>
+                              <span>{p.name}</span>
+                            </button>
+                          ))}
                         </div>
-                      )}
-                      {currentCard.spuntiB && currentCard.spuntiB.length > 0 && (
-                        <div className={styles.spuntiBox}>
-                          <strong>Spunti B ({currentCard.optionB}):</strong>
-                          <ul>
-                            {currentCard.spuntiB.map((sp) => (
-                              <li key={sp}>{sp}</li>
-                            ))}
-                          </ul>
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            vibrateTick();
+                            dispatch({ type: 'RESOLVE_GOGNA', targetId: null });
+                          }}
+                        >
+                          🤝 Pareggio / Svela penitenza
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <p className={styles.liveCue}>
+                          {state.players.length > 1 ? 'Scegliete al tavolo:' : 'Come ti schieri?'}
+                        </p>
+                        <div className={styles.optionsStack}>
+                          <VoteOption
+                            faction="a"
+                            label={currentCard.optionA ?? 'Accetto!'}
+                            onClick={() => {
+                              vibrateTick();
+                              dispatch({ type: 'RESOLVE_DIGNITA', outcome: 'YES' });
+                            }}
+                          />
+                          <VoteOption
+                            faction="b"
+                            label={currentCard.optionB ?? 'Mai nella vita'}
+                            onClick={() => {
+                              vibrateTick();
+                              dispatch({ type: 'RESOLVE_DIGNITA', outcome: 'NO' });
+                            }}
+                          />
                         </div>
+                      </>
+                    )}
+                  </>
+                )}
+
+              {/* 🔥 COPPIE (ZERO PASSAGGI & ANCHE DISPARI) */}
+              {effectivePassCardMode(state.mode, currentCard) === 'coppie' &&
+                isCoppieCard(currentCard) &&
+                state.coppieState && (
+                  <>
+                    <span className={styles.roundBadge} style={{ alignSelf: 'center' }}>
+                      {currentCard.cardType === 'allineamento'
+                        ? '💘 Allineamento'
+                        : currentCard.cardType === 'verita'
+                          ? '💬 Verità'
+                          : '⚡ Obbligo'}
+                    </span>
+
+                    {currentCard.cardType === 'allineamento' ? (
+                      <>
+                        <h2 className={styles.promptHero}>{currentCard.prompt}</h2>
+                        {state.couples.length > 1 ? (
+                          <>
+                            <p className={styles.liveCue}>
+                              3, 2, 1… indicatevi occhi negli occhi! Tocca le coppie che hanno fatto Match:
+                            </p>
+                            <div className={styles.playerTapGrid}>
+                              {state.couples.map((c) => {
+                                const isMatched = selectedCoppieMatches.includes(c.id);
+                                return (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    className={`${styles.playerTapBtn} ${isMatched ? styles.playerTapBtnSelected : ''}`}
+                                    onClick={() => {
+                                      vibrateTick();
+                                      setSelectedCoppieMatches((prev) =>
+                                        prev.includes(c.id)
+                                          ? prev.filter((id) => id !== c.id)
+                                          : [...prev, c.id],
+                                      );
+                                    }}
+                                  >
+                                    <span>{isMatched ? '💘' : '💕'}</span>
+                                    <span>{c.label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <Button
+                              variant="primary"
+                              size="lg"
+                              onClick={() => {
+                                vibrateTick();
+                                dispatch({
+                                  type: 'RESOLVE_COPPIE_ALIGN',
+                                  matchedCoupleIds: selectedCoppieMatches,
+                                });
+                              }}
+                            >
+                              {selectedCoppieMatches.length > 0
+                                ? `Conferma ${selectedCoppieMatches.length} Match ▶`
+                                : 'Nessun match · Continua ▶'}
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            {(() => {
+                              const singleCouple = state.couples[0];
+                              const pairId = singleCouple?.id ?? 'dynamic_pair';
+                              const [idA, idB] = state.coppieState.featuredPairIds;
+                              const pairLabel =
+                                singleCouple?.label ?? `${playerName(idA)} ❤️ ${playerName(idB)}`;
+                              return (
+                                <>
+                                  <p className={styles.liveCue}>
+                                    💕 {pairLabel}: 3, 2, 1… indicatevi!
+                                  </p>
+                                  <div className={styles.verdictGrid2}>
+                                    <Button
+                                      variant="primary"
+                                      onClick={() => {
+                                        vibrateTick();
+                                        dispatch({
+                                          type: 'RESOLVE_COPPIE_ALIGN',
+                                          matchedCoupleIds: [pairId],
+                                        });
+                                      }}
+                                    >
+                                      💘 Match!
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      onClick={() => {
+                                        vibrateTick();
+                                        dispatch({
+                                          type: 'RESOLVE_COPPIE_ALIGN',
+                                          matchedCoupleIds: [],
+                                        });
+                                      }}
+                                    >
+                                      ⚡ Scoppiati!
+                                    </Button>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p className={styles.liveCue}>
+                          💕 Tocca a {playerAvatar(state.coppieState.featuredPairIds[0])}{' '}
+                          {playerName(state.coppieState.featuredPairIds[0])} &{' '}
+                          {playerAvatar(state.coppieState.featuredPairIds[1])}{' '}
+                          {playerName(state.coppieState.featuredPairIds[1])}
+                        </p>
+                        <h2 className={styles.promptHero}>{currentCard.prompt}</h2>
+                        {currentCard.penalty && (
+                          <div className={styles.penaltyBox}>{currentCard.penalty}</div>
+                        )}
+                        <div className={styles.verdictGrid2}>
+                          <Button
+                            variant="primary"
+                            onClick={() => {
+                              vibrateTick();
+                              dispatch({ type: 'RESOLVE_COPPIE_CHALLENGE', completed: true });
+                            }}
+                          >
+                            ✅ Fatta!
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={() => {
+                              vibrateTick();
+                              dispatch({ type: 'RESOLVE_COPPIE_CHALLENGE', completed: false });
+                            }}
+                          >
+                            🍺 Penitenza / Passo
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
+              {/* 🧩 CRUCIVERBA SHOW: QUIZMASTER VOCALE (30s, ZERO TASTIERA) */}
+              {effectivePassCardMode(state.mode, currentCard) === 'cruciverba' &&
+                state.cruciverbaState &&
+                (() => {
+                  const cs = state.cruciverbaState;
+                  const targetWord =
+                    cs.board.words.find(
+                      (w) => w.id === cs.activeWordId && cs.wordStatus[w.id] === 'pending',
+                    ) ??
+                    cs.board.words.find((w) => cs.wordStatus[w.id] === 'pending') ??
+                    cs.board.words[0];
+                  const revealedSet = new Set(cs.revealedCells);
+                  const slots = targetWord
+                    ? Array.from({ length: targetWord.word.length }, (_, i) => {
+                        const r = targetWord.direction === 'V' ? targetWord.row + i : targetWord.row;
+                        const c = targetWord.direction === 'H' ? targetWord.col + i : targetWord.col;
+                        return revealedSet.has(`${r},${c}`) ? targetWord.word[i] : '';
+                      })
+                    : [];
+                  return (
+                    <>
+                      <div className={styles.timerBox}>
+                        <span>🧩 {cs.board.theme}</span>
+                      </div>
+
+                      <div className={styles.wordPillsRow}>
+                        {cs.board.words.map((w) => {
+                          const st = cs.wordStatus[w.id];
+                          const isActive = targetWord?.id === w.id;
+                          return (
+                            <button
+                              key={w.id}
+                              type="button"
+                              disabled={st !== 'pending'}
+                              className={`${styles.wordPill} ${
+                                st !== 'pending'
+                                  ? styles.wordPillSolved
+                                  : isActive
+                                    ? styles.wordPillActive
+                                    : ''
+                              }`}
+                              onClick={() => dispatch({ type: 'CRUCIVERBA_SELECT_WORD', wordId: w.id })}
+                            >
+                              {w.number}
+                              {w.direction === 'H' ? '→' : '↓'}{' '}
+                              {st === 'solved' ? '✓' : st === 'revealed' ? '👁' : `${w.word.length}`}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {targetWord && (
+                        <>
+                          <p className={styles.liveCue}>
+                            Leggi l’indizio al tavolo ({targetWord.word.length} lettere):
+                          </p>
+                          <h2 className={styles.promptHero}>{targetWord.clue}</h2>
+                          <div className={styles.letterSlotsRow} aria-label="Lettere sbloccate">
+                            {slots.map((ch, idx) => (
+                              <span
+                                key={`${targetWord.id}-${idx}`}
+                                className={`${styles.letterTile} ${ch ? styles.letterTileFilled : ''}`}
+                              >
+                                {ch || '·'}
+                              </span>
+                            ))}
+                          </div>
+                        </>
                       )}
+
+                      {cs.lastFeedback && <Alert>{cs.lastFeedback}</Alert>}
+
+                      {!pickingCruciverbaSolver ? (
+                        <>
+                          <Button
+                            variant="primary"
+                            size="lg"
+                            disabled={!targetWord || cs.wordStatus[targetWord.id] !== 'pending'}
+                            onClick={() => {
+                              vibrateTick();
+                              if (state.players.length === 1 && targetWord) {
+                                dispatch({
+                                  type: 'CRUCIVERBA_SOLVE_WORD',
+                                  wordId: targetWord.id,
+                                  solverId: state.players[0].id,
+                                });
+                              } else {
+                                setPickingCruciverbaSolver(true);
+                              }
+                            }}
+                          >
+                            ✓ Indovinata dal tavolo!
+                          </Button>
+                          <div className={styles.verdictGrid2}>
+                            <Button
+                              variant="ghost"
+                              onClick={() => {
+                                vibrateTick();
+                                dispatch({ type: 'CRUCIVERBA_PASS', reason: 'hint' });
+                              }}
+                            >
+                              💡 1 lettera
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              onClick={() => dispatch({ type: 'CRUCIVERBA_END_NOW' })}
+                            >
+                              Svela tutto
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        targetWord && (
+                          <>
+                            <p className={styles.liveCue}>Chi l’ha detta per primo?</p>
+                            <div className={styles.playerTapGrid}>
+                              {state.players.map((p) => (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  className={styles.playerTapBtn}
+                                  onClick={() => {
+                                    vibrateTick();
+                                    dispatch({
+                                      type: 'CRUCIVERBA_SOLVE_WORD',
+                                      wordId: targetWord.id,
+                                      solverId: p.id,
+                                    });
+                                    setPickingCruciverbaSolver(false);
+                                  }}
+                                >
+                                  <span>{p.avatar}</span>
+                                  <span>{p.name}</span>
+                                </button>
+                              ))}
+                            </div>
+                            <div className={styles.verdictGrid2}>
+                              <Button
+                                variant="primary"
+                                onClick={() => {
+                                  vibrateTick();
+                                  dispatch({
+                                    type: 'CRUCIVERBA_SOLVE_WORD',
+                                    wordId: targetWord.id,
+                                    solverId: null,
+                                  });
+                                  setPickingCruciverbaSolver(false);
+                                }}
+                              >
+                                🙌 In coro (Tavolo)
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                onClick={() => setPickingCruciverbaSolver(false)}
+                              >
+                                Annulla
+                              </Button>
+                            </div>
+                          </>
+                        )
+                      )}
+                    </>
+                  );
+                })()}
+
+              {/* ⚖️ TRIBUNALE: 20s ARRINGHE + VOTO GIURIA 1-TAP */}
+              {effectivePassCardMode(state.mode, currentCard) === 'tribunale' &&
+                state.tribunaleState &&
+                (() => {
+                  const ts = state.tribunaleState;
+                  const accName = playerName(ts.accusaId);
+                  const difName = playerName(ts.difesaId);
+                  const activeSpeakerName = ts.speakerIndex === 0 ? accName : difName;
+                  return (
+                    <>
+                      <h2 className={styles.promptHero}>⚖️ {ts.caseData.title}</h2>
+                      <p className={styles.subtitle}>{ts.caseData.scenario}</p>
+                      <div className={styles.abPair}>
+                        <div
+                          className={styles.abCardA}
+                          style={{
+                            borderColor:
+                              !ts.verdictReady && ts.speakerIndex === 0 ? '#fbbf24' : undefined,
+                          }}
+                        >
+                          <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '0.2rem' }}>
+                            ⚔️ {playerAvatar(ts.accusaId)} {accName}
+                          </div>
+                          {ts.caseData.accusaRole}
+                        </div>
+                        <div
+                          className={styles.abCardB}
+                          style={{
+                            borderColor:
+                              !ts.verdictReady && ts.speakerIndex === 1 ? '#fbbf24' : undefined,
+                          }}
+                        >
+                          <div style={{ fontSize: '0.75rem', opacity: 0.85, marginBottom: '0.2rem' }}>
+                            🛡️ {playerAvatar(ts.difesaId)} {difName}
+                          </div>
+                          {ts.caseData.difesaRole}
+                        </div>
+                      </div>
+
+                      {!ts.verdictReady ? (
+                        <>
+                          <div className={styles.timerBox}>
+                            <span>🎙️ Arringa di {activeSpeakerName}</span>
+                          </div>
+                          <Button
+                            variant="primary"
+                            size="lg"
+                            onClick={() => {
+                              vibrateTick();
+                              dispatch({ type: 'TRIBUNALE_NEXT_SPEAKER' });
+                            }}
+                          >
+                            {ts.speakerIndex === 0
+                              ? `Passa a ${difName} ▶`
+                              : 'Giuria: al voto! ⚖️'}
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <p className={styles.liveCue}>
+                            Giuria: alzate la mano per chi ha convinto di più!
+                          </p>
+                          <div className={styles.verdictGrid2}>
+                            <Button
+                              variant="primary"
+                              onClick={() => {
+                                vibrateTick();
+                                dispatch({ type: 'TRIBUNALE_RESOLVE', winner: 'ACCUSA' });
+                              }}
+                            >
+                              ⚔️ Vince {accName}
+                            </Button>
+                            <Button
+                              variant="primary"
+                              onClick={() => {
+                                vibrateTick();
+                                dispatch({ type: 'TRIBUNALE_RESOLVE', winner: 'DIFESA' });
+                              }}
+                            >
+                              🛡️ Vince {difName}
+                            </Button>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            onClick={() => {
+                              vibrateTick();
+                              dispatch({ type: 'TRIBUNALE_RESOLVE', winner: 'TIE' });
+                            }}
+                          >
+                            🤝 Patteggiamento (Pari)
+                          </Button>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+            </Card>
+          )}
+
+          {/* ROUND RESULT (SOLO DOVE C'È UNA RIVELAZIONE / PENITENZA) */}
+          {state.phase === 'ROUND_RESULT' && state.roundOutcome && currentCard && (
+            <Card glow="accent" className={styles.card}>
+              {(state.roundOutcome.kind === 'split' || state.roundOutcome.kind === 'swing') && (
+                <>
+                  <h2 className={styles.promptHero}>
+                    {state.roundOutcome.liveVerdictLabel ?? 'Scelta fatta'}
+                  </h2>
+                  {isFlashOrClassicoCard(currentCard) && currentCard.storyScene && (
+                    <>
+                      <div className={styles.spuntiBox} style={{ textAlign: 'left' }}>
+                        <strong>Conseguenza</strong>
+                        <div>
+                          {state.roundOutcome.chosenSide === 'B'
+                            ? currentCard.storyScene.consequenceB
+                            : currentCard.storyScene.consequenceA}
+                        </div>
+                      </div>
+                      {currentCard.storyScene.epiloghi &&
+                        currentCard.storyScene.epiloghi.length > 0 && (() => {
+                          const choicesA = state.storyChoicesA ?? 0;
+                          const epi =
+                            currentCard.storyScene!.epiloghi!.find(
+                              (e) => choicesA >= e.minA && choicesA <= e.maxA,
+                            ) ??
+                            currentCard.storyScene!.epiloghi![
+                              currentCard.storyScene!.epiloghi!.length - 1
+                            ];
+                          return (
+                            <div className={styles.penaltyBox}>
+                              <strong>📖 Epilogo della storia</strong>
+                              <div>{epi.text}</div>
+                            </div>
+                          );
+                        })()}
+                    </>
+                  )}
+                  {isFlashOrClassicoCard(currentCard) && currentCard.domandaRilancio && (
+                    <div className={styles.spuntiBox} style={{ textAlign: 'left' }}>
+                      <strong>💬 Rilancio</strong>
+                      <div>{currentCard.domandaRilancio}</div>
                     </div>
                   )}
-
-                {isAssurdoCard(currentCard) && currentCard.sentenza && (
-                  <div className={styles.penaltyBox}>{currentCard.sentenza}</div>
-                )}
-
-                {state.mode === 'classico' ? (
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    onClick={() => dispatch({ type: 'START_REVOTE' })}
-                  >
-                    Passa al Voto Finale 🗳️
-                  </Button>
-                ) : (
-                  <div className={styles.optionsStack}>
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      onClick={() => dispatch({ type: 'NEXT_ROUND' })}
-                    >
-                      Prossimo Round ▶
-                    </Button>
-                    {state.mode === 'flash' && (
-                      <Button variant="ghost" onClick={() => dispatch({ type: 'START_REVOTE' })}>
-                        Qualcuno ha cambiato idea? Rivota 🔄
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-        </Card>
-      )}
-
-      {/* ROUND RESULT */}
-      {state.phase === 'ROUND_RESULT' && state.roundOutcome && currentCard && (
-        <Card glow="accent" className={styles.card}>
-          {state.roundOutcome.kind === 'swing' && (
-            <>
-              <h2 className={styles.title}>
-                {state.roundOutcome.swingDelta && state.roundOutcome.swingDelta > 0
-                  ? `🦋 ${state.roundOutcome.swingDelta} ${state.roundOutcome.swingDelta === 1 ? 'persona ha' : 'persone hanno'} cambiato idea!`
-                  : '🗿 Nessuno ha cambiato idea!'}
-              </h2>
-              <SplitBar split={{ A: state.roundOutcome.countA, B: state.roundOutcome.countB }} />
-              {typeof state.roundOutcome.prevCountA === 'number' && (
-                <p className={styles.subtitle}>
-                  Prima era {state.roundOutcome.prevCountA} A vs {state.roundOutcome.prevCountB} B
-                </p>
+                  {isFlashOrClassicoCard(currentCard) && currentCard.lezioneReale && (
+                    <div className={styles.spuntiBox} style={{ textAlign: 'left' }}>
+                      <strong>🧭 Spunto di riflessione</strong>
+                      <div>{currentCard.lezioneReale}</div>
+                    </div>
+                  )}
+                  {'penalty' in currentCard && currentCard.penalty && (
+                    <div className={styles.penaltyBox}>{currentCard.penalty}</div>
+                  )}
+                </>
               )}
-            </>
-          )}
 
-          {state.roundOutcome.kind === 'gogna' && (
-            <>
-              <h2 className={styles.title}>
-                🎯 Alla Gogna:{' '}
-                {(state.roundOutcome.gognaWinnerIds ?? []).map(playerName).join(' & ')}!
-              </h2>
-              <p className={styles.subtitle}>
-                Con {state.roundOutcome.gognaTopVotes ?? 0} voti dal tavolo
-              </p>
-              {(currentCard as PassAssurdoCard).penalty && (
-                <div className={styles.penaltyBox}>{(currentCard as PassAssurdoCard).penalty}</div>
+              {state.roundOutcome.kind === 'gogna' && (
+                <>
+                  <h2 className={styles.promptHero}>
+                    {(state.roundOutcome.gognaWinnerIds?.length ?? 0) > 0
+                      ? `🎯 Alla Gogna: ${(state.roundOutcome.gognaWinnerIds ?? []).map(playerName).join(' & ')}!`
+                      : '🤝 Pareggio al tavolo!'}
+                  </h2>
+                  {(currentCard as PassAssurdoCard).penalty && (
+                    <div className={styles.penaltyBox}>
+                      {(currentCard as PassAssurdoCard).penalty}
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
 
-          {state.roundOutcome.kind === 'infiltrato' && (
-            <>
-              <h2 className={styles.title}>
-                {state.roundOutcome.infiltratoCaught
-                  ? '🔍 Infiltrato smascherato!'
-                  : '🕵️ L’Infiltrato l’ha fatta franca!'}
-              </h2>
-              <p className={styles.subtitle}>
-                L’Infiltrato era:{' '}
-                <strong>
-                  {state.roundOutcome.infiltratoId
-                    ? playerName(state.roundOutcome.infiltratoId)
-                    : '—'}
-                </strong>
-              </p>
-              <div className={styles.spuntiGrid}>
-                <div className={styles.spuntiBox}>
-                  <strong>Domanda del gruppo:</strong>
-                  <div>{(currentCard as PassInfiltratoCard).groupQuestion}</div>
-                </div>
-                <div className={styles.spuntiBox}>
-                  <strong>Domanda dell’infiltrato:</strong>
-                  <div>{(currentCard as PassInfiltratoCard).impostorQuestion}</div>
-                </div>
-              </div>
-            </>
-          )}
+              {state.roundOutcome.kind === 'dignita' && (
+                <>
+                  <h2 className={styles.promptHero}>
+                    {state.roundOutcome.liveVerdictLabel ?? 'Verdetto'}
+                  </h2>
+                  {(currentCard as PassAssurdoCard).sentenza && (
+                    <div className={styles.penaltyBox}>
+                      {(currentCard as PassAssurdoCard).sentenza}
+                    </div>
+                  )}
+                </>
+              )}
 
-          {state.roundOutcome.kind === 'coppie_align' && (
-            <>
-              <h2 className={styles.title}>
-                {state.roundOutcome.coppieMatched
-                  ? '💘 Sintonia perfetta!'
-                  : '⚡ Scintille! Siete divisi!'}
-              </h2>
-              <SplitBar split={{ A: state.roundOutcome.countA, B: state.roundOutcome.countB }} />
-            </>
-          )}
-
-          <Button variant="primary" size="lg" onClick={() => dispatch({ type: 'NEXT_ROUND' })}>
-            {state.roundIndex + 1 >= state.cards.length ? 'Vedi Premi Finali 🏆' : 'Prossimo Round ▶'}
-          </Button>
-        </Card>
-      )}
-
-      {/* FINAL AWARDS */}
-      {state.phase === 'FINAL_AWARDS' && (
-        <Card glow="accent" className={styles.card}>
-          <Celebration />
-          <h2 className={styles.title}>🏆 Premi della Serata</h2>
-          <div className={styles.optionsStack}>
-            {computePassAwards(state).map((aw) => (
-              <div key={aw.id} className={styles.awardItem}>
-                <span className={styles.awardEmoji}>{aw.emoji}</span>
-                <div>
-                  <div style={{ fontWeight: 800 }}>
-                    {aw.title} · {aw.winnerName}
+              {state.roundOutcome.kind === 'infiltrato' && (
+                <>
+                  <h2 className={styles.promptHero}>
+                    {state.roundOutcome.infiltratoCaught
+                      ? '🔍 Infiltrato smascherato!'
+                      : '🕵️ L’Infiltrato l’ha fatta franca!'}
+                  </h2>
+                  <p className={styles.subtitle}>
+                    L’Infiltrato era:{' '}
+                    <strong>
+                      {state.roundOutcome.infiltratoId
+                        ? `${playerAvatar(state.roundOutcome.infiltratoId)} ${playerName(state.roundOutcome.infiltratoId)}`
+                        : '—'}
+                    </strong>
+                  </p>
+                  <div className={styles.spuntiGrid}>
+                    <div className={styles.spuntiBox}>
+                      <strong>Domanda del gruppo:</strong>
+                      <div>{(currentCard as PassInfiltratoCard).groupQuestion}</div>
+                    </div>
+                    <div className={styles.spuntiBox}>
+                      <strong>Domanda dell’infiltrato:</strong>
+                      <div>{(currentCard as PassInfiltratoCard).impostorQuestion}</div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    {aw.description}
+                </>
+              )}
+
+              {state.roundOutcome.kind === 'coppie_align' && (
+                <>
+                  <h2 className={styles.promptHero}>
+                    {state.roundOutcome.coppieMatched
+                      ? '💘 Sintonia perfetta!'
+                      : '⚡ Scintille!'}
+                  </h2>
+                  {state.roundOutcome.coupleOutcomes && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                      {state.roundOutcome.coupleOutcomes.map((co) => (
+                        <div
+                          key={co.coupleId}
+                          className={styles.spuntiBox}
+                          style={{ borderColor: co.matched ? '#34d399' : undefined }}
+                        >
+                          <strong>
+                            {co.memberAName} ❤️ {co.memberBName}
+                          </strong>
+                          : {co.matched ? '💞 Match! (+100 pt)' : '💥 Scoppiati!'}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {state.couples.length > 1 && (
+                    <div className={styles.penaltyBox}>
+                      {[...state.couples]
+                        .sort((a, b) => b.score - a.score)
+                        .map((c, idx) => (
+                          <div key={c.id}>
+                            {idx === 0 ? '🥇' : '💕'} {c.label}: {c.score} pt
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {state.roundOutcome.kind === 'cruciverba' && isCruciverbaCard(currentCard) && (
+                <>
+                  <h2 className={styles.promptHero}>
+                    🧩 {state.roundOutcome.cruciverbaSolvedCount}/{state.roundOutcome.cruciverbaTotalCount} Parole Risolte!
+                  </h2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', textAlign: 'left' }}>
+                    {currentCard.words.map((w) => (
+                      <div key={w.id} className={styles.spuntiBox}>
+                        <strong>
+                          {w.number}
+                          {w.direction === 'H' ? '→' : '↓'} {w.word}
+                        </strong>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          {state.cruciverbaState?.solvedBy[w.id]
+                            ? `Indovinata da ${state.cruciverbaState.solvedBy[w.id]}`
+                            : 'Svelata al tavolo'}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={() => dispatch({ type: 'RESET_TO_SETUP' })}
-          >
-            Rigioca con gli stessi amici 🔄
-          </Button>
-          <Button variant="ghost" onClick={() => navigate('/')}>
-            Torna alla Home
-          </Button>
-        </Card>
+                </>
+              )}
+
+              {state.roundOutcome.kind === 'tribunale' && isTribunaleCard(currentCard) && (
+                <>
+                  <h2 className={styles.promptHero}>
+                    {state.roundOutcome.tribunaleWinner === 'TIE'
+                      ? '🤝 Patteggiamento!'
+                      : `⚖️ Vince ${(state.roundOutcome.tribunaleWinnerIds ?? []).map(playerName).join(' & ')}!`}
+                  </h2>
+                  {state.roundOutcome.tribunaleLoserId && (
+                    <div className={styles.penaltyBox}>
+                      <strong>🔨 Sentenza per {playerName(state.roundOutcome.tribunaleLoserId)}:</strong>{' '}
+                      {currentCard.penalty}
+                    </div>
+                  )}
+                </>
+              )}
+
+              <Button variant="primary" size="lg" onClick={() => dispatch({ type: 'NEXT_ROUND' })}>
+                {state.roundIndex + 1 >= state.cards.length
+                  ? 'Scopri il Gran Finale 🏆'
+                  : 'Prossimo Round ▶'}
+              </Button>
+            </Card>
+          )}
+
+          {/* FINAL AWARDS */}
+          {state.phase === 'FINAL_AWARDS' && (
+            <PassFinaleView
+              state={state}
+              recordSavedCode={recordSavedCode}
+              onReplay={() => dispatch({ type: 'RESET_TO_SETUP' })}
+              onHome={() => navigate('/')}
+            />
+          )}
+        </div>
       )}
     </main>
   );

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RoomStore, generateRoomCode, SOFT_TIMEOUT_MS, type VoteChoice } from '../rooms';
+import { RoomStore, generateRoomCode, type VoteChoice } from '../rooms';
 import { applyPredictDefaults } from '../predictions';
 import { Deck, type Dilemma, type ContentRegister } from '../deck';
 
@@ -16,7 +16,6 @@ function reachPredict(store: RoomStore, sides: VoteChoice[]): string {
   const { code } = store.create();
   for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
   store.startGame(code, 3);
-  store.advancePhase(code); // DILEMMA_REVEAL
   store.advancePhase(code); // VOTE_1
   sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
   store.advancePhase(code); // SPLIT_REVEAL
@@ -77,7 +76,6 @@ describe('maybeArmSoftTimeout', () => {
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3);
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1
     expect(store.get(code)!.phaseExpiresAt).toBeNull();
     expect(store.maybeArmSoftTimeout(code)).toBe(false); // 0/3 acted
@@ -89,20 +87,18 @@ describe('maybeArmSoftTimeout', () => {
     expect(store.maybeArmSoftTimeout(code)).toBe(false);
   });
 
-  it('arms once 2 of 3 have voted when the 3rd never will (a real 70%+ case)', () => {
+  it('never arms a timer when countdown timers are disabled globally (even >=70% voted)', () => {
     const store = new RoomStore(generateRoomCode, () => 5_000, makeFixtureDeck, () => 0);
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.join(code, 'sock-3', 'P3');
     store.startGame(code, 3);
-    store.advancePhase(code);
     store.advancePhase(code); // VOTE_1, 4 present
     store.vote(code, 'sock-0', 'A');
     store.vote(code, 'sock-1', 'A');
     store.vote(code, 'sock-2', 'B'); // 3/4 = 75% >= 70%, sock-3 never votes
-    expect(store.maybeArmSoftTimeout(code)).toBe(true);
-    expect(store.get(code)!.phaseExpiresAt).toBe(5_000 + SOFT_TIMEOUT_MS);
-    expect(store.maybeArmSoftTimeout(code)).toBe(false); // already armed, no re-arm
+    expect(store.maybeArmSoftTimeout(code)).toBe(false);
+    expect(store.get(code)!.phaseExpiresAt).toBeNull();
   });
 
   it('does nothing for phases with a real timer (DEFENSE)', () => {
@@ -136,7 +132,6 @@ describe('maybeArmSoftTimeout', () => {
     const { code } = store.create();
     for (let i = 0; i < 5; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3);
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1
     // A split vote (not unanimous): an all-A first vote would skip the
     // debate entirely (UNANIMOUS_REVEAL) and never reach PREDICT at all.
@@ -149,9 +144,8 @@ describe('maybeArmSoftTimeout', () => {
       store.predict(code, id, 'A');
       store.swingBet(code, id, 'regge');
     }
-    // 3 of 4 real participants: 75% >= 70% -> arms. Counting the late-joiner
-    // in the total (3/5 = 60%) would wrongly say "not yet".
-    expect(store.maybeArmSoftTimeout(code)).toBe(true);
-    expect(room.phaseExpiresAt).toBe(5_000 + SOFT_TIMEOUT_MS);
+    // Timers disabled globally: maybeArmSoftTimeout always returns false.
+    expect(store.maybeArmSoftTimeout(code)).toBe(false);
+    expect(room.phaseExpiresAt).toBeNull();
   });
 });

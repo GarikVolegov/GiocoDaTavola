@@ -7,7 +7,7 @@ import { vibrateTick } from '../../shared/haptics';
 
 interface GroupMindViewProps {
   question: GroupMindQuestion | null;
-  remaining: number | null;
+  remaining?: number | null;
   answer: VoteChoice | null;
   guess: VoteChoice | null;
   onAnswer: (choice: VoteChoice) => void;
@@ -22,7 +22,7 @@ interface GroupMindViewProps {
 // picked). Presentational — the parent owns state and socket emits.
 export default function GroupMindView({
   question,
-  remaining,
+  remaining: _remaining = null,
   answer,
   guess,
   onAnswer,
@@ -53,7 +53,7 @@ export default function GroupMindView({
   );
 
   return (
-    <MobilePhaseShell title={`🧠 ${PHASE_LABELS.GROUP_MIND}`} remaining={remaining} dock={dock}>
+    <MobilePhaseShell title={`🧠 ${PHASE_LABELS.GROUP_MIND}`} dock={dock}>
       {question && (
         <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>{question.prompt}</p>
       )}
@@ -67,8 +67,7 @@ export default function GroupMindView({
           <VoteOption
             key={letter}
             faction={letter === 'A' ? 'a' : 'b'}
-            letter={letter}
-            label={question ? (letter === 'A' ? question.optionA : question.optionB) : letter}
+            label={question ? (letter === 'A' ? question.optionA : question.optionB) : letter === 'A' ? 'Prima scelta' : 'Seconda scelta'}
             selected={answer === letter}
             onClick={() => {
               vibrateTick();
@@ -88,8 +87,7 @@ export default function GroupMindView({
           <VoteOption
             key={letter}
             faction="accent"
-            letter={letter}
-            label={question ? (letter === 'A' ? question.optionA : question.optionB) : letter}
+            label={question ? (letter === 'A' ? question.optionA : question.optionB) : letter === 'A' ? 'Prima scelta' : 'Seconda scelta'}
             selected={guess === letter}
             onClick={() => {
               vibrateTick();

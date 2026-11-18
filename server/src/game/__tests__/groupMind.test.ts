@@ -97,8 +97,8 @@ describe('GROUP_MIND round — the checkpoint detour', () => {
     expect(store.get(code)!.groupMindQuestion).not.toBeNull();
     store.advancePhase(code); // -> GROUP_MIND_REVEAL
     expect(store.get(code)!.phase).toBe('GROUP_MIND_REVEAL');
-    store.advancePhase(code); // -> DILEMMA_REVEAL (dilemma 3)
-    expect(store.get(code)!.phase).toBe('DILEMMA_REVEAL');
+    store.advancePhase(code); // -> VOTE_1 (dilemma 3)
+    expect(store.get(code)!.phase).toBe('VOTE_1');
     expect(store.get(code)!.dilemmaIndex).toBe(3);
     // Leaving GROUP_MIND clears the question again (only set during it/its reveal).
     expect(store.get(code)!.groupMindQuestion).toBeNull();

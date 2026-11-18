@@ -23,12 +23,11 @@ describe('nextStoriaPhase', () => {
   });
 
   it('SCENE_INTRO apre il bivio incrementando l\'indice', () => {
-    expect(nextStoriaPhase('SCENE_INTRO', 0, TOTAL)).toEqual({ phase: 'DILEMMA_REVEAL', dilemmaIndex: 1 });
-    expect(nextStoriaPhase('SCENE_INTRO', 2, TOTAL)).toEqual({ phase: 'DILEMMA_REVEAL', dilemmaIndex: 3 });
+    expect(nextStoriaPhase('SCENE_INTRO', 0, TOTAL)).toEqual({ phase: 'VOTE_1', dilemmaIndex: 1 });
+    expect(nextStoriaPhase('SCENE_INTRO', 2, TOTAL)).toEqual({ phase: 'VOTE_1', dilemmaIndex: 3 });
   });
 
   it('le fasi interne al bivio seguono la sequenza classica, indice invariato', () => {
-    expect(nextStoriaPhase('DILEMMA_REVEAL', 1, TOTAL).phase).toBe('VOTE_1');
     expect(nextStoriaPhase('VOTE_1', 1, TOTAL).phase).toBe('SPLIT_REVEAL');
     expect(nextStoriaPhase('SPLIT_REVEAL', 1, TOTAL).phase).toBe('PREDICT');
     expect(nextStoriaPhase('PREDICT', 1, TOTAL).phase).toBe('DEFENSE');

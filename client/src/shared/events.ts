@@ -123,6 +123,28 @@ export const SocketEvents = {
   PlayerHotTakeSubmitted: 'player:hotTakeSubmitted',
   /** Server rejects the score (wrong phase, not in room, out of 1-10 range). */
   PlayerHotTakeError: 'player:hotTakeError',
+  /** Cruciverba Show: active player submits a word guess. */
+  PlayerCruciverbaAttempt: 'player:cruciverbaAttempt',
+  /** Server confirms/rejects the Cruciverba word guess back to the submitter. */
+  PlayerCruciverbaFeedback: 'player:cruciverbaFeedback',
+  /** Cruciverba Show: active player unlocks 1 letter and passes turn. */
+  PlayerCruciverbaPass: 'player:cruciverbaPass',
+  /** Tribunale degli Amici: active speaker finishes their 15s speech early. */
+  PlayerTribunaleFinishTurn: 'player:tribunaleFinishTurn',
+  /** Pre-debate reading grace window: leader or active speaker/defender starts the 15s timer immediately. */
+  PlayerFinishReading: 'player:finishReading',
+  /** Tribunale degli Amici: juror casts a vote for ACCUSA or DIFESA. */
+  PlayerTribunaleVote: 'player:tribunaleVote',
+  /** Server confirms the Tribunale vote back to the juror. */
+  PlayerTribunaleVoted: 'player:tribunaleVoted',
+  /** Server rejects an invalid Tribunale action. */
+  PlayerTribunaleError: 'player:tribunaleError',
+  /** Telepatia: player submits their silent 1-word answer. */
+  PlayerTelepathy: 'player:telepathy',
+  /** Server confirms the player's Telepatia word back to them only. */
+  PlayerTelepathySubmitted: 'player:telepathySubmitted',
+  /** Server rejects a Telepatia submission. */
+  PlayerTelepathyError: 'player:telepathyError',
   /** Player writes their own dilemma in the LOBBY (max 2/player). */
   PlayerSubmitDilemma: 'player:submitDilemma',
   /** Server confirms the player's submission back to them only (with their count). */
@@ -163,10 +185,6 @@ export const SocketEvents = {
   PlayerGognaVote: 'player:gognaVote',
   /** Server confirms the gogna vote back to the voter. */
   PlayerGognaVoted: 'player:gognaVoted',
-  /** Spectator bets on hot-seat couple in COPPIE & SCINTILLE mode ("match" or "scoppiano"). */
-  PlayerHotSeatBet: 'player:hotSeatBet',
-  /** Server confirms the hot-seat bet back to the spectator. */
-  PlayerHotSeatBetted: 'player:hotSeatBetted',
 } as const;
 
 /**
@@ -517,14 +535,24 @@ export function estimatePercorsoDilemmi(
 }
 
 /** Minimum connected players required before the host can start. */
-export const MIN_PLAYERS_TO_START = 3;
+export const MIN_PLAYERS_TO_START = 1;
 
 /** Game mode (mirror of the server's `GameMode`). */
 export const GAME_MODES = ['gruppo', 'duello'] as const;
 export type GameMode = (typeof GAME_MODES)[number];
 
 /** The revamped viral party modes (including Serata Mix variable rotation). */
-export const PARTY_MODES = ['flash', 'infiltrato', 'coppie', 'assurdo', 'mix'] as const;
+export const PARTY_MODES = [
+  'flash',
+  'infiltrato',
+  'coppie',
+  'assurdo',
+  'preferiresti',
+  'cruciverba',
+  'tribunale',
+  'classico',
+  'mix',
+] as const;
 export type PartyMode = (typeof PARTY_MODES)[number];
 
 export interface HotTakePromptPayload {
@@ -549,9 +577,101 @@ export interface HotTakeRevealPayload {
   spread: number;
 }
 
+export interface CruciverbaWordPayload {
+  id: string;
+  number: number;
+  direction: 'H' | 'V';
+  row: number;
+  col: number;
+  length: number;
+  clue: string;
+  status: 'pending' | 'solved' | 'revealed';
+  solvedByName: string | null;
+  answer?: string;
+}
+
+export interface CruciverbaCellPayload {
+  letter: string;
+  wordNumbers: number[];
+}
+
+export interface CruciverbaStatePayload {
+  boardId: string;
+  theme: string;
+  rows: number;
+  cols: number;
+  activePlayerId: string | null;
+  activePlayerName: string | null;
+  activeWordId: string;
+  turnsTaken: number;
+  maxTurns: number;
+  words: CruciverbaWordPayload[];
+  cells: Array<Array<CruciverbaCellPayload | null>>;
+  lastEvent?: {
+    playerName: string;
+    kind: 'solved' | 'hint' | 'timeout' | 'wrong';
+    wordId: string;
+    wordText?: string;
+    pointsAwarded: number;
+  };
+}
+
+export interface TribunaleCasePayload {
+  id: string;
+  title: string;
+  scenario: string;
+  accusaRole: string;
+  difesaRole: string;
+  penalty: string;
+}
+
+export interface TribunaleStatePayload {
+  caseData: TribunaleCasePayload;
+  accusaId: string;
+  accusaName: string;
+  difesaId: string;
+  difesaName: string;
+  speakerIndex: 0 | 1;
+  activeSpeakerId: string;
+  activeSpeakerName: string;
+  votesCount: number;
+  totalJurors: number;
+  missingJurorNames: string[];
+  verdict?: {
+    accusaVotes: number;
+    difesaVotes: number;
+    winner: 'ACCUSA' | 'DIFESA' | 'TIE';
+    winnerNames: string[];
+    loserName: string | null;
+    pointsWinner: number;
+    pointsTie: number;
+  };
+}
+
+export interface TelepathyPromptPayload {
+  id: string;
+  prompt: string;
+}
+
+export interface TelepathyClusterPayload {
+  word: string;
+  nicknames: string[];
+  playerIds: string[];
+  pointsPerPlayer: number;
+}
+
+export interface TelepathyRevealPayload {
+  prompt: TelepathyPromptPayload;
+  clusters: TelepathyClusterPayload[];
+  totalPlayers: number;
+  syncedCount: number;
+  biggestMatch: TelepathyClusterPayload | null;
+}
+
 export type PartyIntensity = 'complicita' | 'piccante';
 
 export interface FlashResultPayload {
+  isEmpty?: boolean;
   isUnanimous: boolean;
   isTie: boolean;
   minoritySide: VoteChoice | null;
@@ -560,11 +680,51 @@ export interface FlashResultPayload {
   unvotedNicknames: string[];
 }
 
-export interface HotSeatPayload {
-  coupleIds: [string, string];
-  coupleNicknames: [string, string];
-  coupleMatched?: boolean;
-  correctSpectators?: string[];
+export type PreferirestiChoice = 'A' | 'B' | 'C' | 'D';
+export const PREFERIRESTI_CHOICES = ['A', 'B', 'C', 'D'] as const;
+
+export interface PreferirestiOptionTally {
+  letter: PreferirestiChoice;
+  label: string;
+  count: number;
+  voterNicknames: string[];
+}
+
+export interface PreferirestiResultPayload {
+  isEmpty?: boolean;
+  isUnanimous: boolean;
+  isTie: boolean;
+  winningChoices: PreferirestiChoice[];
+  minorityNicknames: string[];
+  majorityNicknames: string[];
+  unvotedNicknames: string[];
+  options: PreferirestiOptionTally[];
+}
+
+export interface CoupleSummaryPayload {
+  id: string;
+  label: string;
+  memberAId: string;
+  memberBId: string;
+  memberAName: string;
+  memberBName: string;
+  score: number;
+  matches: number;
+  mismatches: number;
+}
+
+export interface CoupleRoundOutcomePayload {
+  coupleId: string;
+  memberAId: string;
+  memberBId: string;
+  memberAName: string;
+  memberBName: string;
+  choiceA: VoteChoice | null;
+  choiceB: VoteChoice | null;
+  choiceALabel: string | null;
+  choiceBLabel: string | null;
+  kind: 'match' | 'mismatch' | 'challenge_done' | 'challenge_partial' | 'challenge_skip' | 'incomplete';
+  pointsAwarded: number;
 }
 
 export interface InfiltratoRoundResult {
@@ -584,8 +744,11 @@ export interface PartyCardPayload {
   cardType?: 'allineamento' | 'verita' | 'obbligo' | 'gogna' | 'dignita' | 'dilemma';
   intensity?: PartyIntensity;
   prompt: string;
+  options?: string[];
   optionA?: string;
   optionB?: string;
+  optionC?: string;
+  optionD?: string;
   penalty?: string;
   sentenza?: string;
   groupQuestion?: string;
@@ -599,7 +762,11 @@ export interface PartyCardPayload {
   infiltratorId?: string;
   infiltratoRoundResult?: InfiltratoRoundResult | null;
   flashResult?: FlashResultPayload | null;
-  hotSeat?: HotSeatPayload | null;
+  preferirestiResult?: PreferirestiResultPayload | null;
+  /** All active fixed couples + scoreboard in Coppie & Scintille mode. */
+  couples?: CoupleSummaryPayload[] | null;
+  /** Parallel round outcomes for each couple shown on SPLIT_REVEAL. */
+  coupleRoundResults?: CoupleRoundOutcomePayload[] | null;
   affinityScore?: number | null;
 }
 
@@ -615,7 +782,7 @@ export interface PlayerGognaVotePayload {
 
 /** Host-facing labels for the game modes. */
 export const MODE_LABELS: Record<GameMode, { nome: string; descr: string }> = {
-  gruppo: { nome: 'Gruppo', descr: '3–8 giocatori' },
+  gruppo: { nome: 'Gruppo', descr: '1–8 giocatori' },
   duello: { nome: 'Percorso in 2', descr: 'in coppia · 2 giocatori' },
 };
 
@@ -678,7 +845,7 @@ export const OBJECTIVE =
 
 /** Three-step "how to play", shown to players on their phone before the game. */
 export const HOW_TO_PLAY: readonly string[] = [
-  'Voti A o B sul tuo telefono.',
+  'Scegli la tua posizione sul telefono.',
   'Ascolti chi difende la propria scelta.',
   'Voti di nuovo: confermi o cambi idea.',
 ];
@@ -713,6 +880,16 @@ export type GamePhase =
   // "Termometro (Hot Take 1–10)" slider mini-game.
   | 'HOT_TAKE_VOTE'
   | 'HOT_TAKE_REVEAL'
+  // "Cruciverba Show" turn-based TV crossword mini-game.
+  | 'CRUCIVERBA'
+  | 'CRUCIVERBA_REVEAL'
+  // "Tribunale degli Amici" 2-contender courtroom duel + jury verdict.
+  | 'TRIBUNALE_ARGUE'
+  | 'TRIBUNALE_VOTE'
+  | 'TRIBUNALE_REVEAL'
+  // "Telepatia" silent 1-word sync mini-game.
+  | 'TELEPATHY'
+  | 'TELEPATHY_REVEAL'
   // "Percorso" mode chapter framing (mirror server phases.ts).
   | 'TAPPA_INTRO'
   | 'TAPPA_RECAP'
@@ -808,6 +985,14 @@ export interface StartGamePayload {
   infiltrato?: boolean;
   /** Enable "Squadre" (gruppo + ≥4 players); defaults off. */
   squadre?: boolean;
+  /** Optional revamped party mode. */
+  partyMode?: PartyMode;
+  /** Coppie & Scintille intensity ('complicita' | 'piccante'). */
+  partyIntensity?: PartyIntensity;
+  /** Custom evening theme. */
+  theme?: string;
+  /** Optional explicit 2-player pairs for Coppie & Scintille mode. */
+  couples?: Array<[string, string]>;
 }
 
 /** Minimum humans required to enable "L'Infiltrato" (mirror of server). */
@@ -956,6 +1141,11 @@ export type AwardId =
   | 'autore'
   | 'spaccalastanza'
   | 'telepate'
+  | 'mentecollettiva'
+  | 'sincronia'
+  | 'pennadoro'
+  | 'lettoregruppo'
+  | 'avvocato'
   // Jolly pool (2.5): each goes to an otherwise empty-handed player.
   | 'fulmine'
   | 'sfinge'
@@ -1182,6 +1372,10 @@ export interface GameStatePayload {
   dilemmaIndex: number;
   /** Epoch ms when the phase auto-advances; null if it has no timer. */
   phaseExpiresAt: number | null;
+  /** Epoch ms when the current individual turn (e.g. Cruciverba 15s / Tribunale 15s) expires; null otherwise. */
+  turnExpiresAt?: number | null;
+  /** Epoch ms when a pre-debate reading grace window ends before the 15s timer starts; null otherwise. */
+  readingEndsAt?: number | null;
   /** True while the leader has paused the game; no phase advances until they
    * resume. The countdown (phaseExpiresAt) is null while paused. */
   paused: boolean;
@@ -1288,6 +1482,16 @@ export interface GameStatePayload {
   hotTakeSubmittedCount?: number;
   /** Nicknames still missing in HOT_TAKE_VOTE; null otherwise. */
   missingHotTakers?: string[] | null;
+  /** "Cruciverba Show" board + 15s turn state; null outside CRUCIVERBA/CRUCIVERBA_REVEAL. */
+  cruciverbaState?: CruciverbaStatePayload | null;
+  /** "Tribunale degli Amici" state; null outside TRIBUNALE_* phases. */
+  tribunaleState?: TribunaleStatePayload | null;
+  /** "Telepatia" prompt; null outside TELEPATHY/TELEPATHY_REVEAL. */
+  telepathyPrompt?: TelepathyPromptPayload | null;
+  /** Live Telepatia submission progress during TELEPATHY; null otherwise. */
+  telepathyProgress?: { done: number; total: number; missingNicknames: string[] } | null;
+  /** Mind-sync clusters reveal in TELEPATHY_REVEAL; null otherwise. */
+  telepathyReveal?: TelepathyRevealPayload | null;
   /**
    * The swing + per-defender attribution, shown only in PHASE_RESULTS; null
    * otherwise. Aggregate counts only — never who voted what.
@@ -1413,7 +1617,7 @@ export interface PlayerVotePayload {
 }
 
 export interface PlayerVotedPayload {
-  choice: VoteChoice;
+  choice: VoteChoice | PreferirestiChoice;
 }
 
 export interface PlayerPredictPayload {
@@ -1735,6 +1939,13 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   WRITE_REVEAL: 'Chi ha scritto cosa',
   HOT_TAKE_VOTE: 'Termometro 1–10',
   HOT_TAKE_REVEAL: 'Gli estremi del gruppo',
+  CRUCIVERBA: 'Cruciverba Show',
+  CRUCIVERBA_REVEAL: 'Tabellone risolto',
+  TRIBUNALE_ARGUE: 'Tribunale degli Amici',
+  TRIBUNALE_VOTE: 'Il verdetto della giuria',
+  TRIBUNALE_REVEAL: 'Sentenza!',
+  TELEPATHY: 'Telepatia',
+  TELEPATHY_REVEAL: 'Sintonia mentale',
   TAPPA_INTRO: 'Nuova tappa',
   TAPPA_RECAP: 'Fine tappa',
   STORY_INTRO: 'La storia',
@@ -1767,6 +1978,7 @@ export type StartGameError =
   | 'INVALID_STORIA'
   | 'INFILTRATO_NEEDS_PLAYERS'
   | 'SQUADRE_NEEDS_PLAYERS'
+  | 'EVEN_PLAYERS_REQUIRED'
   | 'ALREADY_STARTED';
 
 export interface HostStartErrorPayload {
@@ -1776,7 +1988,7 @@ export interface HostStartErrorPayload {
 /** User-facing (Italian) messages for start-game errors. */
 export const START_ERROR_MESSAGES: Record<StartGameError, string> = {
   ROOM_NOT_FOUND: 'Stanza non trovata',
-  NOT_ENOUGH_PLAYERS: 'Servono almeno 3 partecipanti (anche bot)',
+  NOT_ENOUGH_PLAYERS: 'Servono più giocatori per questa modalità',
   NO_HUMAN_PLAYERS: 'Serve almeno una persona in carne e ossa',
   WRONG_PLAYER_COUNT: 'Il Percorso in 2 richiede esattamente 2 giocatori',
   INVALID_DILEMMA_COUNT: 'Numero di dilemmi non valido',
@@ -1785,6 +1997,7 @@ export const START_ERROR_MESSAGES: Record<StartGameError, string> = {
   INVALID_STORIA: 'Storia non valida',
   INFILTRATO_NEEDS_PLAYERS: "L'Infiltrato richiede almeno 4 persone",
   SQUADRE_NEEDS_PLAYERS: 'Le Squadre richiedono almeno 4 giocatori',
+  EVEN_PLAYERS_REQUIRED: 'Coppie & Scintille richiede un numero pari di giocatori (2, 4, 6 o 8)',
   ALREADY_STARTED: 'La partita è già iniziata',
 };
 

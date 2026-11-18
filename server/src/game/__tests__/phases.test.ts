@@ -7,8 +7,8 @@ import {
 } from '../phases';
 
 describe('UNANIMOUS_REVEAL (voto unanime salta il dibattito)', () => {
-  it('è un breve beat celebrativo a timer (~4.5s)', () => {
-    expect(PHASE_DURATIONS_MS.UNANIMOUS_REVEAL).toBe(4_500);
+  it('avanza manualmente senza timer', () => {
+    expect(PHASE_DURATIONS_MS.UNANIMOUS_REVEAL).toBeNull();
   });
   it('non è nella sequenza pura: nextPhase la lascia invariata (inserita da advancePhase)', () => {
     expect(nextPhase('UNANIMOUS_REVEAL', 2, 6)).toEqual({ phase: 'UNANIMOUS_REVEAL', dilemmaIndex: 2 });
@@ -16,8 +16,8 @@ describe('UNANIMOUS_REVEAL (voto unanime salta il dibattito)', () => {
 });
 
 describe('PHASE_DURATIONS_MS — fasi Percorso', () => {
-  it('TAPPA_INTRO ha un timer (carta annuncio auto-avanzante)', () => {
-    expect(PHASE_DURATIONS_MS.TAPPA_INTRO).toBeGreaterThan(0);
+  it('TAPPA_INTRO è senza timer (avanzamento manuale)', () => {
+    expect(PHASE_DURATIONS_MS.TAPPA_INTRO).toBeNull();
   });
   it('TAPPA_RECAP non ha timer (pausa: l\'host preme Continua)', () => {
     expect(PHASE_DURATIONS_MS.TAPPA_RECAP).toBeNull();
@@ -33,13 +33,12 @@ describe('nextPercorsoPhase', () => {
   });
 
   it('TAPPA_INTRO avanza al primo dilemma della tappa', () => {
-    expect(nextPercorsoPhase('TAPPA_INTRO', 0, plan)).toEqual({ phase: 'DILEMMA_REVEAL', dilemmaIndex: 1 });
+    expect(nextPercorsoPhase('TAPPA_INTRO', 0, plan)).toEqual({ phase: 'VOTE_1', dilemmaIndex: 1 });
     // Dopo un recap intermedio (idx=2) la carta della tappa successiva apre il 3° dilemma.
-    expect(nextPercorsoPhase('TAPPA_INTRO', 2, plan)).toEqual({ phase: 'DILEMMA_REVEAL', dilemmaIndex: 3 });
+    expect(nextPercorsoPhase('TAPPA_INTRO', 2, plan)).toEqual({ phase: 'VOTE_1', dilemmaIndex: 3 });
   });
 
   it('le fasi interne al dilemma scorrono come nella sequenza classica', () => {
-    expect(nextPercorsoPhase('DILEMMA_REVEAL', 1, plan).phase).toBe('VOTE_1');
     expect(nextPercorsoPhase('VOTE_1', 1, plan).phase).toBe('SPLIT_REVEAL');
     expect(nextPercorsoPhase('SPLIT_REVEAL', 1, plan).phase).toBe('PREDICT');
     expect(nextPercorsoPhase('PREDICT', 1, plan).phase).toBe('DEFENSE');
@@ -51,8 +50,8 @@ describe('nextPercorsoPhase', () => {
   });
 
   it('PHASE_RESULTS: stessa tappa ⇒ prossimo dilemma', () => {
-    expect(nextPercorsoPhase('PHASE_RESULTS', 1, plan)).toEqual({ phase: 'DILEMMA_REVEAL', dilemmaIndex: 2 });
-    expect(nextPercorsoPhase('PHASE_RESULTS', 3, plan)).toEqual({ phase: 'DILEMMA_REVEAL', dilemmaIndex: 4 });
+    expect(nextPercorsoPhase('PHASE_RESULTS', 1, plan)).toEqual({ phase: 'VOTE_1', dilemmaIndex: 2 });
+    expect(nextPercorsoPhase('PHASE_RESULTS', 3, plan)).toEqual({ phase: 'VOTE_1', dilemmaIndex: 4 });
   });
 
   it('PHASE_RESULTS: confine di tappa ⇒ recap della tappa finita', () => {
@@ -86,6 +85,6 @@ describe('nextPercorsoPhase', () => {
     // Two TAPPA_INTRO (one per tappa) and two TAPPA_RECAP (mid + final).
     expect(seq.filter((p) => p === 'TAPPA_INTRO')).toHaveLength(2);
     expect(seq.filter((p) => p === 'TAPPA_RECAP')).toHaveLength(2);
-    expect(seq.filter((p) => p === 'DILEMMA_REVEAL')).toHaveLength(4);
+    expect(seq.filter((p) => p === 'VOTE_1')).toHaveLength(4);
   });
 });

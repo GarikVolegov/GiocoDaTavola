@@ -5,21 +5,59 @@
 // Automatically ducks background music, respects the master mute toggle,
 // and falls back seamlessly to the Web Speech API if an asset is not found.
 
+import { useEffect, useState } from 'react';
 import type { GamePhase, StoriaView } from '../../shared/events';
 import { getCtx, getMaster, getSharedAudio, isMuted } from './engine';
-import { setMusicIntensity } from './music';
+import { setThematicIntensity } from './thematicMusic';
 import { speak, cancelNarration, isNarrationSpeaking, notifySpeaking } from './narrator';
 
+export type PlaybackRate = 0.75 | 1 | 1.25 | 1.5;
+
+export interface AudioPlayerState {
+  isPlaying: boolean;
+  isPaused: boolean;
+  playbackRate: PlaybackRate;
+}
+
 let currentSource: AudioBufferSourceNode | null = null;
+let currentBuffer: AudioBuffer | null = null;
 let currentAudio: HTMLAudioElement | null = null;
 let playGen = 0;
 let isAudioPlaying = false;
+let isAudioPaused = false;
+let currentRate: PlaybackRate = 1;
+let bufferStartCtxTime = 0;
+let pausedOffset = 0;
+let lastTarget: { url: string | null; fallbackText?: string | null; onDone?: () => void } | null = null;
+let usingSpeechFallback = false;
 
 // In-memory cache for decoded AudioBuffers to eliminate network/decode latency on repeats
 const bufferCache = new Map<string, AudioBuffer>();
 
 type AudioListener = (playing: boolean) => void;
 const audioListeners = new Set<AudioListener>();
+
+type PlayerStateListener = (state: AudioPlayerState) => void;
+const playerStateListeners = new Set<PlayerStateListener>();
+
+function snapshotState(): AudioPlayerState {
+  return {
+    isPlaying: isAudioPlaying || isNarrationSpeaking(),
+    isPaused: isAudioPaused,
+    playbackRate: currentRate,
+  };
+}
+
+function emitPlayerState(): void {
+  const snap = snapshotState();
+  for (const listener of playerStateListeners) {
+    try {
+      listener(snap);
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 function notifyAudioPlaying(playing: boolean): void {
   notifySpeaking(playing);
@@ -33,6 +71,21 @@ function notifyAudioPlaying(playing: boolean): void {
       }
     }
   }
+  emitPlayerState();
+}
+
+export function subscribeAudioPlayerState(listener: PlayerStateListener): () => void {
+  playerStateListeners.add(listener);
+  listener(snapshotState());
+  return () => {
+    playerStateListeners.delete(listener);
+  };
+}
+
+export function useAudioPlayerState(): AudioPlayerState {
+  const [state, setState] = useState<AudioPlayerState>(snapshotState);
+  useEffect(() => subscribeAudioPlayerState(setState), []);
+  return state;
 }
 
 export function subscribeAudioPlayback(listener: AudioListener): () => void {
@@ -95,7 +148,7 @@ export function getStoryAudioUrl(
 
   // Classic or Percorso dilemma: on-demand dynamic neural TTS endpoint (Diego voice)
   if (dilemma && (phase === 'DILEMMA_REVEAL' || phase === 'VOTE_1')) {
-    const text = `Al bivio… ${dilemma.text} — Opzione A: ${dilemma.optionA}. — Opzione B: ${dilemma.optionB}.`;
+    const text = `${dilemma.text} — ${dilemma.optionA}, oppure ${dilemma.optionB}.`;
     return `/api/audio/tts?text=${encodeURIComponent(text)}`;
   }
 
@@ -126,8 +179,13 @@ export function prefetchStoryAudio(url: string | null): void {
 
 export function stopStoryAudio(): void {
   playGen += 1;
+  isAudioPaused = false;
+  pausedOffset = 0;
+  currentBuffer = null;
+  usingSpeechFallback = false;
   if (currentSource) {
     try {
+      currentSource.onended = null;
       currentSource.stop();
       currentSource.disconnect();
     } catch {
@@ -146,7 +204,139 @@ export function stopStoryAudio(): void {
   }
   notifyAudioPlaying(false);
   cancelNarration();
-  setMusicIntensity('full');
+  setThematicIntensity('full');
+}
+
+export function pauseStoryAudio(): void {
+  if (!isAudioPlaying && !isNarrationSpeaking()) return;
+  if (currentSource) {
+    const ctx = getCtx();
+    if (ctx) {
+      pausedOffset = Math.max(0, pausedOffset + (ctx.currentTime - bufferStartCtxTime) * currentRate);
+    }
+    try {
+      currentSource.onended = null;
+      currentSource.stop();
+      currentSource.disconnect();
+    } catch {
+      /* ignore */
+    }
+    currentSource = null;
+    isAudioPaused = true;
+    notifyAudioPlaying(false);
+    setThematicIntensity('full');
+    return;
+  }
+  if (currentAudio) {
+    try {
+      currentAudio.pause();
+    } catch {
+      /* ignore */
+    }
+    isAudioPaused = true;
+    notifyAudioPlaying(false);
+    setThematicIntensity('full');
+    return;
+  }
+  if (usingSpeechFallback && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.pause();
+      isAudioPaused = true;
+      notifyAudioPlaying(false);
+      setThematicIntensity('full');
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+export function resumeStoryAudio(): void {
+  if (!isAudioPaused) return;
+  if (isMuted()) return;
+
+  if (currentBuffer) {
+    const ctx = getCtx();
+    const master = getMaster();
+    if (ctx && master) {
+      if (ctx.state === 'suspended') void ctx.resume();
+      const offset = Math.min(pausedOffset, Math.max(0, currentBuffer.duration - 0.05));
+      const gen = playGen;
+      try {
+        const source = ctx.createBufferSource();
+        source.buffer = currentBuffer;
+        source.playbackRate.value = currentRate;
+        const voiceGain = ctx.createGain();
+        voiceGain.gain.value = 1.05;
+        source.connect(voiceGain);
+        voiceGain.connect(master);
+        source.onended = () => {
+          if (gen !== playGen) return;
+          isAudioPaused = false;
+          pausedOffset = 0;
+          currentSource = null;
+          currentBuffer = null;
+          notifyAudioPlaying(false);
+          setThematicIntensity('full');
+          lastTarget?.onDone?.();
+        };
+        currentSource = source;
+        bufferStartCtxTime = ctx.currentTime;
+        isAudioPaused = false;
+        notifyAudioPlaying(true);
+        setThematicIntensity('soft');
+        source.start(0, offset);
+        return;
+      } catch {
+        /* fall through */
+      }
+    }
+  }
+
+  if (currentAudio) {
+    isAudioPaused = false;
+    currentAudio.playbackRate = currentRate;
+    void currentAudio.play();
+    notifyAudioPlaying(true);
+    setThematicIntensity('soft');
+    return;
+  }
+
+  if (usingSpeechFallback && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      isAudioPaused = false;
+      window.speechSynthesis.resume();
+      notifyAudioPlaying(true);
+      setThematicIntensity('soft');
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+export function setStoryPlaybackRate(rate: PlaybackRate): void {
+  if (currentRate === rate) return;
+  const ctx = getCtx();
+  if (currentSource && ctx && isAudioPlaying && !isAudioPaused) {
+    pausedOffset = Math.max(0, pausedOffset + (ctx.currentTime - bufferStartCtxTime) * currentRate);
+    bufferStartCtxTime = ctx.currentTime;
+    currentSource.playbackRate.value = rate;
+  }
+  if (currentAudio) {
+    currentAudio.playbackRate = rate;
+  }
+  currentRate = rate;
+  emitPlayerState();
+}
+
+export function restartStoryAudio(
+  url?: string | null,
+  fallbackText?: string | null,
+  onDone?: () => void,
+): void {
+  const targetUrl = url !== undefined ? url : (lastTarget?.url ?? null);
+  const targetText = fallbackText !== undefined ? fallbackText : lastTarget?.fallbackText;
+  const targetDone = onDone !== undefined ? onDone : lastTarget?.onDone;
+  playStoryAudio(targetUrl, targetText, targetDone);
 }
 
 export function playStoryAudio(
@@ -154,8 +344,9 @@ export function playStoryAudio(
   fallbackText?: string | null,
   onDone?: () => void,
 ): void {
-  const gen = ++playGen;
   stopStoryAudio();
+  const gen = ++playGen;
+  lastTarget = { url, fallbackText, onDone };
 
   if (isMuted()) {
     onDone?.();
@@ -164,11 +355,15 @@ export function playStoryAudio(
 
   if (!url) {
     if (fallbackText) {
-      setMusicIntensity('soft');
+      usingSpeechFallback = true;
+      setThematicIntensity('soft');
       speak(fallbackText, () => {
-        setMusicIntensity('full');
+        usingSpeechFallback = false;
+        isAudioPaused = false;
+        setThematicIntensity('full');
+        emitPlayerState();
         onDone?.();
-      });
+      }, currentRate);
     } else {
       onDone?.();
     }
@@ -177,8 +372,12 @@ export function playStoryAudio(
 
   const cleanup = () => {
     if (gen !== playGen) return;
+    isAudioPaused = false;
+    pausedOffset = 0;
+    currentBuffer = null;
+    usingSpeechFallback = false;
     notifyAudioPlaying(false);
-    setMusicIntensity('full');
+    setThematicIntensity('full');
     currentSource = null;
     currentAudio = null;
     onDone?.();
@@ -196,17 +395,22 @@ export function playStoryAudio(
     const startBuffer = (buffer: AudioBuffer) => {
       if (gen !== playGen) return;
       try {
+        currentBuffer = buffer;
+        pausedOffset = 0;
+        isAudioPaused = false;
         const source = ctx.createBufferSource();
         source.buffer = buffer;
+        source.playbackRate.value = currentRate;
         const voiceGain = ctx.createGain();
         voiceGain.gain.value = 1.05; // clear, crisp narrator presence over the ducked background music
         source.connect(voiceGain);
         voiceGain.connect(master);
         source.onended = cleanup;
         currentSource = source;
+        bufferStartCtxTime = ctx.currentTime;
 
         notifyAudioPlaying(true);
-        setMusicIntensity('soft');
+        setThematicIntensity('soft');
         source.start(0);
       } catch (err) {
         console.warn('[storyAudio] WebAudio buffer source failed:', err);
@@ -250,11 +454,12 @@ export function playStoryAudio(
       const audio = getSharedAudio() ?? new Audio();
       currentAudio = audio;
       audio.src = url!;
+      audio.playbackRate = currentRate;
 
       audio.onplay = () => {
         if (gen === playGen) {
           notifyAudioPlaying(true);
-          setMusicIntensity('soft');
+          setThematicIntensity('soft');
         }
       };
 

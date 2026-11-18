@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, lazy, Suspense, type FormEvent, type ReactNode } from 'react';
 import { getSocket } from '../shared/socket';
 import { fetchWithTimeout } from '../shared/api';
-import { useCountdown } from '../shared/useCountdown';
 import { useElapsed } from '../shared/useElapsed';
 import { useTransient } from '../shared/useTransient';
 import {
@@ -31,6 +30,7 @@ import {
   type HostStartErrorPayload,
   type PublicPlayer,
   type VoteChoice,
+  type PreferirestiChoice,
   type PlayerVotedPayload,
   type PlayerVoteErrorPayload,
   type PlayerPredictedPayload,
@@ -81,6 +81,9 @@ import GroupMindView from './views/GroupMindView';
 import WriteView from './views/WriteView';
 import WriteVoteView from './views/WriteVoteView';
 import HotTakeView from './views/HotTakeView';
+import CruciverbaView from './views/CruciverbaView';
+import TribunaleView from './views/TribunaleView';
+import TelepathyView from './views/TelepathyView';
 import DuoArgueView from './views/DuoArgueView';
 import PickPredictView from './views/PickPredictView';
 import WaverView from './views/WaverView';
@@ -165,7 +168,7 @@ export default function PlayerApp() {
   const [submitting, setSubmitting] = useState(false);
   const [players, setPlayers] = useState<PublicPlayer[]>([]);
   const [game, setGame] = useState<GameStatePayload | null>(null);
-  const [vote, setVote] = useState<VoteChoice | null>(null);
+  const [vote, setVote] = useState<VoteChoice | PreferirestiChoice | null>(null);
   // Whether the player has explicitly confirmed their second vote (VOTE_2). Local
   // only: the server reports just the aggregate count, so this drives the personal
   // "you confirmed — waiting for the others" feedback on this phone.
@@ -185,6 +188,10 @@ export default function PlayerApp() {
   const [writeText, setWriteText] = useState('');
   const [writeSubmitted, setWriteSubmitted] = useState<string | null>(null);
   const [writeVotedForToken, setWriteVotedForToken] = useState<string | null>(null);
+  const [cruciverbaFeedback, setCruciverbaFeedback] = useState<string | null>(null);
+  const [tribunaleVote, setTribunaleVote] = useState<'ACCUSA' | 'DIFESA' | null>(null);
+  const [telepathyText, setTelepathyText] = useState('');
+  const [telepathySubmitted, setTelepathySubmitted] = useState<string | null>(null);
   // This player's own answer's opaque token this round (private emit on
   // entering WRITE_VOTE / on reconnect) — used to filter our own entry out
   // of the anonymized list without ever comparing real player ids.
@@ -193,12 +200,12 @@ export default function PlayerApp() {
   const [infiltratoToolError, setInfiltratoToolError] = useState<string | null>(null);
   const [secretQuestion, setSecretQuestion] = useState<PlayerSecretQuestionPayload | null>(null);
   const [gognaVotedTarget, setGognaVotedTarget] = useState<string | null>(null);
-  const [partyMode, setPartyMode] = useState<PartyMode | null>('flash');
+  const [partyMode, setPartyMode] = useState<PartyMode | null>('mix');
   const [partyIntensity, setPartyIntensity] = useState<'complicita' | 'piccante' | 'profondo'>('complicita');
   const [infiltratoTono, setInfiltratoTono] = useState<'risate' | 'profondo' | 'misto'>('misto');
   const [familiarita, setFamiliarita] = useState<Familiarita>('vecchi_amici');
   const [partyTheme, setPartyTheme] = useState('');
-  const [myHotSeatBet, setMyHotSeatBet] = useState<'match' | 'scoppiano' | null>(null);
+  const [coupleOrder, setCoupleOrder] = useState<string[]>([]);
   const [myAccusation, setMyAccusation] = useState<string | null>(null);
   const [speakerVote, setSpeakerVote] = useState<string | null>(null);
   // Percorso in 2 (Atto I): the two-part secret submission — own pick + the
@@ -236,6 +243,7 @@ export default function PlayerApp() {
   const [caos, setCaos] = useState<Caos>('assente');
   const [delicatoOptIn, setDelicatoOptIn] = useState(false);
   const [serataLunga, setSerataLunga] = useState(false);
+  const [playMode, setPlayMode] = useState<'solo' | 'gruppo'>('gruppo');
   const [gameMode, setGameMode] = useState<GameMode>('gruppo');
   const [infiltratoOn, setInfiltratoOn] = useState(false);
   const [squadreOn, setSquadreOn] = useState(false);
@@ -252,6 +260,8 @@ export default function PlayerApp() {
   // Current credentials, kept in a ref so the socket 'connect' handler can
   // re-claim the seat after a network blip without re-subscribing.
   const credsRef = useRef<SavedSession | null>(null);
+  const latestDilemmaIndexRef = useRef<number>(0);
+  const prevDilemmaIndexRef = useRef<number | undefined>(undefined);
   // Was the in-flight join triggered by the user pressing a form button? Only
   // then should a join failure surface as a form error. Background replays
   // (auto-rejoin on mount, reconnect after a blip) of a now-dead saved room must
@@ -287,6 +297,9 @@ export default function PlayerApp() {
     };
     const onLobbyUpdate = ({ players }: LobbyUpdatePayload) => setPlayers(players);
     const onGameState = (payload: GameStatePayload) => {
+      if (typeof payload.dilemmaIndex === 'number') {
+        latestDilemmaIndexRef.current = payload.dilemmaIndex;
+      }
       setGame(payload);
       setStartError(null);
     };
@@ -315,14 +328,29 @@ export default function PlayerApp() {
     const onWriteSubmitted = ({ text }: PlayerWriteSubmittedPayload) => setWriteSubmitted(text);
     const onWriteVoted = ({ votedForToken }: PlayerWriteVotedPayload) => setWriteVotedForToken(votedForToken);
     const onMyWriteToken = ({ token }: PlayerMyWriteTokenPayload) => setMyWriteToken(token);
+    const onHotTakeSubmitted = ({ score }: { score: number }) => setMyHotTakeScore(score);
+    const onCruciverbaFeedback = (payload: { ok: boolean; correct: boolean; error?: string }) => {
+      if (!payload.ok && payload.error === 'NOT_YOUR_TURN') {
+        setCruciverbaFeedback('Non è il tuo turno!');
+      } else if (payload.ok && !payload.correct) {
+        setCruciverbaFeedback('Quasi! Riprova o sblocca 1 lettera.');
+      } else {
+        setCruciverbaFeedback(null);
+      }
+    };
+    const onTribunaleVoted = ({ choice }: { choice: 'ACCUSA' | 'DIFESA' }) => setTribunaleVote(choice);
+    const onTelepathySubmitted = ({ word }: { word: string }) => setTelepathySubmitted(word);
     const onInfiltratoRole = (payload: PlayerInfiltratoRolePayload) => setInfiltratoRole(payload);
     const onSecretQuestion = (payload: PlayerSecretQuestionPayload) => {
-      setSecretQuestion(payload);
-      if (payload.isInfiltrator) {
+      const normalized = {
+        ...payload,
+        round: typeof payload.round === 'number' ? payload.round : latestDilemmaIndexRef.current,
+      };
+      setSecretQuestion(normalized);
+      if (normalized.isInfiltrator) {
         vibrateInfiltrator();
       }
     };
-    const onHotSeatBetted = ({ bet }: { bet: 'match' | 'scoppiano' }) => setMyHotSeatBet(bet);
     const onGognaVoted = ({ targetId }: { targetId: string }) => setGognaVotedTarget(targetId);
     const onInfiltratoToolError = ({ error }: PlayerInfiltratoToolErrorPayload) =>
       setInfiltratoToolError(INFILTRATO_TOOL_ERROR_MESSAGES[error] ?? 'Non puoi agire ora');
@@ -360,9 +388,12 @@ export default function PlayerApp() {
     socket.on(SocketEvents.PlayerWriteSubmitted, onWriteSubmitted);
     socket.on(SocketEvents.PlayerWriteVoted, onWriteVoted);
     socket.on(SocketEvents.PlayerMyWriteToken, onMyWriteToken);
+    socket.on(SocketEvents.PlayerHotTakeSubmitted, onHotTakeSubmitted);
+    socket.on(SocketEvents.PlayerCruciverbaFeedback, onCruciverbaFeedback);
+    socket.on(SocketEvents.PlayerTribunaleVoted, onTribunaleVoted);
+    socket.on(SocketEvents.PlayerTelepathySubmitted, onTelepathySubmitted);
     socket.on(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
     socket.on(SocketEvents.PlayerSecretQuestion, onSecretQuestion);
-    socket.on(SocketEvents.PlayerHotSeatBetted, onHotSeatBetted);
     socket.on(SocketEvents.PlayerGognaVoted, onGognaVoted);
     socket.on(SocketEvents.PlayerInfiltratoToolError, onInfiltratoToolError);
     socket.on(SocketEvents.PlayerAccused, onAccused);
@@ -421,9 +452,12 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerWriteSubmitted, onWriteSubmitted);
       socket.off(SocketEvents.PlayerWriteVoted, onWriteVoted);
       socket.off(SocketEvents.PlayerMyWriteToken, onMyWriteToken);
+      socket.off(SocketEvents.PlayerHotTakeSubmitted, onHotTakeSubmitted);
+      socket.off(SocketEvents.PlayerCruciverbaFeedback, onCruciverbaFeedback);
+      socket.off(SocketEvents.PlayerTribunaleVoted, onTribunaleVoted);
+      socket.off(SocketEvents.PlayerTelepathySubmitted, onTelepathySubmitted);
       socket.off(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
       socket.off(SocketEvents.PlayerSecretQuestion, onSecretQuestion);
-      socket.off(SocketEvents.PlayerHotSeatBetted, onHotSeatBetted);
       socket.off(SocketEvents.PlayerGognaVoted, onGognaVoted);
       socket.off(SocketEvents.PlayerInfiltratoToolError, onInfiltratoToolError);
       socket.off(SocketEvents.PlayerAccused, onAccused);
@@ -438,50 +472,7 @@ export default function PlayerApp() {
     };
   }, []);
 
-  // Leave the room on purpose: forget the saved seat and reset to the join form.
-  const leaveRoom = () => {
-    clearSession();
-    credsRef.current = null;
-    setJoinedCode(null);
-    setPlayerId(null);
-    setGame(null);
-    setPlayers([]);
-    setVote(null);
-    setBlindSpot(null);
-    setConfirmingLeave(false);
-  };
-
-  const phase = game?.phase ?? 'LOBBY';
-  const remaining = useCountdown(game?.phaseExpiresAt ?? null);
-  useEffect(() => {
-    document.documentElement.setAttribute('data-phase', phase);
-    return () => {
-      document.documentElement.removeAttribute('data-phase');
-    };
-  }, [phase]);
-  // The last 5s of ANY phase timer buzz every phone once per second — mirrors
-  // the host's audio timerWarn cue, which already ticks in the same window.
-  useEffect(() => {
-    if (remaining != null && remaining >= 1 && remaining <= 5) buzz(20);
-  }, [remaining]);
-  // Self-paced turn (DEFENSE/INTERVENTI): the floor countdown gates "Ho finito".
-  const minRemaining = useCountdown(game?.defense?.minEndsAt ?? null);
-  const canFinishNow = game?.defense?.minEndsAt == null || (minRemaining ?? 0) <= 0;
-  // The speaker's elapsed time, counting UP from the turn start.
-  const speakerElapsed = useElapsed(game?.defense?.startedAt ?? null);
-  // The just-finished speaker's applause tally, shown briefly at the start of
-  // the next turn (the server never clears it — the client treats it as a toast).
-  const lastTurnApplause = useTransient(game?.lastTurnApplause ?? null, 3_000);
-  // Self-paced turn (DUO_ARGUE): the floor countdown gates "Ho finito".
-  const duoMinRemaining = useCountdown(game?.duoTurn?.minEndsAt ?? null);
-  const duoCanFinishNow = game?.duoTurn?.minEndsAt == null || (duoMinRemaining ?? 0) <= 0;
-  const duoSpeakerElapsed = useElapsed(game?.duoTurn?.startedAt ?? null);
-
-  // Each new dilemma round starts with a clean (unselected) vote + prediction.
-  // Keyed on the dilemma's id, not dilemmaIndex: a discarded/unanimous-skipped
-  // dilemma is replaced IN PLACE (same index, fresh id) — indexing on
-  // dilemmaIndex alone would miss that reset and leave a stale vote selected.
-  useEffect(() => {
+  const resetRoundInputs = () => {
     setVote(null);
     setVoteError(null);
     setPredicted(null);
@@ -491,6 +482,7 @@ export default function PlayerApp() {
     setKnowGuess(null);
     setKnowResult(null);
     setSpeakerVote(null);
+    setMyAccusation(null);
     setGroupMindAnswer(null);
     setMyHotTakeScore(null);
     setGroupMindGuess(null);
@@ -498,22 +490,103 @@ export default function PlayerApp() {
     setWriteText('');
     setWriteSubmitted(null);
     setWriteVotedForToken(null);
-    setMyWriteToken(null);
     setInfiltratoToolError(null);
     setDuoOwn(null);
     setDuoPredict(null);
     setDuoSynced(false);
     setDuoRating(null);
-    setMyHotSeatBet(null);
     setGognaVotedTarget(null);
-  }, [game?.dilemma?.id, game?.partyCard?.prompt]);
+    setHandRaised(false);
+    setRaiseHandError(null);
+    setCruciverbaFeedback(null);
+    setTribunaleVote(null);
+    setTelepathyText('');
+    setTelepathySubmitted(null);
+  };
+
+  // Leave the room on purpose: forget the saved seat and reset to the join form.
+  const leaveRoom = () => {
+    clearSession();
+    credsRef.current = null;
+    setJoinedCode(null);
+    setPlayerId(null);
+    setGame(null);
+    setPlayers([]);
+    resetRoundInputs();
+    setMyWriteToken(null);
+    setInfiltratoRole(null);
+    setSecretQuestion(null);
+    setBlindSpot(null);
+    setConfirmingLeave(false);
+  };
+
+  const phase = game?.phase ?? 'LOBBY';
+  const remaining = null;
+  const turnRemaining = null;
+  const readingRemaining = null;
+  useEffect(() => {
+    document.documentElement.setAttribute('data-phase', phase);
+    return () => {
+      document.documentElement.removeAttribute('data-phase');
+    };
+  }, [phase]);
+  // Timers disabled: speakers can finish whenever ready.
+  const minRemaining = null;
+  const canFinishNow = true;
+  // The speaker's elapsed time, counting UP from the turn start.
+  const speakerElapsed = useElapsed(game?.defense?.startedAt ?? null);
+  // The just-finished speaker's applause tally, shown briefly at the start of
+  // the next turn (the server never clears it — the client treats it as a toast).
+  const lastTurnApplause = useTransient(game?.lastTurnApplause ?? null, 3_000);
+  const duoMinRemaining = null;
+  const duoCanFinishNow = true;
+  const duoSpeakerElapsed = useElapsed(game?.duoTurn?.startedAt ?? null);
+
+  // Each new round/mini-game starts with clean (unselected) per-round answers.
+  // Keyed on dilemmaIndex + active prompt ids across ALL modes (dilemma, party,
+  // groupMind, write, hotTake, missingWord, telepathy) so no prior selection
+  // ever leaks into the next round, Serata Mix minigame, or rematch.
+  useEffect(() => {
+    const prevIdx = prevDilemmaIndexRef.current;
+    prevDilemmaIndexRef.current = game?.dilemmaIndex;
+    if (prevIdx !== undefined && game?.dilemmaIndex !== undefined && prevIdx !== game.dilemmaIndex) {
+      setMyWriteToken(null);
+    }
+    resetRoundInputs();
+  }, [
+    game?.dilemmaIndex,
+    game?.dilemma?.id,
+    game?.partyCard?.prompt,
+    game?.hotTakePrompt?.id,
+    game?.groupMindQuestion?.id,
+    game?.writePrompt?.id,
+    game?.cruciverbaState?.boardId,
+    game?.tribunaleState?.caseData?.id,
+    game?.telepathyPrompt?.id,
+  ]);
 
   useEffect(() => {
-    if (phase === 'DILEMMA_REVEAL') {
-      setMyHotSeatBet(null);
+    if (phase === 'LOBBY' || phase === 'PHASE_INTRO') {
+      resetRoundInputs();
+      setMyWriteToken(null);
+      setInfiltratoRole(null);
+      setSecretQuestion(null);
+      setBlindSpot(null);
+    } else if (phase === 'WRITE') {
+      setMyWriteToken(null);
+    } else if (phase === 'DILEMMA_REVEAL') {
       setGognaVotedTarget(null);
     }
   }, [phase]);
+
+  useEffect(() => {
+    setCoupleOrder((prev) => {
+      const currentIds = players.map((p) => p.id);
+      const validPrev = prev.filter((id) => currentIds.includes(id));
+      const added = currentIds.filter((id) => !validPrev.includes(id));
+      return [...validPrev, ...added];
+    });
+  }, [players]);
 
   // The twist's DUO_WAVER arrives mid-round (same dilemmaIndex): each entry into
   // the phase starts from a fresh, unselected rating.
@@ -618,7 +691,7 @@ export default function PlayerApp() {
     setConfirmed(false);
   }, [phase]);
 
-  const castVote = (choice: VoteChoice) => {
+  const castVote = (choice: VoteChoice | PreferirestiChoice) => {
     setVote(choice); // optimistic; reverts via player:voted/voteError
     setVoteError(null);
     setConfirmed(false); // changing the (second) vote un-confirms it
@@ -626,10 +699,29 @@ export default function PlayerApp() {
     getSocket().emit(SocketEvents.PlayerVote, { choice });
   };
 
-  const castHotSeatBet = (bet: 'match' | 'scoppiano') => {
-    setMyHotSeatBet(bet);
-    buzz(15);
-    getSocket().emit(SocketEvents.PlayerHotSeatBet, { bet });
+  const couplePairs: Array<[string, string]> = [];
+  for (let i = 0; i + 1 < coupleOrder.length; i += 2) {
+    couplePairs.push([coupleOrder[i], coupleOrder[i + 1]]);
+  }
+  const shuffleCouples = () => {
+    setCoupleOrder((prev) => {
+      const copy = [...prev];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    });
+  };
+  const swapCoupleMembers = (idA: string, idB: string) => {
+    setCoupleOrder((prev) => {
+      const idxA = prev.indexOf(idA);
+      const idxB = prev.indexOf(idB);
+      if (idxA === -1 || idxB === -1) return prev;
+      const next = [...prev];
+      [next[idxA], next[idxB]] = [next[idxB], next[idxA]];
+      return next;
+    });
   };
 
   const castSwingBet = (bet: SwingBet) => {
@@ -864,6 +956,12 @@ export default function PlayerApp() {
       infiltratoTono,
       familiarita,
       theme: partyTheme.trim() ? partyTheme.trim() : undefined,
+      couples:
+        (partyMode === 'coppie' || partyMode === 'mix') &&
+        couplePairs.length * 2 === players.length &&
+        players.length >= 2
+          ? couplePairs
+          : undefined,
     });
   };
   const castAccuse = (accusedId: string) => {
@@ -877,6 +975,7 @@ export default function PlayerApp() {
   const rematch = () => getSocket().emit(SocketEvents.LeaderRematch);
   const pauseGame = () => getSocket().emit(SocketEvents.LeaderPauseGame);
   const resumeGame = () => getSocket().emit(SocketEvents.LeaderResumeGame);
+  const finishReading = () => getSocket().emit(SocketEvents.PlayerFinishReading);
   const removePlayer = (id: string) => getSocket().emit(SocketEvents.LeaderRemovePlayer, { id });
 
   const submitDilemma = () => {
@@ -888,13 +987,22 @@ export default function PlayerApp() {
     });
   };
 
-  // Gruppo: solo play allowed (1 human + bots), never bots-only. Duello: exactly
-  // two humans (no bot opponent). Mirrors the old HostApp start gating.
+  // Solo vs Group gating: in 'solo', 1 human player starts immediately without bots or friends;
+  // in 'gruppo', require >= 2 players (or 3 for infiltrato/tribunale, even >= 2 for coppie).
   const humanCount = players.filter((p) => !p.isBot).length;
+  const effectivePlayMode = players.length >= 2 ? 'gruppo' : playMode;
   const canStart =
     gameMode === 'duello'
       ? players.length === 2 && humanCount === 2
-      : players.length >= MIN_PLAYERS_TO_START && humanCount >= 1;
+      : partyMode === 'coppie'
+        ? players.length >= 2 && players.length % 2 === 0 && humanCount >= 1
+        : partyMode === 'infiltrato'
+          ? humanCount >= 3
+          : partyMode === 'tribunale'
+            ? players.length >= 3 && humanCount >= 1
+            : effectivePlayMode === 'solo'
+              ? players.length >= MIN_PLAYERS_TO_START && humanCount >= 1
+              : players.length >= 2 && humanCount >= 1;
   const canAddBot = gameMode !== 'duello' && players.length < 8;
 
   // Phases that run a server-side countdown the leader may skip (everything past
@@ -925,7 +1033,10 @@ export default function PlayerApp() {
     p === 'DUO_WAVER' ||
     p === 'GROUP_MIND' ||
     p === 'WRITE' ||
-    p === 'WRITE_VOTE';
+    p === 'WRITE_VOTE' ||
+    p === 'HOT_TAKE_VOTE' ||
+    p === 'TRIBUNALE_VOTE' ||
+    p === 'TELEPATHY';
 
   // The leader's "skip the rest of this phase" button — only shown to the leader
   // during a phase that has a countdown. Rendered in each in-game branch.
@@ -1031,14 +1142,6 @@ export default function PlayerApp() {
       <main style={wrap}>
         {audioControls}
         <h1 style={{ fontSize: '1.5rem', margin: 0 }}>Arringa consegnata 🎭</h1>
-        {remaining != null && (
-          <div
-            aria-label="Tempo rimanente"
-            style={{ fontSize: '2rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-          >
-            {remaining}s
-          </div>
-        )}
         <p style={{ fontSize: '1.05rem', opacity: 0.85, margin: 0 }}>
           Hai difeso il lato che non era tuo, da vero avvocato del diavolo.
         </p>
@@ -1047,6 +1150,9 @@ export default function PlayerApp() {
       </main>
     );
   }
+
+  const activeSecretQuestion =
+    secretQuestion && secretQuestion.round === (game?.dilemmaIndex ?? 0) ? secretQuestion : null;
 
   if (
     joinedCode &&
@@ -1074,13 +1180,11 @@ export default function PlayerApp() {
         playerCount={players.length}
         missingVoters={game?.missingVoters ?? null}
         partyCard={game?.partyCard}
-        secretQuestion={secretQuestion}
+        secretQuestion={activeSecretQuestion}
         gognaVotedTarget={gognaVotedTarget}
         onGognaVote={(targetId) => getSocket().emit(SocketEvents.PlayerGognaVote, { targetId })}
         players={players}
         myPlayerId={playerId}
-        myHotSeatBet={myHotSeatBet}
-        onHotSeatBet={castHotSeatBet}
         skipButton={
           <>
             {discardButton}
@@ -1144,6 +1248,8 @@ export default function PlayerApp() {
         phase={phase}
         defense={game?.defense ?? null}
         dilemma={game?.dilemma}
+        partyCard={game?.partyCard ?? null}
+        secretQuestion={activeSecretQuestion}
         isDevilRound={game?.isDevilRound ?? false}
         isPubblico={players.find((p) => p.id === playerId)?.role === 'pubblico'}
         absurdConstraint={game?.absurdConstraint ?? null}
@@ -1158,6 +1264,9 @@ export default function PlayerApp() {
         canFinishNow={canFinishNow}
         minRemaining={minRemaining}
         remaining={remaining}
+        readingRemaining={readingRemaining}
+        isLeader={isLeader}
+        onFinishReading={finishReading}
         speakerElapsed={speakerElapsed}
         lastTurnApplause={lastTurnApplause}
         onFinish={sendFinish}
@@ -1293,6 +1402,85 @@ export default function PlayerApp() {
     );
   }
 
+  if (joinedCode && (phase === 'CRUCIVERBA' || phase === 'CRUCIVERBA_REVEAL')) {
+    return withLeaveMenu(
+      <CruciverbaView
+        phase={phase}
+        state={game?.cruciverbaState ?? null}
+        myId={playerId}
+        isLeader={isLeader}
+        turnRemaining={turnRemaining}
+        phaseRemaining={remaining}
+        readingRemaining={readingRemaining}
+        feedback={cruciverbaFeedback}
+        onAttempt={(guess, wordId) => {
+          setCruciverbaFeedback(null);
+          buzz(25);
+          getSocket().emit(SocketEvents.PlayerCruciverbaAttempt, { guess, wordId });
+        }}
+        onPassHint={() => {
+          setCruciverbaFeedback(null);
+          buzz(15);
+          getSocket().emit(SocketEvents.PlayerCruciverbaPass);
+        }}
+        onFinishReading={finishReading}
+        skipButton={skipButton}
+      />
+    );
+  }
+
+  if (
+    joinedCode &&
+    (phase === 'TRIBUNALE_ARGUE' || phase === 'TRIBUNALE_VOTE' || phase === 'TRIBUNALE_REVEAL')
+  ) {
+    return withLeaveMenu(
+      <TribunaleView
+        phase={phase}
+        state={game?.tribunaleState ?? null}
+        myId={playerId}
+        isLeader={isLeader}
+        turnRemaining={turnRemaining}
+        phaseRemaining={remaining}
+        readingRemaining={readingRemaining}
+        myVote={tribunaleVote}
+        onFinishTurn={() => {
+          buzz(25);
+          getSocket().emit(SocketEvents.PlayerTribunaleFinishTurn);
+        }}
+        onFinishReading={finishReading}
+        onVote={(choice) => {
+          setTribunaleVote(choice);
+          buzz(25);
+          getSocket().emit(SocketEvents.PlayerTribunaleVote, { choice });
+        }}
+        onReaction={sendReaction}
+        skipButton={skipButton}
+      />
+    );
+  }
+
+  if (joinedCode && (phase === 'TELEPATHY' || phase === 'TELEPATHY_REVEAL')) {
+    return withLeaveMenu(
+      <TelepathyView
+        phase={phase}
+        prompt={game?.telepathyPrompt ?? null}
+        progress={game?.telepathyProgress ?? null}
+        reveal={game?.telepathyReveal ?? null}
+        remaining={remaining}
+        text={telepathyText}
+        submitted={telepathySubmitted}
+        onTextChange={setTelepathyText}
+        onSubmit={() => {
+          const val = telepathyText.trim();
+          if (!val) return;
+          setTelepathySubmitted(val);
+          getSocket().emit(SocketEvents.PlayerTelepathy, { word: val });
+        }}
+        skipButton={skipButton}
+      />
+    );
+  }
+
   if (joinedCode && phase === 'ACCUSE') {
     const candidates = players.filter((p) => p.id !== playerId);
     return withLeaveMenu(
@@ -1301,6 +1489,8 @@ export default function PlayerApp() {
         remaining={remaining}
         myAccusation={myAccusation}
         onAccuse={castAccuse}
+        isPartyInfiltrato={game?.partyCard?.mode === 'infiltrato'}
+        skipButton={skipButton}
       />
     );
   }
@@ -1324,12 +1514,7 @@ export default function PlayerApp() {
           knowResult={knowResult}
           groupMindResult={groupMindResult}
           blindSpot={blindSpot}
-          skipButton={
-            <>
-              {discardButton}
-              {skipButton}
-            </>
-          }
+          skipButton={discardButton}
         />
       </>
     );
@@ -1565,6 +1750,8 @@ export default function PlayerApp() {
               setSquadreOn={setSquadreOn}
               tappaCounts={game?.tappaCounts}
               humanCount={humanCount}
+              playMode={effectivePlayMode}
+              setPlayMode={setPlayMode}
               canStart={canStart}
               onStart={startGame}
               startError={startError}
@@ -1578,6 +1765,10 @@ export default function PlayerApp() {
               setFamiliarita={setFamiliarita}
               theme={partyTheme}
               setTheme={setPartyTheme}
+              players={players}
+              couplePairs={couplePairs}
+              onShuffleCouples={shuffleCouples}
+              onSwapCoupleMembers={swapCoupleMembers}
             />
           ) : (
             <Card style={{ width: '100%', textAlign: 'center', padding: '1.5rem 1rem' }}>

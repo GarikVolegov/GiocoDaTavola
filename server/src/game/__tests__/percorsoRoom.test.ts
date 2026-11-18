@@ -83,9 +83,10 @@ describe('startGame — modalità Percorso', () => {
     });
   });
 
-  it('richiede comunque abbastanza giocatori (gruppo)', () => {
+  it('consente anche 1 solo giocatore (solo) e rifiuta senza umani', () => {
     const store = makeStore();
-    expect(startPercorso(store, 2, { startTappa: 1, durata: 'corto' }).res).toEqual({
+    expect(startPercorso(store, 1, { startTappa: 1, durata: 'corto' }).res.ok).toBe(true);
+    expect(startPercorso(store, 0, { startTappa: 1, durata: 'corto' }).res).toEqual({
       ok: false,
       error: 'NOT_ENOUGH_PLAYERS',
     });
@@ -100,7 +101,7 @@ describe('advancePhase — cammino di un Percorso', () => {
     expect(seq.at(-1)).toBe('FINAL_AWARDS');
     expect(seq.filter((p) => p === 'TAPPA_INTRO')).toHaveLength(2); // tappa 3 e 4
     expect(seq.filter((p) => p === 'TAPPA_RECAP')).toHaveLength(2); // intermedio + finale
-    expect(seq.filter((p) => p === 'DILEMMA_REVEAL')).toHaveLength(10);
+    expect(seq.filter((p) => p === 'VOTE_1')).toHaveLength(10);
   });
 
   it('pesca i dilemmi dal piano, in ordine, aggiornando la tappa corrente', () => {
@@ -111,9 +112,9 @@ describe('advancePhase — cammino di un Percorso', () => {
     store.advancePhase(code);
     expect(room.phase).toBe('TAPPA_INTRO');
     expect(room.currentTappa).toBe(3);
-    // TAPPA_INTRO -> DILEMMA_REVEAL (primo dilemma del piano)
+    // TAPPA_INTRO -> VOTE_1 (primo dilemma del piano)
     store.advancePhase(code);
-    expect(room.phase).toBe('DILEMMA_REVEAL');
+    expect(room.phase).toBe('VOTE_1');
     expect(room.currentDilemma?.id).toBe(room.plannedDilemmas[0].id);
     expect(room.currentTappa).toBe(3);
   });

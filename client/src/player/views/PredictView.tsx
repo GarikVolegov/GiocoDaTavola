@@ -12,7 +12,7 @@ interface PredictDilemma {
 interface PredictViewProps {
   dilemma: PredictDilemma | null | undefined;
   knowPair: KnowPair | null; // the viewer's "quanto mi conosci" assignment, if any
-  remaining: number | null;
+  remaining?: number | null;
   predicted: VoteChoice | null;
   swingBet: SwingBet | null;
   knowGuess: VoteChoice | null;
@@ -33,7 +33,7 @@ interface PredictViewProps {
 export default function PredictView({
   dilemma,
   knowPair,
-  remaining,
+  remaining: _remaining = null,
   predicted,
   swingBet,
   knowGuess,
@@ -46,6 +46,8 @@ export default function PredictView({
   skipButton,
   finalStakesRound,
 }: PredictViewProps) {
+  const labelFor = (c: VoteChoice) =>
+    dilemma ? (c === 'A' ? dilemma.optionA : dilemma.optionB) : c === 'A' ? 'Prima scelta' : 'Seconda scelta';
   if (knowPair) {
     return (
       <main style={wrap}>
@@ -56,14 +58,6 @@ export default function PredictView({
         {dilemma && (
           <p style={{ fontSize: '0.95rem', opacity: 0.8, margin: 0, maxWidth: '22rem' }}>{dilemma.text}</p>
         )}
-        {remaining != null && (
-          <div
-            aria-label="Tempo rimanente"
-            style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-          >
-            {remaining}s
-          </div>
-        )}
         <div
           role="group"
           aria-label="La tua ipotesi"
@@ -73,8 +67,7 @@ export default function PredictView({
             <VoteOption
               key={letter}
               faction={letter === 'A' ? 'a' : 'b'}
-              letter={letter}
-              label={dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
+              label={labelFor(letter)}
               selected={knowGuess === letter}
               onClick={() => onKnowGuess(letter)}
               centered
@@ -83,7 +76,7 @@ export default function PredictView({
         </div>
         {knowGuess ? (
           <p style={{ opacity: 0.8, margin: 0 }}>
-            Hai scelto <strong>{knowGuess}</strong>. Conosci bene {knowPair.targetNickname}? 👀
+            Hai scelto <strong>{labelFor(knowGuess)}</strong>. Conosci bene {knowPair.targetNickname}? 👀
           </p>
         ) : (
           <p style={{ opacity: 0.7, margin: 0 }}>Indovina come ha votato.</p>
@@ -97,14 +90,6 @@ export default function PredictView({
       <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
         Chi vincerà <em>dopo</em> le difese?
       </p>
-      {remaining != null && (
-        <div
-          aria-label="Tempo rimanente"
-          style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-        >
-          {remaining}s
-        </div>
-      )}
       <div
         role="group"
         aria-label="Il tuo pronostico"
@@ -114,8 +99,7 @@ export default function PredictView({
           <VoteOption
             key={letter}
             faction={letter === 'A' ? 'a' : 'b'}
-            letter={letter}
-            label={dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
+            label={labelFor(letter)}
             selected={predicted === letter}
             onClick={() => onPredict(letter)}
             centered
@@ -124,7 +108,7 @@ export default function PredictView({
       </div>
       {predicted ? (
         <p style={{ opacity: 0.8, margin: 0 }}>
-          Hai pronosticato <strong>{predicted}</strong>. Vediamo se indovini!
+          Hai pronosticato <strong>{labelFor(predicted)}</strong>. Vediamo se indovini!
         </p>
       ) : (
         <p style={{ opacity: 0.7, margin: 0 }}>Scegli chi pensi convincerà di più.</p>

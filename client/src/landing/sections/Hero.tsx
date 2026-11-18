@@ -120,7 +120,6 @@ export default function Hero({ onCreate, onJoin }: HeroProps) {
                 className={`${styles.bivioChoice} ${styles.bivioChoiceA} ${picked === 'A' ? styles.bivioChoiceSelected : ''}`}
                 onClick={() => pickSide('A')}
               >
-                <span className={styles.optK}>A</span>
                 <span>{current.optionA}</span>
               </button>
               <button
@@ -128,17 +127,16 @@ export default function Hero({ onCreate, onJoin }: HeroProps) {
                 className={`${styles.bivioChoice} ${styles.bivioChoiceB} ${picked === 'B' ? styles.bivioChoiceSelected : ''}`}
                 onClick={() => pickSide('B')}
               >
-                <span className={styles.optK}>B</span>
                 <span>{current.optionB}</span>
               </button>
             </div>
 
             <div className={styles.bivioMeter}>
-              <Swing split={liveSplit} width="100%" height={24} labels />
+              <Swing split={liveSplit} width="100%" height={24} />
               <p className={styles.bivioFeedback}>
                 {picked
-                  ? `HAI SCELTO ${picked} · ORA HAI 30S PER CONVINCERE GLI ALTRI!`
-                  : 'TOCCA A O B PER VEDERE IL GRUPPO DIVIDERSI'}
+                  ? `HAI SCELTO: ${picked === 'A' ? current.optionA.toUpperCase() : current.optionB.toUpperCase()} · ORA CONVINCI GLI ALTRI!`
+                  : 'TOCCA LA TUA SCELTA PER VEDERE IL GRUPPO DIVIDERSI'}
               </p>
             </div>
           </div>

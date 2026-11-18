@@ -87,11 +87,7 @@ describe('socket integration', () => {
     leader.emit('leader:startGame', { dilemmaCount: 3, register: 'misto', mode: 'gruppo' });
     await introP;
 
-    // PHASE_INTRO -> DILEMMA_REVEAL -> VOTE_1 (force-advance the timed phases)
-    const revealP = waitForPhase(leader, 'DILEMMA_REVEAL');
-    leader.emit('leader:advancePhase');
-    await revealP;
-
+    // PHASE_INTRO -> VOTE_1
     const voteP = waitForPhase(leader, 'VOTE_1');
     leader.emit('leader:advancePhase');
     const voteState = await voteP;
@@ -217,7 +213,7 @@ describe('scarta dilemma + voto unanime (socket)', () => {
     const introP = waitForPhase(leader, 'PHASE_INTRO');
     leader.emit('leader:startGame', { dilemmaCount: 3, register: 'misto', mode: 'gruppo' });
     await introP;
-    const revealP = waitForPhase(leader, 'DILEMMA_REVEAL');
+    const revealP = waitForPhase(leader, 'VOTE_1');
     leader.emit('leader:advancePhase');
     const firstReveal = (await revealP) as RichState;
     const firstId = firstReveal.dilemma?.id;
@@ -226,7 +222,7 @@ describe('scarta dilemma + voto unanime (socket)', () => {
     const skippedP = once(p2, 'room:dilemmaSkipped'); // arriva anche ai non-leader
     const secondRevealP = new Promise<RichState>((resolve) => {
       const handler = (s: RichState) => {
-        if (s.phase === 'DILEMMA_REVEAL' && s.dilemma && s.dilemma.id !== firstId) {
+        if (s.phase === 'VOTE_1' && s.dilemma && s.dilemma.id !== firstId) {
           leader.off('game:state', handler);
           resolve(s);
         }
@@ -244,9 +240,6 @@ describe('scarta dilemma + voto unanime (socket)', () => {
     const introP = waitForPhase(leader, 'PHASE_INTRO');
     leader.emit('leader:startGame', { dilemmaCount: 3, register: 'misto', mode: 'gruppo' });
     await introP;
-    const revealP = waitForPhase(leader, 'DILEMMA_REVEAL');
-    leader.emit('leader:advancePhase');
-    await revealP;
     const voteP = waitForPhase(leader, 'VOTE_1');
     leader.emit('leader:advancePhase');
     await voteP;
@@ -328,10 +321,6 @@ describe('pausa e ripresa del gioco (socket)', () => {
     leader.emit('leader:startGame', { dilemmaCount: 3, register: 'misto', mode: 'gruppo' });
     await introP;
 
-    const revealP = waitForPhase(leader, 'DILEMMA_REVEAL');
-    leader.emit('leader:advancePhase');
-    await revealP;
-
     const voteP = waitForPhase(leader, 'VOTE_1');
     leader.emit('leader:advancePhase');
     await voteP;
@@ -386,5 +375,88 @@ describe('pausa e ripresa del gioco (socket)', () => {
     const splitP = waitForPhase(leader, 'SPLIT_REVEAL');
     leader.emit('leader:advancePhase');
     await splitP; // resolves once SPLIT_REVEAL actually arrives
+  }, 15000);
+
+  it('POST /api/pass-and-play/deck supports mix, profondo, infiltratoTono and excludeIds', async () => {
+    const res1 = await fetch(`http://localhost:${port}/api/pass-and-play/deck`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        mode: 'mix',
+        count: 8,
+        intensity: 'profondo',
+        infiltratoTono: 'profondo',
+        familiarita: 'misto',
+      }),
+    });
+    expect(res1.status).toBe(200);
+    const data1 = (await res1.json()) as { mode: string; cards: Array<{ id: string; cardMode?: string }> };
+    expect(data1.mode).toBe('mix');
+    expect(data1.cards.length).toBe(8);
+    expect(new Set(data1.cards.map((c) => c.cardMode)).size).toBeGreaterThanOrEqual(3);
+
+    const excluded = data1.cards.map((c) => c.id);
+    const res2 = await fetch(`http://localhost:${port}/api/pass-and-play/deck`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        mode: 'mix',
+        count: 4,
+        intensity: 'profondo',
+        infiltratoTono: 'profondo',
+        excludeIds: excluded,
+      }),
+    });
+    expect(res2.status).toBe(200);
+    const data2 = (await res2.json()) as { cards: Array<{ id: string }> };
+    expect(data2.cards.length).toBe(4);
+    for (const c of data2.cards) {
+      expect(excluded).not.toContain(c.id);
+    }
+  }, 15000);
+
+  it('emits player:secretQuestion when an infiltrato party game enters DEFENSE', async () => {
+    const s1 = await connect();
+    const s2 = await connect();
+    const s3 = await connect();
+    const s4 = await connect();
+
+    const s1JoinedP = once<JoinedPayload>(s1, 'player:joined');
+    s1.emit('player:createRoom', { nickname: 'LeaderInf' });
+    const created = await s1JoinedP;
+
+    const s2JoinedP = once<JoinedPayload>(s2, 'player:joined');
+    s2.emit('player:join', { code: created.code, nickname: 'Player2' });
+    await s2JoinedP;
+
+    const s3JoinedP = once<JoinedPayload>(s3, 'player:joined');
+    s3.emit('player:join', { code: created.code, nickname: 'Player3' });
+    await s3JoinedP;
+
+    const s4JoinedP = once<JoinedPayload>(s4, 'player:joined');
+    s4.emit('player:join', { code: created.code, nickname: 'Player4' });
+    await s4JoinedP;
+
+    const introP = waitForPhase(s1, 'PHASE_INTRO');
+    s1.emit('leader:startGame', { dilemmaCount: 3, register: 'misto', mode: 'gruppo', partyMode: 'infiltrato' });
+    await introP;
+
+    const secretPromises = [
+      once<{ question: string; isInfiltrator: boolean; round: number }>(s1, 'player:secretQuestion'),
+      once<{ question: string; isInfiltrator: boolean; round: number }>(s2, 'player:secretQuestion'),
+      once<{ question: string; isInfiltrator: boolean; round: number }>(s3, 'player:secretQuestion'),
+      once<{ question: string; isInfiltrator: boolean; round: number }>(s4, 'player:secretQuestion'),
+    ];
+    const defenseP = waitForPhase(s1, 'DEFENSE');
+    s1.emit('leader:advancePhase');
+    await defenseP;
+
+    const secrets = await Promise.all(secretPromises);
+    const infiltratorCount = secrets.filter((sec) => sec.isInfiltrator).length;
+    expect(infiltratorCount).toBe(1);
+    for (const sec of secrets) {
+      expect(sec.question.length).toBeGreaterThan(0);
+      expect(sec.round).toBe(1);
+    }
   }, 15000);
 });

@@ -3,6 +3,7 @@ import { useAuth, useUser, useClerk } from '@clerk/react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Avatar, Button, Card, Field, TextInput, Alert, Logo } from '../shared/ui';
 import { fetchWithTimeout } from '../shared/api';
+import { useOnlineStatus } from '../shared/useOnlineStatus';
 import { PRESET_AVATARS } from '../shared/avatars';
 import type { MyProfile } from '../shared/events';
 import styles from './Settings.module.css';
@@ -36,6 +37,7 @@ export default function Settings() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const navigate = useNavigate();
+  const online = useOnlineStatus();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState('');
@@ -68,7 +70,26 @@ export default function Settings() {
     };
   }, [isSignedIn, getToken, user?.firstName]);
 
-  if (!isLoaded) return <main className={styles.page} />;
+  if (!isLoaded) {
+    if (!online) {
+      return (
+        <main className={styles.page}>
+          <Card>
+            <p>Impostazioni account non disponibili offline.</p>
+            <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+              <Button variant="primary" onClick={() => navigate('/passa')}>
+                📱 Passa il telefono
+              </Button>
+              <Button variant="ghost" onClick={() => navigate('/')}>
+                Torna alla home
+              </Button>
+            </div>
+          </Card>
+        </main>
+      );
+    }
+    return <main className={styles.page} />;
+  }
   if (!isSignedIn) return <Navigate to="/" replace />;
 
   async function onPickFile(e: ChangeEvent<HTMLInputElement>) {

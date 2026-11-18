@@ -93,8 +93,8 @@ describe("L'Infiltrato — mission, accusation & verdict", () => {
       { 'sock-0': 'B', 'sock-1': 'B', 'sock-2': 'B' },
       'sock-0', // the infiltrator seeds a decoy this round — required for the flip to count (4.5)
     );
-    playRound(store, code, { 'sock-0': 'A', 'sock-1': 'A', 'sock-2': 'A', 'sock-3': 'A' });
-    playRound(store, code, { 'sock-0': 'A', 'sock-1': 'A', 'sock-2': 'A', 'sock-3': 'A' });
+    playRound(store, code, { 'sock-0': 'A', 'sock-1': 'A', 'sock-2': 'A', 'sock-3': 'B' });
+    playRound(store, code, { 'sock-0': 'A', 'sock-1': 'A', 'sock-2': 'A', 'sock-3': 'B' });
     store.advancePhase(code); // PHASE_RESULTS (last) -> ACCUSE
   }
 

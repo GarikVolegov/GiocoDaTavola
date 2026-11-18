@@ -252,6 +252,28 @@ export function ensureLezioneReale(d: Dilemma): string {
   return 'Nella vita reale: il rimpianto per un’opportunità mancata brucia molto più a lungo del disagio di un tentativo fallito. Ascoltare chi dissente è l’unico modo per superare i propri punti ciechi.';
 }
 
+/**
+ * Ensure every dilemma (including player-submitted or party cards) has at least
+ * two concrete defense talking points per side so DEFENSE never shows an empty list.
+ */
+export function ensureSpunti(
+  d: Pick<Dilemma, 'optionA' | 'optionB' | 'spuntiA' | 'spuntiB'>,
+): { spuntiA: string[]; spuntiB: string[] } {
+  const cleanA = (d.spuntiA ?? []).map((s) => s.trim()).filter(Boolean);
+  const cleanB = (d.spuntiB ?? []).map((s) => s.trim()).filter(Boolean);
+  const fallbackA = [
+    `Difendi "${d.optionA}": è la scelta più coerente con ciò che conta davvero sul lungo periodo.`,
+    `Chiedi al gruppo quale costo nascosto comporta scegliere "${d.optionB}" rispetto a "${d.optionA}".`,
+  ];
+  const fallbackB = [
+    `Difendi "${d.optionB}": è la scelta più lucida e sostenibile nella vita reale.`,
+    `Fai notare al gruppo cosa si rischia di perdere scegliendo d'impulso "${d.optionA}".`,
+  ];
+  const spuntiA = cleanA.length >= 2 ? cleanA : [...cleanA, ...fallbackA].slice(0, 2);
+  const spuntiB = cleanB.length >= 2 ? cleanB : [...cleanB, ...fallbackB].slice(0, 2);
+  return { spuntiA, spuntiB };
+}
+
 /** Dilemmas matching a register; 'misto' returns the whole pool. */
 export function dilemmasForRegister(all: Dilemma[], register: ContentRegister): Dilemma[] {
   if (register === 'misto') return all;
@@ -356,12 +378,17 @@ export function dilemmasForPercorsoTappa(all: Dilemma[], tappa: Tappa): Dilemma[
 export function loadDilemmas(): Dilemma[] {
   const file = join(__dirname, '..', '..', 'data', 'dilemmas.json');
   const list = JSON.parse(readFileSync(file, 'utf-8')) as Dilemma[];
-  return list.map((d) => ({
-    ...d,
-    tono: tonoOfDilemma(d),
-    lezioneReale: ensureLezioneReale(d),
-    domandaRilancio: ensureDomandaRilancio(d),
-  }));
+  return list.map((d) => {
+    const spunti = ensureSpunti(d);
+    return {
+      ...d,
+      tono: tonoOfDilemma(d),
+      spuntiA: spunti.spuntiA,
+      spuntiB: spunti.spuntiB,
+      lezioneReale: ensureLezioneReale(d),
+      domandaRilancio: ensureDomandaRilancio(d),
+    };
+  });
 }
 
 /**

@@ -1,6 +1,9 @@
-// Service Worker for Nexus (Schierati) — enables offline app shell & Pass & Play.
-const CACHE_NAME = 'nexus-shell-v2';
-const PRECACHE_URLS = [
+// Service Worker for Nexus (Schierati) — enables full offline app shell & Pass & Play.
+// In production builds, Vite's precache plugin replaces CACHE_NAME and PRECACHE_ASSETS
+// with the exact hashed JS/CSS/font chunks from dist/assets/.
+const CACHE_NAME = 'nexus-shell-dev';
+const PRECACHE_ASSETS = [];
+const PRECACHE_CORE = [
   '/',
   '/passa',
   '/index.html',
@@ -12,11 +15,17 @@ const PRECACHE_URLS = [
 ];
 
 self.addEventListener('install', (event) => {
+  const urls = Array.from(new Set([...PRECACHE_CORE, ...PRECACHE_ASSETS]));
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE_URLS))
-      .catch(() => {})
+      .then((cache) =>
+        Promise.allSettled(
+          urls.map((url) =>
+            cache.add(new Request(url, { cache: 'reload' })).catch(() => cache.add(url)),
+          ),
+        ),
+      )
       .then(() => self.skipWaiting()),
   );
 });
@@ -32,6 +41,12 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
@@ -40,23 +55,53 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/socket.io/')) return;
 
-  // SPA navigation: network-first, fall back to cached index.html when offline.
+  // SPA navigation: network-first with a 3s timeout, falling back to cached index.html offline.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
-        .then((res) => {
+      (async () => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 3000);
+        try {
+          const res = await fetch(request, { signal: controller.signal });
+          clearTimeout(timer);
           if (res.ok) {
             const copy = res.clone();
             caches.open(CACHE_NAME).then((c) => c.put('/index.html', copy)).catch(() => {});
           }
           return res;
-        })
-        .catch(() => caches.match('/index.html').then((r) => r || Response.error())),
+        } catch {
+          clearTimeout(timer);
+          const cached =
+            (await caches.match('/index.html')) ||
+            (await caches.match('/')) ||
+            (await caches.match(request));
+          return cached || Response.error();
+        }
+      })(),
     );
     return;
   }
 
-  // Static assets (JS/CSS chunks, fonts, icons, local audio): cache-first with background refresh.
+  // Hashed Vite assets (/assets/*): cache-first (immutable), fallback to network + cache.
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request)
+          .then((res) => {
+            if (res.ok && res.type === 'basic') {
+              const copy = res.clone();
+              caches.open(CACHE_NAME).then((c) => c.put(request, copy)).catch(() => {});
+            }
+            return res;
+          })
+          .catch(() => Response.error());
+      }),
+    );
+    return;
+  }
+
+  // Other static assets (icons, local audio, etc.): cache-first with background refresh.
   event.respondWith(
     caches.match(request).then((cached) => {
       const networkFetch = fetch(request)

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Show, UserButton } from '@clerk/react';
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '../shared/ui';
+import { useOnlineStatus } from '../shared/useOnlineStatus';
 import Hero from './sections/Hero';
 import BivioScrollRoad from './sections/BivioScrollRoad';
 import HowToPlay from './sections/HowToPlay';
@@ -17,6 +18,7 @@ import styles from './Landing.module.css';
 // stays reachable directly at /host?code= for anyone who wants a shared screen.
 export default function Landing() {
   const navigate = useNavigate();
+  const online = useOnlineStatus();
   const create = () => navigate('/join?create=1');
   const join = () => navigate('/join');
 
@@ -46,6 +48,44 @@ export default function Landing() {
 
   return (
     <main className={styles.page}>
+      {!online && (
+        <div
+          role="status"
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 60,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+            padding: '8px 16px',
+            background: 'rgba(15, 23, 42, 0.96)',
+            borderBottom: '1px solid rgba(255, 62, 127, 0.35)',
+            color: '#F1F5F9',
+            fontSize: 13,
+          }}
+        >
+          <span>✈️ Sei offline — le partite online richiedono rete, ma puoi giocare subito su un solo telefono:</span>
+          <button
+            type="button"
+            onClick={() => navigate('/passa')}
+            style={{
+              padding: '5px 12px',
+              borderRadius: 999,
+              border: 'none',
+              background: '#FF3E7F',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            📱 Passa il telefono
+          </button>
+        </div>
+      )}
       <div className={styles.navPillWrap}>
         <nav className={styles.navPill} aria-label="Navigazione principale">
           <Logo size={24} className={styles.navLogo} />

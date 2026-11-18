@@ -96,9 +96,10 @@ describe('startGame — modalità Storia', () => {
     expect(startStoria(store, 3, 'inesistente').res).toEqual({ ok: false, error: 'INVALID_STORIA' });
   });
 
-  it('richiede comunque abbastanza giocatori (gruppo)', () => {
+  it('consente anche 1 solo giocatore (solo) e rifiuta 0 giocatori', () => {
     const store = makeStore();
-    expect(startStoria(store, 2).res).toEqual({ ok: false, error: 'NOT_ENOUGH_PLAYERS' });
+    expect(startStoria(store, 1).res.ok).toBe(true);
+    expect(startStoria(store, 0).res).toEqual({ ok: false, error: 'NOT_ENOUGH_PLAYERS' });
   });
 
   it('disabilita i meta-giochi a sorpresa (devil/know/infiltrato/squadre)', () => {
@@ -123,7 +124,7 @@ describe('advancePhase — cammino di una Storia', () => {
     expect(seq.filter((p) => p === 'SCENE_INTRO')).toHaveLength(2);
     expect(seq.filter((p) => p === 'SCENE_CONSEQUENCE')).toHaveLength(2);
     expect(seq.filter((p) => p === 'STORY_EPILOGUE')).toHaveLength(1);
-    expect(seq.filter((p) => p === 'DILEMMA_REVEAL')).toHaveLength(2);
+    expect(seq.filter((p) => p === 'VOTE_1')).toHaveLength(2);
   });
 
   it('SCENE_INTRO imposta narrazione, atto corrente e pesca il bivio dal piano', () => {
@@ -136,8 +137,8 @@ describe('advancePhase — cammino di una Storia', () => {
     expect(room.phase).toBe('SCENE_INTRO');
     expect(room.currentSceneNarration).toBe('Narrazione s1.');
     expect(room.currentAct).toBe(0);
-    store.advancePhase(code); // SCENE_INTRO -> DILEMMA_REVEAL (bivio 1)
-    expect(room.phase).toBe('DILEMMA_REVEAL');
+    store.advancePhase(code); // SCENE_INTRO -> VOTE_1 (bivio 1)
+    expect(room.phase).toBe('VOTE_1');
     expect(room.currentDilemma?.id).toBe(room.plannedDilemmas[0].id);
   });
 

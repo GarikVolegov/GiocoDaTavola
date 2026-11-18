@@ -9,7 +9,7 @@ interface WaverViewProps {
   twist: boolean;
   /** The devil's advocate has nothing to rate — they wait for the verdict. */
   isAdvocate: boolean;
-  remaining: number | null;
+  remaining?: number | null;
   rating: 0 | 1 | 2 | null;
   onRate: (rating: 0 | 1 | 2) => void;
   waverCount: number;
@@ -28,7 +28,7 @@ export default function WaverView({
   partnerNickname,
   twist,
   isAdvocate,
-  remaining,
+  remaining: _remaining = null,
   rating,
   onRate,
   waverCount,
@@ -38,14 +38,6 @@ export default function WaverView({
   return (
     <main style={wrap}>
       <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.DUO_WAVER}</h1>
-      {remaining != null && (
-        <div
-          aria-label="Tempo rimanente"
-          style={{ fontSize: '2rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-        >
-          {remaining}s
-        </div>
-      )}
       {isAdvocate ? (
         <>
           <p style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
@@ -77,7 +69,7 @@ export default function WaverView({
             ))}
           </div>
           {rating != null ? (
-            <p style={{ fontWeight: 800, margin: 0 }}>✓ Registrato — puoi cambiare finché c'è tempo</p>
+            <p style={{ fontWeight: 800, margin: 0 }}>✓ Registrato — puoi cambiare prima della chiusura</p>
           ) : (
             <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
               Sii onesto: i punti vanno a chi argomenta bene.

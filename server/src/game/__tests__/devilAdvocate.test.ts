@@ -33,7 +33,6 @@ function reachDevilDefense(store: RoomStore, sides: (VoteChoice | null)[]): stri
   store.startGame(code, 3); // devilRoundIndex = 2 with rng=()=>0
   let g = 0;
   while (store.get(code)!.dilemmaIndex !== 2 && g++ < 50) store.advancePhase(code);
-  store.advancePhase(code); // VOTE_1 (round 2)
   sides.forEach((side, i) => side && store.vote(code, `sock-${i}`, side));
   store.advancePhase(code); // SPLIT_REVEAL
   store.advancePhase(code); // PREDICT
@@ -194,6 +193,9 @@ describe('Avvocato del Diavolo — public reveal gating', () => {
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3); // devil round = 2
+    store.advancePhase(code); // VOTE_1 (round 1)
+    store.vote(code, 'sock-0', 'A');
+    store.vote(code, 'sock-1', 'B');
     // Round 1 (normal) reaches DEFENSE -> never devil.
     let g = 0;
     while (!(store.get(code)!.phase === 'DEFENSE' && store.get(code)!.dilemmaIndex === 1) && g++ < 20) {

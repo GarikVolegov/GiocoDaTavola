@@ -11,7 +11,7 @@ export interface Feature {
 export const FEATURES: Feature[] = [
   { icon: '🗳️', title: 'Centinaia di dilemmi, mai uguali', body: 'Scelte di vita, lavoro e morale: scomode, brillanti e perfette per accendere il dibattito.' },
   { icon: '🎯', title: 'Vince chi convince', body: 'Non conta avere ragione: conta far cambiare idea agli altri… e saperla cambiare al momento giusto.' },
-  { icon: '🤖', title: 'Perfetto anche in pochi', body: 'Siete in meno di 4? Aggiungi bot con personalità diverse e giocate subito.' },
+  { icon: '👤', title: 'In gruppo o da solo, senza timer', body: 'Gioca da solo, passando un telefono o creando una stanza: zero fretta e ritmo deciso da voi.' },
   { icon: '🎉', title: 'Nessuno perde', body: 'A fine serata premi ironici per tutti: si gioca per ridere e scoprirsi, non per il punteggio.' },
 ];
 
@@ -57,13 +57,13 @@ export const PARTY_MODES_INFO: PartyModeInfo[] = [
   {
     id: 'flash',
     name: 'Schierati Flash',
-    tag: '3s Voto · Blitz',
+    tag: 'Voto & Confronto',
     desc: 'Voto istantaneo e difesa lampo: chi resta in minoranza paga pegno.',
   },
   {
     id: 'infiltrato',
     name: "L'Infiltrato",
-    tag: 'Bluff · 60s',
+    tag: 'Bluff & Accusa',
     desc: 'Tutti hanno la stessa domanda tranne uno: smaschera chi bluffa.',
   },
   {

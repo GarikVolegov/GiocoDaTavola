@@ -53,7 +53,6 @@ function defenseRoom(store: RoomStore, sides: (VoteChoice | null)[] = ['A', 'B',
   const { code } = store.create();
   for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
   store.startGame(code, dilemmaCount); // PHASE_INTRO
-  store.advancePhase(code); // DILEMMA_REVEAL
   store.advancePhase(code); // VOTE_1
   sides.forEach((side, i) => side && store.vote(code, `sock-${i}`, side));
   store.advancePhase(code); // SPLIT_REVEAL
@@ -339,38 +338,36 @@ describe('RoomStore.startGame', () => {
     store.startGame(code, 3);
     const room = store.get(code);
     expect(room?.dilemmaIndex).toBe(0);
-    // PHASE_INTRO has a timer: expiry = now + its duration.
-    expect(room?.phaseExpiresAt).toBe(1_000 + PHASE_DURATIONS_MS.PHASE_INTRO!);
+    // All phases run without countdown timers.
+    expect(room?.phaseExpiresAt).toBeNull();
   });
 });
 
 describe('PHASE_DURATIONS_MS', () => {
-  it('has no timer for LOBBY/FINAL_AWARDS and the self-paced vote phases', () => {
+  it('has no countdown timer across all phases (leader/player paced)', () => {
     expect(PHASE_DURATIONS_MS.LOBBY).toBeNull();
     expect(PHASE_DURATIONS_MS.FINAL_AWARDS).toBeNull();
-    // Self-paced: advance on "everyone acted", not on a timer.
     expect(PHASE_DURATIONS_MS.VOTE_1).toBeNull();
     expect(PHASE_DURATIONS_MS.VOTE_2).toBeNull();
     expect(PHASE_DURATIONS_MS.PREDICT).toBeNull();
     expect(PHASE_DURATIONS_MS.SPEAKER_VOTE).toBeNull();
-    const timed: GamePhase[] = [
+    const manualPhases: GamePhase[] = [
       'PHASE_INTRO',
       'DILEMMA_REVEAL',
       'SPLIT_REVEAL',
       'DEFENSE',
       'PHASE_RESULTS',
     ];
-    for (const phase of timed) {
-      expect(PHASE_DURATIONS_MS[phase]).toBeGreaterThan(0);
+    for (const phase of manualPhases) {
+      expect(PHASE_DURATIONS_MS[phase]).toBeNull();
     }
   });
 });
 
 describe('nextPhase (pure transition)', () => {
   it('walks one dilemma in order: PHASE_INTRO -> ... -> PHASE_RESULTS', () => {
-    // dilemmaIndex 0 -> 1 when the first dilemma is revealed.
-    expect(nextPhase('PHASE_INTRO', 0, 3)).toEqual({ phase: 'DILEMMA_REVEAL', dilemmaIndex: 1 });
-    expect(nextPhase('DILEMMA_REVEAL', 1, 3)).toEqual({ phase: 'VOTE_1', dilemmaIndex: 1 });
+    // dilemmaIndex 0 -> 1 when the first dilemma enters VOTE_1.
+    expect(nextPhase('PHASE_INTRO', 0, 3)).toEqual({ phase: 'VOTE_1', dilemmaIndex: 1 });
     expect(nextPhase('VOTE_1', 1, 3)).toEqual({ phase: 'SPLIT_REVEAL', dilemmaIndex: 1 });
     expect(nextPhase('SPLIT_REVEAL', 1, 3)).toEqual({ phase: 'PREDICT', dilemmaIndex: 1 });
     expect(nextPhase('PREDICT', 1, 3)).toEqual({ phase: 'DEFENSE', dilemmaIndex: 1 });
@@ -379,9 +376,9 @@ describe('nextPhase (pure transition)', () => {
     expect(nextPhase('SPEAKER_VOTE', 1, 3)).toEqual({ phase: 'PHASE_RESULTS', dilemmaIndex: 1 });
   });
 
-  it('loops PHASE_RESULTS back to DILEMMA_REVEAL while dilemmas remain', () => {
-    expect(nextPhase('PHASE_RESULTS', 1, 3)).toEqual({ phase: 'DILEMMA_REVEAL', dilemmaIndex: 2 });
-    expect(nextPhase('PHASE_RESULTS', 2, 3)).toEqual({ phase: 'DILEMMA_REVEAL', dilemmaIndex: 3 });
+  it('loops PHASE_RESULTS back to VOTE_1 while dilemmas remain', () => {
+    expect(nextPhase('PHASE_RESULTS', 1, 3)).toEqual({ phase: 'VOTE_1', dilemmaIndex: 2 });
+    expect(nextPhase('PHASE_RESULTS', 2, 3)).toEqual({ phase: 'VOTE_1', dilemmaIndex: 3 });
   });
 
   it('goes to FINAL_AWARDS after the last dilemma', () => {
@@ -397,7 +394,7 @@ describe('RoomStore.advancePhase', () => {
     return code;
   }
 
-  it('advances PHASE_INTRO -> DILEMMA_REVEAL and sets the next expiry', () => {
+  it('advances PHASE_INTRO -> VOTE_1 and clears expiry (self-paced)', () => {
     let now = 5_000;
     const store = new RoomStore(generateRoomCode, () => now);
     const code = startedRoom(store);
@@ -405,9 +402,9 @@ describe('RoomStore.advancePhase', () => {
     const result = store.advancePhase(code);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.room.phase).toBe('DILEMMA_REVEAL');
+      expect(result.room.phase).toBe('VOTE_1');
       expect(result.room.dilemmaIndex).toBe(1);
-      expect(result.room.phaseExpiresAt).toBe(9_000 + PHASE_DURATIONS_MS.DILEMMA_REVEAL!);
+      expect(result.room.phaseExpiresAt).toBeNull();
     }
   });
 
@@ -448,7 +445,7 @@ describe('RoomStore.advancePhase', () => {
     while (store.get(code)?.phase !== 'FINAL_AWARDS' && guard++ < 100) {
       store.advancePhase(code);
       const room = store.get(code);
-      if (room?.phase === 'DILEMMA_REVEAL') reveals.push(room.dilemmaIndex);
+      if (room?.phase === 'VOTE_1') reveals.push(room.dilemmaIndex);
     }
     // Exactly 3 dilemmas revealed, indexed 1..3.
     expect(reveals).toEqual([1, 2, 3]);
@@ -472,21 +469,20 @@ describe('RoomStore dilemma reveal (US-007)', () => {
     expect(store.get(code)?.currentDilemma).toBeNull();
   });
 
-  it('draws a dilemma when entering DILEMMA_REVEAL', () => {
+  it('draws a dilemma when entering VOTE_1', () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
     const code = startedDeckRoom(store);
-    store.advancePhase(code); // PHASE_INTRO -> DILEMMA_REVEAL
+    store.advancePhase(code); // PHASE_INTRO -> VOTE_1
     const room = store.get(code);
-    expect(room?.phase).toBe('DILEMMA_REVEAL');
+    expect(room?.phase).toBe('VOTE_1');
     expect(room?.currentDilemma).toEqual(DILEMMA_FIXTURE[0]);
   });
 
   it('keeps the same dilemma for the rest of the round (vote/split/defense)', () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
     const code = startedDeckRoom(store);
-    store.advancePhase(code); // DILEMMA_REVEAL (d1)
+    store.advancePhase(code); // VOTE_1 (d1)
     const d = store.get(code)?.currentDilemma;
-    store.advancePhase(code); // VOTE_1
     store.advancePhase(code); // SPLIT_REVEAL
     expect(store.get(code)?.currentDilemma).toEqual(d);
   });
@@ -499,7 +495,7 @@ describe('RoomStore dilemma reveal (US-007)', () => {
     while (store.get(code)?.phase !== 'FINAL_AWARDS' && guard++ < 100) {
       store.advancePhase(code);
       const room = store.get(code);
-      if (room?.phase === 'DILEMMA_REVEAL' && room.currentDilemma) {
+      if (room?.phase === 'VOTE_1' && room.currentDilemma) {
         revealed.push(room.currentDilemma.id);
       }
     }
@@ -514,7 +510,6 @@ describe('RoomStore voting (US-008)', () => {
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, count); // PHASE_INTRO
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1
     return code;
   }
@@ -543,7 +538,8 @@ describe('RoomStore voting (US-008)', () => {
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3); // PHASE_INTRO
     expect(store.vote(code, 'sock-0', 'A')).toEqual({ ok: false, error: 'NOT_VOTING_PHASE' });
-    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    store.advancePhase(code); // SPLIT_REVEAL
     expect(store.vote(code, 'sock-0', 'A')).toEqual({ ok: false, error: 'NOT_VOTING_PHASE' });
   });
 
@@ -617,7 +613,7 @@ describe('RoomStore voting (US-008)', () => {
     // steps variable, so loop on the dilemma index rather than hardcoding it.
     let guard = 0;
     while (store.get(code)?.dilemmaIndex !== 2 && guard++ < 100) store.advancePhase(code);
-    expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL');
+    expect(store.get(code)?.phase).toBe('VOTE_1');
     expect(store.voteCount(code)).toBe(0);
   });
 });
@@ -628,7 +624,6 @@ describe('RoomStore split reveal (US-009)', () => {
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3); // PHASE_INTRO
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1
     store.vote(code, 'sock-0', 'A');
     store.vote(code, 'sock-1', 'B');
@@ -715,14 +710,14 @@ describe('RoomStore defense (US-010)', () => {
     expect(store.get(code)?.phase).toBe('VOTE_2');
   });
 
-  it('resets the per-turn timer when moving to the next defender', () => {
+  it('keeps phaseExpiresAt null when moving to the next defender', () => {
     let now = 1_000;
     const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
     const code = defenseRoom(store, ['A', 'B', 'B']);
-    expect(store.get(code)?.phaseExpiresAt).toBe(1_000 + PHASE_DURATIONS_MS.DEFENSE!);
+    expect(store.get(code)?.phaseExpiresAt).toBeNull();
     now = 50_000;
     store.advancePhase(code); // next turn
-    expect(store.get(code)?.phaseExpiresAt).toBe(50_000 + PHASE_DURATIONS_MS.DEFENSE!);
+    expect(store.get(code)?.phaseExpiresAt).toBeNull();
   });
 
   it('exposes the current speaker + turn progress during DEFENSE', () => {
@@ -739,8 +734,8 @@ describe('RoomStore defense (US-010)', () => {
       spunti: ['pro A1 #1', 'pro A1 #2'],
       raisedCount: 0,
       queue: null,
-      minEndsAt: 30_000,
-      canFinish: false,
+      minEndsAt: null,
+      canFinish: true,
       startedAt: 0,
     });
     store.advancePhase(code); // next turn -> side B speaker
@@ -755,8 +750,8 @@ describe('RoomStore defense (US-010)', () => {
       spunti: ['pro B1 #1', 'pro B1 #2'],
       raisedCount: 0,
       queue: null,
-      minEndsAt: 30_000,
-      canFinish: false,
+      minEndsAt: null,
+      canFinish: true,
       startedAt: 0,
     });
     store.advancePhase(code); // VOTE_2 -> defense no longer public
@@ -768,7 +763,6 @@ describe('RoomStore defense (US-010)', () => {
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3);
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1
     store.vote(code, 'sock-0', 'A');
     store.vote(code, 'sock-1', 'B');
@@ -787,28 +781,10 @@ describe('RoomStore defense (US-010)', () => {
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3);
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1 (nobody votes)
     store.advancePhase(code); // SPLIT_REVEAL
     store.advancePhase(code); // PREDICT
-    store.advancePhase(code); // DEFENSE (no defenders)
-    expect(store.get(code)?.phase).toBe('DEFENSE');
-    expect(store.publicDefense(code)).toEqual({
-      kind: 'defense',
-      speaker: null,
-      intervenor: null,
-      speakerId: null,
-      turn: 0,
-      totalTurns: 0,
-      argument: null,
-      spunti: null,
-      raisedCount: 0,
-      queue: null,
-      minEndsAt: null,
-      canFinish: true,
-      startedAt: 0,
-    });
-    store.advancePhase(code); // -> VOTE_2
+    store.advancePhase(code); // skips DEFENSE (no defenders) -> straight to VOTE_2
     expect(store.get(code)?.phase).toBe('VOTE_2');
   });
 
@@ -831,7 +807,6 @@ describe('RoomStore second vote + swing (US-011)', () => {
     const { code } = store.create();
     for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3); // PHASE_INTRO
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1
     sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
     store.advancePhase(code); // SPLIT_REVEAL
@@ -921,7 +896,7 @@ describe('RoomStore second vote + swing (US-011)', () => {
     const code = vote2Room(store, ['A', 'B', 'B']);
     let guard = 0;
     while (store.get(code)?.dilemmaIndex !== 2 && guard++ < 20) store.advancePhase(code);
-    expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL');
+    expect(store.get(code)?.phase).toBe('VOTE_1');
     expect(store.computeSwing(code)).toEqual({
       first: { A: 0, B: 0 },
       second: { A: 0, B: 0 },
@@ -1063,7 +1038,6 @@ describe('RoomStore public swing (Fase A)', () => {
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3);
-    store.advancePhase(code); // DILEMMA_REVEAL
     expect(store.publicSwing(code)).toBeNull();
     expect(store.publicSwing('ZZZZ')).toBeNull();
   });
@@ -1341,10 +1315,20 @@ describe('RoomStore bots (Fase B)', () => {
     expect(store.startGame(code, 3).ok).toBe(true);
   });
 
-  it('still requires 3 total participants', () => {
+  it('allows starting with 1 human (solo) or 1 human + 1 bot', () => {
+    const soloStore = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
+    const soloCode = lobbyWith(soloStore, 1, 0);
+    expect(soloStore.startGame(soloCode, 3).ok).toBe(true);
+    let g = 0;
+    while (soloStore.get(soloCode)?.phase !== 'VOTE_1' && g++ < 10) soloStore.advancePhase(soloCode);
+    expect(soloStore.get(soloCode)?.phase).toBe('VOTE_1');
+    expect(soloStore.vote(soloCode, 'sock-0', 'A').ok).toBe(true);
+    soloStore.advancePhase(soloCode);
+    expect(soloStore.get(soloCode)?.phase).toBe('PHASE_RESULTS');
+
     const store = new RoomStore();
     const code = lobbyWith(store, 1, 1);
-    expect(store.startGame(code, 3)).toEqual({ ok: false, error: 'NOT_ENOUGH_PLAYERS' });
+    expect(store.startGame(code, 3).ok).toBe(true);
   });
 
   it('refuses a bots-only game (needs at least one human)', () => {
@@ -1658,12 +1642,12 @@ describe('duo round (advancePhase)', () => {
     expect(room.duoAssignedSides.get('p1')).toBe('B');
     expect(room.duoAssignedSides.get('p2')).toBe('A');
     expect(room.duoSpeakers).toEqual(['p1', 'p2']);
-    expect(room.turnMinEndsAt).toBe(1000 + 15_000);
+    expect(room.turnMinEndsAt).toBeNull();
     const turn = store.publicDuoTurn('EEEE')!;
     expect(turn.speaker?.id).toBe('p1');
     expect(turn.speaker?.side).toBe('B');
     expect(turn.speaker?.inverted).toBe(true);
-    expect(turn.canFinish).toBe(false);
+    expect(turn.canFinish).toBe(true);
     store.advancePhase('EEEE'); // second turn
     expect(room.phase).toBe('DUO_ARGUE');
     expect(room.duoTurnIndex).toBe(1);
@@ -1796,12 +1780,12 @@ describe('DUO_ARGUE "Ho finito"', () => {
     expect(store.get(code)!.phase).toBe('DUO_ARGUE');
   }
 
-  it('rejects an early finish (floor) and a finish from the listener', () => {
+  it('accepts an immediate finish from the speaker and rejects a finish from the listener', () => {
     const store = new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
     const { code } = store.create();
     toArgue(store, code);
-    expect(store.finishTurn(code, 'p1')).toEqual({ ok: false, error: 'TOO_EARLY' });
     expect(store.finishTurn(code, 'p2')).toEqual({ ok: false, error: 'NOT_SPEAKER' });
+    expect(store.finishTurn(code, 'p1')).toMatchObject({ ok: true });
   });
 });
 
@@ -1811,7 +1795,6 @@ describe('RoomStore reconnection / connected state', () => {
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, count);
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1
     return code;
   }
@@ -2004,7 +1987,7 @@ describe("DEFENSE budget: serataLunga option (3.3)", () => {
     expect(store.get(code)!.defenseMaxMs).toBe(DEFENSE_MAX_MS_LUNGA);
   });
 
-  it("a human speaker's turn is armed with the room's chosen cap, not a fixed constant", () => {
+  it("a human speaker's turn runs without a countdown timer even in serataLunga", () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck, () => 0);
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
@@ -2019,7 +2002,7 @@ describe("DEFENSE budget: serataLunga option (3.3)", () => {
     store.advancePhase(code); // DEFENSE
     const room = store.get(code)!;
     expect(room.phase).toBe('DEFENSE');
-    expect(room.phaseExpiresAt).toBe(room.turnStartedAt! + DEFENSE_MAX_MS_LUNGA);
+    expect(room.phaseExpiresAt).toBeNull();
   });
 });
 
@@ -2262,7 +2245,7 @@ describe('DILEMMA_REVEAL — roster-template dilemmas (5.3, "contenuto combinato
     store.join(code, 'p2', 'Bea');
     store.join(code, 'p3', 'Cid');
     store.startGame(code, 3);
-    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1 (draws & resolves roster dilemma)
     const revealed = store.get(code)!.currentDilemma!;
     expect(revealed.id).toBe('rt01'); // same id — exclusion/authorship still keys off the template
     expect(revealed.text).toMatch(/^(Marco|Bea|Cid) eredita 50k/);
@@ -2469,7 +2452,6 @@ describe('RoomStore live reactions (engagement)', () => {
     const { code } = store.create();
     for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3); // PHASE_INTRO
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1
     sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
     store.advancePhase(code); // SPLIT_REVEAL
@@ -2508,7 +2490,6 @@ describe('RoomStore live reactions (engagement)', () => {
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3); // PHASE_INTRO
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1
     expect(store.react(code, 'sock-0', '👏')).toEqual({ ok: false, error: 'NOT_REACTING_PHASE' });
   });
@@ -2623,7 +2604,6 @@ describe('RoomStore predictions (engagement)', () => {
     const { code } = store.create();
     for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3); // PHASE_INTRO
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1
     sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
     store.advancePhase(code); // SPLIT_REVEAL
@@ -2726,7 +2706,7 @@ describe('RoomStore predictions (engagement)', () => {
     expect(store.predictedCount(code)).toBe(1);
     let g = 0;
     while (store.get(code)?.dilemmaIndex !== 2 && g++ < 20) store.advancePhase(code);
-    expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL');
+    expect(store.get(code)?.phase).toBe('VOTE_1');
     expect(store.predictedCount(code)).toBe(0); // cleared for the new dilemma
   });
 
@@ -2761,7 +2741,6 @@ describe('RoomStore best-speaker vote (engagement)', () => {
     const { code } = store.create();
     for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3); // PHASE_INTRO
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1
     sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
     store.advancePhase(code); // SPLIT_REVEAL
@@ -2824,7 +2803,6 @@ describe('RoomStore best-speaker vote (engagement)', () => {
     store.join(code, 'sock-2', 'H2');
     store.addBot(code);
     store.startGame(code, 3);
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1
     store.vote(code, 'sock-0', 'A');
     store.vote(code, 'sock-1', 'B');
@@ -2852,7 +2830,7 @@ describe('RoomStore best-speaker vote (engagement)', () => {
     store.leave(code, 'sock-2');
     let g = 0;
     while (store.get(code)?.dilemmaIndex !== 2 && g++ < 20) store.advancePhase(code);
-    expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL');
+    expect(store.get(code)?.phase).toBe('VOTE_1');
     expect(store.speakerVotedCount(code)).toBe(0);
   });
 
@@ -3130,7 +3108,7 @@ describe('RoomStore VOTE_2 confirm (auto-paced)', () => {
     store.confirmVote(code, 'sock-0');
     let g = 0;
     while (store.get(code)?.dilemmaIndex !== 2 && g++ < 30) store.advancePhase(code);
-    expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL');
+    expect(store.get(code)?.phase).toBe('VOTE_1');
     expect(store.confirmedCount(code)).toBe(0);
   });
 });
@@ -3168,7 +3146,6 @@ describe('RoomStore defense — equa rotazione difensori', () => {
     store.startGame(code, 3);
     let g = 0;
     while (store.get(code)!.dilemmaIndex !== 2 && g++ < 50) store.advancePhase(code);
-    store.advancePhase(code); // VOTE_1 (round 2 = devil)
     (['A', 'B', 'B'] as VoteChoice[]).forEach((side, i) => store.vote(code, `sock-${i}`, side));
     while (store.get(code)?.phase !== 'DEFENSE' && g++ < 50) store.advancePhase(code);
     const counts = store.get(code)!.defenseCounts;
@@ -3188,13 +3165,13 @@ describe('RoomStore defense — equa rotazione difensori', () => {
 });
 
 describe('INTERVENTI phase constants + room fields', () => {
-  it('exposes the floor/cap/bot durations', () => {
+  it('exposes zero human floors and timer-free phase durations', () => {
     expect([DEFENSE_MIN_MS, INTERVENTO_MIN_MS, DEFENSE_MAX_MS_NORMALE, DEFENSE_MAX_MS_LUNGA, INTERVENTI_MAX_MS, TURN_BOT_MS])
-      .toEqual([30_000, 15_000, 90_000, 180_000, 90_000, 20_000]);
+      .toEqual([0, 0, 90_000, 180_000, 90_000, 20_000]);
   });
-  it("DEFENSE's static fallback matches the default (normale) cap — armTurn overrides with room.defenseMaxMs on entry", () => {
-    expect(PHASE_DURATIONS_MS.DEFENSE).toBe(90_000);
-    expect(PHASE_DURATIONS_MS.INTERVENTI).toBe(90_000);
+  it('DEFENSE and INTERVENTI have null static timers (leader/speaker paced)', () => {
+    expect(PHASE_DURATIONS_MS.DEFENSE).toBeNull();
+    expect(PHASE_DURATIONS_MS.INTERVENTI).toBeNull();
   });
   it('isInterventiPhase only matches INTERVENTI', () => {
     expect(isInterventiPhase('INTERVENTI')).toBe(true);
@@ -3212,14 +3189,14 @@ describe('INTERVENTI phase constants + room fields', () => {
 });
 
 describe('armTurn on DEFENSE entry', () => {
-  it('a human defender gets the 30s floor and the 90s default cap (3.3)', () => {
+  it('a human defender gets no minimum floor and no phase countdown timer', () => {
     const now = 1_000;
     const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
     const code = defenseRoom(store, ['A', 'B', 'B']);
     const room = store.get(code)!;
     expect(room.phase).toBe('DEFENSE');
-    expect(room.turnMinEndsAt).toBe(now + 30_000);
-    expect(room.phaseExpiresAt).toBe(now + DEFENSE_MAX_MS_NORMALE);
+    expect(room.turnMinEndsAt).toBeNull();
+    expect(room.phaseExpiresAt).toBeNull();
   });
 
   it('records the turn start (turnStartedAt) and exposes it as defense.startedAt', () => {
@@ -3298,15 +3275,13 @@ describe('INTERVENTI queue cap', () => {
 });
 
 describe('finishTurn', () => {
-  it('is rejected before the minimum, accepted after, and only from the speaker', () => {
-    let now = 1_000;
+  it('is accepted immediately from the speaker and rejected from anyone else', () => {
+    const now = 1_000;
     const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
     const code = defenseRoom(store, ['A', 'B', 'B']);
     const speaker = store.get(code)!.defenders[0].id;
     const other = [...store.get(code)!.players.keys()].find((id) => id !== speaker)!;
     expect(store.finishTurn(code, other)).toEqual({ ok: false, error: 'NOT_SPEAKER' });
-    expect(store.finishTurn(code, speaker)).toEqual({ ok: false, error: 'TOO_EARLY' });
-    now = 1_000 + 30_000;
     expect(store.finishTurn(code, speaker)).toMatchObject({ ok: true });
   });
 });
@@ -3390,12 +3365,10 @@ describe('publicDefense count vs names', () => {
     expect(d2.speakerId).toBe(others[0]);
     expect(d2.intervenor?.id).toBe(others[0]);
   });
-  it('canFinish flips once the floor passes', () => {
-    let now = 1_000;
+  it('canFinish is immediately true for human speakers (no timer floor)', () => {
+    const now = 1_000;
     const store = new RoomStore(generateRoomCode, () => now, makeFixtureDeck, () => 0);
     const code = defenseRoom(store, ['A', null, null]);
-    expect(store.publicDefense(code)!.canFinish).toBe(false);
-    now = 1_000 + 30_000;
     expect(store.publicDefense(code)!.canFinish).toBe(true);
   });
 });
@@ -3419,13 +3392,12 @@ describe('voto unanime salta il dibattito (UNANIMOUS_REVEAL)', () => {
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3); // PHASE_INTRO
-    store.advancePhase(code); // DILEMMA_REVEAL (d1)
     store.advancePhase(code); // VOTE_1
     return code;
   }
   const makeStore = () => new RoomStore(generateRoomCode, () => 1_000, makeFixtureDeck, () => 0);
 
-  it('VOTE_1 chiuso unanime ⇒ UNANIMOUS_REVEAL (stesso round, timer 4.5s), non SPLIT_REVEAL', () => {
+  it('VOTE_1 chiuso unanime ⇒ UNANIMOUS_REVEAL (stesso round, senza timer), non SPLIT_REVEAL', () => {
     const store = makeStore();
     const code = unanimousVote1Room(store);
     for (let i = 0; i < 3; i++) store.vote(code, `sock-${i}`, 'A');
@@ -3433,7 +3405,7 @@ describe('voto unanime salta il dibattito (UNANIMOUS_REVEAL)', () => {
     const room = store.get(code)!;
     expect(room.phase).toBe('UNANIMOUS_REVEAL');
     expect(room.dilemmaIndex).toBe(1);
-    expect(room.phaseExpiresAt).toBe(1_000 + PHASE_DURATIONS_MS.UNANIMOUS_REVEAL!);
+    expect(room.phaseExpiresAt).toBeNull();
     expect(store.publicUnanimous(code)).toEqual({ side: 'A', count: 3 });
   });
 
@@ -3472,7 +3444,7 @@ describe('voto unanime salta il dibattito (UNANIMOUS_REVEAL)', () => {
     store.advancePhase(code); // UNANIMOUS_REVEAL
     store.advancePhase(code); // re-reveal
     const room = store.get(code)!;
-    expect(room.phase).toBe('DILEMMA_REVEAL');
+    expect(room.phase).toBe('VOTE_1');
     expect(room.dilemmaIndex).toBe(1);
     expect(room.currentDilemma?.id).toBe('d4');
     expect(room.plannedDilemmas[0].id).toBe('d4');
@@ -3489,7 +3461,6 @@ describe('voto unanime salta il dibattito (UNANIMOUS_REVEAL)', () => {
     store.addBot(code);
     store.addBot(code);
     store.startGame(code, 3);
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1 (i bot hanno già votato)
     const room = store.get(code)!;
     const botSide = [...room.votes.values()][0];
@@ -3499,7 +3470,7 @@ describe('voto unanime salta il dibattito (UNANIMOUS_REVEAL)', () => {
     store.vote(code, 'sock-0', botSide);
     store.advancePhase(code); // UNANIMOUS_REVEAL
     store.advancePhase(code); // re-reveal del sostituto
-    expect(store.get(code)!.phase).toBe('DILEMMA_REVEAL');
+    expect(store.get(code)!.phase).toBe('VOTE_1');
     store.advancePhase(code); // VOTE_1 del sostituto
     expect(store.get(code)!.votes.size).toBe(2); // i bot hanno ri-votato
   });
@@ -3512,7 +3483,7 @@ describe('voto unanime salta il dibattito (UNANIMOUS_REVEAL)', () => {
     for (let i = 0; i < 3; i++) store.vote(code, `sock-${i}`, 'A');
     store.advancePhase(code); // UNANIMOUS_REVEAL
     store.advancePhase(code); // niente rimpiazzo ⇒ round successivo
-    expect(room.phase).toBe('DILEMMA_REVEAL');
+    expect(room.phase).toBe('VOTE_1');
     expect(room.dilemmaIndex).toBe(2);
     expect(room.currentDilemma?.id).toBe('d2');
   });
@@ -3538,7 +3509,6 @@ describe('voto unanime salta il dibattito (UNANIMOUS_REVEAL)', () => {
     const code = unanimousVote1Room(store);
     for (let i = 0; i < 3; i++) store.vote(code, `sock-${i}`, 'A');
     store.advancePhase(code); // UNANIMOUS_REVEAL
-    store.advancePhase(code); // DILEMMA_REVEAL (sostituto)
     store.advancePhase(code); // VOTE_1
     (['A', 'B', 'B'] as const).forEach((side, i) => store.vote(code, `sock-${i}`, side));
     const room = store.get(code)!;
@@ -3565,7 +3535,7 @@ describe('voto unanime salta il dibattito (UNANIMOUS_REVEAL)', () => {
     expect(room.dilemmaIndex).toBe(2);
     const visited: GamePhase[] = [];
     guard = 0;
-    while (room.phase !== 'DILEMMA_REVEAL' || room.dilemmaIndex !== 3) {
+    while (room.phase !== 'VOTE_1' || room.dilemmaIndex !== 3) {
       store.advancePhase(code);
       visited.push(room.phase);
       if (guard++ > 50) break;
@@ -3578,7 +3548,6 @@ describe('voto unanime salta il dibattito (UNANIMOUS_REVEAL)', () => {
     const { code } = store.create();
     for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
     store.startGame(code, 3);
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1
     const room = store.get(code)!;
     room.format = 'percorso';
@@ -3605,16 +3574,16 @@ describe('skipDilemma — "Scarta dilemma" del leader', () => {
   it('da DILEMMA_REVEAL rimpiazza subito il dilemma: stesso round, carta nuova, expiry fresco', () => {
     const store = makeStore();
     const code = started(store);
-    toPhase(store, code, 'DILEMMA_REVEAL');
+    toPhase(store, code, 'VOTE_1');
     expect(store.get(code)!.currentDilemma?.id).toBe('d1');
     const res = store.skipDilemma(code);
     expect(res.ok).toBe(true);
     const room = store.get(code)!;
-    expect(room.phase).toBe('DILEMMA_REVEAL');
+    expect(room.phase).toBe('VOTE_1');
     expect(room.dilemmaIndex).toBe(1);
     expect(room.currentDilemma?.id).toBe('d4');
     expect(room.excludeDilemmaIds.has('d1')).toBe(true);
-    expect(room.phaseExpiresAt).toBe(1_000 + PHASE_DURATIONS_MS.DILEMMA_REVEAL!);
+    expect(room.phaseExpiresAt).toBeNull();
   });
 
   it('da VOTE_1 con voti già castati azzera i voti e riparte dal reveal del sostituto', () => {
@@ -3626,7 +3595,7 @@ describe('skipDilemma — "Scarta dilemma" del leader', () => {
     const res = store.skipDilemma(code);
     expect(res.ok).toBe(true);
     const room = store.get(code)!;
-    expect(room.phase).toBe('DILEMMA_REVEAL');
+    expect(room.phase).toBe('VOTE_1');
     expect(room.dilemmaIndex).toBe(1);
     expect(room.currentDilemma?.id).toBe('d4');
     expect(room.votes.size).toBe(0);
@@ -3635,12 +3604,12 @@ describe('skipDilemma — "Scarta dilemma" del leader', () => {
   it('a mazzo esaurito lo scarto avanza il round invece di rimpiazzare', () => {
     const store = makeStore();
     const code = started(store);
-    toPhase(store, code, 'DILEMMA_REVEAL');
+    toPhase(store, code, 'VOTE_1');
     const room = store.get(code)!;
     while (room.deck!.draw()) { /* svuota il mazzo */ }
     const res = store.skipDilemma(code);
     expect(res.ok).toBe(true);
-    expect(room.phase).toBe('DILEMMA_REVEAL');
+    expect(room.phase).toBe('VOTE_1');
     expect(room.dilemmaIndex).toBe(2);
     expect(room.currentDilemma?.id).toBe('d2');
   });
@@ -3668,7 +3637,7 @@ describe('skipDilemma — "Scarta dilemma" del leader', () => {
   it('è rifiutato fuori dal formato classic (percorso non ha un mazzo da cui pescare)', () => {
     const store = makeStore();
     const code = started(store);
-    toPhase(store, code, 'DILEMMA_REVEAL');
+    toPhase(store, code, 'VOTE_1');
     store.get(code)!.format = 'percorso';
     expect(store.skipDilemma(code)).toEqual({ ok: false, error: 'NOT_CLASSIC' });
   });
@@ -3686,7 +3655,7 @@ describe('skipDilemma — "Scarta dilemma" del leader', () => {
   it('il rematch dopo uno scarto esclude anche il dilemma scartato dal prossimo mazzo', () => {
     const store = makeStore();
     const code = started(store);
-    toPhase(store, code, 'DILEMMA_REVEAL');
+    toPhase(store, code, 'VOTE_1');
     store.skipDilemma(code); // d1 scartato, sostituito da d4
     const room = store.get(code)!;
     let guard = 0;
@@ -3756,25 +3725,22 @@ describe('RoomStore.pauseGame / resumeGame', () => {
     return code;
   }
 
-  it('freezes the countdown and restores it on resume, preserving the remaining time', () => {
-    let now = 10_000;
+  it('toggles paused state cleanly when there is no countdown timer', () => {
+    const now = 10_000;
     const store = new RoomStore(generateRoomCode, () => now);
     const code = startedRoom(store); // PHASE_INTRO
-    const expiresAtPause = 10_000 + PHASE_DURATIONS_MS.PHASE_INTRO!;
-    now = 12_000; // 2s elapsed since PHASE_INTRO started
 
     expect(store.pauseGame(code)).toBe(true);
     const paused = store.get(code)!;
     expect(paused.paused).toBe(true);
     expect(paused.phaseExpiresAt).toBeNull();
-    expect(paused.pausedRemainingMs).toBe(expiresAtPause - 12_000);
+    expect(paused.pausedRemainingMs).toBeNull();
 
-    now = 60_000; // however long the pause lasts is irrelevant
     expect(store.resumeGame(code)).toBe(true);
     const resumed = store.get(code)!;
     expect(resumed.paused).toBe(false);
     expect(resumed.pausedRemainingMs).toBeNull();
-    expect(resumed.phaseExpiresAt).toBe(60_000 + (expiresAtPause - 12_000));
+    expect(resumed.phaseExpiresAt).toBeNull();
   });
 
   it('rejects pausing in LOBBY, FINAL_AWARDS, or DUO_PORTRAIT', () => {
@@ -3810,26 +3776,26 @@ describe('RoomStore.advancePhase / skipDilemma while paused', () => {
   it('advancePhase refuses to advance while paused, and resumes normally after resumeGame', () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
     const code = startedRoom(store);
-    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
     expect(store.pauseGame(code)).toBe(true);
 
     expect(store.advancePhase(code)).toEqual({ ok: false, error: 'PAUSED' });
-    expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL'); // untouched
+    expect(store.get(code)?.phase).toBe('VOTE_1'); // untouched
 
     expect(store.resumeGame(code)).toBe(true);
     const result = store.advancePhase(code);
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.room.phase).toBe('VOTE_1');
+    if (result.ok) expect(result.room.phase).toBe('SPLIT_REVEAL');
   });
 
   it('skipDilemma refuses to run while paused, without corrupting the phase', () => {
     const store = new RoomStore(generateRoomCode, () => 0, makeFixtureDeck);
     const code = startedRoom(store);
-    store.advancePhase(code); // DILEMMA_REVEAL (skippable)
+    store.advancePhase(code); // VOTE_1 (skippable)
     expect(store.pauseGame(code)).toBe(true);
 
     expect(store.skipDilemma(code)).toEqual({ ok: false, error: 'PAUSED' });
-    expect(store.get(code)?.phase).toBe('DILEMMA_REVEAL'); // NOT 'UNANIMOUS_REVEAL'
+    expect(store.get(code)?.phase).toBe('VOTE_1'); // NOT 'UNANIMOUS_REVEAL'
   });
 
   it('enforces maxRooms cap via canCreate() and create()', () => {

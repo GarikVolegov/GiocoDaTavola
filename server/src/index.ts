@@ -17,7 +17,11 @@ import { serializeRoom, deserializeRoom } from './game/roomSnapshot';
 import { persistSnapshot, loadAllSnapshots, deleteSnapshot } from './snapshotStore';
 import { createRateLimiter } from './rateLimit';
 import { getOrGenerateTts, MAX_TTS_TEXT_LENGTH } from './audioTts';
-import { generatePartyCards, getCuratedCards, isGeminiAvailable, type PartyMode } from './game/geminiGenerator';
+import { generatePartyCards, getCuratedCards, isGeminiAvailable, type PartyMode, type CoppieIntensity, type PartyCard, type AssurdoCard } from './game/geminiGenerator';
+import { CRUCIVERBA_BOARDS, getCurrentCruciverbaPlayerId } from './game/cruciverba';
+import { TRIBUNALE_CASES, getTribunaleSpeakerId } from './game/tribunale';
+import { buildPercorsoPlan, isDurata, getPercorsoMeta } from './game/percorso';
+import { buildStoriaPlan } from './game/storie';
 
 // Load server/.env (DATABASE_URL, CLERK_SECRET_KEY, AI_BASE_URL/AI_MODEL, …) if
 // present. Zero-dependency: uses Node's built-in env-file loader (Node 20.12+).
@@ -164,6 +168,10 @@ function refreshAfterRosterChange(code: string): void {
     advanceAndBroadcast(code); // a leaver was the last unconfirmed -> don't block
   } else if (room.phase === 'DUO_REPICK' && rooms.duoRepickComplete(code)) {
     advanceAndBroadcast(code);
+  } else if (room.phase === 'TRIBUNALE_VOTE' && rooms.tribunaleVotesComplete(code)) {
+    advanceAndBroadcast(code);
+  } else if (room.phase === 'TELEPATHY' && rooms.telepathyPhaseComplete(code)) {
+    advanceAndBroadcast(code);
   } else {
     if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
     broadcastGameState(code);
@@ -185,6 +193,8 @@ function gameStatePayload(room: Room) {
     register: room.register,
     dilemmaIndex: room.dilemmaIndex,
     phaseExpiresAt: room.phaseExpiresAt,
+    turnExpiresAt: room.turnExpiresAt,
+    readingEndsAt: room.readingEndsAt,
     paused: room.paused,
     // Session format + percorso view (null in classic). Secret-safe: progress and
     // tappa metadata only, never an individual vote. tappaCounts is static setup data.
@@ -243,6 +253,11 @@ function gameStatePayload(room: Room) {
     hotTakeReveal: rooms.publicHotTakeReveal(room.code),
     hotTakeSubmittedCount: rooms.hotTakeSubmittedCount(room.code),
     missingHotTakers: rooms.hotTakeProgress(room.code)?.missingNicknames ?? null,
+    cruciverbaState: rooms.publicCruciverbaState(room.code),
+    tribunaleState: rooms.publicTribunaleState(room.code),
+    telepathyPrompt: rooms.publicTelepathyPrompt(room.code),
+    telepathyProgress: rooms.telepathyProgress(room.code),
+    telepathyReveal: rooms.publicTelepathyReveal(room.code),
     // "L'Infiltrato": how many have accused (ACCUSE) + the FINAL_AWARDS reveal.
     accusedCount: room.accusations.size,
     infiltratoResult: rooms.publicInfiltratoResult(room.code),
@@ -341,8 +356,19 @@ function emitBlindSpots(code: string): void {
   }
 }
 
+const turnTimers = new Map<string, NodeJS.Timeout>();
+
+function clearTurnTimer(code: string): void {
+  const timer = turnTimers.get(code);
+  if (timer) {
+    clearTimeout(timer);
+    turnTimers.delete(code);
+  }
+}
+
 // Cancel any pending auto-advance timer for a room.
 function clearPhaseTimer(code: string): void {
+  clearTurnTimer(code);
   const timer = phaseTimers.get(code);
   if (timer) {
     clearTimeout(timer);
@@ -380,10 +406,56 @@ function reapRoom(code: string): void {
   console.log('[server] reaped abandoned room', code);
 }
 
+function scheduleTurnTimer(code: string): void {
+  clearTurnTimer(code);
+  const room = rooms.get(code);
+  if (!room || room.paused) return;
+
+  // Timers are disabled globally for humans; keep automated turns ONLY for bots
+  // so bot players never deadlock a room.
+  if (room.phase === 'CRUCIVERBA' && room.cruciverbaState) {
+    const activeId = getCurrentCruciverbaPlayerId(room.cruciverbaState);
+    if (activeId && room.players.get(activeId)?.isBot) {
+      const botTimer = setTimeout(() => {
+        if (turnTimers.get(code) !== botTimer) return;
+        turnTimers.delete(code);
+        const botRes = rooms.performCruciverbaBotTurn(code);
+        if (botRes && botRes.roundEnded) {
+          advanceAndBroadcast(code);
+        } else {
+          broadcastGameState(code);
+          scheduleTurnTimer(code);
+        }
+      }, 1_800);
+      turnTimers.set(code, botTimer);
+    }
+    return;
+  }
+
+  if (room.phase === 'TRIBUNALE_ARGUE' && room.tribunaleState) {
+    const speakerId = getTribunaleSpeakerId(room.tribunaleState);
+    const isBotSpeaker = room.players.get(speakerId)?.isBot === true;
+    if (!isBotSpeaker) return;
+    const timer = setTimeout(() => {
+      if (turnTimers.get(code) !== timer) return;
+      turnTimers.delete(code);
+      const adv = rooms.advanceTribunaleSpeaker(code);
+      if (adv.enteredVote) {
+        broadcastAdvance(code, false);
+      } else {
+        broadcastGameState(code);
+        scheduleTurnTimer(code);
+      }
+    }, 2_500);
+    turnTimers.set(code, timer);
+  }
+}
+
 // Schedule the next auto-advance from the room's server-side expiry. Replaces
 // any existing timer; phases with no timer (FINAL_AWARDS) end the chain.
 function schedulePhase(code: string): void {
   clearPhaseTimer(code);
+  scheduleTurnTimer(code);
   const room = rooms.get(code);
   if (!room || room.phaseExpiresAt == null) return;
   const delay = Math.max(0, room.phaseExpiresAt - Date.now());
@@ -422,15 +494,58 @@ function leaderCodeFor(socketId: string): string | null {
   return rooms.isLeader(session.code, session.playerId) ? session.code : null;
 }
 
+function emitSecretQuestionIfNeeded(room: Room | undefined, targetPlayerId?: string): void {
+  if (!room || room.phase === 'LOBBY' || room.phase === 'FINAL_AWARDS') return;
+  const activeMode =
+    room.partyMode === 'mix'
+      ? (room.mixPlan[Math.max(0, room.dilemmaIndex - 1)] ?? room.partyMode)
+      : room.partyMode;
+  if (activeMode !== 'infiltrato' || !room.currentPartyCard || !('groupQuestion' in room.currentPartyCard)) {
+    return;
+  }
+  const card = room.currentPartyCard as { groupQuestion?: string; impostorQuestion?: string };
+  const recipients = targetPlayerId
+    ? (() => {
+        const p = room.players.get(targetPlayerId);
+        return p ? [p] : [];
+      })()
+    : [...room.players.values()];
+  for (const player of recipients) {
+    if (player.isBot) continue;
+    const sid = playerSocket.get(player.id);
+    if (!sid) continue;
+    const isInfiltrator = player.id === room.infiltratorId;
+    const question = isInfiltrator ? (card.impostorQuestion ?? '') : (card.groupQuestion ?? '');
+    io.to(sid).emit('player:secretQuestion', {
+      question,
+      isInfiltrator,
+      round: room.dilemmaIndex,
+    });
+  }
+}
+
 // Broadcast + side effects shared by every path that lands the room on a new
 // phase: the leader's force-advance, a timer expiry, AND the leader's
 // "Scarta dilemma" (which also re-enters DILEMMA_REVEAL or can fall through
 // to FINAL_AWARDS on an exhausted deck). `hadLateJoiners` must be sampled
 // BEFORE the phase change that might promote one, by the caller.
 function broadcastAdvance(code: string, hadLateJoiners: boolean): void {
+  const snapRoom = rooms.get(code);
+  // Push per-player secrets/tokens BEFORE broadcasting game:state so clients
+  // receive their round-scoped clue, secret question, and write-vote token
+  // synchronously before switching screens.
+  emitSecretQuestionIfNeeded(snapRoom);
+  if (snapRoom && snapRoom.phase === 'WRITE_VOTE') {
+    for (const player of snapRoom.players.values()) {
+      if (player.isBot) continue;
+      const token = rooms.myWrittenAnswerToken(code, player.id);
+      if (!token) continue;
+      const sid = playerSocket.get(player.id);
+      if (sid) io.to(sid).emit('player:myWriteToken', { token });
+    }
+  }
   broadcastGameState(code);
   if (hadLateJoiners) broadcastLobby(code);
-  const snapRoom = rooms.get(code);
   if (snapRoom) void persistSnapshot(code, serializeRoom(snapRoom)); // never rejects; failures open its breaker
   if (rooms.get(code)?.phase === 'FINAL_AWARDS') emitBlindSpots(code);
   schedulePhase(code);
@@ -464,40 +579,6 @@ function broadcastAdvance(code: string, hadLateJoiners: boolean): void {
     for (const r of rooms.groupMindResults(code)) {
       const sid = playerSocket.get(r.playerId);
       if (sid) io.to(sid).emit('player:groupMindResult', { correct: r.correct, guess: r.guess, actual: r.actual });
-    }
-  }
-  if (room && room.phase === 'WRITE_VOTE') {
-    // Privately tell each writer their own answer's opaque token, so their
-    // phone can filter its own entry out of the anonymized list without ever
-    // learning another author's real id (the roster is public, so the id
-    // itself would de-anonymize the vote).
-    for (const player of room.players.values()) {
-      if (player.isBot) continue;
-      const token = rooms.myWrittenAnswerToken(code, player.id);
-      if (!token) continue;
-      const sid = playerSocket.get(player.id);
-      if (sid) io.to(sid).emit('player:myWriteToken', { token });
-    }
-  }
-  if (
-    room &&
-    (room.partyMode === 'infiltrato' || room.partyMode === 'mix') &&
-    room.currentPartyCard &&
-    'groupQuestion' in room.currentPartyCard &&
-    room.phase === 'DILEMMA_REVEAL'
-  ) {
-    const card = room.currentPartyCard as { groupQuestion?: string; impostorQuestion?: string };
-    for (const player of room.players.values()) {
-      if (player.isBot) continue;
-      const sid = playerSocket.get(player.id);
-      if (!sid) continue;
-      const isInfiltrator = player.id === room.infiltratorId;
-      const question = isInfiltrator ? (card.impostorQuestion ?? '') : (card.groupQuestion ?? '');
-      io.to(sid).emit('player:secretQuestion', {
-        question,
-        isInfiltrator,
-        round: room.dilemmaIndex,
-      });
     }
   }
   if (room && (room.phase === 'FINAL_AWARDS' || room.phase === 'DUO_PORTRAIT')) {
@@ -721,7 +802,80 @@ app.put('/api/me/profile', dbRoute(async (req, res) => {
   res.json(result.value);
 }));
 
+// Save a completed Pass & Play session to the authenticated user's game history.
+app.post('/api/me/pass-and-play-record', dbRoute(async (req, res) => {
+  const header = req.header('authorization') ?? '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const userId = await verifyClerkToken(token);
+  if (!userId) {
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
+
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const validModes = ['flash', 'infiltrato', 'coppie', 'assurdo', 'preferiresti', 'cruciverba', 'tribunale', 'mix', 'classico', 'percorso', 'storia'];
+  const partyMode = typeof body.partyMode === 'string' && validModes.includes(body.partyMode)
+    ? body.partyMode
+    : null;
+  if (!partyMode) {
+    res.status(400).json({ error: 'invalid-mode' });
+    return;
+  }
+
+  const rounds = typeof body.rounds === 'number' && Number.isFinite(body.rounds) ? Math.floor(body.rounds) : 0;
+  if (rounds < 1 || rounds > 100) {
+    res.status(400).json({ error: 'invalid-rounds' });
+    return;
+  }
+
+  const playerCount =
+    typeof body.playerCount === 'number' && Number.isFinite(body.playerCount)
+      ? Math.max(1, Math.min(30, Math.floor(body.playerCount)))
+      : 2;
+  const score =
+    typeof body.score === 'number' && Number.isFinite(body.score)
+      ? Math.max(0, Math.min(100_000, Math.floor(body.score)))
+      : 0;
+  const rawNickname = typeof body.nickname === 'string' ? body.nickname.trim().slice(0, 32) : '';
+  const nickname = rawNickname || 'Pass & Play';
+
+  if (!dbEnabled()) {
+    res.status(503).json({ error: 'db-unavailable' });
+    return;
+  }
+
+  const gameCode = `PNP-${Date.now().toString(36).toUpperCase()}`;
+  await saveGameRecords([
+    {
+      clerkUserId: userId,
+      gameCode,
+      mode: `party:${partyMode}`,
+      nickname,
+      persuasion: score,
+      rounds,
+      changedCount: 0,
+      majorityCount: 0,
+      awardsCount: 0,
+      playerCount,
+    },
+  ]);
+  res.json({ ok: true, gameCode });
+}));
+
 const deckLimiter = createRateLimiter(20, 60_000);
+
+function cardMatchesExclude(card: Record<string, unknown>, excludeSet: Set<string>): boolean {
+  if (excludeSet.size === 0) return false;
+  for (const key of ['id', 'text', 'prompt', 'groupQuestion'] as const) {
+    const val = card[key];
+    if (typeof val === 'string' && excludeSet.has(val)) return true;
+  }
+  return false;
+}
+
+app.get('/api/pass-and-play/stories', (_req: Request, res: Response) => {
+  res.json({ stories: STORIE_CATALOG });
+});
 
 // Deck endpoint for Pass & Play ("Passa il Telefono", 1-device local mode).
 // Returns curated or AI-generated cards without requiring a Socket.IO room.
@@ -735,39 +889,227 @@ app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
   const body = (req.body ?? {}) as Record<string, unknown>;
   const modeRaw = typeof body.mode === 'string' ? body.mode : 'flash';
   const countRaw = typeof body.count === 'number' && Number.isFinite(body.count) ? Math.floor(body.count) : 5;
-  const count = Math.max(1, Math.min(15, countRaw));
-  const intensity = body.intensity === 'piccante' ? 'piccante' : 'complicita';
-  const theme = typeof body.theme === 'string' ? body.theme.trim().slice(0, 80) : undefined;
+  const count = Math.max(1, Math.min(20, countRaw));
+  const intensity: CoppieIntensity =
+    body.intensity === 'piccante'
+      ? 'piccante'
+      : body.intensity === 'profondo'
+        ? 'profondo'
+        : 'complicita';
+  const rawTono = body.infiltratoTono;
+  const infiltratoTono: 'risate' | 'profondo' | 'misto' =
+    rawTono === 'risate' || rawTono === 'leggero'
+      ? 'risate'
+      : rawTono === 'profondo' || rawTono === 'spinto'
+        ? 'profondo'
+        : 'misto';
+  const rawTheme =
+    typeof body.theme === 'string'
+      ? body.theme
+      : typeof body.topic === 'string'
+        ? body.topic
+        : undefined;
+  const theme = rawTheme ? rawTheme.trim().slice(0, 80) || undefined : undefined;
   const registerRaw = typeof body.register === 'string' ? body.register : 'misto';
   const register: ContentRegister =
     registerRaw === 'vita' || registerRaw === 'business' || registerRaw === 'carriera' ? registerRaw : 'misto';
   const familiaritaRaw = typeof body.familiarita === 'string' ? body.familiarita : 'misto';
   const familiarita: Familiarita = isFamiliarita(familiaritaRaw) ? familiaritaRaw : 'misto';
+  const playerCount =
+    typeof body.playerCount === 'number' && Number.isFinite(body.playerCount)
+      ? Math.max(1, Math.floor(body.playerCount))
+      : 4;
+  const excludeSet = new Set<string>(
+    Array.isArray(body.excludeIds)
+      ? body.excludeIds.filter((v): v is string => typeof v === 'string' && v.trim().length > 0).slice(0, 200)
+      : [],
+  );
 
-  if (modeRaw === 'classico') {
+  const getPassClassicoCards = (limit: number) => {
     const basePool = dilemmasForRegister(ALL_DILEMMAS, register).filter((d) => !d.delicato && !d.roster);
-    const pool = filterByFamiliarita(basePool, familiarita);
-    const arr = [...pool];
-    const limit = Math.min(count, arr.length);
-    for (let i = 0; i < limit; i++) {
+    const famPool = filterByFamiliarita(basePool, familiarita);
+    const freshPool = famPool.filter((d) => !cardMatchesExclude(d as unknown as Record<string, unknown>, excludeSet));
+    const arr = freshPool.length > 0 ? [...freshPool] : [...famPool];
+    const capped = Math.min(limit, arr.length);
+    for (let i = 0; i < capped; i++) {
       const j = i + Math.floor(Math.random() * (arr.length - i));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-    res.json({ mode: 'classico', cards: arr.slice(0, limit), source: 'curated' });
+    return arr.slice(0, capped).map((d) => ({ ...d, cardMode: 'classico' }));
+  };
+
+  if (modeRaw === 'classico') {
+    res.json({ mode: 'classico', cards: getPassClassicoCards(count), source: 'curated' });
     return;
   }
 
-  const validPartyModes: PartyMode[] = ['flash', 'infiltrato', 'coppie', 'assurdo'];
+  if (modeRaw === 'percorso') {
+    const percorsoId = typeof body.percorsoId === 'string' ? body.percorsoId : 'bussola';
+    const startTappa =
+      typeof body.startTappa === 'number' && Number.isFinite(body.startTappa) ? body.startTappa : 1;
+    const durata = typeof body.durata === 'string' && isDurata(body.durata) ? body.durata : 'corto';
+    const plan = buildPercorsoPlan(
+      ALL_DILEMMAS,
+      startTappa,
+      durata,
+      Math.random,
+      percorsoId,
+      excludeSet,
+      playerCount,
+      familiarita,
+    );
+    const meta = getPercorsoMeta(percorsoId);
+    const cards = plan.dilemmas.map((d, i) => ({
+      ...d,
+      cardMode: 'percorso',
+      tappa: plan.tappe[i],
+      tappaNome: meta.tappe.find((t) => t.id === plan.tappe[i])?.nome ?? `Tappa ${plan.tappe[i]}`,
+    }));
+    res.json({ mode: 'percorso', cards, source: 'curated' });
+    return;
+  }
+
+  if (modeRaw === 'storia') {
+    const stories = loadStories();
+    const storyId = typeof body.storyId === 'string' ? body.storyId : '';
+    const story = stories.find((s) => s.id === storyId) ?? stories[0];
+    if (!story) {
+      res.json({ mode: 'storia', cards: [], source: 'curated' });
+      return;
+    }
+    const plan = buildStoriaPlan(story);
+    const cards = plan.dilemmas.map((d, i) => ({
+      ...d,
+      cardMode: 'storia',
+      storyScene: {
+        storyId: story.id,
+        title: story.title,
+        protagonist: story.protagonist,
+        premessa: i === 0 ? story.premessa : undefined,
+        actTitle: story.acts[plan.acts[i]]?.title ?? `Atto ${plan.acts[i] + 1}`,
+        sceneNarration: plan.scenes[i].narration,
+        consequenceA: plan.scenes[i].consequenceA,
+        consequenceB: plan.scenes[i].consequenceB,
+        epiloghi: i === plan.dilemmas.length - 1 ? story.epiloghi : undefined,
+      },
+    }));
+    res.json({ mode: 'storia', cards, source: 'curated' });
+    return;
+  }
+
+  const getPassCruciverbaCards = (limit: number) => {
+    const fresh = CRUCIVERBA_BOARDS.filter((b) => !excludeSet.has(b.id));
+    const source = [...(fresh.length >= limit ? fresh : CRUCIVERBA_BOARDS)];
+    for (let i = source.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [source[i], source[j]] = [source[j], source[i]];
+    }
+    return source.slice(0, limit).map((b) => ({
+      id: b.id,
+      cardMode: 'cruciverba',
+      theme: b.theme,
+      rows: b.rows,
+      cols: b.cols,
+      words: b.words,
+    }));
+  };
+
+  const getPassTribunaleCards = (limit: number) => {
+    const fresh = TRIBUNALE_CASES.filter((c) => !excludeSet.has(c.id));
+    const source = [...(fresh.length >= limit ? fresh : TRIBUNALE_CASES)];
+    for (let i = source.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [source[i], source[j]] = [source[j], source[i]];
+    }
+    return source.slice(0, limit).map((c) => ({
+      id: c.id,
+      cardMode: 'tribunale',
+      title: c.title,
+      scenario: c.scenario,
+      accusaRole: c.accusaRole,
+      difesaRole: c.difesaRole,
+      penalty: c.penalty,
+    }));
+  };
+
+  if (modeRaw === 'cruciverba') {
+    res.json({ mode: 'cruciverba', cards: getPassCruciverbaCards(count), source: 'curated' });
+    return;
+  }
+  if (modeRaw === 'tribunale') {
+    res.json({ mode: 'tribunale', cards: getPassTribunaleCards(count), source: 'curated' });
+    return;
+  }
+
+  const validPartyModes: PartyMode[] = ['flash', 'infiltrato', 'coppie', 'assurdo', 'preferiresti', 'mix'];
   const partyMode: PartyMode = validPartyModes.includes(modeRaw as PartyMode) ? (modeRaw as PartyMode) : 'flash';
+  const useAi = Boolean(theme && isGeminiAvailable());
 
-  if (theme && isGeminiAvailable()) {
-    const cards = await generatePartyCards(partyMode, { count, intensity, familiarita, theme });
-    res.json({ mode: partyMode, cards, source: 'gemini' });
+  if (partyMode === 'mix') {
+    const subModes: Array<Exclude<PartyMode, 'mix'>> =
+      playerCount >= 2 ? ['flash', 'preferiresti', 'assurdo', 'coppie'] : ['flash', 'preferiresti', 'assurdo'];
+    if (playerCount >= 3) subModes.push('infiltrato');
+    const totalSubModes = subModes.length + 2 + (playerCount >= 3 ? 1 : 0);
+    const perMode = Math.max(1, Math.ceil(count / totalSubModes));
+    const rawBuckets = await Promise.all([
+      ...subModes.map(async (sub) => {
+        const fetchCount = sub === 'assurdo' && playerCount < 2 ? perMode * 2 : perMode;
+        const rawCards = useAi
+          ? await generatePartyCards(sub, { count: fetchCount, intensity, infiltratoTono, familiarita, theme })
+          : getCuratedCards(sub, { count: fetchCount, intensity, infiltratoTono, familiarita, excludeIds: excludeSet });
+        const soloSafe =
+          sub === 'assurdo' && playerCount < 2
+            ? rawCards.filter((c) => (c as AssurdoCard).cardType === 'dignita')
+            : rawCards;
+        const baseCards = soloSafe.length > 0 ? soloSafe : rawCards;
+        const filtered = baseCards.filter((c) => !cardMatchesExclude(c as unknown as Record<string, unknown>, excludeSet));
+        const finalSlice = filtered.length > 0 ? filtered : baseCards;
+        return finalSlice.slice(0, perMode).map((c) => ({ ...(c as object), cardMode: sub }) as Record<string, unknown>);
+      }),
+      Promise.resolve(getPassCruciverbaCards(perMode) as Array<Record<string, unknown>>),
+      Promise.resolve(getPassClassicoCards(perMode) as Array<Record<string, unknown>>),
+      ...(playerCount >= 3 ? [Promise.resolve(getPassTribunaleCards(perMode) as Array<Record<string, unknown>>)] : []),
+    ]);
+    const buckets = rawBuckets
+      .filter((cards) => cards.length > 0)
+      .map((cards) => ({ cards, cursor: 0 }));
+    for (let i = buckets.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [buckets[i], buckets[j]] = [buckets[j], buckets[i]];
+    }
+    const mixed: Array<Record<string, unknown>> = [];
+    let lastMode: unknown = null;
+    while (mixed.length < count) {
+      const withCards = buckets.filter((b) => b.cursor < b.cards.length);
+      if (withCards.length === 0) break;
+      const distinct = withCards.filter((b) => b.cards[b.cursor].cardMode !== lastMode);
+      const pool = distinct.length > 0 ? distinct : withCards;
+      const minCursor = Math.min(...pool.map((b) => b.cursor));
+      const candidates = pool.filter((b) => b.cursor === minCursor);
+      const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+      const card = chosen.cards[chosen.cursor++];
+      mixed.push(card);
+      lastMode = card.cardMode ?? null;
+    }
+    res.json({ mode: 'mix', cards: mixed, source: useAi ? 'gemini' : 'curated' });
     return;
   }
 
-  const cards = getCuratedCards(partyMode, { count, intensity, familiarita });
-  res.json({ mode: partyMode, cards, source: 'curated' });
+  const fetchCount = partyMode === 'assurdo' && playerCount < 2 ? count * 2 : count;
+  const rawCards: PartyCard[] = useAi
+    ? await generatePartyCards(partyMode, { count: fetchCount, intensity, infiltratoTono, familiarita, theme })
+    : getCuratedCards(partyMode, { count: fetchCount, intensity, infiltratoTono, familiarita, excludeIds: excludeSet });
+  const soloSafe =
+    partyMode === 'assurdo' && playerCount < 2
+      ? rawCards.filter((c) => (c as AssurdoCard).cardType === 'dignita')
+      : rawCards;
+  const baseCards = soloSafe.length > 0 ? soloSafe : rawCards;
+  const filtered = baseCards.filter((c) => !cardMatchesExclude(c as unknown as Record<string, unknown>, excludeSet));
+  res.json({
+    mode: partyMode,
+    cards: (filtered.length > 0 ? filtered : baseCards).slice(0, count),
+    source: useAi ? 'gemini' : 'curated',
+  });
 });
 
 io.on('connection', (socket) => {
@@ -829,7 +1171,7 @@ io.on('connection', (socket) => {
 
   // The leader starts the game for their room, choosing the dilemma count.
   // Gated: only the socket whose player is the room leader may start.
-  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string; percorsoId?: string; storyId?: string; mood?: string; delicatoOptIn?: boolean; serataLunga?: boolean; caos?: string; seenDilemmaIds?: string[]; partyMode?: string; partyIntensity?: string; infiltratoTono?: string; familiarita?: string; theme?: string }) => {
+  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string; percorsoId?: string; storyId?: string; mood?: string; delicatoOptIn?: boolean; serataLunga?: boolean; caos?: string; seenDilemmaIds?: string[]; partyMode?: string; partyIntensity?: string; infiltratoTono?: string; familiarita?: string; theme?: string; couples?: Array<[string, string]> }) => {
     const code = leaderCodeFor(socket.id);
     if (!code) {
       socket.emit('leader:startError', { error: 'ROOM_NOT_FOUND' });
@@ -857,7 +1199,7 @@ io.on('connection', (socket) => {
           .map((id) => String(id).trim())
           .filter((id) => id.length > 0 && id.length <= 64)
       : [];
-    const partyMode = payload?.partyMode && ['flash', 'infiltrato', 'coppie', 'assurdo', 'mix'].includes(payload.partyMode)
+    const partyMode = payload?.partyMode && ['flash', 'infiltrato', 'coppie', 'assurdo', 'preferiresti', 'cruciverba', 'tribunale', 'classico', 'mix'].includes(payload.partyMode)
       ? (payload.partyMode as PartyMode)
       : undefined;
     const partyIntensity =
@@ -875,6 +1217,11 @@ io.on('connection', (socket) => {
         ? payload.familiarita
         : 'misto';
     const theme = typeof payload?.theme === 'string' ? payload.theme.trim().slice(0, 80) : undefined;
+    const couples = Array.isArray(payload?.couples)
+      ? payload.couples
+          .filter((pair): pair is [string, string] => Array.isArray(pair) && pair.length === 2)
+          .map(([a, b]) => [String(a), String(b)] as [string, string])
+      : undefined;
 
     const result = rooms.startGame(
       code,
@@ -895,21 +1242,42 @@ io.on('connection', (socket) => {
       theme,
       infiltratoTono,
       familiarita,
+      couples,
     );
     if (!result.ok) {
       socket.emit('leader:startError', { error: result.error });
       return;
     }
-    // If Gemini is available and we're in a party mode, optionally generate fresh cards in background
-    if (partyMode && partyMode !== 'mix' && isGeminiAvailable()) {
-      generatePartyCards(partyMode, { count: Number(payload?.dilemmaCount) || 5, intensity: partyIntensity, infiltratoTono, familiarita, theme })
-        .then((aiCards) => {
-          const r = rooms.get(code);
-          if (r && r.partyMode === partyMode && aiCards.length > 0) {
-            r.partyCards.splice(r.dilemmaIndex, aiCards.length, ...aiCards);
-          }
-        })
-        .catch(() => {});
+    if (partyMode && isGeminiAvailable()) {
+      if (partyMode !== 'mix' && ['flash', 'infiltrato', 'coppie', 'assurdo', 'preferiresti'].includes(partyMode)) {
+        generatePartyCards(partyMode, { count: Number(payload?.dilemmaCount) || 5, intensity: partyIntensity, infiltratoTono, familiarita, theme })
+          .then((aiCards) => {
+            const r = rooms.get(code);
+            if (r && r.partyMode === partyMode && aiCards.length > 0) {
+              r.partyCards.splice(r.dilemmaIndex, aiCards.length, ...aiCards);
+            }
+          })
+          .catch(() => {});
+      } else if (partyMode === 'mix' && theme) {
+        const cardSubModes = ['flash', 'infiltrato', 'coppie', 'assurdo', 'preferiresti'] as const;
+        for (const sub of cardSubModes) {
+          const matchingIndices = result.room.mixPlan
+            .map((k, idx) => (k === sub ? idx : -1))
+            .filter((idx) => idx >= 0);
+          if (matchingIndices.length === 0) continue;
+          generatePartyCards(sub, { count: matchingIndices.length, intensity: partyIntensity, infiltratoTono, familiarita, theme })
+            .then((aiCards) => {
+              const r = rooms.get(code);
+              if (!r || r.partyMode !== 'mix' || aiCards.length === 0) return;
+              matchingIndices.forEach((slotIdx, aiIdx) => {
+                if (slotIdx >= r.dilemmaIndex && aiCards[aiIdx]) {
+                  r.partyCards[slotIdx] = aiCards[aiIdx];
+                }
+              });
+            })
+            .catch(() => {});
+        }
+      }
     }
     // Privately tell the infiltrator their secret role + mission (only their phone).
     const infiltratorId = result.room.infiltratorId;
@@ -1072,16 +1440,7 @@ io.on('connection', (socket) => {
       const token = rooms.myWrittenAnswerToken(code, playerId);
       if (token) socket.emit('player:myWriteToken', { token });
     }
-    if (room && room.partyMode === 'infiltrato' && room.currentPartyCard && room.phase !== 'LOBBY') {
-      const card = room.currentPartyCard as { groupQuestion?: string; impostorQuestion?: string };
-      const isInfiltrator = playerId === room.infiltratorId;
-      const question = isInfiltrator ? (card.impostorQuestion ?? '') : (card.groupQuestion ?? '');
-      socket.emit('player:secretQuestion', {
-        question,
-        isInfiltrator,
-        round: room.dilemmaIndex,
-      });
-    }
+    emitSecretQuestionIfNeeded(room, playerId);
     broadcastLobby(code);
     if (reconnecting && room && isVotingPhase(room.phase)) broadcastGameState(code);
   });
@@ -1099,7 +1458,9 @@ io.on('connection', (socket) => {
       return;
     }
     // Confirm the player's own current choice back to just them.
-    socket.emit('player:voted', { choice: result.room.votes.get(playerId) });
+    socket.emit('player:voted', {
+      choice: result.room.preferirestiVotes.get(playerId) ?? result.room.votes.get(playerId),
+    });
     // Advance as soon as everyone present has acted. VOTE_1 and the duo picks:
     // everyone has voted. VOTE_2 / DUO_REPICK: changing the vote also confirms
     // it (store), so advance once everyone required has confirmed.
@@ -1126,23 +1487,6 @@ io.on('connection', (socket) => {
     const result = rooms.recordGognaVote(code, playerId, targetId);
     if (!result.ok) return;
     socket.emit('player:gognaVoted', { targetId });
-    if (rooms.allVoted(code)) {
-      advanceAndBroadcast(code);
-    } else {
-      broadcastGameState(code);
-    }
-  });
-
-  // Spectator bets on hot-seat couple in COPPIE & SCINTILLE mode ("match" or "scoppiano").
-  socket.on('player:hotSeatBet', (payload: { bet?: string }) => {
-    const session = sessions.get(socket.id);
-    if (!session) return;
-    const { code, playerId } = session;
-    const bet = payload?.bet === 'match' ? 'match' : payload?.bet === 'scoppiano' ? 'scoppiano' : null;
-    if (!bet) return;
-    const ok = rooms.recordHotSeatBet(code, playerId, bet);
-    if (!ok) return;
-    socket.emit('player:hotSeatBetted', { bet });
     if (rooms.allVoted(code)) {
       advanceAndBroadcast(code);
     } else {
@@ -1397,6 +1741,111 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Cruciverba Show: active player submits a word guess during their 15s turn.
+  socket.on('player:cruciverbaAttempt', (payload: { guess?: string; wordId?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const res = rooms.submitCruciverbaAttempt(
+      code,
+      playerId,
+      String(payload?.guess ?? ''),
+      typeof payload?.wordId === 'string' ? payload.wordId : undefined,
+    );
+    socket.emit('player:cruciverbaFeedback', res);
+    if (!res.ok) return;
+    if (res.roundEnded) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code);
+      if (res.correct) scheduleTurnTimer(code);
+    }
+  });
+
+  // Cruciverba Show: active player unlocks 1 letter of the current word and passes.
+  socket.on('player:cruciverbaPass', () => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const res = rooms.passOrTimeoutCruciverba(code, 'hint', playerId);
+    if (!res.ok) return;
+    if (res.roundEnded) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code);
+      scheduleTurnTimer(code);
+    }
+  });
+
+  // Tribunale degli Amici: active contender finishes their 15s speech turn early.
+  socket.on('player:tribunaleFinishTurn', () => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const adv = rooms.advanceTribunaleSpeaker(code, playerId);
+    if (!adv.ok) {
+      socket.emit('player:tribunaleError', { error: adv.error });
+      return;
+    }
+    if (adv.enteredVote) {
+      broadcastAdvance(code, false);
+    } else {
+      broadcastGameState(code);
+      scheduleTurnTimer(code);
+    }
+  });
+
+  // Pre-debate reading grace window: leader or active contender/defender skips straight to the 15s timer.
+  socket.on('player:finishReading', () => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const res = rooms.finishReading(code, playerId);
+    if (!res.ok) return;
+    broadcastGameState(code);
+    schedulePhase(code);
+  });
+
+  // Tribunale degli Amici: jury votes ACCUSA or DIFESA during TRIBUNALE_VOTE.
+  socket.on('player:tribunaleVote', (payload: { choice?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const choice = payload?.choice === 'ACCUSA' ? 'ACCUSA' : payload?.choice === 'DIFESA' ? 'DIFESA' : null;
+    if (!choice) return;
+    const res = rooms.submitTribunaleVote(code, playerId, choice);
+    if (!res.ok) {
+      socket.emit('player:tribunaleError', { error: res.error });
+      return;
+    }
+    socket.emit('player:tribunaleVoted', { choice });
+    if (rooms.tribunaleVotesComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
+      broadcastGameState(code);
+    }
+  });
+
+  // Telepatia (silent 1-word sync mode): player submits or updates their word.
+  socket.on('player:telepathy', (payload: { word?: string }) => {
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.submitTelepathy(code, playerId, String(payload?.word ?? ''));
+    if (!result.ok) {
+      socket.emit('player:telepathyError', { error: result.error });
+      return;
+    }
+    socket.emit('player:telepathySubmitted', { word: result.word });
+    if (rooms.telepathyPhaseComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
+      broadcastGameState(code);
+    }
+  });
+
   // A player writes their own dilemma in the LOBBY (max 2/player). The store
   // validates + caps it; on success the room's submitted count is broadcast.
   socket.on('player:submitDilemma', (payload: { text?: string; optionA?: string; optionB?: string }) => {
@@ -1509,28 +1958,8 @@ io.on('connection', (socket) => {
     if (!userId) return;
     rooms.setPlayerUser(session.code, session.playerId, userId);
     const room = rooms.get(session.code);
-    if (
-    room &&
-    (room.partyMode === 'infiltrato' || room.partyMode === 'mix') &&
-    room.currentPartyCard &&
-    'groupQuestion' in room.currentPartyCard &&
-    room.phase === 'DILEMMA_REVEAL'
-  ) {
-    const card = room.currentPartyCard as { groupQuestion?: string; impostorQuestion?: string };
-    for (const player of room.players.values()) {
-      if (player.isBot) continue;
-      const sid = playerSocket.get(player.id);
-      if (!sid) continue;
-      const isInfiltrator = player.id === room.infiltratorId;
-      const question = isInfiltrator ? (card.impostorQuestion ?? '') : (card.groupQuestion ?? '');
-      io.to(sid).emit('player:secretQuestion', {
-        question,
-        isInfiltrator,
-        round: room.dilemmaIndex,
-      });
-    }
-  }
-  if (room && (room.phase === 'FINAL_AWARDS' || room.phase === 'DUO_PORTRAIT')) {
+    emitSecretQuestionIfNeeded(room, session.playerId);
+    if (room && (room.phase === 'FINAL_AWARDS' || room.phase === 'DUO_PORTRAIT')) {
       saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards (identify) failed', e));
       saveGameRecords(gamesToPersist(room)).catch((e) => console.error('[db] saveGameRecords (identify) failed', e));
     }

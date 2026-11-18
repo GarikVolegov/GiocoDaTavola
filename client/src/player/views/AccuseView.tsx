@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { PHASE_LABELS, type PublicPlayer } from '../../shared/events';
 import { VoteOption } from '../../shared/ui';
 import { wrap } from './layout';
@@ -7,16 +8,27 @@ interface AccuseViewProps {
   remaining: number | null;
   myAccusation: string | null;
   onAccuse: (accusedId: string) => void;
+  isPartyInfiltrato?: boolean;
+  skipButton?: ReactNode;
 }
 
 // The phone's "who is the infiltrator?" screen (ACCUSE). Presentational: the
 // parent owns the accusation state and the socket emit.
-export default function AccuseView({ candidates, remaining, myAccusation, onAccuse }: AccuseViewProps) {
+export default function AccuseView({
+  candidates,
+  remaining,
+  myAccusation,
+  onAccuse,
+  isPartyInfiltrato = false,
+  skipButton,
+}: AccuseViewProps) {
   return (
     <main style={wrap}>
       <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.ACCUSE}</h1>
       <p style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, maxWidth: '22rem' }}>
-        🕵️ Chi ha cercato di ribaltare il gruppo?
+        {isPartyInfiltrato
+          ? '🕵️ Chi aveva la domanda diversa dal gruppo?'
+          : '🕵️ Chi ha cercato di ribaltare il gruppo?'}
       </p>
       {remaining != null && (
         <div
@@ -47,6 +59,7 @@ export default function AccuseView({ candidates, remaining, myAccusation, onAccu
       ) : (
         <p style={{ opacity: 0.7, margin: 0 }}>Tocca chi sospetti.</p>
       )}
+      {skipButton}
     </main>
   );
 }

@@ -42,12 +42,12 @@ describe('narrationFor', () => {
     expect(narrationFor('SCENE_INTRO', storia)).toBe('Il Consiglio ti chiede un messaggio.');
   });
 
-  it('DILEMMA_REVEAL e VOTE_1 in storia leggono il bivio con opzione A e B', () => {
+  it('DILEMMA_REVEAL e VOTE_1 in storia leggono il dilemma e le scelte direttamente', () => {
     const reveal = narrationFor('DILEMMA_REVEAL', storia, sampleDilemma);
-    expect(reveal).toBe('Al bivio: Cosa dici nel messaggio? Opzione A: La verità nuda. Opzione B: Una versione rassicurante.');
+    expect(reveal).toBe('Cosa dici nel messaggio? La verità nuda, oppure Una versione rassicurante.');
 
     const vote1 = narrationFor('VOTE_1', storia, sampleDilemma);
-    expect(vote1).toBe('Al bivio: Cosa dici nel messaggio? Opzione A: La verità nuda. Opzione B: Una versione rassicurante.');
+    expect(vote1).toBe('Cosa dici nel messaggio? La verità nuda, oppure Una versione rassicurante.');
   });
 
   it('SCENE_CONSEQUENCE senza decisione legge la conseguenza pura', () => {
@@ -76,9 +76,9 @@ describe('narrationFor', () => {
     expect(narrationFor('STORY_EPILOGUE', { ...storia, epilogo: 'Sopravvivete.' })).toBe('Sopravvivete.');
   });
 
-  it('DILEMMA_REVEAL in modalità classica legge il dilemma e le opzioni', () => {
+  it('DILEMMA_REVEAL in modalità classica legge il dilemma e le scelte direttamente', () => {
     const line = narrationFor('DILEMMA_REVEAL', null, sampleDilemma);
-    expect(line).toBe('Dilemma: Cosa dici nel messaggio? Opzione A: La verità nuda. Opzione B: Una versione rassicurante.');
+    expect(line).toBe('Cosa dici nel messaggio? La verità nuda, oppure Una versione rassicurante.');
   });
 
   it('rispetta l\'opzione readClassicDilemmas: false', () => {

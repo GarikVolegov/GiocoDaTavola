@@ -67,9 +67,17 @@ export interface PlayerStats {
    * ones. Optional + only set once a submitted dilemma of theirs was played.
    */
   authoredBestBalance?: number;
+  /** Rounds won collaboratively in "Cruciverba Show". Optional + only set once non-zero. */
+  coopWins?: number;
+  /** Number of teammates synced with in "Telepatia". Optional + only set once non-zero. */
+  telepathyMatches?: number;
+  /** Votes received for creative answers in "In Altre Parole" (WRITE). Optional + only set once non-zero. */
+  writeVotes?: number;
+  /** Courtroom trials won in "Tribunale degli Amici". Optional + only set once non-zero. */
+  tribunaleWins?: number;
 }
 
-/** The fun end-of-game superlatives (persuasion-themed). */
+/** The fun end-of-game superlatives (persuasion-themed + party mini-game honors). */
 export type AwardId =
   | 'persuasore'
   | 'banderuola'
@@ -84,6 +92,11 @@ export type AwardId =
   | 'autore'
   | 'spaccalastanza'
   | 'telepate'
+  | 'mentecollettiva'
+  | 'sincronia'
+  | 'pennadoro'
+  | 'lettoregruppo'
+  | 'avvocato'
   // Jolly pool (2.5): each goes to an otherwise empty-handed player, one apiece
   // — never competed for like the awards above. See computeAwards's jolly pass.
   | 'fulmine'
@@ -133,28 +146,62 @@ export function computeAwards(room: Room): Award[] {
     const nickname = room.players.get(best.id)?.nickname ?? '';
     return { id: best.id, nickname };
   };
+  const hasVote2Opportunity =
+    !room.partyMode || entries.some(([, s]) => s.changedCount > 0);
+  const isPartyMode = room.partyMode != null;
+
+  const sintoniaWinner = winnerBy((s) => s.majorityCount, (s) => s.majorityCount > 0);
   const defs: Array<Omit<Award, 'winner'> & { winner: Player | null }> = [
     { id: 'persuasore', title: 'Il Persuasore', emoji: '🏆',
       description: 'Le sue difese hanno spostato più voti.',
-      winner: winnerBy((s) => s.persuasion, (s) => s.persuasion > 0) },
+      winner: isPartyMode
+        ? winnerBy((s) => s.persuasion, (s) => s.defendedCount > 0 && s.persuasion > 0)
+        : winnerBy((s) => s.persuasion, (s) => s.persuasion > 0) },
+    { id: 'pennadoro', title: "Penna d'Oro", emoji: '✍️',
+      description: 'Le sue risposte hanno raccolto più voti in In Altre Parole.',
+      winner: winnerBy((s) => s.writeVotes ?? 0, (s) => (s.writeVotes ?? 0) > 0) },
+    { id: 'mentecollettiva', title: 'Mente Collettiva', emoji: '🧩',
+      description: 'Protagonista al tabellone del Cruciverba Show.',
+      winner: winnerBy((s) => s.coopWins ?? 0, (s) => (s.coopWins ?? 0) > 0) },
+    { id: 'avvocato', title: 'Principe del Foro', emoji: '⚖️',
+      description: 'Ha vinto più cause nel Tribunale degli Amici.',
+      winner: winnerBy((s) => s.tribunaleWins ?? 0, (s) => (s.tribunaleWins ?? 0) > 0) },
+    { id: 'sincronia', title: 'Onda Telepatica', emoji: '⚡',
+      description: 'Ha indovinato la stessa parola del gruppo in Telepatia.',
+      winner: winnerBy((s) => s.telepathyMatches ?? 0, (s) => (s.telepathyMatches ?? 0) > 0) },
     { id: 'banderuola', title: 'La Banderuola', emoji: '🎏',
       description: 'Ha cambiato idea più spesso.',
       winner: winnerBy((s) => s.changedCount, (s) => s.changedCount > 0) },
     { id: 'roccione', title: 'Il Roccione', emoji: '🪨',
       description: 'Non ha mai cambiato idea.',
-      winner: winnerBy((s) => s.rounds, (s) => s.rounds > 0 && s.changedCount === 0) },
+      winner: hasVote2Opportunity
+        ? winnerBy((s) => s.rounds, (s) => s.rounds > 0 && s.changedCount === 0)
+        : null },
     { id: 'sintonia', title: 'In sintonia col gruppo', emoji: '🔮',
       description: 'Più spesso dalla parte della maggioranza.',
-      winner: winnerBy((s) => s.majorityCount, (s) => s.majorityCount > 0) },
+      winner: sintoniaWinner },
     { id: 'bastian', title: 'Bastian Contrario', emoji: '🦓',
       description: 'Più spesso in minoranza.',
-      winner: winnerBy((s) => s.minorityCount, (s) => s.minorityCount > 0) },
+      winner: (() => {
+        let best: { id: string; score: number } | null = null;
+        for (const [id, s] of entries) {
+          if (s.minorityCount <= 0) continue;
+          if (sintoniaWinner && id === sintoniaWinner.id && s.minorityCount <= s.majorityCount) continue;
+          if (best === null || s.minorityCount > best.score) best = { id, score: s.minorityCount };
+        }
+        if (!best) return null;
+        return { id: best.id, nickname: room.players.get(best.id)?.nickname ?? '' };
+      })() },
     { id: 'beniamino', title: 'Beniamino del pubblico', emoji: '👏',
       description: 'Ha ricevuto più reazioni mentre difendeva.',
       winner: winnerBy((s) => s.reactionsReceived ?? 0, (s) => (s.reactionsReceived ?? 0) > 0) },
-    { id: 'oracolo', title: "L'Oracolo", emoji: '🎯',
-      description: 'Ha pronosticato meglio l’esito delle difese.',
-      winner: winnerBy((s) => s.correctPredictions ?? 0, (s) => (s.correctPredictions ?? 0) > 0) },
+    isPartyMode
+      ? { id: 'lettoregruppo', title: 'Lettore del Gruppo', emoji: '🎯',
+          description: 'Ha previsto meglio le risposte del tavolo.',
+          winner: winnerBy((s) => s.correctPredictions ?? 0, (s) => (s.correctPredictions ?? 0) > 0) }
+      : { id: 'oracolo', title: "L'Oracolo", emoji: '🎯',
+          description: 'Ha pronosticato meglio l’esito delle difese.',
+          winner: winnerBy((s) => s.correctPredictions ?? 0, (s) => (s.correctPredictions ?? 0) > 0) },
     { id: 'oratore', title: 'Il Grande Oratore', emoji: '🎤',
       description: 'Votato dai più come il più convincente.',
       winner: winnerBy((s) => s.oratorVotes ?? 0, (s) => (s.oratorVotes ?? 0) > 0) },
@@ -188,7 +235,7 @@ export function computeAwards(room: Room): Award[] {
     if ((s.firstToVoteCount ?? 0) > 0) {
       jolly.push({ id: 'fulmine', title: 'Il Fulmine', emoji: '⚡',
         description: 'Il primo a votare, più spesso di chiunque altro.', winner });
-    } else if (s.changedCount === 0) {
+    } else if (hasVote2Opportunity && s.changedCount === 0) {
       jolly.push({ id: 'sfinge', title: 'La Sfinge', emoji: '🗿',
         description: 'Impassibile: non ha mai cambiato idea.', winner });
     } else {

@@ -1,8 +1,9 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@clerk/react';
 import ErrorBoundary from './shared/ErrorBoundary';
 import { BivioBackdrop } from './shared/ui';
+import { useOnlineStatus } from './shared/useOnlineStatus';
 
 // Per-route code-splitting: a phone opening `/join` shouldn't download the
 // host/landing/profile code, and vice versa. Each view becomes its own chunk.
@@ -18,11 +19,21 @@ const AuthPage = lazy(() => import('./auth/AuthPage'));
 const ConnectionBanner = lazy(() => import('./shared/ConnectionBanner'));
 
 // Root `/`: signed-in users get their dashboard (/casa); everyone else sees the
-// marketing landing. Gating on isLoaded avoids a landing flash before redirect.
+// marketing landing. If offline or Clerk takes >1.5s to load, fall back to
+// Landing immediately instead of leaving the screen blank.
 function RootRoute() {
   const { isLoaded, isSignedIn } = useAuth();
-  if (!isLoaded) return null;
-  return isSignedIn ? <Navigate to="/casa" replace /> : <Landing />;
+  const online = useOnlineStatus();
+  const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    if (isLoaded) return;
+    const id = window.setTimeout(() => setTimedOut(true), 1500);
+    return () => window.clearTimeout(id);
+  }, [isLoaded]);
+
+  if (!isLoaded && online && !timedOut) return null;
+  return isLoaded && isSignedIn ? <Navigate to="/casa" replace /> : <Landing />;
 }
 
 export default function App() {
@@ -40,6 +51,7 @@ export default function App() {
             <Route path="/impostazioni" element={<><BivioBackdrop variant="dashboard" /><Settings /></>} />
             <Route path="/accedi" element={<><BivioBackdrop variant="dashboard" /><AuthPage /></>} />
             <Route path="/registrati" element={<Navigate to="/accedi?tab=registrati" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
       </BrowserRouter>

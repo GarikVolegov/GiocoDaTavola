@@ -37,8 +37,8 @@ export default function WriteView({ prompt, remaining, text, submitted, onTextCh
         </Button>
       )}
       <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem' }}>
-        {progress && progress.missingNicknames.length > 0
-          ? `Aspettiamo ${formatWaitingList(progress.missingNicknames)}…`
+        {progress && (progress.missingNicknames?.length ?? 0) > 0
+          ? `Aspettiamo ${formatWaitingList(progress.missingNicknames ?? [])}…`
           : progress
             ? `Hanno scritto ${progress.done}/${progress.total}`
             : null}

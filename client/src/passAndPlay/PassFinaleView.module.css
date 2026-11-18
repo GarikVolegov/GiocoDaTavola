@@ -1,0 +1,702 @@
+.root {
+  width: min(95vw, 42rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-6);
+  animation: finaleEnter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes finaleEnter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .tabPanel,
+  .meterFill {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* --- Hero Verdict Card --- */
+.verdictCard {
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(229, 193, 88, 0.14) 0%, transparent 62%),
+    radial-gradient(90% 80% at 10% 100%, rgba(62, 130, 252, 0.12) 0%, transparent 55%),
+    var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.verdictTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: var(--gold-soft);
+  border: 1px solid var(--gold-line);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-pill, 999px);
+}
+
+.savedChip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--success);
+  background: rgba(56, 239, 125, 0.1);
+  border: 1px solid rgba(56, 239, 125, 0.32);
+  padding: 0.22rem 0.6rem;
+  border-radius: var(--radius-pill, 999px);
+  letter-spacing: 0.02em;
+}
+
+.verdictHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+}
+
+.verdictEmoji {
+  font-size: clamp(2.4rem, 7vw, 3.2rem);
+  line-height: 1;
+  filter: drop-shadow(0 6px 16px rgba(229, 193, 88, 0.32));
+}
+
+.verdictTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: calc(clamp(1.45rem, 4.6vw, 2.05rem) * var(--display-scale, 1));
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-display, 0.03em);
+  line-height: 1.12;
+  color: var(--text);
+}
+
+.verdictSubtitle {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  max-width: 34ch;
+}
+
+/* Chemistry Thermometer */
+.meterBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-md, 10px);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--border);
+}
+
+.meterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.meterLabel {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.meterValue {
+  color: var(--gold);
+}
+
+.meterTrack {
+  height: 0.55rem;
+  width: 100%;
+  border-radius: var(--radius-pill, 999px);
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.meterFill {
+  height: 100%;
+  border-radius: var(--radius-pill, 999px);
+  background: linear-gradient(90deg, var(--faction-a) 0%, var(--gold) 65%, var(--success) 100%);
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 4 KPI Pills */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+@media (max-width: 350px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.kpiBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0.55rem 0.35rem;
+  border-radius: var(--radius-md, 10px);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  gap: 0.12rem;
+}
+
+.kpiNum {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpiLabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+/* --- Section Tabs --- */
+.tabsBar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  padding: 0.3rem;
+  border-radius: var(--radius-lg, 14px);
+  background: rgba(14, 18, 36, 0.72);
+  border: 1px solid var(--border);
+}
+
+.tabBtn {
+  min-height: 2.75rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.tabBtn:hover {
+  color: var(--text);
+}
+
+.tabBtnActive {
+  background: rgba(229, 193, 88, 0.14);
+  border-color: var(--gold-line);
+  color: var(--gold);
+  box-shadow: 0 0 18px rgba(229, 193, 88, 0.16);
+}
+
+.tabPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  animation: tabFade 220ms ease both;
+}
+
+@keyframes tabFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- MVP Spotlight & Awards Grid --- */
+.mvpCard {
+  background:
+    radial-gradient(100% 90% at 50% 0%, rgba(229, 193, 88, 0.2) 0%, transparent 65%),
+    var(--surface);
+  border: 1.5px solid var(--gold-line) !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.mvpBadge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--on-faction);
+  background: var(--gold);
+  padding: 0.22rem 0.7rem;
+  border-radius: var(--radius-pill, 999px);
+}
+
+.mvpAvatarWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 999px;
+  background: rgba(229, 193, 88, 0.14);
+  border: 2px solid var(--gold-line);
+  font-size: 2.4rem;
+  margin-top: 0.2rem;
+}
+
+.mvpAwardBadge {
+  position: absolute;
+  right: -0.35rem;
+  bottom: -0.25rem;
+  font-size: 1.5rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+}
+
+.mvpTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.mvpWinner {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--gold);
+}
+
+.mvpDesc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  max-width: 34ch;
+}
+
+.awardsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+}
+
+@media (min-width: 560px) {
+  .awardsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.awardCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-lg, 14px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--glass-highlight);
+}
+
+.awardIconCol {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.9rem;
+  height: 2.9rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.45rem;
+}
+
+.awardMiniEmoji {
+  position: absolute;
+  right: -0.25rem;
+  bottom: -0.25rem;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.awardBody {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.awardTitle {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.awardWinner {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--gold);
+}
+
+.awardDesc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+/* Sfida della Staffa */
+.closerCard {
+  background:
+    linear-gradient(135deg, rgba(62, 130, 252, 0.12), rgba(245, 108, 56, 0.12)),
+    var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-lg, 14px);
+  padding: 0.95rem 1.05rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.closerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.closerKicker {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
+.closerNextBtn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  border-radius: var(--radius-pill, 999px);
+  padding: 0.3rem 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.closerNextBtn:hover {
+  border-color: var(--gold-line);
+  color: var(--gold);
+}
+
+.closerText {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.45;
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* --- Player Dossiers (Pagelle) --- */
+.playerSelector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: center;
+}
+
+.playerChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-pill, 999px);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.playerChipActive {
+  background: rgba(62, 130, 252, 0.18);
+  border-color: var(--faction-a);
+  color: var(--text);
+  box-shadow: 0 0 14px rgba(62, 130, 252, 0.22);
+}
+
+.dossierCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  align-items: stretch;
+}
+
+.dossierHead {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.dossierAvatar {
+  width: 3.6rem;
+  height: 3.6rem;
+  border-radius: 999px;
+  background: rgba(229, 193, 88, 0.12);
+  border: 1.5px solid var(--gold-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.dossierTitle {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.dossierPlayerName {
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
+.dossierMotto {
+  margin: 0;
+  font-style: italic;
+  font-size: 0.92rem;
+  color: var(--text);
+  opacity: 0.92;
+}
+
+.dossierDesc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.dossierStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.dossierStatBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0.5rem 0.35rem;
+  border-radius: var(--radius-md, 10px);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+}
+
+.dossierStatVal {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.dossierStatLbl {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.dossierAwardsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.dossierAwardTag {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--gold-soft);
+  border: 1px solid var(--gold-line);
+  color: var(--gold);
+}
+
+.lessonBox {
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-md, 10px);
+  background: rgba(229, 193, 88, 0.09);
+  border: 1px solid rgba(229, 193, 88, 0.3);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+/* --- Moments Timeline --- */
+.momentsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.momentCard {
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-lg, 14px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.momentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.momentRoundMeta {
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.momentBadge {
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--border);
+}
+
+.tone_gold {
+  color: var(--gold);
+  background: var(--gold-soft);
+  border-color: var(--gold-line);
+}
+
+.tone_a {
+  color: #8cb7ff;
+  background: var(--faction-a-soft);
+  border-color: var(--faction-a-line);
+}
+
+.tone_b {
+  color: #ff9c73;
+  background: var(--faction-b-soft);
+  border-color: var(--faction-b-line);
+}
+
+.tone_success {
+  color: var(--success);
+  background: rgba(56, 239, 125, 0.12);
+  border-color: rgba(56, 239, 125, 0.35);
+}
+
+.tone_danger {
+  color: #ff8080;
+  background: rgba(255, 82, 82, 0.14);
+  border-color: rgba(255, 82, 82, 0.38);
+}
+
+.momentPrompt {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.momentOutcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* --- Action Dock --- */
+.actionDock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: var(--space-1);
+}
+
+.secondaryActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+@media (max-width: 380px) {
+  .secondaryActions {
+    grid-template-columns: 1fr;
+  }
+}

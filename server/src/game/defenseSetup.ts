@@ -2,39 +2,26 @@
 // turn timer, and the bot defender's templated argument. Operates on a Room with
 // injected rng/now. Type-only import from rooms.ts keeps it cycle-free.
 import type { Room, Defender, VoteChoice } from './rooms';
-import { DEFENSE_MIN_MS, INTERVENTO_MIN_MS, INTERVENTI_MAX_MS, TURN_BOT_MS } from './phases';
+import { TURN_BOT_MS } from './phases';
 import { countGiocatori, rulesForGiocatoriCount } from './ruleset';
 import { botDefenseArgument } from './botDefense';
-import { TWIST_DEFENSE_LAMPO_MS, TWIST_DUELLO_MS } from './twists';
 import * as devilAdvocate from './devilAdvocate';
 import * as defenseTurns from './defenseTurns';
 
-/** Set the turn's start + min/max timers based on whether the speaker is a bot.
- * Also resets the live per-emoji applause tally for the new turn — the caller
- * is responsible for snapshotting the PREVIOUS turn's tally (if any) into
- * `lastTurnApplause` before calling this, since by now the speaker has
- * already changed. The "difesa-lampo" twist (4.3) forces a hard 30s cap in
- * place of the room's normal budget, for this round only. */
+/** Set the turn's start + bot timer based on whether the speaker is a bot.
+ * Human speakers have no minimum floor and no countdown limit ("Ho finito ▶"
+ * is enabled immediately); bots/disconnected speakers use TURN_BOT_MS. */
 export function armTurn(room: Room, now: number): void {
-  const interventi = room.phase === 'INTERVENTI';
   const speakerId = defenseTurns.currentSpeakerId(room);
   const speaker = speakerId ? room.players.get(speakerId) : undefined;
-  const twistId = room.currentTwist?.id;
-  const defenseMax =
-    twistId === 'difesa-lampo'
-      ? TWIST_DEFENSE_LAMPO_MS
-      : twistId === 'duello-botta-risposta'
-        ? TWIST_DUELLO_MS
-        : room.defenseMaxMs;
-  const defenseMin = twistId === 'duello-botta-risposta' ? INTERVENTO_MIN_MS : DEFENSE_MIN_MS;
   room.turnStartedAt = now;
   room.turnReactionTally = {};
   // Each new turn is a fresh sabotage opportunity (4.5) — the decoy from the
   // PREVIOUS speaker's turn doesn't carry over.
   room.infiltratoDecoySpunto = null;
   if (speaker && !speaker.isBot && speaker.connected !== false) {
-    room.turnMinEndsAt = now + (interventi ? INTERVENTO_MIN_MS : defenseMin);
-    room.phaseExpiresAt = now + (interventi ? INTERVENTI_MAX_MS : defenseMax);
+    room.turnMinEndsAt = null;
+    room.phaseExpiresAt = null;
   } else {
     room.turnMinEndsAt = null;
     room.phaseExpiresAt = now + TURN_BOT_MS;

@@ -6,7 +6,16 @@ import { join } from 'path';
 import { GoogleGenAI } from '@google/genai';
 import type { DilemmaFamiliarita, Familiarita } from './deck';
 
-export type PartyMode = 'flash' | 'infiltrato' | 'coppie' | 'assurdo' | 'mix';
+export type PartyMode =
+  | 'flash'
+  | 'infiltrato'
+  | 'coppie'
+  | 'assurdo'
+  | 'preferiresti'
+  | 'cruciverba'
+  | 'tribunale'
+  | 'classico'
+  | 'mix';
 
 export interface FlashCard {
   id: string;
@@ -54,7 +63,19 @@ export interface AssurdoCard {
   familiarita?: DilemmaFamiliarita;
 }
 
-export type PartyCard = FlashCard | InfiltratoCard | CoppieCard | AssurdoCard;
+export interface PreferirestiCard {
+  id: string;
+  prompt: string;
+  options: string[];
+  optionA?: string;
+  optionB?: string;
+  optionC?: string;
+  optionD?: string;
+  penalty?: string;
+  familiarita?: DilemmaFamiliarita;
+}
+
+export type PartyCard = FlashCard | InfiltratoCard | CoppieCard | AssurdoCard | PreferirestiCard;
 
 export const SYSTEM_PROMPT = `Sei l'autore creativo di un party game virale per ragazzi italiani (18-28 anni). Il tuo unico obiettivo è generare domande, dilemmi, obblighi e round per il gioco "Impostore" che scatenino risate immediate, dibattiti accesi e zero noia.
 
@@ -81,6 +102,7 @@ interface PartyDecksData {
     profondo?: CoppieCard[];
   };
   assurdo: AssurdoCard[];
+  preferiresti?: PreferirestiCard[];
 }
 
 let cachedDecks: PartyDecksData | null = null;
@@ -101,6 +123,7 @@ export function loadCuratedDecks(): PartyDecksData {
     infiltrato: [],
     coppie: { complicita: [], piccante: [], profondo: [] },
     assurdo: [],
+    preferiresti: [],
   };
 }
 
@@ -138,17 +161,25 @@ export function getCuratedCards(
     pool = [...(decks.coppie[intensity] ?? decks.coppie.complicita)];
   } else if (mode === 'assurdo') {
     pool = [...decks.assurdo];
+  } else if (mode === 'preferiresti') {
+    pool = [...(decks.preferiresti ?? [])];
   } else if (mode === 'mix') {
-    pool = [...decks.flash, ...decks.assurdo];
+    pool = [...decks.flash, ...decks.assurdo, ...(decks.preferiresti ?? [])];
   }
 
   const fam = options.familiarita;
-  if (fam === 'vecchi_amici') {
-    const filtered = pool.filter((c) => c.familiarita !== 'nuove_conoscenze');
-    if (filtered.length > 0) pool = filtered;
-  } else if (fam === 'nuove_conoscenze') {
-    const filtered = pool.filter((c) => c.familiarita !== 'vecchi_amici');
-    if (filtered.length > 0) pool = filtered;
+  const count = options.count ?? pool.length;
+  if (fam === 'vecchi_amici' || fam === 'nuove_conoscenze') {
+    const filtered =
+      fam === 'vecchi_amici'
+        ? pool.filter((c) => c.familiarita !== 'nuove_conoscenze')
+        : pool.filter((c) => c.familiarita !== 'vecchi_amici');
+    if (filtered.length >= count) {
+      pool = filtered;
+    } else if (filtered.length > 0) {
+      const famIds = new Set(filtered.map((c) => c.id));
+      pool = [...filtered, ...pool.filter((c) => !famIds.has(c.id))];
+    }
   }
 
   const exclude = options.excludeIds;
@@ -165,7 +196,6 @@ export function getCuratedCards(
     return [...preferred, ...rest];
   };
   const ordered = [...prioritize(fresh), ...prioritize(stale)];
-  const count = options.count ?? ordered.length;
   return ordered.slice(0, count);
 }
 
@@ -352,6 +382,25 @@ Rispondi con un JSON array di oggetti:
   }
 ]`;
       break;
+
+    case 'preferiresti':
+      prompt = `Genera ${count} carte per la modalità "PREFERIRESTI CHE..." con 4 scelte.
+Ogni carta deve avere un incipit breve ("Preferiresti che...") e 4 opzioni assurde, scomode o divisivissime tra cui i giocatori devono scegliere e dibattere.
+Rispondi con un JSON array di oggetti:
+[
+  {
+    "id": "gen_pr_1",
+    "prompt": "Preferiresti che per il resto della vita...",
+    "options": [
+      "Ogni tuo starnuto suonasse come una tromba da stadio",
+      "Le tue orecchie diventassero viola ogni volta che dici una bugia",
+      "Dovessi cantare in falsetto per ordinare al ristorante",
+      "Il tuo telefono leggesse ad alta voce l'ultimo messaggio appena lo sblocchi"
+    ],
+    "penalty": "Chi resta in minoranza difende la sua scelta davanti al tavolo o beve!"
+  }
+]`;
+      break;
   }
 
   if (theme && theme.trim().length > 0) {
@@ -385,6 +434,14 @@ function parseGeneratedCards(mode: PartyMode, rawText: string): PartyCard[] {
       }
       if (mode === 'assurdo') {
         return typeof item.prompt === 'string';
+      }
+      if (mode === 'preferiresti') {
+        return (
+          typeof item.prompt === 'string' &&
+          Array.isArray(item.options) &&
+          item.options.length >= 3 &&
+          item.options.every((opt) => typeof opt === 'string')
+        );
       }
       return true;
     });

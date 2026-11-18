@@ -1,6 +1,12 @@
 import type { ReactNode } from 'react';
-import { PHASE_LABELS, type DefenseState, type Reaction, type Twist } from '../../shared/events';
-import { formatMSS } from '../../shared/time';
+import {
+  PHASE_LABELS,
+  type DefenseState,
+  type PartyCardPayload,
+  type PlayerSecretQuestionPayload,
+  type Reaction,
+  type Twist,
+} from '../../shared/events';
 import ReactionSwarm from '../../shared/ReactionSwarm';
 import ReactionBar from './ReactionBar';
 import { Button, Card } from '../../shared/ui';
@@ -36,15 +42,20 @@ interface DefenseViewProps {
   playerId: string | null;
   handRaised: boolean;
   raiseHandError: string | null;
-  canFinishNow: boolean;
-  minRemaining: number | null;
-  remaining: number | null;
-  speakerElapsed: number | null;
+  canFinishNow?: boolean;
+  minRemaining?: number | null;
+  remaining?: number | null;
+  readingRemaining?: number | null;
+  isLeader?: boolean;
+  onFinishReading?: () => void;
+  speakerElapsed?: number | null;
   lastTurnApplause: Applause | null;
   onFinish: () => void;
   onToggleHand: () => void;
   onReact: (emoji: Reaction) => void;
   skipButton: ReactNode;
+  partyCard?: PartyCardPayload | null;
+  secretQuestion?: PlayerSecretQuestionPayload | null;
 }
 
 // The phone's defense/interventi turn screen. Presentational: the parent owns the
@@ -64,15 +75,20 @@ export default function DefenseView({
   playerId,
   handRaised,
   raiseHandError,
-  canFinishNow,
-  minRemaining,
-  remaining,
-  speakerElapsed,
+  canFinishNow: _canFinishNow = true,
+  minRemaining: _minRemaining = null,
+  remaining: _remaining = null,
+  readingRemaining: _readingRemaining = null,
+  isLeader: _isLeader = false,
+  onFinishReading: _onFinishReading,
+  speakerElapsed: _speakerElapsed = null,
   lastTurnApplause,
   onFinish,
   onToggleHand,
   onReact,
   skipButton,
+  partyCard,
+  secretQuestion,
 }: DefenseViewProps) {
   const speaker = d?.speaker ?? null; // the defender (DEFENSE only)
   const myTurn = d?.speakerId != null && d.speakerId === playerId;
@@ -84,20 +100,9 @@ export default function DefenseView({
   const myQueuePos = d?.queue ? d.queue.findIndex((q) => q.id === playerId) : -1;
 
   const finishButton = (
-    <>
-      <Button variant="primary" size="lg" onClick={onFinish} disabled={!canFinishNow}>
-        Ho finito ▶
-      </Button>
-      {canFinishNow
-        ? remaining != null && (
-            <p style={{ fontSize: '0.85rem', opacity: 0.6, margin: 0 }}>max {remaining}s</p>
-          )
-        : (
-            <p style={{ fontSize: '0.85rem', opacity: 0.6, margin: 0 }}>
-              Parla ancora {minRemaining ?? ''}s prima di poter passare
-            </p>
-          )}
-    </>
+    <Button variant="primary" size="lg" onClick={onFinish}>
+      Ho finito ▶
+    </Button>
   );
 
   const canRaiseHand =
@@ -155,7 +160,7 @@ export default function DefenseView({
   );
 
   return (
-    <MobilePhaseShell title={PHASE_LABELS[phase]} remaining={remaining} dock={dock}>
+    <MobilePhaseShell title={PHASE_LABELS[phase]} dock={dock}>
       <ReactionSwarm />
       {lastTurnApplause && (
         <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, opacity: 0.9 }}>
@@ -198,14 +203,12 @@ export default function DefenseView({
               )}
               {speaker.devil ? (
                 <p style={{ fontSize: '1.1rem', opacity: 0.95, margin: 0, maxWidth: '22rem' }}>
-                  Hai votato <strong>{speaker.side === 'A' ? 'B' : 'A'}</strong>, ma ora convinci tutti
-                  che <strong>{speaker.side}</strong>
-                  {sideOption ? ` (${sideOption})` : ''} è la scelta giusta!
+                  Hai votato diversamente, ma ora convinci tutti
+                  che <strong>{sideOption ?? 'questa'}</strong> è la scelta giusta!
                 </p>
               ) : (
                 <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
-                  Difendi <strong>{speaker.side}</strong>
-                  {sideOption ? `: ${sideOption}` : ''}
+                  Difendi: <strong>{sideOption ?? 'la tua posizione'}</strong>
                 </p>
               )}
               {absurdConstraint && (
@@ -232,15 +235,117 @@ export default function DefenseView({
               )}
             </Card>
           )}
-          {d?.startedAt != null && (
-            <div
-              aria-label="Tempo trascorso"
-              style={{ fontSize: '3rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-            >
-              {formatMSS(speakerElapsed ?? 0)}
-            </div>
-          )}
         </>
+      ) : speaker == null && phase === 'DEFENSE' && partyCard?.mode === 'infiltrato' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.85rem', width: 'min(90vw, 22rem)' }}>
+          {secretQuestion ? (
+            <div
+              style={{
+                width: '100%',
+                padding: '1rem',
+                borderRadius: 'var(--radius-md)',
+                background: secretQuestion.isInfiltrator
+                  ? 'linear-gradient(145deg, rgba(239, 68, 68, 0.25) 0%, rgba(30, 20, 20, 0.85) 100%)'
+                  : 'linear-gradient(145deg, rgba(16, 185, 129, 0.25) 0%, rgba(15, 30, 25, 0.85) 100%)',
+                border: secretQuestion.isInfiltrator ? '2px solid #ef4444' : '2px solid #10b981',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.45rem',
+                boxShadow: secretQuestion.isInfiltrator
+                  ? '0 0 20px rgba(239, 68, 68, 0.45)'
+                  : '0 0 20px rgba(16, 185, 129, 0.35)',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.85rem',
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                  color: secretQuestion.isInfiltrator ? '#ef4444' : '#10b981',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {secretQuestion.isInfiltrator ? '🕵️ SEI L’INFILTRATO!' : '🤫 LA TUA DOMANDA SEGRETA'}
+              </span>
+              <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#fff', lineHeight: 1.25 }}>
+                {secretQuestion.question}
+              </p>
+              <span style={{ fontSize: '0.82rem', opacity: 0.88 }}>
+                {secretQuestion.isInfiltrator
+                  ? 'Rispondi al volo a voce e confondi il tavolo senza farti scoprire!'
+                  : 'Rispondete a voce a turno, poi interrogatevi per capire chi ha la domanda diversa!'}
+              </span>
+            </div>
+          ) : (
+            <p style={{ fontSize: '1.05rem', opacity: 0.85, margin: 0 }}>
+              🕵️ Rispondete a voce alla domanda segreta e interrogatevi: chi è l’Infiltrato?
+            </p>
+          )}
+        </div>
+      ) : speaker == null && phase === 'DEFENSE' && partyCard?.mode === 'flash' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.65rem', maxWidth: '22rem', textAlign: 'center' }}>
+          {dilemma && (
+            <Card style={{ width: '100%', padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <p style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>{dilemma.text}</p>
+              <p style={{ margin: 0, fontSize: '0.82rem', opacity: 0.8 }}>
+                {dilemma.optionA} · {dilemma.optionB}
+              </p>
+            </Card>
+          )}
+          <p style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: 'var(--gold)' }}>
+            ⚡ Difesa Lampo!
+          </p>
+          <p style={{ fontSize: '0.98rem', opacity: 0.92, margin: 0 }}>
+            {partyCard.flashResult?.isTie
+              ? '⚔️ Guerra civile (50/50) — attacco e difesa dal vivo!'
+              : partyCard.flashResult?.minorityNicknames.length
+                ? `🍺 In minoranza: ${partyCard.flashResult.minorityNicknames.join(', ')} — difendetevi dal vivo!`
+                : 'La minoranza difende la propria scelta dal vivo!'}
+          </p>
+        </div>
+      ) : speaker == null && phase === 'DEFENSE' && partyCard?.mode === 'preferiresti' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.65rem', maxWidth: '22rem', textAlign: 'center' }}>
+          <Card style={{ width: '100%', padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+            <p style={{ margin: 0, fontSize: '1rem', fontWeight: 800 }}>{partyCard.prompt}</p>
+            {partyCard.options && partyCard.options.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', textAlign: 'left', fontSize: '0.82rem', opacity: 0.85 }}>
+                {partyCard.options.slice(0, 4).map((opt, idx) => (
+                  <div key={idx}>• {opt}</div>
+                ))}
+              </div>
+            )}
+          </Card>
+          <p style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#7dd3fc' }}>
+            🔀 Difesa delle scelte!
+          </p>
+          <p style={{ fontSize: '0.98rem', opacity: 0.92, margin: 0 }}>
+            {partyCard.preferirestiResult?.isTie
+              ? '⚔️ Parità tra le scelte — convincete gli altri dal vivo!'
+              : partyCard.preferirestiResult?.minorityNicknames.length
+                ? `🍺 In minoranza: ${partyCard.preferirestiResult.minorityNicknames.join(', ')} — difendete la vostra scelta!`
+                : 'Difendete la vostra scelta dal vivo!'}
+          </p>
+        </div>
+      ) : speaker == null && phase === 'DEFENSE' && partyCard?.mode === 'assurdo' && partyCard.gognaTargetNickname ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.65rem', maxWidth: '22rem', textAlign: 'center' }}>
+          <Card style={{ width: '100%', padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+            <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.85 }}>
+              {dilemma?.text ?? partyCard.prompt}
+            </p>
+            <p style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#34d399' }}>
+              👑 Alla gogna: {partyCard.gognaTargetNickname}
+            </p>
+            {partyCard.sentenza && (
+              <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#fde68a' }}>
+                📜 “{partyCard.sentenza}”
+              </p>
+            )}
+          </Card>
+          <p style={{ fontSize: '0.98rem', fontWeight: 700, color: '#34d399', margin: 0 }}>
+            Difenditi davanti a tutti prima di scontare la sentenza!
+          </p>
+        </div>
       ) : speaker == null && phase === 'DEFENSE' ? (
         <p style={{ fontSize: '1.1rem', opacity: 0.8, margin: 0 }}>
           Nessuna difesa per questo dilemma.
@@ -278,8 +383,7 @@ export default function DefenseView({
                 </p>
               )}
               <p style={{ fontSize: '1rem', opacity: 0.9, margin: 0 }}>
-                Sta difendendo <strong>{speaker.side}</strong>
-                {sideOption ? `: ${sideOption}` : ''}
+                Sta difendendo: <strong>{sideOption ?? 'la sua posizione'}</strong>
               </p>
             </>
           )}

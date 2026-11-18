@@ -2,9 +2,14 @@ import { useState } from 'react';
 import { isMuted, setMuted } from './audio/engine';
 import styles from './MuteButton.module.css';
 
-// A discreet corner toggle for the host's sound (musichetta + effects). The engine
+export interface MuteButtonProps {
+  /** When true, renders inline inside a flex header instead of fixed top-left corner. */
+  inline?: boolean;
+}
+
+// A discreet sound toggle for host (fixed corner) or mobile topbar (inline). The engine
 // persists the choice, so it survives reloads; local state just mirrors it for the icon.
-export function MuteButton() {
+export function MuteButton({ inline = false }: MuteButtonProps = {}) {
   const [muted, setMutedState] = useState(isMuted());
   const toggle = () => {
     const next = !muted;
@@ -14,7 +19,7 @@ export function MuteButton() {
   return (
     <button
       type="button"
-      className={styles.btn}
+      className={inline ? styles.btnInline : styles.btn}
       onClick={toggle}
       aria-pressed={muted}
       aria-label={muted ? 'Riattiva audio' : 'Silenzia audio'}

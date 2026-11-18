@@ -50,7 +50,7 @@ describe('Classic: escalation di complessità (alto → max → power)', () => {
     for (let i = 0; i < 600 && room.phase !== 'FINAL_AWARDS'; i++) {
       const r = store.advancePhase(code);
       if (!r.ok) break;
-      if (room.phase === 'DILEMMA_REVEAL' && room.currentDilemma) seen.push(rank(room.currentDilemma));
+      if (room.phase === 'VOTE_1' && room.currentDilemma) seen.push(rank(room.currentDilemma));
     }
     expect(seen.length).toBe(5);
     expect(seen[0]).not.toBe(COMPLESSITA_RANK.power);

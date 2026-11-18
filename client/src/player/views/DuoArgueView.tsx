@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { PHASE_LABELS, type DuoTurn, type Reaction } from '../../shared/events';
-import { formatMSS } from '../../shared/time';
 import { Button, Card } from '../../shared/ui';
 import ReactionBar from './ReactionBar';
 import { wrap } from './layout';
@@ -15,10 +14,10 @@ interface DuoArgueViewProps {
   speaker: DuoTurn['speaker'] | null | undefined;
   dilemma: DuoArgueDilemma | null | undefined;
   playerId: string | null;
-  remaining: number | null;
-  canFinishNow: boolean;
-  minRemaining: number | null;
-  speakerElapsed: number | null;
+  remaining?: number | null;
+  canFinishNow?: boolean;
+  minRemaining?: number | null;
+  speakerElapsed?: number | null;
   onFinish: () => void;
   onReact: (emoji: Reaction) => void;
   skipButton: ReactNode;
@@ -31,10 +30,10 @@ export default function DuoArgueView({
   speaker,
   dilemma,
   playerId,
-  remaining,
-  canFinishNow,
-  minRemaining,
-  speakerElapsed,
+  remaining: _remaining = null,
+  canFinishNow: _canFinishNow = true,
+  minRemaining: _minRemaining = null,
+  speakerElapsed: _speakerElapsed = null,
   onFinish,
   onReact,
   skipButton,
@@ -55,14 +54,6 @@ export default function DuoArgueView({
   return (
     <main style={wrap}>
       <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS.DUO_ARGUE}</h1>
-      {remaining != null && (
-        <div
-          aria-label="Tempo rimanente"
-          style={{ fontSize: '3rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-        >
-          {remaining}s
-        </div>
-      )}
       {myTurn ? (
         <>
           <Card
@@ -85,25 +76,13 @@ export default function DuoArgueView({
               </p>
             )}
             <p style={{ fontSize: '1.1rem', opacity: 0.9, margin: 0 }}>
-              Difendi <strong>{speaker.side}</strong>
-              {sideOption ? `: ${sideOption}` : ''}
-              {speaker.inverted || speaker.advocate ? ' (non è il tuo!)' : ''}
+              Difendi: <strong>{sideOption ?? 'la tua posizione'}</strong>
+              {speaker.inverted || speaker.advocate ? ' (non è la tua!)' : ''}
             </p>
           </Card>
-          <div
-            aria-label="Tempo trascorso"
-            style={{ fontSize: '2.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-          >
-            {formatMSS(speakerElapsed ?? 0)}
-          </div>
-          <Button variant="primary" size="lg" onClick={onFinish} disabled={!canFinishNow}>
+          <Button variant="primary" size="lg" onClick={onFinish}>
             Ho finito ▶
           </Button>
-          {!canFinishNow && (
-            <p style={{ fontSize: '0.85rem', opacity: 0.6, margin: 0 }}>
-              Parla ancora {minRemaining ?? ''}s prima di poter passare
-            </p>
-          )}
         </>
       ) : speaker ? (
         <>

@@ -25,7 +25,6 @@ function reachPredict(store: RoomStore, sides: VoteChoice[], dilemmaCount = 3): 
   const { code } = store.create();
   for (let i = 0; i < sides.length; i++) store.join(code, `sock-${i}`, `P${i}`);
   store.startGame(code, dilemmaCount);
-  store.advancePhase(code); // DILEMMA_REVEAL
   store.advancePhase(code); // VOTE_1
   sides.forEach((side, i) => store.vote(code, `sock-${i}`, side));
   store.advancePhase(code); // SPLIT_REVEAL

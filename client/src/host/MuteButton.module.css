@@ -2,9 +2,8 @@
    never overlaps the top-right room-code chip; sits below the connection banner. */
 .btn {
   position: fixed;
-  top: var(--space-4);
-  left: var(--space-4);
-  top: max(var(--space-4), env(safe-area-inset-top));
+  top: max(var(--space-4), calc(env(safe-area-inset-top, 0px) + var(--space-2)));
+  left: max(var(--space-4), calc(env(safe-area-inset-left, 0px) + var(--space-4)));
   z-index: 30;
   display: flex;
   align-items: center;
@@ -25,7 +24,32 @@
   opacity: 1;
   transform: scale(1.05);
 }
-.btn:focus-visible {
+.btn:focus-visible,
+.btnInline:focus-visible {
   outline: 2px solid var(--accent, currentColor);
   outline-offset: 2px;
+}
+
+.btnInline {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full, 999px);
+  box-shadow: var(--shadow-card);
+  opacity: 0.9;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.btnInline:hover {
+  opacity: 1;
+  transform: scale(1.05);
 }

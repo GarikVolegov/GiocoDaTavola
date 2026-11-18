@@ -3,10 +3,25 @@ import { useAuth, useUser } from '@clerk/react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Avatar, Button, Card, Logo } from '../shared/ui';
 import { fetchWithTimeout } from '../shared/api';
+import { useOnlineStatus } from '../shared/useOnlineStatus';
 import type { MyDashboard } from '../shared/events';
 import styles from './Home.module.css';
 
-const MODE_LABEL: Record<string, string> = { gruppo: 'Gruppo', duello: 'Duello' };
+const MODE_LABEL: Record<string, string> = {
+  gruppo: 'Gruppo',
+  duello: 'Duello',
+  'party:mix': '🎲 Serata Mix',
+  'party:flash': '⚡ Flash',
+  'party:preferiresti': '🔀 Preferiresti',
+  'party:infiltrato': '🕵️ L’Infiltrato',
+  'party:coppie': '🌶️ Coppie',
+  'party:assurdo': '🤡 Assurdo',
+  'party:cruciverba': '🧩 Cruciverba',
+  'party:tribunale': '⚖️ Tribunale',
+  'party:classico': '🎭 Classico',
+  'party:percorso': '🧗 Percorso',
+  'party:storia': '📖 Storie',
+};
 
 // `/casa`: the signed-in user's home. Quick game start + their trophies, stats
 // and recent games (one round-trip to GET /api/me/dashboard, which also carries
@@ -16,6 +31,7 @@ export default function Home() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
+  const online = useOnlineStatus();
   const [data, setData] = useState<MyDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +60,30 @@ export default function Home() {
     };
   }, [isSignedIn, getToken]);
 
-  if (!isLoaded) return <main className={styles.page} />;
+  if (!isLoaded) {
+    if (!online) {
+      return (
+        <main className={styles.page}>
+          <Card className={styles.welcome}>
+            <div className={styles.welcomeEmoji}>✈️</div>
+            <h2 className={styles.welcomeTitle}>Sei offline</h2>
+            <p className={styles.welcomeText}>
+              Nessuna connessione: puoi giocare subito in modalità Passa il telefono!
+            </p>
+            <div className={styles.cta}>
+              <Button variant="primary" size="lg" onClick={() => navigate('/passa')}>
+                📱 Passa il telefono
+              </Button>
+              <Button variant="ghost" size="lg" onClick={() => navigate('/')}>
+                Torna alla home
+              </Button>
+            </div>
+          </Card>
+        </main>
+      );
+    }
+    return <main className={styles.page} />;
+  }
   if (!isSignedIn) return <Navigate to="/" replace />;
 
   const profile = data?.profile ?? { displayName: null, avatar: null };

@@ -78,6 +78,22 @@ describe('sfxForTransition', () => {
     expect(sfxForTransition('DUO_ROUND_RESULT', 'DUO_PORTRAIT', game())).toBe('awards');
   });
 
+  it('plays warp on story/percorso transitions, clash on debate, insight on reveals', () => {
+    expect(sfxForTransition('LOBBY', 'STORY_INTRO', game())).toBe('warp');
+    expect(sfxForTransition('SCENE_CONSEQUENCE', 'SCENE_INTRO', game())).toBe('warp');
+    expect(sfxForTransition('PHASE_RESULTS', 'TAPPA_RECAP', game())).toBe('warp');
+
+    expect(sfxForTransition('PREDICT', 'DEFENSE', game())).toBe('clash');
+    expect(sfxForTransition('DUO_SIDE_PICK', 'DUO_ARGUE', game())).toBe('clash');
+    // Infiltrato uses its own siren in HostApp instead of doubling clash
+    expect(sfxForTransition('VOTE_1', 'DEFENSE', game({ partyMode: 'infiltrato' }))).toBeNull();
+
+    expect(sfxForTransition('VOTE_1', 'SCENE_CONSEQUENCE', game())).toBe('insight');
+    expect(sfxForTransition('GROUP_MIND', 'GROUP_MIND_REVEAL', game())).toBe('insight');
+    expect(sfxForTransition('WRITE_VOTE', 'WRITE_REVEAL', game())).toBe('insight');
+    expect(sfxForTransition('HOT_TAKE_VOTE', 'HOT_TAKE_REVEAL', game())).toBe('insight');
+  });
+
   it('is silent for ordinary, non-event transitions', () => {
     expect(sfxForTransition('LOBBY', 'PHASE_INTRO', game())).toBeNull();
     expect(sfxForTransition('SPLIT_REVEAL', 'PREDICT', game())).toBeNull();

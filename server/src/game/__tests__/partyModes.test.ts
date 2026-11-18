@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RoomStore } from '../rooms';
+import { RoomStore, type Player } from '../rooms';
 import { loadCuratedDecks } from '../geminiGenerator';
 
 describe('Party Modes ("Schierati" Overhaul)', () => {
@@ -10,6 +10,13 @@ describe('Party Modes ("Schierati" Overhaul)', () => {
     expect(decks.coppie.complicita.length).toBeGreaterThanOrEqual(10);
     expect(decks.coppie.piccante.length).toBeGreaterThanOrEqual(10);
     expect(decks.assurdo.length).toBeGreaterThanOrEqual(15);
+    expect((decks.preferiresti ?? []).length).toBeGreaterThanOrEqual(25);
+
+    for (const card of decks.preferiresti ?? []) {
+      expect(card.prompt.length).toBeGreaterThan(0);
+      expect(card.options.length).toBe(4);
+      expect(card.options.every((opt) => opt.trim().length > 0)).toBe(true);
+    }
 
     // Verify brevity on flash cards (max 15-18 words)
     for (const card of decks.flash) {
@@ -27,7 +34,7 @@ describe('Party Modes ("Schierati" Overhaul)', () => {
     }
   });
 
-  it('starts SCHIERATI FLASH with 15s blitz defense and curated cards', () => {
+  it('starts SCHIERATI FLASH without countdown timer and curated cards', () => {
     const store = new RoomStore(
       () => 'TEST',
       () => 1000,
@@ -59,12 +66,12 @@ describe('Party Modes ("Schierati" Overhaul)', () => {
     if (!result.ok) return;
 
     expect(result.room.partyMode).toBe('flash');
-    expect(result.room.defenseMaxMs).toBe(15_000); // 15s blitz defense
+    expect(result.room.defenseMaxMs).toBe(90_000);
     expect(result.room.partyCards.length).toBe(5);
 
-    // Advance to DILEMMA_REVEAL
+    // Advance to VOTE_1 directly (DILEMMA_REVEAL skipped)
     store.advancePhase(code);
-    expect(result.room.phase).toBe('DILEMMA_REVEAL');
+    expect(result.room.phase).toBe('VOTE_1');
     expect(result.room.currentPartyCard).not.toBeNull();
     expect(result.room.currentDilemma).not.toBeNull();
     expect(result.room.currentDilemma?.register).toBe('vita');
@@ -75,7 +82,7 @@ describe('Party Modes ("Schierati" Overhaul)', () => {
     expect(publicCard?.penalty).toContain('minoranza');
   });
 
-  it("starts L'INFILTRATO with 60s debate, assigns infiltrator and hides secrets until reveal", () => {
+  it("starts L'INFILTRATO without debate timer, assigns infiltrator and hides secrets until reveal", () => {
     const store = new RoomStore(
       () => 'TEST',
       () => 1000,
@@ -108,17 +115,16 @@ describe('Party Modes ("Schierati" Overhaul)', () => {
 
     expect(result.room.partyMode).toBe('infiltrato');
     expect(result.room.infiltratorId).toBeDefined();
-    expect(result.room.defenseMaxMs).toBe(60_000); // 60s debate timer
+    expect(result.room.defenseMaxMs).toBe(90_000);
 
-    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // DEFENSE (infiltrato enters directly at DEFENSE)
     const publicCard = store.publicPartyCard(code);
     expect(publicCard?.mode).toBe('infiltrato');
-    // Secret question stays hidden from public view during reveal
+    // Secret question stays hidden from public view during debate
     expect(publicCard?.groupQuestion).toBeUndefined();
     expect(publicCard?.infiltratorUnmasked).toBe(false);
 
     // In SPLIT_REVEAL phase (after accusation), questions and infiltrator are unmasked
-    store.advancePhase(code); // moves to DEFENSE
     store.advancePhase(code); // moves to ACCUSE
     const accuseCard = store.publicPartyCard(code);
     expect(accuseCard?.infiltratorUnmasked).toBe(false); // still hidden during accusation!
@@ -164,7 +170,7 @@ describe('Party Modes ("Schierati" Overhaul)', () => {
 
     expect(result.room.partyMode).toBe('coppie');
     expect(result.room.partyIntensity).toBe('piccante');
-    expect(result.room.defenseMaxMs).toBe(30_000);
+    expect(result.room.defenseMaxMs).toBe(90_000);
 
     store.advancePhase(code); // DILEMMA_REVEAL
     const publicCard = store.publicPartyCard(code);
@@ -205,18 +211,16 @@ describe('Party Modes ("Schierati" Overhaul)', () => {
     if (!result.ok) return;
 
     expect(result.room.partyMode).toBe('assurdo');
-    expect(result.room.defenseMaxMs).toBe(30_000);
+    expect(result.room.defenseMaxMs).toBe(90_000);
 
-    store.advancePhase(code); // DILEMMA_REVEAL
+    store.advancePhase(code); // VOTE_1
+    expect(result.room.phase).toBe('VOTE_1');
     // Force current party card to gogna
     result.room.currentPartyCard = {
       id: 'test-gogna',
       cardType: 'gogna',
       prompt: 'Chi finirebbe prima nei guai?',
     };
-
-    store.advancePhase(code); // VOTE_1
-    expect(result.room.phase).toBe('VOTE_1');
 
     // Players cast gogna votes
     store.recordGognaVote(code, p1.id, p2.id); // Alice votes Bob
@@ -244,7 +248,6 @@ describe('Party Modes ("Schierati" Overhaul)', () => {
     const { player: _p4 } = store.join(code, 'p4', 'Diana') as { player: Player };
 
     store.startGame(code, 3, 'vita', 'gruppo', false, false, undefined, undefined, 'mista', false, false, 'assente', [], 'flash');
-    store.advancePhase(code); // DILEMMA_REVEAL
     store.advancePhase(code); // VOTE_1
 
     // p1 and p2 vote A, p3 votes B, p4 does not vote (holdout)
@@ -266,7 +269,7 @@ describe('Party Modes ("Schierati" Overhaul)', () => {
     expect(publicCard?.flashResult?.majorityNicknames).toContain('Bob');
   });
 
-  it('evaluates Hot-Seat bets in Coppie & Scintille for groups > 2', () => {
+  it('enforces even player count in Coppie & Scintille, runs fixed pairs in parallel, and scores couple matches', () => {
     const store = new RoomStore(() => 'TEST', () => 1000);
     const room = store.create();
     const code = room.code;
@@ -274,24 +277,262 @@ describe('Party Modes ("Schierati" Overhaul)', () => {
     const { player: p2 } = store.join(code, 'p2', 'Bob') as { player: Player };
     const { player: p3 } = store.join(code, 'p3', 'Charlie') as { player: Player };
 
-    store.startGame(code, 3, 'vita', 'gruppo', false, false, undefined, undefined, 'mista', false, false, 'assente', [], 'coppie', 'piccante', 'Addio al celibato');
+    // Odd player count must fail cleanly
+    const oddErr = store.startGame(code, 3, 'vita', 'gruppo', false, false, undefined, undefined, 'mista', false, false, 'assente', [], 'coppie', 'piccante');
+    expect(oddErr.ok).toBe(false);
+    if (!oddErr.ok) expect(oddErr.error).toBe('EVEN_PLAYERS_REQUIRED');
+
+    const { player: p4 } = store.join(code, 'p4', 'Diana') as { player: Player };
+
+    const startRes = store.startGame(
+      code,
+      3,
+      'vita',
+      'gruppo',
+      false,
+      false,
+      undefined,
+      undefined,
+      'mista',
+      false,
+      false,
+      'assente',
+      [],
+      'coppie',
+      'piccante',
+      'Addio al celibato',
+      undefined,
+      'misto',
+      [
+        [p1.id, p3.id],
+        [p2.id, p4.id],
+      ],
+    );
+    expect(startRes.ok).toBe(true);
     expect(store.get(code)?.theme).toBe('Addio al celibato');
-    store.advancePhase(code); // DILEMMA_REVEAL
+    expect(store.get(code)?.couples.map((c) => [c.memberAId, c.memberBId])).toEqual([
+      [p1.id, p3.id],
+      [p2.id, p4.id],
+    ]);
+
     store.advancePhase(code); // VOTE_1
-
-    // p1 and p2 are the hot seat couple
+    // Couple 1 (Alice & Charlie) both pick 'A' -> match!
     store.vote(code, p1.id, 'A');
-    store.vote(code, p2.id, 'A'); // they matched!
-
-    // p3 is spectator and bets 'match'
-    store.recordHotSeatBet(code, p3.id, 'match');
+    store.vote(code, p3.id, 'A');
+    // Couple 2 (Bob & Diana) split -> mismatch!
+    store.vote(code, p2.id, 'A');
+    store.vote(code, p4.id, 'B');
 
     store.advancePhase(code); // SPLIT_REVEAL
     const card = store.publicPartyCard(code);
-    expect(card?.hotSeat).toBeDefined();
-    expect(card?.hotSeat?.coupleMatched).toBe(true);
-    expect(card?.hotSeat?.correctSpectators).toContain('Charlie');
-    // Charlie receives +50 points
-    expect(store.get(code)?.partyScores.get(p3.id)).toBe(50);
+    expect(card?.couples).toHaveLength(2);
+    expect(card?.coupleRoundResults).toHaveLength(2);
+    const c1Out = card?.coupleRoundResults?.find((o) => o.memberAId === p1.id);
+    expect(['match', 'challenge_done']).toContain(c1Out?.kind);
+    expect((store.get(code)?.partyScores.get(p1.id) ?? 0)).toBeGreaterThan(0);
+    expect((store.get(code)?.partyScores.get(p3.id) ?? 0)).toBeGreaterThan(0);
+  });
+
+  it('skips DEFENSE automatically in Flash mode when everyone votes the same (no empty defense screen)', () => {
+    const store = new RoomStore(() => 'TEST', () => 1000);
+    const room = store.create();
+    const code = room.code;
+    const { player: p1 } = store.join(code, 'p1', 'Alice') as { player: Player };
+    const { player: p2 } = store.join(code, 'p2', 'Bob') as { player: Player };
+    const { player: p3 } = store.join(code, 'p3', 'Charlie') as { player: Player };
+
+    store.startGame(code, 3, 'vita', 'gruppo', false, false, undefined, undefined, 'mista', false, false, 'assente', [], 'flash');
+    store.advancePhase(code); // VOTE_1 (round 1)
+    store.vote(code, p1.id, 'A');
+    store.vote(code, p2.id, 'A');
+    store.vote(code, p3.id, 'A');
+
+    store.advancePhase(code); // SPLIT_REVEAL
+    expect(store.get(code)?.phase).toBe('SPLIT_REVEAL');
+
+    store.advancePhase(code); // skips DEFENSE -> VOTE_1 (round 2)
+    expect(store.get(code)?.phase).toBe('VOTE_1');
+    expect(store.get(code)?.dilemmaIndex).toBe(2);
+  });
+
+  it('resolves accusations and results properly inside mix mode infiltrato rounds', () => {
+    let seed = 0;
+    const rng = () => ((seed++ * 0.37) % 1);
+    const store = new RoomStore(() => 'TEST', () => 1000, undefined, rng);
+    const room = store.create();
+    const code = room.code;
+    const { player: p1 } = store.join(code, 'p1', 'Alice') as { player: Player };
+    const { player: p2 } = store.join(code, 'p2', 'Bob') as { player: Player };
+    const { player: p3 } = store.join(code, 'p3', 'Charlie') as { player: Player };
+    const { player: p4 } = store.join(code, 'p4', 'Diana') as { player: Player };
+
+    store.startGame(code, 7, 'misto', 'gruppo', false, false, undefined, undefined, 'mista', false, false, 'assente', [], 'mix');
+    const r = store.get(code)!;
+    const infIdx = r.mixPlan.indexOf('infiltrato');
+    expect(infIdx).toBeGreaterThanOrEqual(0);
+
+    // Advance until we hit the infiltrato round's DEFENSE -> ACCUSE -> SPLIT_REVEAL
+    while (r.phase !== 'FINAL_AWARDS') {
+      store.advancePhase(code);
+      if (r.dilemmaIndex === infIdx + 1 && r.phase === 'DEFENSE') {
+        store.advancePhase(code); // -> ACCUSE
+        expect(r.phase).toBe('ACCUSE');
+        const target = r.infiltratorId!;
+        const accusers = [p1.id, p2.id, p3.id, p4.id].filter((id) => id !== target);
+        for (const a of accusers) store.accuse(code, a, target);
+        store.advancePhase(code); // -> SPLIT_REVEAL
+        expect(r.phase).toBe('SPLIT_REVEAL');
+        expect(r.infiltratoRoundResult).not.toBeNull();
+        expect(r.infiltratoRoundResult?.caught).toBe(true);
+        break;
+      }
+    }
+  });
+
+  it('enters Flash DEFENSE with no reading window or countdown timer and allows pause/resume', () => {
+    const now = 10_000;
+    const store = new RoomStore(() => 'TEST', () => now);
+    const { code } = store.create();
+    const { player: p1 } = store.join(code, 'p1', 'Alice') as { player: Player };
+    const { player: p2 } = store.join(code, 'p2', 'Bob') as { player: Player };
+    const { player: p3 } = store.join(code, 'p3', 'Charlie') as { player: Player };
+
+    store.startGame(code, 3, 'vita', 'gruppo', false, false, undefined, undefined, 'mista', false, false, 'assente', [], 'flash');
+    store.advancePhase(code); // VOTE_1
+    store.vote(code, p1.id, 'A');
+    store.vote(code, p2.id, 'A');
+    store.vote(code, p3.id, 'B'); // Charlie is in minority
+
+    store.advancePhase(code); // SPLIT_REVEAL
+    expect(store.get(code)?.phase).toBe('SPLIT_REVEAL');
+
+    store.advancePhase(code); // DEFENSE (no timer, no reading window)
+    const room = store.get(code)!;
+    expect(room.phase).toBe('DEFENSE');
+    expect(room.readingEndsAt).toBeNull();
+    expect(room.phaseExpiresAt).toBeNull();
+
+    // Pause / resume works cleanly without timers
+    expect(store.pauseGame(code)).toBe(true);
+    expect(room.paused).toBe(true);
+    expect(room.readingEndsAt).toBeNull();
+    expect(room.pausedReadingRemainingMs).toBeNull();
+
+    expect(store.resumeGame(code)).toBe(true);
+    expect(room.paused).toBe(false);
+    expect(room.readingEndsAt).toBeNull();
+    expect(room.phaseExpiresAt).toBeNull();
+  });
+
+  it('enters Tribunale and Cruciverba inside Serata Mix without reading windows or turn timers', () => {
+    const now = 5_000;
+    let step = 0;
+    const steps = [0.05, 0.15, 0.28, 0.4, 0.52, 0.65, 0.78, 0.9, 0.96, 0.72];
+    const rng = () => steps[step++ % steps.length];
+    const store = new RoomStore(() => 'TEST', () => now, undefined, rng);
+    const { code } = store.create();
+    store.join(code, 'p1', 'Alice');
+    store.join(code, 'p2', 'Bob');
+    store.join(code, 'p3', 'Charlie');
+    store.join(code, 'p4', 'Diana');
+
+    store.startGame(code, 10, 'misto', 'gruppo', false, false, undefined, undefined, 'mista', false, false, 'assente', [], 'mix');
+    const room = store.get(code)!;
+
+    let sawTribunale = false;
+    let sawCruciverba = false;
+    let guard = 0;
+    while (room.phase !== 'FINAL_AWARDS' && guard++ < 80) {
+      store.advancePhase(code);
+      if (room.phase === 'TRIBUNALE_ARGUE') {
+        sawTribunale = true;
+        expect(room.readingEndsAt).toBeNull();
+        expect(room.turnExpiresAt).toBeNull();
+      } else if (room.phase === 'CRUCIVERBA') {
+        sawCruciverba = true;
+        expect(room.readingEndsAt).toBeNull();
+        expect(room.turnExpiresAt).toBeNull();
+      }
+    }
+    expect(sawTribunale).toBe(true);
+    expect(sawCruciverba).toBe(true);
+  });
+
+  it('runs PREFERIRESTI CHE... with 4 choices, minority identification, and timer-free defense', () => {
+    const now = 10_000;
+    const store = new RoomStore(() => 'TEST', () => now);
+    const { code } = store.create();
+    const { player: p1 } = store.join(code, 'p1', 'Alice') as { player: Player };
+    const { player: p2 } = store.join(code, 'p2', 'Bob') as { player: Player };
+    const { player: p3 } = store.join(code, 'p3', 'Charlie') as { player: Player };
+    const { player: p4 } = store.join(code, 'p4', 'Diana') as { player: Player };
+
+    const result = store.startGame(
+      code,
+      3,
+      'misto',
+      'gruppo',
+      false,
+      false,
+      undefined,
+      undefined,
+      'mista',
+      false,
+      false,
+      'assente',
+      [],
+      'preferiresti',
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.room.partyMode).toBe('preferiresti');
+    expect(result.room.defenseMaxMs).toBe(90_000);
+    expect(result.room.partyCards.length).toBe(3);
+
+    store.advancePhase(code); // VOTE_1
+    expect(result.room.phase).toBe('VOTE_1');
+
+    const voteCard = store.publicPartyCard(code);
+    expect(voteCard?.mode).toBe('preferiresti');
+    expect(voteCard?.options).toHaveLength(4);
+
+    // Alice & Bob choose C; Charlie chooses A; Diana chooses D -> C is majority, Charlie & Diana are minority
+    expect(store.vote(code, p1.id, 'C').ok).toBe(true);
+    expect(store.vote(code, p2.id, 'C').ok).toBe(true);
+    expect(store.vote(code, p3.id, 'A').ok).toBe(true);
+    expect(store.vote(code, p4.id, 'D').ok).toBe(true);
+    expect(store.vote(code, p4.id, 'E').ok).toBe(false);
+
+    store.advancePhase(code); // SPLIT_REVEAL
+    expect(result.room.phase).toBe('SPLIT_REVEAL');
+    const revealCard = store.publicPartyCard(code);
+    expect(revealCard?.preferirestiResult?.isUnanimous).toBe(false);
+    expect(revealCard?.preferirestiResult?.isTie).toBe(false);
+    expect(revealCard?.preferirestiResult?.winningChoices).toEqual(['C']);
+    expect(revealCard?.preferirestiResult?.majorityNicknames).toEqual(['Alice', 'Bob']);
+    expect(revealCard?.preferirestiResult?.minorityNicknames).toEqual(['Charlie', 'Diana']);
+
+    store.advancePhase(code); // DEFENSE without reading grace or countdown
+    expect(result.room.phase).toBe('DEFENSE');
+    expect(result.room.readingEndsAt).toBeNull();
+    expect(result.room.phaseExpiresAt).toBeNull();
+
+    // Advance -> round 2 VOTE_1
+    store.advancePhase(code);
+    expect(result.room.phase).toBe('VOTE_1');
+    expect(result.room.dilemmaIndex).toBe(2);
+
+    // Unanimous vote on C skips DEFENSE directly to round 3 VOTE_1
+    store.vote(code, p1.id, 'C');
+    store.vote(code, p2.id, 'C');
+    store.vote(code, p3.id, 'C');
+    store.vote(code, p4.id, 'C');
+    store.advancePhase(code); // SPLIT_REVEAL
+    expect(result.room.preferirestiResult?.isUnanimous).toBe(true);
+    store.advancePhase(code); // skips DEFENSE -> VOTE_1 round 3
+    expect(result.room.phase).toBe('VOTE_1');
+    expect(result.room.dilemmaIndex).toBe(3);
   });
 });

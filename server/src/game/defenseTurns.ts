@@ -4,6 +4,7 @@
 // from rooms.ts keep it cycle-free.
 import type { Room, RaiseHandResult, FinishTurnResult, DefenseState } from './rooms';
 import { isDefensePhase, isInterventiPhase } from './phases';
+import { ensureSpunti } from './deck';
 
 /** The id of the player currently speaking, or null. */
 export function currentSpeakerId(room: Room): string | null {
@@ -122,9 +123,10 @@ export function publicDefense(room: Room, now: number): DefenseState | null {
   const speaker = room.defenders[room.defenseTurnIndex] ?? null;
   const baseSpunti =
     speaker && room.currentDilemma
-      ? speaker.side === 'A'
-        ? room.currentDilemma.spuntiA
-        : room.currentDilemma.spuntiB
+      ? (() => {
+          const guaranteed = ensureSpunti(room.currentDilemma);
+          return speaker.side === 'A' ? guaranteed.spuntiA : guaranteed.spuntiB;
+        })()
       : null;
   // "L'Infiltrato col merito" (4.5): a decoy spunto, indistinguishable from
   // the real ones, mixed in when the infiltrator just used their tool.

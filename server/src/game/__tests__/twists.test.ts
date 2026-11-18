@@ -82,7 +82,6 @@ function twistDefenseRoom(store: RoomStore): string {
   const { code } = store.create();
   for (let i = 0; i < 3; i++) store.join(code, `sock-${i}`, `P${i}`);
   store.startGame(code, 3, 'misto', 'gruppo', false, false, undefined, undefined, 'mista', false, false, 'alto');
-  store.advancePhase(code); // DILEMMA_REVEAL
   store.advancePhase(code); // VOTE_1
   store.vote(code, 'sock-0', 'A');
   store.vote(code, 'sock-1', 'B');
@@ -102,11 +101,11 @@ describe('DEFENSE with a twist in play', () => {
     expect(store.publicTwist(code)?.id).toBe('difesa-lampo');
   });
 
-  it('"difesa-lampo" forces a hard 30s cap in place of the room default', () => {
+  it('"difesa-lampo" keeps DEFENSE untimed without a countdown cap when timers are disabled', () => {
     const store = makeStore(() => 0);
     const code = twistDefenseRoom(store);
     const room = store.get(code)!;
-    expect(room.phaseExpiresAt).toBe(room.turnStartedAt! + TWIST_DEFENSE_LAMPO_MS);
+    expect(room.phaseExpiresAt).toBeNull();
     expect(TWIST_DEFENSE_LAMPO_MS).toBeLessThan(DEFENSE_MAX_MS_NORMALE);
   });
 

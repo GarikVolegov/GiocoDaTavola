@@ -48,6 +48,16 @@ export type GamePhase =
   // "Termometro (Hot Take 1–10)": mobile slider mini-game (vote 1–10, reveal extremes).
   | 'HOT_TAKE_VOTE'
   | 'HOT_TAKE_REVEAL'
+  // "Cruciverba Show": TV turn-based 2D crossword where players take 15s turns.
+  | 'CRUCIVERBA'
+  | 'CRUCIVERBA_REVEAL'
+  // "Tribunale degli Amici": 2 contenders argue 15s each -> jury votes -> verdict.
+  | 'TRIBUNALE_ARGUE'
+  | 'TRIBUNALE_VOTE'
+  | 'TRIBUNALE_REVEAL'
+  // "Telepatia": everyone secretly writes one word trying to match teammates.
+  | 'TELEPATHY'
+  | 'TELEPATHY_REVEAL'
   // "Percorso" mode: the chapter card shown entering a new tappa, and the
   // end-of-tappa recap/pause (handled by nextPercorsoPhase, not nextPhase).
   | 'TAPPA_INTRO'
@@ -91,8 +101,8 @@ export type GamePhase =
  * MIN floor (below which "Ho finito" is rejected) and a generous MAX safety cap;
  * a bot or absent speaker (who can't tap) just gets TURN_BOT_MS.
  */
-export const DEFENSE_MIN_MS = 30_000;
-export const INTERVENTO_MIN_MS = 15_000;
+export const DEFENSE_MIN_MS = 0;
+export const INTERVENTO_MIN_MS = 0;
 /**
  * DEFENSE's per-turn safety cap (3.3): 90s by default so a round's "stage
  * budget" stays roughly constant regardless of group size; the leader may
@@ -104,10 +114,12 @@ export const DEFENSE_MAX_MS_LUNGA = 180_000;
 
 export const INTERVENTI_MAX_MS = 90_000;
 export const TURN_BOT_MS = 20_000;
+/** Reading grace window before a 15s fast-mode debate starts (Flash / Gogna). */
+export const FLASH_DEFENSE_READ_MS = 0;
 
 /** Per-turn floor for a DUO_ARGUE arringa (Percorso in 2) — mirrors
  * INTERVENTO_MIN_MS; kept separate so the two can diverge later. */
-export const DUO_TURN_MIN_MS = 15_000;
+export const DUO_TURN_MIN_MS = 0;
 
 /**
  * Self-paced phases (VOTE_1/VOTE_2/PREDICT/SPEAKER_VOTE) have no fixed timer —
@@ -121,70 +133,55 @@ export const SOFT_TIMEOUT_FAST_MS = 20_000;
 export const SOFT_TIMEOUT_LONG_MS = 50_000;
 
 /**
- * How long each phase lasts before the server auto-advances, in ms. `null`
- * means the phase has no timer: LOBBY waits for the host to start, FINAL_AWARDS
- * is terminal. Timers are authoritative server-side; clients only render the
- * countdown from the broadcast expiry timestamp.
+ * All phases run without countdown timers (`null`): votes advance once every
+ * present player has acted or when the leader advances manually; speaking,
+ * narrative, and reveal phases advance manually on tap.
  */
 export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   LOBBY: null,
-  PHASE_INTRO: 5_000,
-  DILEMMA_REVEAL: 6_000,
-  // Self-paced votes: no timer — advance once every present player has acted
-  // (early-advance in index.ts), with the leader's "Salta ▶" as the only override.
+  PHASE_INTRO: null,
+  DILEMMA_REVEAL: null,
   VOTE_1: null,
-  // The first 3s are a client-rendered "3-2-1" suspense beat (no split shown
-  // yet); the split itself is revealed for the remaining 6s. See
-  // SPLIT_REVEAL_SUSPENSE_MS below — client and server must agree on the split.
-  SPLIT_REVEAL: 9_000,
+  SPLIT_REVEAL: null,
   PREDICT: null,
-  // Room-specific (Room.defenseMaxMs) as soon as armTurn runs on entry to
-  // DEFENSE; this is only the transient value between the phase transition
-  // and that call, never actually observed.
-  DEFENSE: DEFENSE_MAX_MS_NORMALE,
-  INTERVENTI: INTERVENTI_MAX_MS,
+  DEFENSE: null,
+  INTERVENTI: null,
   VOTE_2: null,
   SPEAKER_VOTE: null,
-  PHASE_RESULTS: 8_000,
-  // GROUP_MIND is self-paced (ends once everyone has answered + predicted, or
-  // the leader skips); GROUP_MIND_REVEAL is a short fixed beat, like PHASE_RESULTS.
+  PHASE_RESULTS: null,
   GROUP_MIND: null,
-  GROUP_MIND_REVEAL: 8_000,
-  // WRITE/WRITE_VOTE are self-paced (end once everyone's done, or the leader
-  // skips, with the usual soft-timeout backstop); WRITE_REVEAL is a fixed beat.
+  GROUP_MIND_REVEAL: null,
   WRITE: null,
   WRITE_VOTE: null,
-  WRITE_REVEAL: 10_000,
+  WRITE_REVEAL: null,
   HOT_TAKE_VOTE: null,
-  HOT_TAKE_REVEAL: 20_000,
-  // Percorso: the chapter card auto-advances; the end-of-tappa recap has no timer
-  // so it doubles as a break — the host resumes with "Continua ▶" when ready.
-  TAPPA_INTRO: 8_000,
+  HOT_TAKE_REVEAL: null,
+  CRUCIVERBA: null,
+  CRUCIVERBA_REVEAL: null,
+  TRIBUNALE_ARGUE: null,
+  TRIBUNALE_VOTE: null,
+  TRIBUNALE_REVEAL: null,
+  TELEPATHY: null,
+  TELEPATHY_REVEAL: null,
+  TAPPA_INTRO: null,
   TAPPA_RECAP: null,
-  // Storie: the narrator (leader) controls the pace of every prose card, so they
-  // never auto-advance — the host reads aloud and resumes with "Continua ▶".
   STORY_INTRO: null,
   SCENE_INTRO: null,
   SCENE_CONSEQUENCE: null,
   STORY_EPILOGUE: null,
-  // "Tutti d'accordo!" — just long enough to read the winning side and cheer.
-  UNANIMOUS_REVEAL: 4_500,
-  // "Il processo" (4.5): a proper trial, not a snap guess — 75s to discuss out
-  // loud before voting who the infiltrator is (was 30s).
-  ACCUSE: 75_000,
+  UNANIMOUS_REVEAL: null,
+  ACCUSE: null,
   FINAL_AWARDS: null,
-  // Percorso in 2: every input phase has a real timer + server early-advance
-  // (the group's soft-timeout quorum can never arm with only 2 players).
-  DUO_ACT_INTRO: 7_000,
-  DUO_PICK_PREDICT: 30_000,
-  DUO_SYNC_REVEAL: 8_000,
-  DUO_SIDE_PICK: 12_000,
-  DUO_ARGUE: 45_000,
-  DUO_WAVER: 15_000,
-  DUO_ROUND_RESULT: 8_000,
-  DUO_PICK: 20_000,
-  DUO_REVEAL: 6_000,
-  DUO_REPICK: 20_000,
+  DUO_ACT_INTRO: null,
+  DUO_PICK_PREDICT: null,
+  DUO_SYNC_REVEAL: null,
+  DUO_SIDE_PICK: null,
+  DUO_ARGUE: null,
+  DUO_WAVER: null,
+  DUO_ROUND_RESULT: null,
+  DUO_PICK: null,
+  DUO_REVEAL: null,
+  DUO_REPICK: null,
   DUO_PORTRAIT: null,
 };
 
@@ -235,7 +232,6 @@ export function isSpeakerVotePhase(phase: GamePhase): boolean {
 
 /** Ordered phases that make up a single dilemma round. */
 const DILEMMA_SEQUENCE: GamePhase[] = [
-  'DILEMMA_REVEAL',
   'VOTE_1',
   'SPLIT_REVEAL',
   'PREDICT',
@@ -264,11 +260,11 @@ export function nextPhase(
   dilemmaCount: number,
 ): PhaseTransition {
   if (current === 'PHASE_INTRO') {
-    return { phase: 'DILEMMA_REVEAL', dilemmaIndex: 1 };
+    return { phase: 'VOTE_1', dilemmaIndex: 1 };
   }
   if (current === 'PHASE_RESULTS') {
     return dilemmaIndex < dilemmaCount
-      ? { phase: 'DILEMMA_REVEAL', dilemmaIndex: dilemmaIndex + 1 }
+      ? { phase: 'VOTE_1', dilemmaIndex: dilemmaIndex + 1 }
       : { phase: 'FINAL_AWARDS', dilemmaIndex };
   }
   const i = DILEMMA_SEQUENCE.indexOf(current);
@@ -300,7 +296,7 @@ export function nextPercorsoPhase(
     return { phase: 'TAPPA_INTRO', dilemmaIndex: 0 };
   }
   if (current === 'TAPPA_INTRO') {
-    return { phase: 'DILEMMA_REVEAL', dilemmaIndex: dilemmaIndex + 1 };
+    return { phase: 'VOTE_1', dilemmaIndex: dilemmaIndex + 1 };
   }
   if (current === 'TAPPA_RECAP') {
     return dilemmaIndex < total
@@ -311,7 +307,7 @@ export function nextPercorsoPhase(
     if (dilemmaIndex < total) {
       const sameTappa = plannedTappe[dilemmaIndex] === plannedTappe[dilemmaIndex - 1];
       return sameTappa
-        ? { phase: 'DILEMMA_REVEAL', dilemmaIndex: dilemmaIndex + 1 }
+        ? { phase: 'VOTE_1', dilemmaIndex: dilemmaIndex + 1 }
         : { phase: 'TAPPA_RECAP', dilemmaIndex };
     }
     // Last dilemma done: recap the final tappa before the awards.
@@ -350,7 +346,7 @@ export function nextStoriaPhase(
     return { phase: 'SCENE_INTRO', dilemmaIndex: 0 };
   }
   if (current === 'SCENE_INTRO') {
-    return { phase: 'DILEMMA_REVEAL', dilemmaIndex: dilemmaIndex + 1 };
+    return { phase: 'VOTE_1', dilemmaIndex: dilemmaIndex + 1 };
   }
   if (current === 'PHASE_RESULTS') {
     return { phase: 'SCENE_CONSEQUENCE', dilemmaIndex };

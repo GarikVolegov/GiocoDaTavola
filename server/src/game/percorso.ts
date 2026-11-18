@@ -371,8 +371,14 @@ export function buildPercorsoPlan(
     const rawStepPool = percorsoId
       ? dilemmasForPercorsoTappa(pool, t as Tappa)
       : dilemmasForTappa(pool, t as Tappa);
-    const stepPool = filterByFamiliarita(rawStepPool, familiarita);
-    const take = Math.min(alloc[t as Tappa], stepPool.length);
+    const famPool = filterByFamiliarita(rawStepPool, familiarita);
+    const target = alloc[t as Tappa];
+    let stepPool = famPool;
+    if (stepPool.length < target && famPool.length < rawStepPool.length) {
+      const famIds = new Set(famPool.map((d) => d.id));
+      stepPool = [...famPool, ...rawStepPool.filter((d) => !famIds.has(d.id))];
+    }
+    const take = Math.min(target, stepPool.length);
     const picked = selectMatchedSequence(stepPool, {
       count: take,
       alreadyPicked: dilemmas,

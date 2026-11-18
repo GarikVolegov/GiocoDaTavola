@@ -13200,7 +13200,7 @@
     ],
     "domandaRilancio": "Qual è la regola non scritta delle vostre vacanze di gruppo che nessuno rispetta mai?",
     "lezioneReale": "Le regole esplicite prima di partire salvano più amicizie di mille buone intenzioni.",
-    "familiarita": "vecchi_amici",
+    "familiarita": "tutti",
     "temi": [
       "amicizia",
       "tempo",
@@ -13231,7 +13231,7 @@
     ],
     "domandaRilancio": "Qual è la cosa più assurda che hai visto mettere in «cassa comune» in una vacanza?",
     "lezioneReale": "I risentimenti più stupidi nascono quando nessuno osa definire il confine tra comune e personale.",
-    "familiarita": "vecchi_amici",
+    "familiarita": "tutti",
     "temi": [
       "soldi",
       "amicizia",
@@ -14438,7 +14438,7 @@
     ],
     "dinamica": "relazione",
     "polarizzazione": "alta",
-    "familiarita": "vecchi_amici"
+    "familiarita": "tutti"
   },
   {
     "id": "m155",
@@ -15998,7 +15998,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m004",
@@ -16028,7 +16028,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m005",
@@ -16058,7 +16058,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m006",
@@ -16088,7 +16088,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m007",
@@ -16118,7 +16118,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m008",
@@ -16148,7 +16148,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m009",
@@ -16178,7 +16178,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m010",
@@ -16208,7 +16208,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m011",
@@ -16238,7 +16238,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m012",
@@ -16268,7 +16268,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m013",
@@ -16298,7 +16298,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m014",
@@ -16328,7 +16328,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m015",
@@ -16358,7 +16358,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m016",
@@ -16388,7 +16388,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m017",
@@ -16418,7 +16418,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m018",
@@ -16508,7 +16508,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m021",
@@ -16538,7 +16538,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m022",
@@ -16568,7 +16568,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m023",
@@ -16598,7 +16598,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m024",
@@ -16628,7 +16628,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m025",
@@ -16658,7 +16658,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m026",
@@ -16688,7 +16688,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m027",
@@ -16718,7 +16718,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m028",
@@ -16778,7 +16778,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m030",
@@ -16808,7 +16808,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m031",
@@ -16838,7 +16838,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m032",
@@ -16868,7 +16868,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m033",
@@ -16898,7 +16898,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m034",
@@ -16928,7 +16928,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m035",
@@ -17049,7 +17049,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m039",
@@ -17079,7 +17079,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m040",
@@ -17109,7 +17109,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m041",
@@ -17139,7 +17139,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m042",
@@ -17169,7 +17169,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m043",
@@ -17229,7 +17229,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m045",
@@ -17259,7 +17259,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m046",
@@ -17289,7 +17289,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m047",
@@ -17319,7 +17319,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m048",
@@ -17349,7 +17349,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m049",
@@ -17379,7 +17379,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m050",
@@ -17409,7 +17409,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m051",
@@ -17439,7 +17439,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m052",
@@ -17529,7 +17529,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m055",
@@ -17559,7 +17559,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m056",
@@ -17589,7 +17589,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m057",
@@ -17619,7 +17619,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m058",
@@ -17649,7 +17649,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m059",
@@ -17679,7 +17679,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m060",
@@ -17770,7 +17770,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m063",
@@ -17800,7 +17800,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m064",
@@ -17830,7 +17830,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m065",
@@ -17860,7 +17860,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m066",
@@ -17890,7 +17890,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m067",
@@ -17920,7 +17920,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m068",
@@ -17950,7 +17950,7 @@
     ],
     "dinamica": "assurdo",
     "polarizzazione": "alta",
-    "familiarita": "nuove_conoscenze"
+    "familiarita": "tutti"
   },
   {
     "id": "m069",
@@ -22847,9 +22847,9 @@
   },
   {
     "id": "m300",
-    "text": "Hai davanti una scelta: strada A sicura al 95% ma mediocre, strada B incerta al 50% ma che potrebbe cambiarti davvero la vita. Come decidi a freddo?",
-    "optionA": "Strada B: se il lato negativo è sopravvivibile, il potenziale positivo batte una vita mediocre.",
-    "optionB": "Strada A finché non costruisco un cuscino che renda la strada B meno suicida.",
+    "text": "Hai davanti una scelta: una via sicura al 95% ma mediocre, oppure una scommessa incerta al 50% che potrebbe cambiarti davvero la vita. Come decidi a freddo?",
+    "optionA": "Scelgo la scommessa: se il lato negativo è sopravvivibile, il potenziale positivo batte una vita mediocre.",
+    "optionB": "Scelgo la via sicura finché non costruisco un cuscino che renda il salto meno suicida.",
     "register": "vita",
     "complessita": "alto",
     "tono": "direzione",

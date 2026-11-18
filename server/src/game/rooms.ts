@@ -9,6 +9,14 @@ import * as writeRound from './writeRound';
 import type { WritePrompt, PublicWrittenAnswer, WriteRevealAnswer } from './writeRound';
 import * as hotTake from './hotTake';
 import type { HotTakePrompt, HotTakeReveal, HotTakeSubmitResult } from './hotTake';
+import * as cruciverba from './cruciverba';
+import type { CruciverbaRoundState, PublicCruciverbaState } from './cruciverba';
+import * as tribunale from './tribunale';
+import type { TribunaleRoundState } from './tribunale';
+import * as coppie from './coppie';
+import type { CouplePair, CoupleRoundOutcome } from './coppie';
+import * as telepathy from './telepathy';
+import type { TelepathyPrompt, TelepathyReveal } from './telepathy';
 import * as twists from './twists';
 import type { Twist, Caos } from './twists';
 import * as rosterDilemmas from './rosterDilemmas';
@@ -31,11 +39,6 @@ import {
   type GamePhase,
   type PhaseTransition,
   PHASE_DURATIONS_MS,
-  SOFT_TIMEOUT_THRESHOLD,
-  SOFT_TIMEOUT_MS,
-  SOFT_TIMEOUT_FAST_MS,
-  SOFT_TIMEOUT_LONG_MS,
-  DUO_TURN_MIN_MS,
   DEFENSE_MAX_MS_NORMALE,
   DEFENSE_MAX_MS_LUNGA,
   nextPhase,
@@ -73,9 +76,10 @@ import {
   type InfiltratoCard,
   type CoppieCard,
   type AssurdoCard,
+  type PreferirestiCard,
   type CoppieIntensity,
 } from './geminiGenerator';
-import { computeAwards as computeAwardsFor, type Award, type PlayerStats } from './awards';
+import { computeAwards as computeAwardsFor, ensureStats, type Award, type PlayerStats } from './awards';
 import { computeBlindSpot, type BlindSpot } from './blindspots';
 import { computePodium, type PodiumEntry } from './podium';
 import {
@@ -116,6 +120,28 @@ export * from './storie';
 export type { Award, AwardId, PlayerStats } from './awards';
 export type { BlindSpot, BlindSpotId } from './blindspots';
 export type { PodiumEntry } from './podium';
+export type { PreferirestiCard } from './geminiGenerator';
+
+export type PreferirestiChoice = 'A' | 'B' | 'C' | 'D';
+export const PREFERIRESTI_CHOICES = ['A', 'B', 'C', 'D'] as const;
+
+export interface PreferirestiOptionTally {
+  letter: PreferirestiChoice;
+  label: string;
+  count: number;
+  voterNicknames: string[];
+}
+
+export interface PreferirestiResultPayload {
+  isEmpty?: boolean;
+  isUnanimous: boolean;
+  isTie: boolean;
+  winningChoices: PreferirestiChoice[];
+  minorityNicknames: string[];
+  majorityNicknames: string[];
+  unvotedNicknames: string[];
+  options: PreferirestiOptionTally[];
+}
 
 const CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const CODE_LENGTH = 4;
@@ -137,7 +163,7 @@ export const MAX_ROOMS = 500;
 export const NICKNAME_MAX = 24;
 
 /** Minimum connected players required before the host can start the game. */
-export const MIN_PLAYERS_TO_START = 3;
+export const MIN_PLAYERS_TO_START = 1;
 
 /** How many dilemmas the host may choose to play in one game. */
 export const DILEMMA_COUNT_OPTIONS = [3, 5, 7] as const;
@@ -634,32 +660,88 @@ export interface Room {
   theme: string | null;
   /** Result of Schierati Flash round (doxxing minority + unvoted players, unanimity, tie). */
   flashResult: FlashResultPayload | null;
+  /** Secret 4-option choices (playerId -> A|B|C|D) for "Preferiresti che...". */
+  preferirestiVotes: Map<string, PreferirestiChoice>;
+  /** Public split breakdown + minority debate targets for "Preferiresti che...". */
+  preferirestiResult: PreferirestiResultPayload | null;
   /** Result of Infiltrato round (unmasked role, questions comparison, caught status). */
   infiltratoRoundResult: InfiltratoRoundResult | null;
-  /** Hot-seat couple player ids in Coppie mode when group > 2 players. */
-  hotSeatCouple: [string, string] | null;
-  /** Spectator bets in Coppie hot-seat mode: spectatorId -> 'match' | 'scoppiano'. */
-  hotSeatBets: Map<string, 'match' | 'scoppiano'>;
+  /** Fixed 2-player couples when playing Coppie & Scintille (or even-count Mix). */
+  couples: CouplePair[];
+  /** Parallel round outcomes for each couple shown during SPLIT_REVEAL. */
+  coupleRoundResults: CoupleRoundOutcome[] | null;
   /** Running party points accumulated across the game. */
   partyScores: Map<string, number>;
   /** Termometro (Hot Take 1–10) state for the current round. */
   hotTakeScores: Map<string, number>;
   currentHotTakePrompt: HotTakePrompt | null;
   usedHotTakeIds: Set<string>;
+  /** "Cruciverba Show": turn-based 2D crossword state for the current round. */
+  cruciverbaState: CruciverbaRoundState | null;
+  usedCruciverbaIds: Set<string>;
+  /** "Tribunale degli Amici": courtroom face-off state for the current round. */
+  tribunaleState: TribunaleRoundState | null;
+  usedTribunaleIds: Set<string>;
+  tribunaleAppearances: Map<string, number>;
+  /** Epoch ms when the active single-player turn (Cruciverba / Tribunale) expires. */
+  turnExpiresAt: number | null;
+  pausedTurnRemainingMs: number | null;
+  /** Epoch ms when a pre-debate reading window ends before the 15s timer starts. */
+  readingEndsAt: number | null;
+  pausedReadingRemainingMs: number | null;
+  /** "Telepatia": silent word-sync state for the current round. */
+  currentTelepathyPrompt: TelepathyPrompt | null;
+  usedTelepathyIds: Set<string>;
+  telepathyAnswers: Map<string, string>;
+  telepathyReveal: TelepathyReveal | null;
   /** Cross-game anti-repeat tracking for party cards. */
   usedPartyCardIds: Set<string>;
   /** Dynamic mini-game sequence when partyMode === 'mix'. */
   mixPlan: MixRoundKind[];
 }
 
-export type MixRoundKind = 'flash' | 'hotTake' | 'groupMind' | 'write' | 'assurdo' | 'infiltrato';
+export type MixRoundKind =
+  | 'flash'
+  | 'hotTake'
+  | 'groupMind'
+  | 'write'
+  | 'assurdo'
+  | 'preferiresti'
+  | 'infiltrato'
+  | 'coppie'
+  | 'cruciverba'
+  | 'tribunale'
+  | 'telepatia';
 
 /**
  * Build a variable, non-repeating sequence of mini-games for "Serata Mix".
- * Guarantees no two consecutive rounds share the same mini-game kind.
+ * Guarantees no two consecutive rounds share the same mini-game kind, requires
+ * even player counts for fixed-pair `coppie`, and blends competitive, TV-show
+ * ("cruciverba"), courtroom ("tribunale"), and sync ("telepatia") rounds.
  */
 export function buildMixPlan(count: number, playerCount: number, rng: () => number): MixRoundKind[] {
-  const basePool: MixRoundKind[] = ['flash', 'hotTake', 'groupMind', 'write', 'assurdo'];
+  if (playerCount < 2) {
+    const soloPool: MixRoundKind[] = ['flash', 'preferiresti', 'assurdo', 'cruciverba', 'hotTake', 'groupMind'];
+    const plan: MixRoundKind[] = [];
+    for (let i = 0; i < count; i++) {
+      const prev = i > 0 ? plan[i - 1] : null;
+      const candidates = soloPool.filter((k) => k !== prev);
+      const chosen = candidates[Math.floor(rng() * candidates.length)];
+      plan.push(chosen);
+    }
+    return plan;
+  }
+  const basePool: MixRoundKind[] = [
+    'flash',
+    'hotTake',
+    'groupMind',
+    'write',
+    'assurdo',
+    'cruciverba',
+    'telepatia',
+  ];
+  if (playerCount >= 3) basePool.push('tribunale');
+  if (playerCount >= 2 && playerCount % 2 === 0) basePool.push('coppie');
   if (playerCount >= 4) basePool.push('infiltrato');
   const plan: MixRoundKind[] = [];
   for (let i = 0; i < count; i++) {
@@ -668,6 +750,44 @@ export function buildMixPlan(count: number, playerCount: number, rng: () => numb
     const chosen = candidates[Math.floor(rng() * candidates.length)];
     plan.push(chosen);
   }
+  const pinned = new Set<number>();
+  const ensureIncluded = (target: MixRoundKind) => {
+    const existingIdx = plan.indexOf(target);
+    if (existingIdx !== -1) {
+      pinned.add(existingIdx);
+      return;
+    }
+    for (let i = 1; i < count; i++) {
+      if (pinned.has(i)) continue;
+      const prev = plan[i - 1];
+      const next = i + 1 < count ? plan[i + 1] : null;
+      if (prev !== target && next !== target) {
+        plan[i] = target;
+        pinned.add(i);
+        return;
+      }
+    }
+  };
+  if (count >= 4) ensureIncluded('cruciverba');
+  if (count >= 5 && playerCount >= 3) ensureIncluded('tribunale');
+  if (count >= 4) ensureIncluded('telepatia');
+  const missingKinds: MixRoundKind[] = [
+    ...(plan.includes('preferiresti') ? [] : (['preferiresti'] as const)),
+    ...basePool.filter((k) => !plan.includes(k)),
+  ];
+  for (const target of missingKinds) {
+    for (let i = count - 1; i >= 1; i--) {
+      if (pinned.has(i)) continue;
+      if (plan.indexOf(plan[i]) >= i) continue;
+      const prev = plan[i - 1];
+      const next = i + 1 < count ? plan[i + 1] : null;
+      if (prev !== target && next !== target) {
+        plan[i] = target;
+        pinned.add(i);
+        break;
+      }
+    }
+  }
   return plan;
 }
 
@@ -675,10 +795,15 @@ export function mixEntryPhase(kind: MixRoundKind): GamePhase {
   if (kind === 'hotTake') return 'HOT_TAKE_VOTE';
   if (kind === 'groupMind') return 'GROUP_MIND';
   if (kind === 'write') return 'WRITE';
-  return 'DILEMMA_REVEAL';
+  if (kind === 'infiltrato') return 'DEFENSE';
+  if (kind === 'cruciverba') return 'CRUCIVERBA';
+  if (kind === 'tribunale') return 'TRIBUNALE_ARGUE';
+  if (kind === 'telepatia') return 'TELEPATHY';
+  return 'VOTE_1';
 }
 
 export interface FlashResultPayload {
+  isEmpty?: boolean;
   isUnanimous: boolean;
   isTie: boolean;
   minoritySide: VoteChoice | null;
@@ -724,6 +849,7 @@ export type StartGameError =
   | 'INVALID_STORIA'
   | 'INFILTRATO_NEEDS_PLAYERS'
   | 'SQUADRE_NEEDS_PLAYERS'
+  | 'EVEN_PLAYERS_REQUIRED'
   | 'ALREADY_STARTED';
 
 export type StartGameResult =
@@ -1141,13 +1267,28 @@ function emptyRoom(code: string, createdAt: number): Room {
     gognaVotesCount: 0,
     theme: null,
     flashResult: null,
+    preferirestiVotes: new Map(),
+    preferirestiResult: null,
     infiltratoRoundResult: null,
-    hotSeatCouple: null,
-    hotSeatBets: new Map(),
+    couples: [],
+    coupleRoundResults: null,
     partyScores: new Map(),
     hotTakeScores: new Map(),
     currentHotTakePrompt: null,
     usedHotTakeIds: new Set(),
+    cruciverbaState: null,
+    usedCruciverbaIds: new Set(),
+    tribunaleState: null,
+    usedTribunaleIds: new Set(),
+    tribunaleAppearances: new Map(),
+    turnExpiresAt: null,
+    pausedTurnRemainingMs: null,
+    readingEndsAt: null,
+    pausedReadingRemainingMs: null,
+    currentTelepathyPrompt: null,
+    usedTelepathyIds: new Set(),
+    telepathyAnswers: new Map(),
+    telepathyReveal: null,
     usedPartyCardIds: new Set(),
     mixPlan: [],
   };
@@ -1232,10 +1373,10 @@ export class RoomStore {
     room.turnStartedAt = null;
   }
 
-  /** Arm one DUO_ARGUE speaking turn (count-up start + "Ho finito" floor). */
+  /** Arm one DUO_ARGUE speaking turn (count-up start; no minimum floor). */
   private armDuoTurn(room: Room): void {
     room.turnStartedAt = this.now();
-    room.turnMinEndsAt = this.now() + DUO_TURN_MIN_MS;
+    room.turnMinEndsAt = null;
   }
 
   /**
@@ -1434,12 +1575,28 @@ export class RoomStore {
     room.gognaVotesCount = 0;
     room.theme = null;
     room.flashResult = null;
+    room.preferirestiVotes = new Map();
+    room.preferirestiResult = null;
     room.infiltratoRoundResult = null;
-    room.hotSeatCouple = null;
-    room.hotSeatBets = new Map();
+    room.couples = [];
+    room.coupleRoundResults = null;
     room.partyScores = new Map();
     room.hotTakeScores = new Map();
     room.currentHotTakePrompt = null;
+    room.usedHotTakeIds = new Set();
+    room.cruciverbaState = null;
+    room.usedCruciverbaIds = new Set();
+    room.tribunaleState = null;
+    room.usedTribunaleIds = new Set();
+    room.tribunaleAppearances = new Map();
+    room.turnExpiresAt = null;
+    room.pausedTurnRemainingMs = null;
+    room.readingEndsAt = null;
+    room.pausedReadingRemainingMs = null;
+    room.currentTelepathyPrompt = null;
+    room.usedTelepathyIds = new Set();
+    room.telepathyAnswers = new Map();
+    room.telepathyReveal = null;
     room.mixPlan = [];
     return { ok: true, room };
   }
@@ -1472,6 +1629,7 @@ export class RoomStore {
     theme?: string,
     infiltratoTono?: 'risate' | 'profondo' | 'misto',
     familiarita: Familiarita = 'misto',
+    explicitCouples?: Array<[string, string]>,
   ): StartGameResult {
     const safeFamiliarita: Familiarita = isFamiliarita(familiarita) ? familiarita : 'misto';
     const room = this.rooms.get(code);
@@ -1524,6 +1682,10 @@ export class RoomStore {
     } else if (partyMode) {
       const validPartyCounts = [3, 5, 7, 10];
       if (!validPartyCounts.includes(dilemmaCount)) return { ok: false, error: 'INVALID_DILEMMA_COUNT' };
+      if (partyMode === 'classico') {
+        if (!isContentRegister(register)) return { ok: false, error: 'INVALID_REGISTER' };
+        if (!isMood(mood)) return { ok: false, error: 'INVALID_MOOD' };
+      }
     } else {
       if (!isDilemmaCount(dilemmaCount)) return { ok: false, error: 'INVALID_DILEMMA_COUNT' };
       if (!isContentRegister(register)) return { ok: false, error: 'INVALID_REGISTER' };
@@ -1538,14 +1700,18 @@ export class RoomStore {
         return { ok: false, error: 'WRONG_PLAYER_COUNT' };
       }
     } else if (partyMode === 'coppie') {
-      // "Coppie & Scintille" can be played by a single couple (2 players) or a group!
-      if (room.players.size < 2) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
+      // "Coppie & Scintille" strictly runs on 2-player fixed couples (2, 4, 6, 8 players).
+      if (!coppie.validateCoppiePlayerCount(room.players.size)) {
+        return { ok: false, error: 'EVEN_PLAYERS_REQUIRED' };
+      }
       if (humanCount < 1) return { ok: false, error: 'NO_HUMAN_PLAYERS' };
     } else if (partyMode === 'infiltrato') {
       if (humanCount < 3) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
+    } else if (partyMode === 'tribunale') {
+      if (room.players.size < 3 || humanCount < 1) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
     } else {
       if (room.players.size < MIN_PLAYERS_TO_START) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
-      // Solo play is allowed (1 human + bots), but never a bots-only game.
+      // Solo play is allowed (1 human, with or without bots), never bots-only.
       if (humanCount < 1) return { ok: false, error: 'NO_HUMAN_PLAYERS' };
     }
     // "L'Infiltrato" needs gruppo + enough humans to hide among and to accuse.
@@ -1647,9 +1813,18 @@ export class RoomStore {
       // Mood (2.2) narrows the pool by complexity tier; the delicate-theme
       // opt-in additionally excludes flagged 'power' dilemmas unless the
       // leader explicitly asked for them. Validated above via isMood.
+      const targetCount =
+        mode === 'duello'
+          ? buildDuoActPlan(dilemmaCount).reduce((a, b) => a + b, 0)
+          : dilemmaCount;
+      const needed = Math.max(0, targetCount - room.submittedDilemmas.length);
       const cards = room.deck.cards;
       const moodEligible = filterByMood(cards, mood as Mood, delicatoOptIn);
-      const famEligible = filterByFamiliarita(moodEligible, safeFamiliarita);
+      let famEligible = filterByFamiliarita(moodEligible, safeFamiliarita);
+      if (famEligible.length < needed && famEligible.length < moodEligible.length) {
+        const famIds = new Set(famEligible.map((d) => d.id));
+        famEligible = [...famEligible, ...moodEligible.filter((d) => !famIds.has(d.id))];
+      }
       // Roster templates (5.3) read differently every time (a fresh random
       // name), so "già visto" exclusion never applies to them — they're
       // exempt from ever being filtered out here.
@@ -1666,10 +1841,6 @@ export class RoomStore {
       // The duello plays MORE dilemmas than the leader's 3/5/7 wire value: the
       // three duo acts expand it (4/7/10) — escalation then lands the spiciest
       // dilemmas in Atto III for free.
-      const targetCount =
-        mode === 'duello'
-          ? buildDuoActPlan(dilemmaCount).reduce((a, b) => a + b, 0)
-          : dilemmaCount;
       room.plannedDilemmas = dilemmaPlan.buildClassicPlan(
         room.deck,
         room.submittedDilemmas,
@@ -1720,16 +1891,33 @@ export class RoomStore {
     room.duoFirstPickAgreements = 0;
     room.duoMoments = [];
     // Configure revamped party mode if requested
-    if (partyMode && ['flash', 'infiltrato', 'coppie', 'assurdo', 'mix'].includes(partyMode)) {
+    if (
+      partyMode &&
+      ['flash', 'infiltrato', 'coppie', 'assurdo', 'preferiresti', 'cruciverba', 'tribunale', 'mix'].includes(
+        partyMode,
+      )
+    ) {
       room.partyMode = partyMode;
       room.partyIntensity =
         partyIntensity === 'piccante' ? 'piccante' : partyIntensity === 'profondo' ? 'profondo' : 'complicita';
       room.theme = theme?.trim() || null;
       room.flashResult = null;
+      room.preferirestiVotes = new Map();
+      room.preferirestiResult = null;
       room.infiltratoRoundResult = null;
+      room.coupleRoundResults = null;
       room.partyScores = new Map();
       room.hotTakeScores = new Map();
       room.currentHotTakePrompt = null;
+      room.cruciverbaState = null;
+      room.tribunaleState = null;
+      room.tribunaleAppearances = new Map();
+      room.turnExpiresAt = null;
+      room.readingEndsAt = null;
+      room.pausedReadingRemainingMs = null;
+      room.currentTelepathyPrompt = null;
+      room.telepathyAnswers = new Map();
+      room.telepathyReveal = null;
       room.mixPlan = [];
       if (partyMode === 'infiltrato') {
         const candidates = humans.length > 0 ? humans : [...room.players.values()].filter((p) => !p.isBot);
@@ -1737,45 +1925,71 @@ export class RoomStore {
           room.infiltratorId = candidates[Math.floor(this.rng() * candidates.length)].id;
         }
       }
-      if (partyMode === 'coppie' && room.players.size > 2) {
-        if (humans.length >= 2) {
-          room.hotSeatCouple = [humans[0].id, humans[1].id];
-        }
-        room.hotSeatBets = new Map();
+      const resolveName = (id: string) => room.players.get(id)?.nickname ?? 'Giocatore';
+      if (
+        partyMode === 'coppie' ||
+        (partyMode === 'mix' && coppie.validateCoppiePlayerCount(room.players.size))
+      ) {
+        room.couples = coppie.buildFixedCouples([...room.players.keys()], resolveName, explicitCouples);
       } else {
-        room.hotSeatCouple = null;
-        room.hotSeatBets = new Map();
+        room.couples = [];
       }
-      if (partyMode === 'flash' || partyMode === 'mix') room.defenseMaxMs = 15_000;
-      else if (partyMode === 'infiltrato') room.defenseMaxMs = 60_000;
-      else if (partyMode === 'coppie') room.defenseMaxMs = 30_000;
-      else if (partyMode === 'assurdo') room.defenseMaxMs = 30_000;
+      room.defenseMaxMs = DEFENSE_MAX_MS_NORMALE;
       const count = dilemmaCount || 5;
-      if (partyMode === 'mix') {
+      if (partyMode === 'cruciverba') {
+        room.mixPlan = Array.from({ length: count }, () => 'cruciverba');
+        room.partyCards = [];
+        room.dilemmaCount = count;
+      } else if (partyMode === 'tribunale') {
+        room.mixPlan = Array.from({ length: count }, () => 'tribunale');
+        room.partyCards = [];
+        room.dilemmaCount = count;
+      } else if (partyMode === 'mix') {
         room.mixPlan = buildMixPlan(count, room.players.size, this.rng);
-        // Pre-draw a card for every slot in mixPlan (flash / assurdo / infiltrato)
+        // Pre-draw cards for party-card slots in mixPlan (only tag used for actual card slots)
         const flashCards = getCuratedCards('flash', { count, familiarita: safeFamiliarita, rng: this.rng, excludeIds: room.usedPartyCardIds });
-        const assurdoCards = getCuratedCards('assurdo', { count, familiarita: safeFamiliarita, rng: this.rng, excludeIds: room.usedPartyCardIds });
+        const rawAssurdoCards = getCuratedCards('assurdo', { count: count * 2, familiarita: safeFamiliarita, rng: this.rng, excludeIds: room.usedPartyCardIds });
+        const assurdoCards =
+          room.players.size < 2
+            ? rawAssurdoCards.filter((c) => (c as AssurdoCard).cardType === 'dignita')
+            : rawAssurdoCards;
         const infiltratoCards = getCuratedCards('infiltrato', { count, familiarita: safeFamiliarita, rng: this.rng, excludeIds: room.usedPartyCardIds });
+        const coppieCards = getCuratedCards('coppie', { count, intensity: room.partyIntensity, familiarita: safeFamiliarita, rng: this.rng, excludeIds: room.usedPartyCardIds });
+        const preferirestiRng = this.rng === Math.random ? Math.random : () => 0.5;
+        const preferirestiCards = getCuratedCards('preferiresti', { count, familiarita: safeFamiliarita, rng: preferirestiRng, excludeIds: room.usedPartyCardIds });
         let fi = 0;
         let ai = 0;
         let ii = 0;
+        let ci = 0;
+        let pi = 0;
         room.partyCards = room.mixPlan.map((kind) => {
-          if (kind === 'assurdo') return assurdoCards[ai++ % assurdoCards.length];
-          if (kind === 'infiltrato') return infiltratoCards[ii++ % infiltratoCards.length];
-          return flashCards[fi++ % flashCards.length];
+          let drawn: PartyCard;
+          if (kind === 'assurdo') drawn = (assurdoCards.length > 0 ? assurdoCards : rawAssurdoCards)[ai++ % Math.max(1, assurdoCards.length || rawAssurdoCards.length)];
+          else if (kind === 'infiltrato') drawn = infiltratoCards[ii++ % infiltratoCards.length];
+          else if (kind === 'coppie') drawn = coppieCards[ci++ % coppieCards.length];
+          else if (kind === 'preferiresti') drawn = preferirestiCards[pi++ % preferirestiCards.length];
+          else drawn = flashCards[fi++ % flashCards.length];
+          if (drawn && (kind === 'flash' || kind === 'assurdo' || kind === 'infiltrato' || kind === 'coppie' || kind === 'preferiresti')) {
+            room.usedPartyCardIds.add(drawn.id);
+          }
+          return drawn;
         });
-        for (const c of room.partyCards) if (c) room.usedPartyCardIds.add(c.id);
         room.dilemmaCount = room.mixPlan.length;
       } else {
-        const cards = getCuratedCards(partyMode, {
-          count,
+        let cards = getCuratedCards(partyMode, {
+          count: partyMode === 'assurdo' && room.players.size < 2 ? count * 2 : count,
           intensity: room.partyIntensity,
           infiltratoTono,
           familiarita: safeFamiliarita,
           rng: this.rng,
           excludeIds: room.usedPartyCardIds,
         });
+        if (partyMode === 'assurdo' && room.players.size < 2) {
+          const dignitaOnly = cards.filter((c) => (c as AssurdoCard).cardType === 'dignita');
+          if (dignitaOnly.length > 0) cards = dignitaOnly.slice(0, count);
+        } else {
+          cards = cards.slice(0, count);
+        }
         for (const c of cards) room.usedPartyCardIds.add(c.id);
         room.partyCards = cards;
         room.dilemmaCount = cards.length;
@@ -1793,12 +2007,23 @@ export class RoomStore {
       room.partyMode = null;
       room.theme = null;
       room.flashResult = null;
+      room.preferirestiVotes = new Map();
+      room.preferirestiResult = null;
       room.infiltratoRoundResult = null;
-      room.hotSeatCouple = null;
-      room.hotSeatBets = new Map();
+      room.couples = [];
+      room.coupleRoundResults = null;
       room.partyScores = new Map();
       room.hotTakeScores = new Map();
       room.currentHotTakePrompt = null;
+      room.cruciverbaState = null;
+      room.tribunaleState = null;
+      room.tribunaleAppearances = new Map();
+      room.turnExpiresAt = null;
+      room.readingEndsAt = null;
+      room.pausedReadingRemainingMs = null;
+      room.currentTelepathyPrompt = null;
+      room.telepathyAnswers = new Map();
+      room.telepathyReveal = null;
       room.mixPlan = [];
       room.partyCards = [];
       room.currentPartyCard = null;
@@ -1853,7 +2078,13 @@ export class RoomStore {
     }
     room.pausedRemainingMs =
       room.phaseExpiresAt != null ? Math.max(0, room.phaseExpiresAt - this.now()) : null;
+    room.pausedTurnRemainingMs =
+      room.turnExpiresAt != null ? Math.max(0, room.turnExpiresAt - this.now()) : null;
+    room.pausedReadingRemainingMs =
+      room.readingEndsAt != null ? Math.max(0, room.readingEndsAt - this.now()) : null;
     room.phaseExpiresAt = null;
+    room.turnExpiresAt = null;
+    room.readingEndsAt = null;
     room.paused = true;
     return true;
   }
@@ -1868,8 +2099,14 @@ export class RoomStore {
     if (!room || !room.paused) return false;
     room.phaseExpiresAt =
       room.pausedRemainingMs != null ? this.now() + room.pausedRemainingMs : null;
+    room.turnExpiresAt =
+      room.pausedTurnRemainingMs != null ? this.now() + room.pausedTurnRemainingMs : null;
+    room.readingEndsAt =
+      room.pausedReadingRemainingMs != null ? this.now() + room.pausedReadingRemainingMs : null;
     room.paused = false;
     room.pausedRemainingMs = null;
+    room.pausedTurnRemainingMs = null;
+    room.pausedReadingRemainingMs = null;
     return true;
   }
 
@@ -1897,7 +2134,7 @@ export class RoomStore {
     // "L'Infiltrato": the end-game accusation leads into FINAL_AWARDS, resolving
     // whether the infiltrator was caught and whether they won.
     if (room.phase === 'ACCUSE') {
-      if (room.partyMode !== 'infiltrato') {
+      if (!room.partyMode) {
         room.phase = 'FINAL_AWARDS';
         room.phaseExpiresAt = this.expiryFor('FINAL_AWARDS');
         infiltrato.resolveInfiltrato(room);
@@ -1973,36 +2210,52 @@ export class RoomStore {
     const step = (phase: GamePhase, idx: number): PhaseTransition => {
       if (room.partyMode) {
         const total = room.dilemmaCount ?? 0;
-        if (room.partyMode === 'flash') {
-          if (phase === 'PHASE_INTRO') return { phase: 'DILEMMA_REVEAL', dilemmaIndex: 1 };
-          if (phase === 'DILEMMA_REVEAL') return { phase: 'VOTE_1', dilemmaIndex: idx };
+        if (room.partyMode === 'flash' || room.partyMode === 'preferiresti') {
+          if (phase === 'PHASE_INTRO') return { phase: 'VOTE_1', dilemmaIndex: 1 };
           if (phase === 'VOTE_1') return { phase: 'SPLIT_REVEAL', dilemmaIndex: idx };
           if (phase === 'SPLIT_REVEAL') return { phase: 'DEFENSE', dilemmaIndex: idx };
           if (phase === 'DEFENSE') {
             return idx < total
-              ? { phase: 'DILEMMA_REVEAL', dilemmaIndex: idx + 1 }
+              ? { phase: 'VOTE_1', dilemmaIndex: idx + 1 }
               : { phase: 'FINAL_AWARDS', dilemmaIndex: idx };
           }
         }
         if (room.partyMode === 'infiltrato') {
-          if (phase === 'PHASE_INTRO') return { phase: 'DILEMMA_REVEAL', dilemmaIndex: 1 };
-          if (phase === 'DILEMMA_REVEAL') return { phase: 'DEFENSE', dilemmaIndex: idx };
+          if (phase === 'PHASE_INTRO') return { phase: 'DEFENSE', dilemmaIndex: 1 };
           if (phase === 'DEFENSE') return { phase: 'ACCUSE', dilemmaIndex: idx };
           if (phase === 'ACCUSE') return { phase: 'SPLIT_REVEAL', dilemmaIndex: idx };
           if (phase === 'SPLIT_REVEAL') {
             return idx < total
-              ? { phase: 'DILEMMA_REVEAL', dilemmaIndex: idx + 1 }
+              ? { phase: 'DEFENSE', dilemmaIndex: idx + 1 }
               : { phase: 'FINAL_AWARDS', dilemmaIndex: idx };
           }
         }
         if (room.partyMode === 'coppie' || room.partyMode === 'assurdo') {
-          if (phase === 'PHASE_INTRO') return { phase: 'DILEMMA_REVEAL', dilemmaIndex: 1 };
-          if (phase === 'DILEMMA_REVEAL') return { phase: 'VOTE_1', dilemmaIndex: idx };
+          if (phase === 'PHASE_INTRO') return { phase: 'VOTE_1', dilemmaIndex: 1 };
           if (phase === 'VOTE_1') return { phase: 'SPLIT_REVEAL', dilemmaIndex: idx };
           if (phase === 'SPLIT_REVEAL') return { phase: 'DEFENSE', dilemmaIndex: idx };
           if (phase === 'DEFENSE') {
             return idx < total
-              ? { phase: 'DILEMMA_REVEAL', dilemmaIndex: idx + 1 }
+              ? { phase: 'VOTE_1', dilemmaIndex: idx + 1 }
+              : { phase: 'FINAL_AWARDS', dilemmaIndex: idx };
+          }
+        }
+        if (room.partyMode === 'cruciverba') {
+          if (phase === 'PHASE_INTRO') return { phase: 'CRUCIVERBA', dilemmaIndex: 1 };
+          if (phase === 'CRUCIVERBA') return { phase: 'CRUCIVERBA_REVEAL', dilemmaIndex: idx };
+          if (phase === 'CRUCIVERBA_REVEAL') {
+            return idx < total
+              ? { phase: 'CRUCIVERBA', dilemmaIndex: idx + 1 }
+              : { phase: 'FINAL_AWARDS', dilemmaIndex: idx };
+          }
+        }
+        if (room.partyMode === 'tribunale') {
+          if (phase === 'PHASE_INTRO') return { phase: 'TRIBUNALE_ARGUE', dilemmaIndex: 1 };
+          if (phase === 'TRIBUNALE_ARGUE') return { phase: 'TRIBUNALE_VOTE', dilemmaIndex: idx };
+          if (phase === 'TRIBUNALE_VOTE') return { phase: 'TRIBUNALE_REVEAL', dilemmaIndex: idx };
+          if (phase === 'TRIBUNALE_REVEAL') {
+            return idx < total
+              ? { phase: 'TRIBUNALE_ARGUE', dilemmaIndex: idx + 1 }
               : { phase: 'FINAL_AWARDS', dilemmaIndex: idx };
           }
         }
@@ -2025,12 +2278,20 @@ export class RoomStore {
             if (phase === 'WRITE_VOTE') return { phase: 'WRITE_REVEAL', dilemmaIndex: idx };
             if (phase === 'WRITE_REVEAL') return advanceToNextMixRound(idx);
           } else if (curKind === 'infiltrato') {
-            if (phase === 'DILEMMA_REVEAL') return { phase: 'DEFENSE', dilemmaIndex: idx };
             if (phase === 'DEFENSE') return { phase: 'ACCUSE', dilemmaIndex: idx };
             if (phase === 'ACCUSE') return { phase: 'SPLIT_REVEAL', dilemmaIndex: idx };
             if (phase === 'SPLIT_REVEAL') return advanceToNextMixRound(idx);
+          } else if (curKind === 'cruciverba') {
+            if (phase === 'CRUCIVERBA') return { phase: 'CRUCIVERBA_REVEAL', dilemmaIndex: idx };
+            if (phase === 'CRUCIVERBA_REVEAL') return advanceToNextMixRound(idx);
+          } else if (curKind === 'tribunale') {
+            if (phase === 'TRIBUNALE_ARGUE') return { phase: 'TRIBUNALE_VOTE', dilemmaIndex: idx };
+            if (phase === 'TRIBUNALE_VOTE') return { phase: 'TRIBUNALE_REVEAL', dilemmaIndex: idx };
+            if (phase === 'TRIBUNALE_REVEAL') return advanceToNextMixRound(idx);
+          } else if (curKind === 'telepatia') {
+            if (phase === 'TELEPATHY') return { phase: 'TELEPATHY_REVEAL', dilemmaIndex: idx };
+            if (phase === 'TELEPATHY_REVEAL') return advanceToNextMixRound(idx);
           } else {
-            if (phase === 'DILEMMA_REVEAL') return { phase: 'VOTE_1', dilemmaIndex: idx };
             if (phase === 'VOTE_1') return { phase: 'SPLIT_REVEAL', dilemmaIndex: idx };
             if (phase === 'SPLIT_REVEAL') return { phase: 'DEFENSE', dilemmaIndex: idx };
             if (phase === 'DEFENSE') return advanceToNextMixRound(idx);
@@ -2039,18 +2300,36 @@ export class RoomStore {
       }
       if (room.format === 'classic') {
         if (phase === 'PHASE_RESULTS' && groupMind.isGroupMindCheckpoint(idx, room.dilemmaCount ?? 0)) {
-          // Checkpoints land at idx=2,4,6,…; occurrence = idx/2 = 1,2,3,…
-          // Odd occurrences -> La Mente del Gruppo, even -> In Altre Parole.
+          // Checkpoints land at idx=2,4,6,8,…; occurrence = idx/2 = 1,2,3,4,…
+          // Solo players skip multi-player WRITE/TELEPATHY and alternate GROUP_MIND/CRUCIVERBA.
           const occurrence = idx / 2;
-          return occurrence % 2 === 1
-            ? { phase: 'GROUP_MIND', dilemmaIndex: idx }
-            : { phase: 'WRITE', dilemmaIndex: idx };
+          if (room.players.size < 2) {
+            return occurrence % 2 === 1
+              ? { phase: 'GROUP_MIND', dilemmaIndex: idx }
+              : { phase: 'CRUCIVERBA', dilemmaIndex: idx };
+          }
+          const mod = occurrence % 4;
+          if (mod === 1) return { phase: 'GROUP_MIND', dilemmaIndex: idx };
+          if (mod === 2) return { phase: 'WRITE', dilemmaIndex: idx };
+          if (mod === 3) return { phase: 'CRUCIVERBA', dilemmaIndex: idx };
+          return { phase: 'TELEPATHY', dilemmaIndex: idx };
         }
         if (phase === 'GROUP_MIND') return { phase: 'GROUP_MIND_REVEAL', dilemmaIndex: idx };
         if (phase === 'GROUP_MIND_REVEAL') return nextPhase('PHASE_RESULTS', idx, room.dilemmaCount ?? 0);
         if (phase === 'WRITE') return { phase: 'WRITE_VOTE', dilemmaIndex: idx };
         if (phase === 'WRITE_VOTE') return { phase: 'WRITE_REVEAL', dilemmaIndex: idx };
         if (phase === 'WRITE_REVEAL') return nextPhase('PHASE_RESULTS', idx, room.dilemmaCount ?? 0);
+        if (phase === 'CRUCIVERBA') return { phase: 'CRUCIVERBA_REVEAL', dilemmaIndex: idx };
+        if (phase === 'CRUCIVERBA_REVEAL') return nextPhase('PHASE_RESULTS', idx, room.dilemmaCount ?? 0);
+        if (phase === 'TELEPATHY') return { phase: 'TELEPATHY_REVEAL', dilemmaIndex: idx };
+        if (phase === 'TELEPATHY_REVEAL') return nextPhase('PHASE_RESULTS', idx, room.dilemmaCount ?? 0);
+      }
+      // Solo play (1 player, no bots): skip multi-player debate/predict/re-vote phases
+      // and go straight from VOTE_1 to the round outcome.
+      if (!room.partyMode && room.players.size < 2 && phase === 'VOTE_1') {
+        return room.format === 'storia'
+          ? { phase: 'SCENE_CONSEQUENCE', dilemmaIndex: idx }
+          : { phase: 'PHASE_RESULTS', dilemmaIndex: idx };
       }
       return room.format === 'percorso'
         ? nextPercorsoPhase(phase, idx, room.plannedTappe)
@@ -2072,7 +2351,7 @@ export class RoomStore {
       // or — deck exhausted — advance as if its PHASE_RESULTS just ended (which
       // keeps the GROUP_MIND/WRITE checkpoints and the ACCUSE detour below).
       transition = dilemmaPlan.replaceCurrentDilemma(room)
-        ? { phase: 'DILEMMA_REVEAL', dilemmaIndex: room.dilemmaIndex }
+        ? { phase: 'VOTE_1', dilemmaIndex: room.dilemmaIndex }
         : step('PHASE_RESULTS', room.dilemmaIndex);
     } else {
       transition = step(room.phase, room.dilemmaIndex);
@@ -2092,6 +2371,48 @@ export class RoomStore {
         transition = { phase: 'UNANIMOUS_REVEAL', dilemmaIndex: room.dilemmaIndex };
       }
     }
+    const isInfiltratoDefenseEntry = (t: PhaseTransition): boolean => {
+      if (t.phase !== 'DEFENSE' || !room.partyMode) return false;
+      const sub = room.partyMode === 'mix' ? (room.mixPlan[t.dilemmaIndex - 1] ?? 'flash') : room.partyMode;
+      return sub === 'infiltrato';
+    };
+    // Skip DEFENSE when there is nothing to defend or discuss:
+    // - In partyMode (except infiltrato debate and active gogna justification),
+    //   there are no defenders, so skip straight past DEFENSE.
+    // - In classic/percorso/storia, if selectDefenders picks 0 defenders (e.g.
+    //   unanimous vote or <2 voters), skip DEFENSE rather than showing an empty
+    //   "Nessuna difesa per questo dilemma." screen.
+    if (transition.phase === 'DEFENSE' && !isInfiltratoDefenseEntry(transition)) {
+      if (room.partyMode) {
+        const sub =
+          room.partyMode === 'mix'
+            ? (room.mixPlan[transition.dilemmaIndex - 1] ?? 'flash')
+            : room.partyMode;
+        const isActiveGogna =
+          sub === 'assurdo' &&
+          (room.currentPartyCard as AssurdoCard | undefined)?.cardType === 'gogna' &&
+          room.gognaTargetNickname != null;
+        const isActiveFlashDefense =
+          sub === 'flash' &&
+          room.flashResult != null &&
+          !room.flashResult.isEmpty &&
+          !room.flashResult.isUnanimous;
+        const isActivePreferirestiDefense =
+          sub === 'preferiresti' &&
+          room.preferirestiResult != null &&
+          !room.preferirestiResult.isEmpty &&
+          !room.preferirestiResult.isUnanimous;
+        if (!isActiveGogna && !isActiveFlashDefense && !isActivePreferirestiDefense) {
+          transition = step('DEFENSE', transition.dilemmaIndex);
+        }
+      } else {
+        room.currentTwist = twists.isTwistRound(room) ? twists.pickTwist(this.rng) : null;
+        room.defenders = defenseSetup.selectDefenders(room, this.rng);
+        if (room.defenders.length === 0) {
+          transition = step('DEFENSE', transition.dilemmaIndex);
+        }
+      }
+    }
     // The peer "best speaker" vote needs at least two defenders to choose between;
     // with 0 or 1 it's degenerate, so skip straight to the results.
     if (transition.phase === 'SPEAKER_VOTE' && room.defenders.length < 2) {
@@ -2103,34 +2424,16 @@ export class RoomStore {
     }
     room.phase = transition.phase;
     room.dilemmaIndex = transition.dilemmaIndex;
-    if (room.partyMode) {
-      if (transition.phase === 'DILEMMA_REVEAL') {
-        room.phaseExpiresAt = this.now() + (room.partyMode === 'flash' ? 3_000 : 5_000);
-      } else if (transition.phase === 'VOTE_1') {
-        room.phaseExpiresAt = this.now() + (room.partyMode === 'flash' ? 6_000 : 15_000);
-      } else if (transition.phase === 'SPLIT_REVEAL') {
-        room.phaseExpiresAt = this.now() + (room.partyMode === 'flash' ? 6_000 : 8_000);
-      } else if (transition.phase === 'DEFENSE') {
-        const defenseSubMode =
-          room.partyMode === 'mix' ? (room.mixPlan[transition.dilemmaIndex - 1] ?? 'flash') : room.partyMode;
-        if (defenseSubMode === 'infiltrato') {
-          room.phaseExpiresAt = this.now() + 60_000;
-        } else if (defenseSubMode === 'flash') {
-          room.phaseExpiresAt = this.now() + 15_000;
-        } else {
-          room.phaseExpiresAt = this.now() + 20_000;
-        }
-      } else if (transition.phase === 'ACCUSE') {
-        room.phaseExpiresAt = this.now() + 20_000;
-      } else {
-        room.phaseExpiresAt = this.expiryFor(transition.phase);
-      }
-    } else {
-      room.phaseExpiresAt = this.expiryFor(transition.phase);
-    }
+    room.turnExpiresAt = null;
+    room.readingEndsAt = null;
+    room.pausedReadingRemainingMs = null;
+    // All phases run without countdown timers.
+    room.phaseExpiresAt = null;
+    const isDilemmaRoundEntry =
+      transition.phase === 'VOTE_1' || isInfiltratoDefenseEntry(transition);
     // A new round starting is the round boundary (3.2): promote anyone who
     // late-joined last round, cap permitting.
-    if (transition.phase === 'DILEMMA_REVEAL') promoteLateJoiners(room);
+    if (isDilemmaRoundEntry) promoteLateJoiners(room);
     // Percorso: entering a chapter card sets the upcoming tappa (the dilemma the
     // card precedes is dilemmaIndex+1) and resets the per-tappa recap counters.
     if (transition.phase === 'TAPPA_INTRO') {
@@ -2154,6 +2457,9 @@ export class RoomStore {
     // closed bivio from the second-vote majority (tie → first-vote lead → A) and
     // shows the matching branch text. Aggregate only — no individual vote leaks.
     if (transition.phase === 'SCENE_CONSEQUENCE') {
+      if (room.votes1.size === 0 && room.votes.size > 0) {
+        room.votes1 = new Map(room.votes);
+      }
       const scene = room.plannedScenes[transition.dilemmaIndex - 1];
       const decision = decisionForRound(tally(room.votes), tally(room.votes1));
       room.currentDecision = decision;
@@ -2169,9 +2475,9 @@ export class RoomStore {
     if (transition.phase === 'STORY_EPILOGUE' && room.story) {
       room.currentEpilogo = pickEpilogo(room.story.epiloghi, countDecisionsA(room.storyDecisions));
     }
-    // Entering a new dilemma reveal draws the next (non-repeating) dilemma and
+    // Entering a new dilemma round draws the next (non-repeating) dilemma and
     // resets the round's secret votes so each dilemma starts from a clean tally.
-    if (transition.phase === 'DILEMMA_REVEAL') {
+    if (isDilemmaRoundEntry) {
       if (room.partyMode && room.partyCards.length > 0) {
         const cardIndex = (transition.dilemmaIndex - 1) % room.partyCards.length;
         const card = room.partyCards[cardIndex];
@@ -2206,11 +2512,13 @@ export class RoomStore {
           };
         } else if (activeSubMode === 'coppie') {
           const cc = card as CoppieCard;
+          const fallbackA = cc.cardType === 'allineamento' ? 'Partner 1' : '✅ Fatta insieme!';
+          const fallbackB = cc.cardType === 'allineamento' ? 'Partner 2' : '🍺 Penitenza / Passiamo';
           room.currentDilemma = {
             id: cc.id,
             text: cc.prompt,
-            optionA: cc.optionA ?? (cc.cardType === 'allineamento' ? 'Lui / Opzione A' : 'Fatto!'),
-            optionB: cc.optionB ?? (cc.cardType === 'allineamento' ? 'Lei / Opzione B' : 'Penitenza! 🍺'),
+            optionA: cc.optionA ?? fallbackA,
+            optionB: cc.optionB ?? fallbackB,
             spuntiA: [],
             spuntiB: [],
             register: 'vita',
@@ -2228,11 +2536,31 @@ export class RoomStore {
             register: 'vita',
             complessita: 'sorbetto',
           };
+        } else if (activeSubMode === 'preferiresti') {
+          const pc = card as PreferirestiCard;
+          const opts = pc.options ?? [
+            pc.optionA ?? 'Prima scelta',
+            pc.optionB ?? 'Seconda scelta',
+            pc.optionC ?? 'Terza scelta',
+            pc.optionD ?? 'Quarta scelta',
+          ];
+          room.currentDilemma = {
+            id: pc.id,
+            text: pc.prompt,
+            optionA: opts[0] ?? 'Prima scelta',
+            optionB: opts[1] ?? 'Seconda scelta',
+            spuntiA: [],
+            spuntiB: [],
+            register: 'vita',
+            complessita: 'sorbetto',
+          };
         }
         room.gognaVotes.clear();
         room.gognaTargetId = null;
         room.gognaTargetNickname = null;
         room.gognaVotesCount = 0;
+        room.preferirestiVotes.clear();
+        room.preferirestiResult = null;
         if (activeSubMode === 'infiltrato') {
           const humans = [...room.players.values()].filter((p) => !p.isBot);
           if (humans.length > 0) {
@@ -2240,17 +2568,12 @@ export class RoomStore {
           }
           room.accusations.clear();
           room.infiltratoRoundResult = null;
-        } else if (activeSubMode === 'coppie') {
-          if (room.players.size > 2) {
-            const humans = [...room.players.values()].filter((p) => !p.isBot);
-            if (humans.length >= 2) {
-              const i1 = (transition.dilemmaIndex - 1) % humans.length;
-              const i2 = transition.dilemmaIndex % humans.length;
-              room.hotSeatCouple = [humans[i1].id, humans[i2].id];
-            }
-          }
-          room.hotSeatBets.clear();
+        } else if (room.partyMode === 'mix') {
+          room.infiltratorId = null;
+          room.accusations.clear();
+          room.infiltratoRoundResult = null;
         }
+        room.coupleRoundResults = null;
         room.flashResult = null;
       } else if (room.format === 'percorso') {
         // The ascent is precomputed: walk it by index, and track the live tappa.
@@ -2288,6 +2611,17 @@ export class RoomStore {
       room.turnMinEndsAt = null;
       room.groupMindQuestion = null;
       room.writePrompt = null;
+      room.currentHotTakePrompt = null;
+      room.hotTakeScores.clear();
+      room.cruciverbaState = null;
+      room.tribunaleState = null;
+      room.turnExpiresAt = null;
+      room.readingEndsAt = null;
+      room.pausedReadingRemainingMs = null;
+      room.coupleRoundResults = null;
+      room.currentTelepathyPrompt = null;
+      room.telepathyAnswers.clear();
+      room.telepathyReveal = null;
       room.currentTwist = null;
       room.infiltratoToolUsedThisRound = false;
       room.infiltratoDecoySpunto = null;
@@ -2295,6 +2629,38 @@ export class RoomStore {
     // Entering PREDICT in the "Quanto mi conosci" round assigns the guessing ring.
     if (transition.phase === 'PREDICT' && knowRound.isKnowRound(room)) {
       knowRound.assignKnowTargets(room);
+    }
+    const isStandaloneMiniGameEntry =
+      transition.phase === 'GROUP_MIND' ||
+      transition.phase === 'WRITE' ||
+      transition.phase === 'HOT_TAKE_VOTE' ||
+      transition.phase === 'CRUCIVERBA' ||
+      transition.phase === 'TRIBUNALE_ARGUE' ||
+      transition.phase === 'TELEPATHY';
+    if (isStandaloneMiniGameEntry) {
+      room.currentDilemma = null;
+      room.currentPartyCard = null;
+      room.flashResult = null;
+      room.preferirestiVotes.clear();
+      room.preferirestiResult = null;
+      room.infiltratoRoundResult = null;
+      room.coupleRoundResults = null;
+      room.gognaVotes.clear();
+      room.gognaTargetId = null;
+      room.gognaTargetNickname = null;
+      room.gognaVotesCount = 0;
+      room.votes.clear();
+      room.votes1.clear();
+      room.confirmedVote2.clear();
+      if (transition.phase !== 'GROUP_MIND') room.groupMindQuestion = null;
+      if (transition.phase !== 'WRITE') room.writePrompt = null;
+      if (transition.phase !== 'HOT_TAKE_VOTE') room.currentHotTakePrompt = null;
+      if (transition.phase !== 'CRUCIVERBA') room.cruciverbaState = null;
+      if (transition.phase !== 'TRIBUNALE_ARGUE') room.tribunaleState = null;
+      if (transition.phase !== 'TELEPATHY') {
+        room.currentTelepathyPrompt = null;
+        room.telepathyReveal = null;
+      }
     }
     // Entering GROUP_MIND (4.1): draw a fresh question, reset this round's
     // answers/guesses, and have bots answer immediately so they never block it.
@@ -2337,6 +2703,51 @@ export class RoomStore {
       room.hotTakeScores = new Map();
       hotTake.castBotHotTake(room, this.rng);
     }
+    // Entering CRUCIVERBA: draw a fresh 2D board with no countdown timer.
+    if (transition.phase === 'CRUCIVERBA') {
+      const board = cruciverba.drawCruciverbaBoard(room.usedCruciverbaIds, this.rng);
+      const activeIds = [...room.players.values()]
+        .filter((p) => p.connected !== false && !room.lateJoiners.has(p.id))
+        .map((p) => p.id);
+      const turnIds = activeIds.length > 0 ? activeIds : [...room.players.keys()];
+      room.cruciverbaState = cruciverba.initCruciverbaRound(board, turnIds, this.rng);
+      room.readingEndsAt = null;
+      room.turnExpiresAt = null;
+    }
+    // Entering TRIBUNALE_ARGUE: draw a relatable dispute case + 2 fair contenders
+    // with no countdown timer (advance manually when ready).
+    if (transition.phase === 'TRIBUNALE_ARGUE') {
+      const caseData = tribunale.drawTribunaleCase(room.usedTribunaleIds, this.rng);
+      const activeIds = [...room.players.values()]
+        .filter((p) => p.connected !== false && !room.lateJoiners.has(p.id))
+        .map((p) => p.id);
+      const poolIds = activeIds.length >= 2 ? activeIds : [...room.players.keys()];
+      const pair = tribunale.pickTribunaleContenders(poolIds, room.tribunaleAppearances, this.rng);
+      if (pair) {
+        room.tribunaleAppearances.set(pair[0], (room.tribunaleAppearances.get(pair[0]) ?? 0) + 1);
+        room.tribunaleAppearances.set(pair[1], (room.tribunaleAppearances.get(pair[1]) ?? 0) + 1);
+        room.tribunaleState = tribunale.initTribunaleRound(caseData, pair[0], pair[1]);
+        room.readingEndsAt = null;
+        room.turnExpiresAt = null;
+      }
+    }
+    // Entering TRIBUNALE_VOTE: bots in the jury cast their verdict immediately.
+    if (transition.phase === 'TRIBUNALE_VOTE' && room.tribunaleState) {
+      const st = room.tribunaleState;
+      for (const p of room.players.values()) {
+        if (!p.isBot || p.id === st.accusaId || p.id === st.difesaId) continue;
+        tribunale.castTribunaleVote(st, p.id, this.rng() < 0.5 ? 'ACCUSA' : 'DIFESA');
+      }
+    }
+    // Entering TELEPATHY: draw a 1-word mind-sync prompt, reset answers, and have bots submit.
+    if (transition.phase === 'TELEPATHY') {
+      const tp = telepathy.pickTelepathyPrompt(room, this.rng);
+      room.currentTelepathyPrompt = tp;
+      room.usedTelepathyIds.add(tp.id);
+      room.telepathyAnswers = new Map();
+      room.telepathyReveal = null;
+      telepathy.fillBotTelepathyAnswers(room, this.rng);
+    }
     // Entering WRITE_VOTE: freeze the anonymized shuffled order, then bots vote.
     if (transition.phase === 'WRITE_VOTE') {
       writeRound.freezeWriteOrder(room, this.rng);
@@ -2349,16 +2760,17 @@ export class RoomStore {
     // selectDefenders/armTurn below both read room.currentTwist.
     if (transition.phase === 'DEFENSE') {
       if (room.partyMode) {
-        if (room.partyMode === 'flash') room.defenseMaxMs = 15_000;
-        else if (room.partyMode === 'infiltrato') room.defenseMaxMs = 60_000;
-        else if (room.partyMode === 'coppie') room.defenseMaxMs = 20_000;
-        else if (room.partyMode === 'assurdo') room.defenseMaxMs = 20_000;
+        const defenseSubMode =
+          room.partyMode === 'mix' ? (room.mixPlan[transition.dilemmaIndex - 1] ?? 'flash') : room.partyMode;
+        if (defenseSubMode === 'flash' || defenseSubMode === 'assurdo' || defenseSubMode === 'preferiresti') room.defenseMaxMs = 15_000;
+        else if (defenseSubMode === 'infiltrato') room.defenseMaxMs = 60_000;
+        else if (defenseSubMode === 'coppie') room.defenseMaxMs = 20_000;
         room.defenders = [];
         room.defenseTurnIndex = 0;
         room.raisedHands = [];
       } else {
-        room.currentTwist = twists.isTwistRound(room) ? twists.pickTwist(this.rng) : null;
-        room.defenders = defenseSetup.selectDefenders(room, this.rng);
+        // currentTwist & defenders were already computed when checking whether
+        // DEFENSE should be skipped above.
         room.absurdConstraint = absurdConstraints.pickAbsurdConstraint(this.rng);
         room.defenseTurnIndex = 0;
         room.defenseArgument = defenseSetup.argumentForCurrentDefender(room, this.rng);
@@ -2380,18 +2792,34 @@ export class RoomStore {
             room.gognaVotes.set(p.id, target);
           }
         }
+      } else if (voteSubMode === 'preferiresti') {
+        const pc = room.currentPartyCard as PreferirestiCard | null;
+        const optLen = Math.max(2, Math.min(4, pc?.options?.length ?? 4));
+        const choices = PREFERIRESTI_CHOICES.slice(0, optLen);
+        for (const p of room.players.values()) {
+          if (p.isBot) {
+            const botChoice = choices[Math.floor(this.rng() * choices.length)] ?? 'A';
+            room.preferirestiVotes.set(p.id, botChoice);
+            room.votes.set(p.id, botChoice === 'A' ? 'A' : 'B');
+          }
+        }
       }
     }
     if (transition.phase === 'SPLIT_REVEAL') {
-      if (room.partyMode === 'flash') {
+      const splitSubMode =
+        room.partyMode === 'mix' ? (room.mixPlan[transition.dilemmaIndex - 1] ?? 'flash') : room.partyMode;
+      if (splitSubMode === 'flash') {
         const countA = [...room.votes.values()].filter((v) => v === 'A').length;
         const countB = [...room.votes.values()].filter((v) => v === 'B').length;
         const totalVotes = countA + countB;
-        const isUnanimous = totalVotes > 0 && (countA === 0 || countB === 0);
-        const isTie = totalVotes > 0 && countA === countB;
+        const isEmpty = totalVotes === 0;
+        const isUnanimous = !isEmpty && (countA === 0 || countB === 0);
+        const isTie = !isEmpty && countA === countB;
         let minoritySide: VoteChoice | null = null;
-        if (!isUnanimous && !isTie) {
+        let majoritySide: VoteChoice | null = null;
+        if (!isEmpty && !isUnanimous && !isTie) {
           minoritySide = countA < countB ? 'A' : 'B';
+          majoritySide = countA > countB ? 'A' : 'B';
         }
         const minorityNicknames: string[] = [];
         const majorityNicknames: string[] = [];
@@ -2401,21 +2829,20 @@ export class RoomStore {
           const v = room.votes.get(p.id);
           if (!v) {
             unvotedNicknames.push(p.nickname);
-            minorityNicknames.push(p.nickname);
+            if (!isEmpty) minorityNicknames.push(p.nickname);
           } else if (isUnanimous) {
             majorityNicknames.push(p.nickname);
             minorityNicknames.push(p.nickname);
           } else if (isTie) {
             // Guerra civile
+          } else if (v === minoritySide) {
+            minorityNicknames.push(p.nickname);
           } else {
-            if (v === minoritySide) {
-              minorityNicknames.push(p.nickname);
-            } else {
-              majorityNicknames.push(p.nickname);
-            }
+            majorityNicknames.push(p.nickname);
           }
         }
         room.flashResult = {
+          isEmpty,
           isUnanimous,
           isTie,
           minoritySide,
@@ -2423,7 +2850,19 @@ export class RoomStore {
           majorityNicknames,
           unvotedNicknames,
         };
-      } else if (room.partyMode === 'infiltrato') {
+        const firstVoterId = [...room.votes.keys()].find((id) => !room.players.get(id)?.isBot);
+        for (const [pid, v] of room.votes.entries()) {
+          const st = ensureStats(room, pid);
+          st.rounds++;
+          if (pid === firstVoterId) st.firstToVoteCount = (st.firstToVoteCount ?? 0) + 1;
+          if (majoritySide && v === majoritySide) {
+            st.majorityCount++;
+            room.partyScores.set(pid, (room.partyScores.get(pid) ?? 0) + 50);
+          } else if (majoritySide && v !== majoritySide) {
+            st.minorityCount++;
+          }
+        }
+      } else if (splitSubMode === 'infiltrato') {
         const tallyAccusations = new Map<string, number>();
         for (const accusedId of room.accusations.values()) {
           tallyAccusations.set(accusedId, (tallyAccusations.get(accusedId) ?? 0) + 1);
@@ -2459,20 +2898,48 @@ export class RoomStore {
         } else if (room.infiltratorId) {
           room.partyScores.set(room.infiltratorId, (room.partyScores.get(room.infiltratorId) ?? 0) + 200);
         }
-      } else if (room.partyMode === 'coppie') {
-        if (room.hotSeatCouple) {
-          const [id1, id2] = room.hotSeatCouple;
-          const v1 = room.votes.get(id1);
-          const v2 = room.votes.get(id2);
-          const matched = Boolean(v1 && v2 && v1 === v2);
-          const expected = matched ? 'match' : 'scoppiano';
-          for (const [voterId, bet] of room.hotSeatBets.entries()) {
-            if (bet === expected) {
-              room.partyScores.set(voterId, (room.partyScores.get(voterId) ?? 0) + 50);
+        const firstAccuserId = [...room.accusations.keys()].find((id) => !room.players.get(id)?.isBot);
+        for (const [voterId, accId] of room.accusations.entries()) {
+          const st = ensureStats(room, voterId);
+          st.rounds++;
+          if (voterId === firstAccuserId) st.firstToVoteCount = (st.firstToVoteCount ?? 0) + 1;
+          if (accId === room.infiltratorId) {
+            st.correctPredictions = (st.correctPredictions ?? 0) + 1;
+            st.majorityCount++;
+          } else {
+            st.minorityCount++;
+          }
+        }
+        if (room.infiltratorId) {
+          const infSt = ensureStats(room, room.infiltratorId);
+          if (!room.accusations.has(room.infiltratorId)) infSt.rounds++;
+          infSt.defendedCount++;
+          if (!caught) infSt.persuasion += 2;
+        }
+      } else if (splitSubMode === 'coppie') {
+        const cc = (room.currentPartyCard ?? { cardType: 'allineamento' }) as CoppieCard;
+        const resolveName = (id: string) => room.players.get(id)?.nickname ?? 'Giocatore';
+        const outcomes = coppie.scoreCoppieRound(room.couples, cc, room.votes, resolveName);
+        room.coupleRoundResults = outcomes;
+        const firstVoter = [...room.votes.keys()].find((id) => !room.players.get(id)?.isBot);
+        for (const out of outcomes) {
+          const perMemberPts = out.pointsAwarded;
+          for (const pid of [out.memberAId, out.memberBId]) {
+            const st = ensureStats(room, pid);
+            st.rounds++;
+            st.defendedCount++;
+            if (pid === firstVoter) st.firstToVoteCount = (st.firstToVoteCount ?? 0) + 1;
+            if (perMemberPts > 0) {
+              room.partyScores.set(pid, (room.partyScores.get(pid) ?? 0) + perMemberPts);
+              st.majorityCount++;
+              st.correctPredictions = (st.correctPredictions ?? 0) + 1;
+              if (out.kind === 'match') st.persuasion += 1;
+            } else if (out.kind === 'mismatch' || out.kind === 'challenge_skip') {
+              st.minorityCount++;
             }
           }
         }
-      } else if (room.partyMode === 'assurdo') {
+      } else if (splitSubMode === 'assurdo') {
         const tallyMap = new Map<string, number>();
         for (const targetId of room.gognaVotes.values()) {
           tallyMap.set(targetId, (tallyMap.get(targetId) ?? 0) + 1);
@@ -2489,6 +2956,124 @@ export class RoomStore {
           room.gognaTargetId = topId;
           room.gognaTargetNickname = room.players.get(topId)?.nickname ?? null;
           room.gognaVotesCount = topCount;
+        }
+        if (room.gognaVotes.size > 0) {
+          const firstGognaVoter = [...room.gognaVotes.keys()].find((id) => !room.players.get(id)?.isBot);
+          for (const [voterId, targetId] of room.gognaVotes.entries()) {
+            const st = ensureStats(room, voterId);
+            st.rounds++;
+            if (voterId === firstGognaVoter) st.firstToVoteCount = (st.firstToVoteCount ?? 0) + 1;
+            if (topId && targetId === topId) {
+              st.correctPredictions = (st.correctPredictions ?? 0) + 1;
+              st.majorityCount++;
+              room.partyScores.set(voterId, (room.partyScores.get(voterId) ?? 0) + 50);
+            } else {
+              st.minorityCount++;
+            }
+          }
+          if (topId) ensureStats(room, topId).defendedCount++;
+        } else if (room.votes.size > 0) {
+          const cntA = [...room.votes.values()].filter((v) => v === 'A').length;
+          const cntB = [...room.votes.values()].filter((v) => v === 'B').length;
+          const maj: VoteChoice | null = cntA !== cntB && cntA + cntB > 0 ? (cntA > cntB ? 'A' : 'B') : null;
+          const firstDigVoter = [...room.votes.keys()].find((id) => !room.players.get(id)?.isBot);
+          for (const [pid, v] of room.votes.entries()) {
+            const st = ensureStats(room, pid);
+            st.rounds++;
+            if (pid === firstDigVoter) st.firstToVoteCount = (st.firstToVoteCount ?? 0) + 1;
+            if (maj && v === maj) {
+              st.majorityCount++;
+              room.partyScores.set(pid, (room.partyScores.get(pid) ?? 0) + 50);
+            } else if (maj && v !== maj) {
+              st.minorityCount++;
+            }
+          }
+        }
+      } else if (splitSubMode === 'preferiresti') {
+        const pc = room.currentPartyCard as PreferirestiCard | null;
+        const rawOpts = pc?.options?.length
+          ? pc.options
+          : [
+              pc?.optionA ?? 'Scelta 1',
+              pc?.optionB ?? 'Scelta 2',
+              pc?.optionC ?? 'Scelta 3',
+              pc?.optionD ?? 'Scelta 4',
+            ].filter(Boolean);
+        const optLabels = rawOpts.slice(0, 4);
+        const optionTallies: PreferirestiOptionTally[] = optLabels.map((label, idx) => ({
+          letter: PREFERIRESTI_CHOICES[idx],
+          label,
+          count: 0,
+          voterNicknames: [],
+        }));
+        const byLetter = new Map<PreferirestiChoice, PreferirestiOptionTally>();
+        for (const o of optionTallies) byLetter.set(o.letter, o);
+
+        for (const p of room.players.values()) {
+          const v = room.preferirestiVotes.get(p.id) ?? (room.votes.get(p.id) as PreferirestiChoice | undefined);
+          if (!v) continue;
+          const bucket = byLetter.get(v) ?? optionTallies[0];
+          if (bucket) {
+            bucket.count++;
+            if (!p.isBot) bucket.voterNicknames.push(p.nickname);
+          }
+        }
+
+        const totalVotes = optionTallies.reduce((sum, o) => sum + o.count, 0);
+        const isEmpty = totalVotes === 0;
+        const activeOptions = optionTallies.filter((o) => o.count > 0);
+        const maxCount = activeOptions.reduce((m, o) => Math.max(m, o.count), 0);
+        const isUnanimous = !isEmpty && activeOptions.length === 1;
+        const isTie = !isEmpty && activeOptions.length > 1 && activeOptions.every((o) => o.count === maxCount);
+        const winningChoices: PreferirestiChoice[] =
+          !isEmpty && !isTie
+            ? activeOptions.filter((o) => o.count === maxCount).map((o) => o.letter)
+            : [];
+        const winningSet = new Set<PreferirestiChoice>(winningChoices);
+
+        const minorityNicknames: string[] = [];
+        const majorityNicknames: string[] = [];
+        const unvotedNicknames: string[] = [];
+        for (const p of room.players.values()) {
+          if (p.isBot) continue;
+          const v = room.preferirestiVotes.get(p.id) ?? (room.votes.get(p.id) as PreferirestiChoice | undefined);
+          if (!v) {
+            unvotedNicknames.push(p.nickname);
+            if (!isEmpty) minorityNicknames.push(p.nickname);
+          } else if (isUnanimous) {
+            majorityNicknames.push(p.nickname);
+            minorityNicknames.push(p.nickname);
+          } else if (isTie) {
+            // Tutti divisi: dibattito generale
+          } else if (winningSet.has(v)) {
+            majorityNicknames.push(p.nickname);
+          } else {
+            minorityNicknames.push(p.nickname);
+          }
+        }
+
+        room.preferirestiResult = {
+          isEmpty,
+          isUnanimous,
+          isTie,
+          winningChoices,
+          minorityNicknames,
+          majorityNicknames,
+          unvotedNicknames,
+          options: optionTallies,
+        };
+
+        const firstVoterId = [...room.preferirestiVotes.keys()].find((id) => !room.players.get(id)?.isBot);
+        for (const [pid, v] of room.preferirestiVotes.entries()) {
+          const st = ensureStats(room, pid);
+          st.rounds++;
+          if (pid === firstVoterId) st.firstToVoteCount = (st.firstToVoteCount ?? 0) + 1;
+          if (!isTie && winningSet.has(v)) {
+            st.majorityCount++;
+            room.partyScores.set(pid, (room.partyScores.get(pid) ?? 0) + 50);
+          } else if (!isTie && !isUnanimous) {
+            st.minorityCount++;
+          }
         }
       }
     }
@@ -2507,12 +3092,130 @@ export class RoomStore {
     // Entering PHASE_RESULTS: fold this round's outcome into the per-player stats
     // while the votes/votes1/defenders are still intact (cleared next reveal).
     if (transition.phase === 'PHASE_RESULTS') {
+      if (room.votes1.size === 0 && room.votes.size > 0) {
+        room.votes1 = new Map(room.votes);
+      }
       roundStats.recordRoundStats(room);
       // Percorso: accumulate the tappa's aggregate recap (count + leading-side
       // flips). Aggregate only — no per-player data leaks into the recap.
       if (room.format === 'percorso') {
         room.tappaDilemmas++;
         if (predictions.leadFlipped(room)) room.tappaSwings++;
+      }
+    }
+    if (transition.phase === 'GROUP_MIND_REVEAL') {
+      for (const o of groupMind.groupMindResults(room)) {
+        const st = ensureStats(room, o.playerId);
+        st.rounds++;
+        if (o.correct) {
+          st.correctPredictions = (st.correctPredictions ?? 0) + 1;
+          st.majorityCount++;
+          room.partyScores.set(o.playerId, (room.partyScores.get(o.playerId) ?? 0) + 50);
+        } else {
+          st.minorityCount++;
+        }
+      }
+    }
+    if (transition.phase === 'WRITE_REVEAL') {
+      for (const ans of writeRound.writeRevealResults(room) ?? []) {
+        const st = ensureStats(room, ans.id);
+        st.rounds++;
+        if (ans.votes > 0) {
+          st.persuasion += ans.votes;
+          st.writeVotes = (st.writeVotes ?? 0) + ans.votes;
+          room.partyScores.set(ans.id, (room.partyScores.get(ans.id) ?? 0) + ans.votes * 25);
+        }
+      }
+    }
+    if (transition.phase === 'CRUCIVERBA_REVEAL' && room.cruciverbaState) {
+      const cState = room.cruciverbaState;
+      const allSolvedByPlayers = cState.board.words.every((w) => cState.wordStatus[w.id] === 'solved');
+      cruciverba.revealRemainingCruciverbaWords(cState);
+      for (const p of room.players.values()) {
+        if (room.lateJoiners.has(p.id)) continue;
+        const st = ensureStats(room, p.id);
+        st.rounds++;
+        if (allSolvedByPlayers) {
+          room.partyScores.set(p.id, (room.partyScores.get(p.id) ?? 0) + 40);
+          st.majorityCount++;
+        }
+      }
+    }
+    if (transition.phase === 'TRIBUNALE_REVEAL' && room.tribunaleState) {
+      const ts = room.tribunaleState;
+      const verdict = tribunale.resolveTribunaleVerdict(ts);
+      const accSt = ensureStats(room, ts.accusaId);
+      const difSt = ensureStats(room, ts.difesaId);
+      accSt.rounds++;
+      accSt.defendedCount++;
+      difSt.rounds++;
+      difSt.defendedCount++;
+      if (verdict.winner === 'TIE') {
+        room.partyScores.set(ts.accusaId, (room.partyScores.get(ts.accusaId) ?? 0) + verdict.pointsTie);
+        room.partyScores.set(ts.difesaId, (room.partyScores.get(ts.difesaId) ?? 0) + verdict.pointsTie);
+      } else {
+        for (const winId of verdict.winnerIds) {
+          const wSt = ensureStats(room, winId);
+          wSt.tribunaleWins = (wSt.tribunaleWins ?? 0) + 1;
+          wSt.majorityCount++;
+          wSt.persuasion += 2;
+          room.partyScores.set(winId, (room.partyScores.get(winId) ?? 0) + verdict.pointsWinner);
+        }
+        if (verdict.loserId) ensureStats(room, verdict.loserId).minorityCount++;
+      }
+      for (const [jurorId, vote] of ts.votes.entries()) {
+        const jSt = ensureStats(room, jurorId);
+        jSt.rounds++;
+        if (verdict.winner === vote) {
+          jSt.majorityCount++;
+          room.partyScores.set(jurorId, (room.partyScores.get(jurorId) ?? 0) + 20);
+        } else if (verdict.winner !== 'TIE') {
+          jSt.minorityCount++;
+        }
+      }
+    }
+    if (transition.phase === 'TELEPATHY_REVEAL') {
+      const reveal = telepathy.resolveTelepathyReveal(room);
+      room.telepathyReveal = reveal;
+      if (reveal) {
+        const pointsById = new Map<string, number>();
+        for (const c of reveal.clusters) {
+          for (const pid of c.playerIds) {
+            pointsById.set(pid, c.pointsEach);
+          }
+        }
+        for (const p of room.players.values()) {
+          if (room.lateJoiners.has(p.id)) continue;
+          const st = ensureStats(room, p.id);
+          st.rounds++;
+          const pts = pointsById.get(p.id) ?? 0;
+          if (pts > 0) {
+            st.telepathyMatches = (st.telepathyMatches ?? 0) + 1;
+            st.majorityCount++;
+            room.partyScores.set(p.id, (room.partyScores.get(p.id) ?? 0) + pts);
+          } else {
+            st.minorityCount++;
+          }
+        }
+      }
+    }
+    if (transition.phase === 'HOT_TAKE_REVEAL') {
+      const reveal = hotTake.buildHotTakeReveal(room);
+      if (reveal && reveal.scores.length > 0) {
+        for (const entry of reveal.scores) {
+          const st = ensureStats(room, entry.playerId);
+          st.rounds++;
+          if (Math.abs(entry.score - reveal.average) <= 1.5) {
+            st.majorityCount++;
+            room.partyScores.set(entry.playerId, (room.partyScores.get(entry.playerId) ?? 0) + 50);
+          } else {
+            st.minorityCount++;
+          }
+        }
+        if (reveal.lowest) ensureStats(room, reveal.lowest.playerId).defendedCount++;
+        if (reveal.highest && reveal.highest.playerId !== reveal.lowest?.playerId) {
+          ensureStats(room, reveal.highest.playerId).defendedCount++;
+        }
       }
     }
     return { ok: true, room };
@@ -2527,83 +3230,9 @@ export class RoomStore {
    * already has a deadline (a real timer, or an already-armed soft one),
    * isn't one of these four, or nobody is actually missing.
    */
-  maybeArmSoftTimeout(code: string): boolean {
-    const room = this.rooms.get(code);
-    if (!room || room.phaseExpiresAt != null) return false;
-    let total = 0;
-    let acted = 0;
-    // Every branch excludes a THIS-round late-joiner (3.2), mirroring each
-    // phase's own real completion gate (allVoted/allPredicted/allSwingBet,
-    // speakerVote/groupMind/writeRound's presentXxx helpers) — they may not
-    // have even seen the prompt yet, so their absence must never count
-    // against the 70% threshold.
-    if (room.phase === 'VOTE_1' || room.phase === 'VOTE_2') {
-      const present = [...room.players.values()].filter(
-        (p) => p.connected !== false && !room.lateJoiners.has(p.id),
-      );
-      total = present.length;
-      acted =
-        room.phase === 'VOTE_2'
-          ? present.filter((p) => room.confirmedVote2.has(p.id)).length
-          : present.filter((p) => room.votes.has(p.id)).length;
-    } else if (room.phase === 'PREDICT') {
-      const humans = [...room.players.values()].filter(
-        (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
-      );
-      const know = knowRound.isKnowRound(room);
-      total = humans.length;
-      acted = humans.filter(
-        (p) =>
-          room.predictions.has(p.id) &&
-          room.swingBets.has(p.id) &&
-          (!know || !room.knowTargets.has(p.id) || room.knowGuesses.has(p.id)),
-      ).length;
-    } else if (room.phase === 'SPEAKER_VOTE') {
-      const humans = [...room.players.values()].filter(
-        (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
-      );
-      total = humans.length;
-      acted = humans.filter((p) => room.speakerVotes.has(p.id)).length;
-    } else if (room.phase === 'GROUP_MIND') {
-      const humans = [...room.players.values()].filter(
-        (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
-      );
-      total = humans.length;
-      acted = humans.filter((p) => room.groupMindAnswers.has(p.id) && room.groupMindGuesses.has(p.id)).length;
-    } else if (room.phase === 'WRITE') {
-      const humans = [...room.players.values()].filter(
-        (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
-      );
-      total = humans.length;
-      acted = humans.filter((p) => room.writeAnswers.has(p.id)).length;
-    } else if (room.phase === 'WRITE_VOTE') {
-      const humans = [...room.players.values()].filter(
-        (p) =>
-          !p.isBot &&
-          p.connected !== false &&
-          !room.lateJoiners.has(p.id) &&
-          room.writeOrder.filter((id) => id !== p.id).length > 0,
-      );
-      total = humans.length;
-      acted = humans.filter((p) => room.writeVotes.has(p.id)).length;
-    } else if (room.phase === 'HOT_TAKE_VOTE') {
-      const humans = [...room.players.values()].filter(
-        (p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id),
-      );
-      total = humans.length;
-      acted = humans.filter((p) => room.hotTakeScores.has(p.id)).length;
-    } else {
-      return false;
-    }
-    if (total === 0 || acted === total) return false;
-    if (acted / total < SOFT_TIMEOUT_THRESHOLD) return false;
-    const timeoutMs = room.partyMode
-      ? SOFT_TIMEOUT_FAST_MS
-      : room.defenseMaxMs > DEFENSE_MAX_MS_NORMALE
-        ? SOFT_TIMEOUT_LONG_MS
-        : SOFT_TIMEOUT_MS;
-    room.phaseExpiresAt = this.now() + timeoutMs;
-    return true;
+  /** Timers are disabled globally; soft-timeouts never arm. */
+  maybeArmSoftTimeout(_code: string): boolean {
+    return false;
   }
 
   /**
@@ -2858,6 +3487,265 @@ export class RoomStore {
     return room ? hotTake.buildHotTakeReveal(room) : null;
   }
 
+  /** End the pre-debate reading grace window (timer expiry or early "Ho letto" tap) and arm the 15s action timer. */
+  finishReading(
+    code: string,
+    actingPlayerId?: string,
+  ): { ok: boolean; error?: string; room?: Room } {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'ROOM_NOT_FOUND' };
+    if (room.paused) return { ok: false, error: 'PAUSED' };
+    if (room.readingEndsAt == null) return { ok: false, error: 'NOT_READING' };
+
+    if (actingPlayerId) {
+      const isLeader = room.leaderId === actingPlayerId;
+      let authorized = isLeader;
+      if (!authorized && room.phase === 'TRIBUNALE_ARGUE' && room.tribunaleState) {
+        authorized = tribunale.getTribunaleSpeakerId(room.tribunaleState) === actingPlayerId;
+      } else if (!authorized && room.phase === 'CRUCIVERBA' && room.cruciverbaState) {
+        authorized = cruciverba.getCurrentCruciverbaPlayerId(room.cruciverbaState) === actingPlayerId;
+      } else if (!authorized && room.phase === 'DEFENSE' && room.partyMode) {
+        const sub =
+          room.partyMode === 'mix' ? (room.mixPlan[room.dilemmaIndex - 1] ?? 'flash') : room.partyMode;
+        if (sub === 'assurdo') {
+          authorized = room.gognaTargetId === actingPlayerId;
+        } else if (sub === 'flash') {
+          const fr = room.flashResult;
+          if (fr?.isTie) {
+            authorized = room.players.has(actingPlayerId);
+          } else if (fr?.minoritySide) {
+            const v = room.votes.get(actingPlayerId);
+            authorized = !v || v === fr.minoritySide;
+          }
+        } else if (sub === 'preferiresti') {
+          const pr = room.preferirestiResult;
+          if (pr?.isTie) {
+            authorized = room.players.has(actingPlayerId);
+          } else if (pr && pr.winningChoices.length > 0) {
+            const v = room.preferirestiVotes.get(actingPlayerId);
+            authorized = !v || !pr.winningChoices.includes(v);
+          }
+        }
+      }
+      if (!authorized) return { ok: false, error: 'NOT_AUTHORIZED' };
+    }
+
+    room.readingEndsAt = null;
+    room.pausedReadingRemainingMs = null;
+    room.turnExpiresAt = null;
+    room.phaseExpiresAt = null;
+    return { ok: true, room };
+  }
+
+  /** Active player submits a word attempt in Cruciverba Show. */
+  submitCruciverbaAttempt(code: string, playerId: string, guess: string, wordId?: string): cruciverba.AttemptResult {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'CRUCIVERBA' || !room.cruciverbaState) {
+      return { ok: false, error: 'ROUND_COMPLETE', correct: false, pointsAwarded: 0, wordId: wordId ?? '', boardSolved: false, roundEnded: false };
+    }
+    room.readingEndsAt = null;
+    room.pausedReadingRemainingMs = null;
+    room.turnExpiresAt = null;
+    const res = cruciverba.submitCruciverbaAttempt(room.cruciverbaState, playerId, guess, wordId);
+    if (res.ok && res.correct) {
+      room.partyScores.set(playerId, (room.partyScores.get(playerId) ?? 0) + res.pointsAwarded);
+      const st = ensureStats(room, playerId);
+      st.coopWins = (st.coopWins ?? 0) + 1;
+    }
+    return res;
+  }
+
+  /** Active player unlocks 1 letter & passes (or host triggers advance). */
+  passOrTimeoutCruciverba(code: string, reason: 'hint' | 'timeout', playerId?: string): cruciverba.PassTurnResult {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'CRUCIVERBA' || !room.cruciverbaState) {
+      return { ok: false, error: 'ROUND_COMPLETE', roundEnded: false };
+    }
+    room.readingEndsAt = null;
+    room.pausedReadingRemainingMs = null;
+    room.turnExpiresAt = null;
+    const res = cruciverba.passOrTimeoutCruciverbaTurn(room.cruciverbaState, reason, playerId, this.rng);
+    return res;
+  }
+
+  /** Trigger a bot turn in Cruciverba Show if the current active player is a bot. */
+  performCruciverbaBotTurn(code: string): cruciverba.AttemptResult | cruciverba.PassTurnResult | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'CRUCIVERBA' || !room.cruciverbaState) return null;
+    const activeId = cruciverba.getCurrentCruciverbaPlayerId(room.cruciverbaState);
+    if (!activeId || !room.players.get(activeId)?.isBot) return null;
+    const pending = cruciverba.getPendingWords(room.cruciverbaState);
+    const targetWord =
+      pending.find((w) => w.id === room.cruciverbaState!.activeWordId) ?? pending[0];
+    if (targetWord && this.rng() < 0.65) {
+      return this.submitCruciverbaAttempt(code, activeId, targetWord.word, targetWord.id);
+    }
+    return this.passOrTimeoutCruciverba(code, 'hint', activeId);
+  }
+
+  publicCruciverbaState(code: string): PublicCruciverbaState | null {
+    const room = this.rooms.get(code);
+    if (!room || !room.cruciverbaState) return null;
+    if (room.phase !== 'CRUCIVERBA' && room.phase !== 'CRUCIVERBA_REVEAL') return null;
+    const resolveName = (id: string) => room.players.get(id)?.nickname ?? 'Giocatore';
+    return cruciverba.serializeCruciverbaState(
+      room.cruciverbaState,
+      resolveName,
+      room.phase === 'CRUCIVERBA_REVEAL',
+    );
+  }
+
+  /** Advance Tribunale speaker (speaker 0 -> speaker 1, or speaker 1 -> TRIBUNALE_VOTE). */
+  advanceTribunaleSpeaker(
+    code: string,
+    actingPlayerId?: string,
+  ): { ok: boolean; enteredVote?: boolean; error?: string } {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'TRIBUNALE_ARGUE' || !room.tribunaleState) {
+      return { ok: false, error: 'NOT_TRIBUNALE_ARGUE' };
+    }
+    const ts = room.tribunaleState;
+    const expectedSpeaker = tribunale.getTribunaleSpeakerId(ts);
+    if (actingPlayerId && actingPlayerId !== expectedSpeaker) {
+      return { ok: false, error: 'NOT_YOUR_TURN' };
+    }
+    room.readingEndsAt = null;
+    room.pausedReadingRemainingMs = null;
+    room.turnExpiresAt = null;
+    if (ts.speakerIndex === 0) {
+      ts.speakerIndex = 1;
+      return { ok: true, enteredVote: false };
+    }
+    this.advancePhase(code);
+    return { ok: true, enteredVote: true };
+  }
+
+  submitTribunaleVote(
+    code: string,
+    jurorId: string,
+    choice: 'ACCUSA' | 'DIFESA',
+  ): { ok: boolean; error?: string } {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'TRIBUNALE_VOTE' || !room.tribunaleState) {
+      return { ok: false, error: 'NOT_TRIBUNALE_VOTE' };
+    }
+    if (!room.players.has(jurorId)) return { ok: false, error: 'NOT_IN_ROOM' };
+    return tribunale.castTribunaleVote(room.tribunaleState, jurorId, choice);
+  }
+
+  tribunaleVotesComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'TRIBUNALE_VOTE' || !room.tribunaleState) return false;
+    const ts = room.tribunaleState;
+    const activeJurors = [...room.players.values()].filter(
+      (p) => p.connected !== false && !room.lateJoiners.has(p.id) && p.id !== ts.accusaId && p.id !== ts.difesaId,
+    );
+    if (activeJurors.length === 0) return true;
+    return activeJurors.every((p) => ts.votes.has(p.id));
+  }
+
+  publicTribunaleState(code: string) {
+    const room = this.rooms.get(code);
+    if (!room || !room.tribunaleState) return null;
+    if (
+      room.phase !== 'TRIBUNALE_ARGUE' &&
+      room.phase !== 'TRIBUNALE_VOTE' &&
+      room.phase !== 'TRIBUNALE_REVEAL'
+    ) {
+      return null;
+    }
+    const ts = room.tribunaleState;
+    const resolveName = (id: string) => room.players.get(id)?.nickname ?? 'Giocatore';
+    const jurors = [...room.players.values()].filter(
+      (p) => p.connected !== false && !room.lateJoiners.has(p.id) && p.id !== ts.accusaId && p.id !== ts.difesaId,
+    );
+    const missingJurorNames = jurors.filter((p) => !ts.votes.has(p.id)).map((p) => p.nickname);
+    const activeSpeakerId = tribunale.getTribunaleSpeakerId(ts);
+    return {
+      caseData: ts.caseData,
+      accusaId: ts.accusaId,
+      accusaName: resolveName(ts.accusaId),
+      difesaId: ts.difesaId,
+      difesaName: resolveName(ts.difesaId),
+      speakerIndex: ts.speakerIndex,
+      activeSpeakerId,
+      activeSpeakerName: resolveName(activeSpeakerId),
+      votesCount: ts.votes.size,
+      totalJurors: jurors.length,
+      missingJurorNames,
+      verdict:
+        room.phase === 'TRIBUNALE_REVEAL' && ts.verdict
+          ? {
+              accusaVotes: ts.verdict.accusaVotes,
+              difesaVotes: ts.verdict.difesaVotes,
+              winner: ts.verdict.winner,
+              winnerNames: ts.verdict.winnerIds.map(resolveName),
+              loserName: ts.verdict.loserId ? resolveName(ts.verdict.loserId) : null,
+              pointsWinner: ts.verdict.pointsWinner,
+              pointsTie: ts.verdict.pointsTie,
+            }
+          : undefined,
+    };
+  }
+
+  /** Record (or update) a silent 1-word answer during TELEPATHY. */
+  submitTelepathy(code: string, playerId: string, word: string): telepathy.TelepathySubmitResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'NOT_TELEPATHY_PHASE' };
+    return telepathy.telepathySubmit(room, playerId, word);
+  }
+
+  telepathyPhaseComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    return room ? telepathy.telepathyPhaseComplete(room) : false;
+  }
+
+  telepathyProgress(code: string): { done: number; total: number; missingNicknames: string[] } | null {
+    const room = this.rooms.get(code);
+    return room ? telepathy.telepathyProgress(room) : null;
+  }
+
+  publicTelepathyPrompt(code: string): { id: string; prompt: string; constraint?: string } | null {
+    const room = this.rooms.get(code);
+    if (!room || !room.currentTelepathyPrompt) return null;
+    if (room.phase !== 'TELEPATHY' && room.phase !== 'TELEPATHY_REVEAL') return null;
+    return {
+      id: room.currentTelepathyPrompt.id,
+      prompt: room.currentTelepathyPrompt.text,
+      constraint: room.currentTelepathyPrompt.constraint,
+    };
+  }
+
+  publicTelepathyReveal(code: string) {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'TELEPATHY_REVEAL') return null;
+    const reveal = room.telepathyReveal ?? telepathy.resolveTelepathyReveal(room);
+    if (!reveal) return null;
+    return {
+      prompt: {
+        id: reveal.prompt.id,
+        prompt: reveal.prompt.text,
+        constraint: reveal.prompt.constraint,
+      },
+      clusters: reveal.clusters.map((c) => ({
+        word: c.word,
+        nicknames: c.nicknames,
+        playerIds: c.playerIds,
+        pointsPerPlayer: c.pointsEach,
+      })),
+      totalPlayers: reveal.totalAnswers,
+      syncedCount: reveal.syncedPlayersCount,
+      biggestMatch: reveal.clusters[0]?.matched
+        ? {
+            word: reveal.clusters[0].word,
+            nicknames: reveal.clusters[0].nicknames,
+            playerIds: reveal.clusters[0].playerIds,
+            pointsPerPlayer: reveal.clusters[0].pointsEach,
+          }
+        : null,
+    };
+  }
+
   /** A fresh shuffled copy of `arr` using the injectable rng (Fisher–Yates). */
 
   /**
@@ -2973,16 +3861,6 @@ export class RoomStore {
     return { ok: true };
   }
 
-  recordHotSeatBet(code: string, playerId: string, bet: 'match' | 'scoppiano'): boolean {
-    const room = this.rooms.get(code);
-    if (!room || room.partyMode !== 'coppie' || room.phase !== 'VOTE_1') return false;
-    if (room.hotSeatCouple && (room.hotSeatCouple[0] === playerId || room.hotSeatCouple[1] === playerId)) {
-      return false;
-    }
-    room.hotSeatBets.set(playerId, bet);
-    return true;
-  }
-
   /** Public party card view for host + phones. Secret questions stay hidden until unmasked. */
   publicPartyCard(code: string) {
     const room = this.rooms.get(code);
@@ -2998,7 +3876,7 @@ export class RoomStore {
         prompt: fc.text,
         optionA: fc.optionA,
         optionB: fc.optionB,
-        penalty: fc.penalty ?? 'Chi è in minoranza beve / fa penitenza o si difende in 15 secondi!',
+        penalty: fc.penalty ?? 'Chi resta in minoranza si difende al volo o fa penitenza!',
         flashResult: room.flashResult,
       };
     }
@@ -3012,7 +3890,7 @@ export class RoomStore {
         cardType: 'dilemma' as const,
         prompt: unmasked
           ? `L'Infiltrato era ${infiltratorPlayer?.nickname ?? 'uno di voi'}!`
-          : 'Domanda segreta inviata sui telefoni! Rispondete ad alta voce a turno, poi 60s di dibattito.',
+          : 'Domanda segreta inviata sui telefoni! Rispondete ad alta voce a turno, poi dibattito libero senza timer.',
         groupQuestion: unmasked ? ic.groupQuestion : undefined,
         impostorQuestion: unmasked ? ic.impostorQuestion : undefined,
         category: ic.category,
@@ -3024,30 +3902,8 @@ export class RoomStore {
     }
     if (activeMode === 'coppie') {
       const cc = card as CoppieCard;
-      let hotSeat: HotSeatPayload | null = null;
-      if (room.hotSeatCouple) {
-        const [id1, id2] = room.hotSeatCouple;
-        const nick1 = room.players.get(id1)?.nickname ?? 'P1';
-        const nick2 = room.players.get(id2)?.nickname ?? 'P2';
-        const v1 = room.votes.get(id1);
-        const v2 = room.votes.get(id2);
-        const coupleMatched = Boolean(v1 && v2 && v1 === v2);
-        const correctSpectators: string[] = [];
-        const expected = coupleMatched ? 'match' : 'scoppiano';
-        for (const [voterId, bet] of room.hotSeatBets.entries()) {
-          if (bet === expected) {
-            const n = room.players.get(voterId)?.nickname;
-            if (n) correctSpectators.push(n);
-          }
-        }
-        const isRevealed = room.phase === 'SPLIT_REVEAL' || room.phase === 'DEFENSE' || room.phase === 'FINAL_AWARDS';
-        hotSeat = {
-          coupleIds: [id1, id2],
-          coupleNicknames: [nick1, nick2],
-          coupleMatched: isRevealed ? coupleMatched : undefined,
-          correctSpectators: isRevealed ? correctSpectators : undefined,
-        };
-      }
+      const resolveName = (id: string) => room.players.get(id)?.nickname ?? 'Giocatore';
+      const isRevealed = room.phase === 'SPLIT_REVEAL' || room.phase === 'DEFENSE' || room.phase === 'FINAL_AWARDS';
       return {
         mode: 'coppie' as const,
         cardType: cc.cardType,
@@ -3056,7 +3912,18 @@ export class RoomStore {
         optionA: cc.optionA,
         optionB: cc.optionB,
         penalty: cc.penalty,
-        hotSeat,
+        couples: room.couples.map((c) => ({
+          id: c.id,
+          label: `${resolveName(c.memberAId)} & ${resolveName(c.memberBId)}`,
+          memberAId: c.memberAId,
+          memberBId: c.memberBId,
+          memberAName: resolveName(c.memberAId),
+          memberBName: resolveName(c.memberBId),
+          score: c.score,
+          matches: c.matches,
+          mismatches: c.mismatches,
+        })),
+        coupleRoundResults: isRevealed ? room.coupleRoundResults : null,
       };
     }
     const partySubMode =
@@ -3074,6 +3941,29 @@ export class RoomStore {
         gognaTargetId: room.gognaTargetId ?? undefined,
         gognaTargetNickname: room.gognaTargetNickname ?? undefined,
         gognaVotes: room.gognaVotesCount || undefined,
+      };
+    }
+    if (partySubMode === 'preferiresti') {
+      const pc = card as PreferirestiCard;
+      const opts = pc.options?.length
+        ? pc.options
+        : [
+            pc.optionA ?? 'Prima scelta',
+            pc.optionB ?? 'Seconda scelta',
+            pc.optionC ?? 'Terza scelta',
+            pc.optionD ?? 'Quarta scelta',
+          ].filter(Boolean);
+      return {
+        mode: 'preferiresti' as const,
+        cardType: 'dilemma' as const,
+        prompt: pc.prompt,
+        options: opts,
+        optionA: opts[0],
+        optionB: opts[1],
+        optionC: opts[2],
+        optionD: opts[3],
+        penalty: pc.penalty ?? 'Chi è in minoranza difende la propria scelta!',
+        preferirestiResult: room.preferirestiResult,
       };
     }
     return null;
@@ -3470,15 +4360,6 @@ export class RoomStore {
   allVoted(code: string): boolean {
     const room = this.rooms.get(code);
     if (!room) return false;
-    if (room.partyMode === 'coppie' && room.hotSeatCouple && room.players.size > 2) {
-      const [c1, c2] = room.hotSeatCouple;
-      const coupleVoted = room.votes.has(c1) && room.votes.has(c2);
-      if (!coupleVoted) return false;
-      const spectators = [...room.players.values()].filter(
-        (p) => !p.isBot && p.connected !== false && p.id !== c1 && p.id !== c2 && !room.lateJoiners.has(p.id),
-      );
-      return spectators.every((p) => room.hotSeatBets.has(p.id));
-    }
     const partySubMode =
       room.partyMode === 'mix' ? (room.mixPlan[room.dilemmaIndex - 1] ?? 'flash') : room.partyMode;
     if (partySubMode === 'assurdo') {
@@ -3582,6 +4463,7 @@ export class RoomStore {
     // Drop any votes so the tally + allVoted + swing only count present players.
     room.votes.delete(playerId);
     room.votes1.delete(playerId);
+    room.preferirestiVotes.delete(playerId);
     room.confirmedVote2.delete(playerId);
     room.predictions.delete(playerId);
     room.swingBets.delete(playerId);

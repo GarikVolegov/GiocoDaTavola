@@ -12,7 +12,7 @@ interface PickPredictDilemma {
 interface PickPredictViewProps {
   dilemma: PickPredictDilemma | null | undefined;
   partnerNickname: string;
-  remaining: number | null;
+  remaining?: number | null;
   own: VoteChoice | null;
   predict: VoteChoice | null;
   synced: boolean;
@@ -28,7 +28,7 @@ interface PickPredictViewProps {
 export default function PickPredictView({
   dilemma,
   partnerNickname,
-  remaining,
+  remaining: _remaining = null,
   own,
   predict,
   synced,
@@ -42,8 +42,7 @@ export default function PickPredictView({
       <VoteOption
         key={letter}
         faction={letter === 'A' ? 'a' : 'b'}
-        letter={letter}
-        label={dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter}
+        label={dilemma ? (letter === 'A' ? dilemma.optionA : dilemma.optionB) : letter === 'A' ? 'Prima scelta' : 'Seconda scelta'}
         selected={selected === letter}
         onClick={() => onPick(letter)}
         centered
@@ -52,14 +51,6 @@ export default function PickPredictView({
   return (
     <main style={wrap}>
       <h1 style={{ fontSize: '1.5rem', margin: 0 }}>{PHASE_LABELS.DUO_PICK_PREDICT}</h1>
-      {remaining != null && (
-        <div
-          aria-label="Tempo rimanente"
-          style={{ fontSize: '2rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-        >
-          {remaining}s
-        </div>
-      )}
       {dilemma && <p style={{ fontSize: '1.05rem', opacity: 0.85, margin: 0 }}>{dilemma.text}</p>}
       <div
         role="group"
@@ -80,7 +71,7 @@ export default function PickPredictView({
         {options(predict, onPredict)}
       </div>
       {synced ? (
-        <p style={{ fontWeight: 800, margin: 0 }}>✓ Inviato — puoi cambiare finché c'è tempo</p>
+        <p style={{ fontWeight: 800, margin: 0 }}>✓ Inviato — puoi cambiare prima della chiusura</p>
       ) : (
         <p style={{ opacity: 0.7, margin: 0, fontSize: '0.9rem' }}>
           Scegli il tuo lato e prevedi il suo: contano entrambi.

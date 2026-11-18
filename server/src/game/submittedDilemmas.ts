@@ -2,6 +2,7 @@
 // RoomStore; RoomStore delegates after the room lookup. Type-only imports from
 // rooms.ts keep it cycle-free.
 import type { Room, SubmitDilemmaResult } from './rooms';
+import { ensureSpunti } from './deck';
 
 /** Max player-submitted dilemmas a guest player may add in the lobby. */
 export const MAX_SUBMISSIONS_PER_PLAYER = 2;
@@ -34,14 +35,15 @@ export function submitDilemma(
   const cap = player.clerkUserId ? MAX_SUBMISSIONS_PER_ACCOUNT : MAX_SUBMISSIONS_PER_PLAYER;
   if (mine >= cap) return { ok: false, error: 'LIMIT_REACHED' };
   const id = `usr-${playerId}-${mine + 1}`;
+  const spunti = ensureSpunti({ optionA: a, optionB: b, spuntiA: [], spuntiB: [] });
   room.submittedDilemmas.push({
     id,
     text: t,
     optionA: a,
     optionB: b,
     register: 'vita',
-    spuntiA: [],
-    spuntiB: [],
+    spuntiA: spunti.spuntiA,
+    spuntiB: spunti.spuntiB,
   });
   room.dilemmaAuthors.set(id, playerId);
   return { ok: true, room, count: mine + 1 };

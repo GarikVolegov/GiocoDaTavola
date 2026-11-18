@@ -15,6 +15,16 @@ export type ConfirmVoteResult =
 export function vote(room: Room, playerId: string, choice: string): VoteResult {
   if (!isVotingPhase(room.phase)) return { ok: false, error: 'NOT_VOTING_PHASE' };
   if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
+  const activeSubMode =
+    room.partyMode === 'mix' ? (room.mixPlan[room.dilemmaIndex - 1] ?? 'flash') : room.partyMode;
+  if (activeSubMode === 'preferiresti') {
+    if (choice !== 'A' && choice !== 'B' && choice !== 'C' && choice !== 'D') {
+      return { ok: false, error: 'INVALID_CHOICE' };
+    }
+    room.preferirestiVotes.set(playerId, choice);
+    room.votes.set(playerId, choice === 'A' ? 'A' : 'B');
+    return { ok: true, room };
+  }
   if (!isVoteChoice(choice)) return { ok: false, error: 'INVALID_CHOICE' };
   room.votes.set(playerId, choice);
   // Casting/changing during VOTE_2 (or the duo re-pick) is itself a confirmation.

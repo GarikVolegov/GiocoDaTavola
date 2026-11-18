@@ -15,8 +15,8 @@ function FeaturePreview({ index }: { index: number }) {
             </div>
             <div className={styles.deckQ}>SALVI UN AMICO O LA TUA CARRIERA?</div>
             <div className={styles.deckOpts}>
-              <span className={styles.deckOptA}>A · AMICO</span>
-              <span className={styles.deckOptB}>B · CARRIERA</span>
+              <span className={styles.deckOptA}>AMICO</span>
+              <span className={styles.deckOptB}>CARRIERA</span>
             </div>
           </div>
         </div>
@@ -28,9 +28,9 @@ function FeaturePreview({ index }: { index: number }) {
       <div className={styles.sceneBox} aria-hidden="true">
         <div className={styles.swingScene}>
           <div className={styles.swingCompareRow}>
-            <span className={styles.swingBefore}>PRIMA: 65% A</span>
+            <span className={styles.swingBefore}>PRIMA: 65%</span>
             <span className={styles.miniShiftTag}>+2 VOTI RIBALTATI</span>
-            <span className={styles.swingAfter}>DOPO: 68% B</span>
+            <span className={styles.swingAfter}>DOPO: 68%</span>
           </div>
           <div className={styles.swingTokensRow}>
             <span className={styles.tokenBlue}>M</span>

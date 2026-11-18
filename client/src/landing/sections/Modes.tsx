@@ -54,10 +54,8 @@ function ModeGraphic({ id }: { id: PartyModeVisualId | 'gruppo' | 'duello' }) {
       return (
         <svg viewBox="0 0 160 44" className={styles.modeSvgWide} aria-hidden="true">
           <rect x="30" y="10" width="38" height="24" rx="6" fill="rgba(62,130,252,0.2)" stroke="#3E82FC" strokeWidth="2" />
-          <text x="49" y="26" textAnchor="middle" fill="#3E82FC" fontSize="13" fontWeight="800" fontFamily="var(--font-display)">A</text>
           <path d="M84 8 L76 22 L82 22 L76 36" fill="none" stroke="#E5C158" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           <rect x="92" y="10" width="38" height="24" rx="6" fill="rgba(245,108,56,0.2)" stroke="#F56C38" strokeWidth="2" />
-          <text x="111" y="26" textAnchor="middle" fill="#F56C38" fontSize="13" fontWeight="800" fontFamily="var(--font-display)">B</text>
         </svg>
       );
   }
@@ -87,7 +85,7 @@ export default function Modes() {
         <div className={styles.mode}>
           <div className={styles.modeHead}>
             <ModeGraphic id="gruppo" />
-            <span className={styles.modeTag}>3–8 giocatori</span>
+            <span className={styles.modeTag}>Da solo o in gruppo</span>
           </div>
           <div className={styles.modeT}>Gruppo Classico</div>
           <div className={styles.modeD}>
@@ -101,7 +99,7 @@ export default function Modes() {
           </div>
           <div className={styles.modeT}>1v1 Duello</div>
           <div className={styles.modeD}>
-            Due posizioni opposte, nessuno scampo: convinci l’altro prima dello scadere.
+            Due posizioni opposte, nessuno scampo: convinci l’altro senza limiti di tempo.
           </div>
         </div>
       </div>

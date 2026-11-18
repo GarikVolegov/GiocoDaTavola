@@ -52,6 +52,7 @@ export function awardsToPersist(room: Room): PersistableAward[] {
     }
     return rows;
   }
+  const modeLabel = room.partyMode ? `party:${room.partyMode}` : room.mode;
   for (const a of computeAwards(room)) {
     const player = room.players.get(a.winner.id);
     if (!player?.clerkUserId) continue;
@@ -62,7 +63,7 @@ export function awardsToPersist(room: Room): PersistableAward[] {
       emoji: a.emoji,
       description: a.description,
       gameCode: room.code,
-      gameMode: room.mode,
+      gameMode: modeLabel,
       nickname: player.nickname,
     });
   }
@@ -91,6 +92,7 @@ export interface PersistableGame {
  */
 export function gamesToPersist(room: Room): PersistableGame[] {
   const isDuo = room.mode === 'duello';
+  const modeLabel = room.partyMode ? `party:${room.partyMode}` : room.mode;
   // Tally awards won per player so each record can show its 🏆 count.
   const awardsByPlayer = new Map<string, number>();
   if (isDuo) {
@@ -106,14 +108,17 @@ export function gamesToPersist(room: Room): PersistableGame[] {
   for (const [id, player] of room.players) {
     if (!player.clerkUserId) continue;
     const stats = room.stats.get(id);
+    const partyPts = room.partyScores?.get(id) ?? 0;
     // Duello: the dashboard's "persuasion" is the duo verdict total; group
     // stats never accumulate there (PHASE_RESULTS is a group-only phase).
-    const persuasion = isDuo ? duoTotalPoints(room.duoScore.get(id)) : stats?.persuasion ?? 0;
-    const rounds = isDuo ? room.dilemmaCount ?? 0 : stats?.rounds ?? 0;
+    const persuasion = isDuo ? duoTotalPoints(room.duoScore.get(id)) : (stats?.persuasion ?? 0) + partyPts;
+    const rounds = isDuo
+      ? (room.dilemmaCount ?? 0)
+      : Math.max(stats?.rounds ?? 0, room.partyMode ? room.dilemmaIndex : 0);
     rows.push({
       clerkUserId: player.clerkUserId,
       gameCode: room.code,
-      mode: room.mode,
+      mode: modeLabel,
       nickname: player.nickname,
       rounds,
       persuasion,
@@ -137,18 +142,25 @@ export async function saveAwards(rows: PersistableAward[]): Promise<void> {
   if (!pool || rows.length === 0) return;
   const client = await pool.connect();
   try {
-    for (const r of rows) {
-      await client.query(
-        `INSERT INTO users (clerk_user_id, last_seen) VALUES ($1, now())
-         ON CONFLICT (clerk_user_id) DO UPDATE SET last_seen = now()`,
-        [r.clerkUserId],
-      );
-      await client.query(
-        `INSERT INTO awards (clerk_user_id, award_id, title, emoji, description, game_code, game_mode, nickname)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         ON CONFLICT (clerk_user_id, award_id, game_code) DO NOTHING`,
-        [r.clerkUserId, r.awardId, r.title, r.emoji, r.description, r.gameCode, r.gameMode, r.nickname],
-      );
+    await client.query('BEGIN');
+    try {
+      for (const r of rows) {
+        await client.query(
+          `INSERT INTO users (clerk_user_id, last_seen) VALUES ($1, now())
+           ON CONFLICT (clerk_user_id) DO UPDATE SET last_seen = now()`,
+          [r.clerkUserId],
+        );
+        await client.query(
+          `INSERT INTO awards (clerk_user_id, award_id, title, emoji, description, game_code, game_mode, nickname)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (clerk_user_id, award_id, game_code) DO NOTHING`,
+          [r.clerkUserId, r.awardId, r.title, r.emoji, r.description, r.gameCode, r.gameMode, r.nickname],
+        );
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
     }
   } finally {
     client.release();
@@ -165,24 +177,31 @@ export async function saveGameRecords(rows: PersistableGame[]): Promise<void> {
   if (!pool || rows.length === 0) return;
   const client = await pool.connect();
   try {
-    for (const r of rows) {
-      await client.query(
-        `INSERT INTO users (clerk_user_id, last_seen) VALUES ($1, now())
-         ON CONFLICT (clerk_user_id) DO UPDATE SET last_seen = now()`,
-        [r.clerkUserId],
-      );
-      await client.query(
-        `INSERT INTO game_records
-           (clerk_user_id, game_code, mode, nickname, rounds, persuasion, changed_count, majority_count, awards_count, player_count)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         ON CONFLICT (clerk_user_id, game_code) DO UPDATE SET
-           mode = EXCLUDED.mode, nickname = EXCLUDED.nickname, rounds = EXCLUDED.rounds,
-           persuasion = EXCLUDED.persuasion, changed_count = EXCLUDED.changed_count,
-           majority_count = EXCLUDED.majority_count, awards_count = EXCLUDED.awards_count,
-           player_count = EXCLUDED.player_count`,
-        [r.clerkUserId, r.gameCode, r.mode, r.nickname, r.rounds, r.persuasion,
-         r.changedCount, r.majorityCount, r.awardsCount, r.playerCount],
-      );
+    await client.query('BEGIN');
+    try {
+      for (const r of rows) {
+        await client.query(
+          `INSERT INTO users (clerk_user_id, last_seen) VALUES ($1, now())
+           ON CONFLICT (clerk_user_id) DO UPDATE SET last_seen = now()`,
+          [r.clerkUserId],
+        );
+        await client.query(
+          `INSERT INTO game_records
+             (clerk_user_id, game_code, mode, nickname, rounds, persuasion, changed_count, majority_count, awards_count, player_count)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           ON CONFLICT (clerk_user_id, game_code) DO UPDATE SET
+             mode = EXCLUDED.mode, nickname = EXCLUDED.nickname, rounds = EXCLUDED.rounds,
+             persuasion = EXCLUDED.persuasion, changed_count = EXCLUDED.changed_count,
+             majority_count = EXCLUDED.majority_count, awards_count = EXCLUDED.awards_count,
+             player_count = EXCLUDED.player_count`,
+          [r.clerkUserId, r.gameCode, r.mode, r.nickname, r.rounds, r.persuasion,
+           r.changedCount, r.majorityCount, r.awardsCount, r.playerCount],
+        );
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
     }
   } finally {
     client.release();

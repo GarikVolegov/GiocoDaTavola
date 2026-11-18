@@ -747,20 +747,20 @@ describe('duo room state lifecycle', () => {
 });
 
 describe('duo phase timing', () => {
-  it('every duo input phase has a real timer; the portrait is terminal', () => {
-    expect(PHASE_DURATIONS_MS.DUO_ACT_INTRO).toBe(7_000);
-    expect(PHASE_DURATIONS_MS.DUO_PICK_PREDICT).toBe(30_000);
-    expect(PHASE_DURATIONS_MS.DUO_SYNC_REVEAL).toBe(8_000);
-    expect(PHASE_DURATIONS_MS.DUO_SIDE_PICK).toBe(12_000);
-    expect(PHASE_DURATIONS_MS.DUO_ARGUE).toBe(45_000);
-    expect(PHASE_DURATIONS_MS.DUO_WAVER).toBe(15_000);
-    expect(PHASE_DURATIONS_MS.DUO_ROUND_RESULT).toBe(8_000);
-    expect(PHASE_DURATIONS_MS.DUO_PICK).toBe(20_000);
-    expect(PHASE_DURATIONS_MS.DUO_REVEAL).toBe(6_000);
-    expect(PHASE_DURATIONS_MS.DUO_REPICK).toBe(20_000);
+  it('removes countdown timers across duo phases and portrait', () => {
+    expect(PHASE_DURATIONS_MS.DUO_ACT_INTRO).toBeNull();
+    expect(PHASE_DURATIONS_MS.DUO_PICK_PREDICT).toBeNull();
+    expect(PHASE_DURATIONS_MS.DUO_SYNC_REVEAL).toBeNull();
+    expect(PHASE_DURATIONS_MS.DUO_SIDE_PICK).toBeNull();
+    expect(PHASE_DURATIONS_MS.DUO_ARGUE).toBeNull();
+    expect(PHASE_DURATIONS_MS.DUO_WAVER).toBeNull();
+    expect(PHASE_DURATIONS_MS.DUO_ROUND_RESULT).toBeNull();
+    expect(PHASE_DURATIONS_MS.DUO_PICK).toBeNull();
+    expect(PHASE_DURATIONS_MS.DUO_REVEAL).toBeNull();
+    expect(PHASE_DURATIONS_MS.DUO_REPICK).toBeNull();
     expect(PHASE_DURATIONS_MS.DUO_PORTRAIT).toBeNull();
   });
-  it('keeps the 15s human floor for a duo argue turn', () => {
-    expect(DUO_TURN_MIN_MS).toBe(15_000);
+  it('has no minimum human floor for a duo argue turn', () => {
+    expect(DUO_TURN_MIN_MS).toBe(0);
   });
 });

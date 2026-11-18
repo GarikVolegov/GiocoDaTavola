@@ -2,7 +2,17 @@ import { describe, it, expect } from 'vitest';
 import { FALLBACK_DECKS, type PassCoppieCard, type PassMode } from './fallbackDeck';
 
 describe('FALLBACK_DECKS (offline Pass & Play)', () => {
-  const modes: PassMode[] = ['flash', 'infiltrato', 'assurdo', 'coppie', 'classico'];
+  const modes: PassMode[] = [
+    'flash',
+    'infiltrato',
+    'assurdo',
+    'coppie',
+    'cruciverba',
+    'tribunale',
+    'preferiresti',
+    'classico',
+    'mix',
+  ];
 
   it('provides at least 8 unique cards for every mode so 8-round offline games never run dry', () => {
     for (const mode of modes) {

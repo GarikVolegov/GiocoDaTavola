@@ -108,16 +108,16 @@ export default function SubmitDilemmaCard({
               <TextInput
                 id="dilemma-option-a"
                 name="dilemmaOptionA"
-                aria-label="Opzione A"
-                placeholder="Opzione A"
+                aria-label="Prima scelta"
+                placeholder="Prima scelta"
                 value={optionA}
                 onChange={(e) => onOptionAChange(e.target.value)}
               />
               <TextInput
                 id="dilemma-option-b"
                 name="dilemmaOptionB"
-                aria-label="Opzione B"
-                placeholder="Opzione B"
+                aria-label="Seconda scelta"
+                placeholder="Seconda scelta"
                 value={optionB}
                 onChange={(e) => onOptionBChange(e.target.value)}
               />

@@ -107,8 +107,8 @@ describe('WRITE/WRITE_VOTE/WRITE_REVEAL — the alternating checkpoint detour', 
     expect(store.get(code)!.writeOrder.length).toBe(3);
     store.advancePhase(code); // -> WRITE_REVEAL
     expect(store.get(code)!.phase).toBe('WRITE_REVEAL');
-    store.advancePhase(code); // -> DILEMMA_REVEAL (dilemma 5)
-    expect(store.get(code)!.phase).toBe('DILEMMA_REVEAL');
+    store.advancePhase(code); // -> VOTE_1 (dilemma 5)
+    expect(store.get(code)!.phase).toBe('VOTE_1');
     expect(store.get(code)!.dilemmaIndex).toBe(5);
     expect(store.get(code)!.writePrompt).toBeNull();
   });

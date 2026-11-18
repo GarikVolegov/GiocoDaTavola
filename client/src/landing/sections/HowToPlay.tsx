@@ -1,7 +1,7 @@
 import { HOW_TO_PLAY } from '../../shared/events';
 import styles from '../Landing.module.css';
 
-const TITLES = ['Voti A o B', 'Si difende', 'Si rivota'];
+const TITLES = ['Scegli dove schierarti', 'Si difende', 'Si rivota'];
 
 function StepPreview({ step }: { step: number }) {
   if (step === 0) {
@@ -9,11 +9,11 @@ function StepPreview({ step }: { step: number }) {
       <div className={styles.miniUi} aria-hidden="true">
         <div className={styles.miniUiHead}>
           <span className={styles.miniBadgeGold}>VOTO SEGRETO</span>
-          <span className={styles.miniTimer}>0:12</span>
+          <span className={styles.miniTimer}>SENZA TIMER</span>
         </div>
         <div className={styles.miniVoteRow}>
-          <span className={`${styles.miniVoteBtn} ${styles.miniVoteA}`}>A ✓</span>
-          <span className={`${styles.miniVoteBtn} ${styles.miniVoteB}`}>B</span>
+          <span className={`${styles.miniVoteBtn} ${styles.miniVoteA}`}>Amico ✓</span>
+          <span className={`${styles.miniVoteBtn} ${styles.miniVoteB}`}>Carriera</span>
         </div>
       </div>
     );
@@ -24,8 +24,8 @@ function StepPreview({ step }: { step: number }) {
         <div className={styles.miniSpeakerRow}>
           <span className={styles.miniMic}>🎤</span>
           <div className={styles.miniSpeakerText}>
-            <span className={styles.miniSpeakerName}>MARCO DIFENDE B</span>
-            <span className={styles.miniSpeakerSub}>ARRINGA DAL VIVO · 0:24</span>
+            <span className={styles.miniSpeakerName}>MARCO DIFENDE CARRIERA</span>
+            <span className={styles.miniSpeakerSub}>ARRINGA DAL VIVO · SENZA TIMER</span>
           </div>
         </div>
         <div className={styles.miniProgressTrack}>
@@ -37,7 +37,7 @@ function StepPreview({ step }: { step: number }) {
   return (
     <div className={styles.miniUi} aria-hidden="true">
       <div className={styles.miniUiHead}>
-        <span className={styles.miniSplitText}>38% A · 62% B</span>
+        <span className={styles.miniSplitText}>38% · 62%</span>
         <span className={styles.miniSwingBadge}>⚡ RIBALTONE!</span>
       </div>
       <div className={styles.miniSplitTrack}>

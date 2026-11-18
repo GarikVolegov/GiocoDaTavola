@@ -3,7 +3,6 @@ import { useAuth, Show, SignInButton } from '@clerk/react';
 import {
   PHASE_LABELS,
   OBJECTIVE,
-  SPLIT_REVEAL_WINDOW_S,
   tappaMeta,
   DUO_ACT_META,
   type GameStatePayload,
@@ -15,19 +14,18 @@ import {
   type PlayerKnowGuessResultPayload,
   type PlayerGroupMindResultPayload,
 } from '../../shared/events';
-import { Card, Button, DilemmaCard, SplitBar, ResultsPanel, RilancioCard, AwardsPanel, NamedMomentsPanel, PodiumPanel } from '../../shared/ui';
+import { Card, Button, DilemmaCard, SplitBar, ResultsPanel, RilancioCard, AwardsPanel, NamedMomentsPanel, PodiumPanel, CompactAudioPlayer } from '../../shared/ui';
 import { computeRealWorldArchetype, type PlayerVoteStats } from '../../shared/realworld/archetypes';
 import { NORTHSTAR_URL } from '../../shared/northstar';
 import { pickIronicTitle, WRONG_PREDICTION_TITLES, WRONG_SWING_BET_TITLES, WRONG_KNOW_TITLES } from '../../shared/ironicTitles';
 import { wrap } from './layout';
-import { narrationFor, useIsSpeaking, unlockSpeech } from '../../host/audio/narrator';
-import { unlockAudio } from '../../host/audio/engine';
-import { getStoryAudioUrl, playStoryAudio, stopStoryAudio } from '../../host/audio/storyAudioPlayer';
+import { narrationFor } from '../../host/audio/narrator';
+import { getStoryAudioUrl } from '../../host/audio/storyAudioPlayer';
 
 interface StatusViewProps {
   phase: GameStatePayload['phase'];
   game: GameStatePayload | null;
-  remaining: number | null;
+  remaining?: number | null;
   playerId: string | null;
   isLeader: boolean;
   players: PublicPlayer[];
@@ -49,7 +47,7 @@ interface StatusViewProps {
 export default function StatusView({
   phase,
   game,
-  remaining,
+  remaining: _remaining = null,
   playerId,
   isLeader,
   players,
@@ -107,42 +105,12 @@ export default function StatusView({
     return `In attesa di ${currentLeader.nickname}…`;
   };
 
-  const isSpeaking = useIsSpeaking();
   const narrationLine = narrationFor(phase, game?.storia ?? null, game?.dilemma ?? null);
   const audioUrl = getStoryAudioUrl(phase, game?.storia ?? null, game?.dilemma ?? null);
 
-  const toggleSpeech = () => {
-    if (isSpeaking) {
-      stopStoryAudio();
-    } else {
-      unlockAudio();
-      unlockSpeech();
-      playStoryAudio(audioUrl, narrationLine);
-    }
-  };
-
   const speechButton = narrationLine ? (
     <div style={{ display: 'flex', justifyContent: 'center', margin: '0.25rem 0' }}>
-      <button
-        type="button"
-        onClick={toggleSpeech}
-        style={{
-          background: isSpeaking ? 'rgba(229, 193, 88, 0.2)' : 'rgba(255, 255, 255, 0.1)',
-          border: `1px solid ${isSpeaking ? 'var(--gold)' : 'rgba(255, 255, 255, 0.25)'}`,
-          borderRadius: '999px',
-          padding: '0.35rem 0.9rem',
-          color: isSpeaking ? 'var(--gold)' : 'inherit',
-          fontSize: '0.85rem',
-          fontWeight: 600,
-          cursor: 'pointer',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.4rem',
-        }}
-        aria-label={isSpeaking ? 'Interrompi voce' : 'Ascolta la storia'}
-      >
-        {isSpeaking ? '⏹️ Ferma voce' : '🔊 Ascolta la storia'}
-      </button>
+      <CompactAudioPlayer audioUrl={audioUrl} fallbackText={narrationLine} label="Ascolta" />
     </div>
   ) : null;
 
@@ -155,16 +123,8 @@ export default function StatusView({
       <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem' }}>{waitingMessage()}</p>
     );
   return (
-    <main style={wrap}>
+    <main style={{ ...wrap, paddingTop: 'max(3.5rem, env(safe-area-inset-top, 0px))' }}>
       <h1 style={{ fontSize: '1.75rem', margin: 0 }}>{PHASE_LABELS[phase]}</h1>
-      {remaining != null && (
-        <div
-          aria-label="Tempo rimanente"
-          style={{ fontSize: '3rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
-        >
-          {remaining}s
-        </div>
-      )}
       {phase === 'TAPPA_INTRO' ? (
         game?.percorso ? (() => {
           const meta = tappaMeta(game.percorso.currentTappa);
@@ -248,7 +208,11 @@ export default function StatusView({
           >
             {game.storia.decision && (
               <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.08rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 'var(--tracking-display, 0.03em)', margin: 0 }}>
-                Il gruppo ha scelto {game.storia.decision === 'A' ? '🔵 A' : '🟠 B'}
+                {game.dilemma
+                  ? game.storia.decision === 'A'
+                    ? game.dilemma.optionA
+                    : game.dilemma.optionB
+                  : 'Scelta confermata'}
               </p>
             )}
             {game.storia.consequence && (
@@ -331,20 +295,123 @@ export default function StatusView({
           </p>
         </>
       ) : phase === 'SPLIT_REVEAL' ? (
-        remaining != null && remaining > SPLIT_REVEAL_WINDOW_S ? (
-          <div
-            aria-label="Si scopre il gruppo tra…"
-            style={{ fontSize: 'clamp(4rem, 20vw, 8rem)', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}
+        game?.partyCard?.mode === 'infiltrato' && game.partyCard.infiltratoRoundResult ? (
+          <Card
+            glow={game.partyCard.infiltratoRoundResult.caught ? 'a' : 'accent'}
+            style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: '0.55rem', textAlign: 'center' }}
           >
-            {remaining - SPLIT_REVEAL_WINDOW_S}
-          </div>
+            <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: game.partyCard.infiltratoRoundResult.caught ? '#34d399' : '#f87171' }}>
+              {game.partyCard.infiltratoRoundResult.caught
+                ? "🎉 L'INFILTRATO È STATO SMASCHERATO!"
+                : "😈 L'INFILTRATO L'HA FATTA FRANCA!"}
+            </p>
+            <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>
+              🕵️ {game.partyCard.infiltratoRoundResult.infiltratorNickname}
+            </p>
+            <div style={{ textAlign: 'left', fontSize: '0.88rem', opacity: 0.92, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <p style={{ margin: 0 }}>
+                <strong style={{ color: '#34d399' }}>Gruppo:</strong> “{game.partyCard.infiltratoRoundResult.groupQuestion}”
+              </p>
+              <p style={{ margin: 0 }}>
+                <strong style={{ color: '#f87171' }}>Infiltrato:</strong> “{game.partyCard.infiltratoRoundResult.impostorQuestion}”
+              </p>
+            </div>
+          </Card>
+        ) : game?.partyCard?.mode === 'flash' && game.partyCard.flashResult?.isEmpty ? (
+          <p style={{ fontSize: '1rem', fontWeight: 700, opacity: 0.85, margin: 0 }}>
+            Nessun voto ricevuto in questo round.
+          </p>
+        ) : game?.partyCard?.mode === 'flash' && game.partyCard.flashResult ? (
+          <>
+            {game?.split && (
+              <SplitBar
+                split={game.split}
+                optionA={game.dilemma?.optionA}
+                optionB={game.dilemma?.optionB}
+              />
+            )}
+            <p style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: '#fbbf24', maxWidth: '22rem' }}>
+              {game.partyCard.flashResult.isUnanimous
+                ? '🍻 Unanimità! Tutti dalla stessa parte!'
+                : game.partyCard.flashResult.isTie
+                  ? '⚔️ Guerra civile (50% vs 50%)! Difendetevi ora!'
+                  : game.partyCard.flashResult.minorityNicknames.length > 0
+                    ? `🍺 In minoranza: ${game.partyCard.flashResult.minorityNicknames.join(', ')} — tocca a voi difendervi!`
+                    : 'Ecco come si è diviso il gruppo'}
+            </p>
+          </>
+        ) : game?.partyCard?.mode === 'preferiresti' && game.partyCard.preferirestiResult ? (
+          game.partyCard.preferirestiResult.isEmpty ? (
+            <p style={{ fontSize: '1rem', fontWeight: 700, opacity: 0.85, margin: 0 }}>
+              Nessun voto ricevuto in questo round.
+            </p>
+          ) : (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', width: 'min(90vw, 22rem)' }}>
+                {game.partyCard.preferirestiResult.options.map((opt) => {
+                  const isWin = game.partyCard?.preferirestiResult?.winningChoices.includes(opt.letter);
+                  return (
+                    <div
+                      key={opt.letter}
+                      style={{
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: 'var(--radius-sm)',
+                        background: isWin ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255,255,255,0.06)',
+                        border: isWin ? '1.5px solid #34d399' : '1px solid rgba(255,255,255,0.14)',
+                        textAlign: 'left',
+                        fontSize: '0.88rem',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
+                        <span>{opt.label}</span>
+                        <span>{opt.count}</span>
+                      </div>
+                      {opt.voterNicknames.length > 0 && (
+                        <div style={{ fontSize: '0.78rem', opacity: 0.78, marginTop: '0.15rem' }}>
+                          {opt.voterNicknames.join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <p style={{ fontSize: '0.98rem', fontWeight: 800, margin: 0, color: '#7dd3fc', maxWidth: '22rem' }}>
+                {game.partyCard.preferirestiResult.isUnanimous
+                  ? '🙌 Tutti sulla stessa scelta!'
+                  : game.partyCard.preferirestiResult.isTie
+                    ? '⚔️ Parità tra le scelte — se ne discute!'
+                    : game.partyCard.preferirestiResult.minorityNicknames.length > 0
+                      ? `🍺 In minoranza: ${game.partyCard.preferirestiResult.minorityNicknames.join(', ')} — difendete la vostra scelta!`
+                      : 'Ecco come si è diviso il gruppo'}
+              </p>
+            </>
+          )
+        ) : game?.partyCard?.mode === 'assurdo' && game.partyCard.cardType === 'gogna' && game.partyCard.gognaTargetNickname ? (
+          <Card style={{ width: 'min(90vw, 22rem)', padding: '0.9rem', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+            <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#34d399' }}>
+              👑 Alla gogna: {game.partyCard.gognaTargetNickname}!
+            </p>
+            {game.partyCard.sentenza && (
+              <p style={{ margin: 0, fontSize: '0.92rem', fontWeight: 700 }}>
+                📜 “{game.partyCard.sentenza}”
+              </p>
+            )}
+          </Card>
         ) : (
           <>
-            {game?.split && <SplitBar split={game.split} />}
-            {game?.dilemma && <DilemmaCard dilemma={game.dilemma} />}
-            <RilancioCard domanda={game?.dilemma?.domandaRilancio} />
+            {game?.split && (
+              <SplitBar
+                split={game.split}
+                optionA={game.dilemma?.optionA}
+                optionB={game.dilemma?.optionB}
+              />
+            )}
             <p style={{ fontSize: '0.95rem', opacity: 0.7, margin: 0 }}>
-              Ecco come si è diviso il gruppo — ora si difende
+              {game?.split && (game.split.A === 0 || game.split.B === 0)
+                ? 'Tutti dalla stessa parte!'
+                : game?.partyCard
+                  ? 'Ecco come si è diviso il gruppo'
+                  : 'Ecco come si è diviso il gruppo — ora si difende'}
             </p>
           </>
         )
@@ -386,7 +453,11 @@ export default function StatusView({
               style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
             >
               <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{game.groupMindQuestion.prompt}</p>
-              <SplitBar split={game.groupMindTally} />
+              <SplitBar
+                split={game.groupMindTally}
+                optionA={game.groupMindQuestion.optionA}
+                optionB={game.groupMindQuestion.optionB}
+              />
               <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>
                 {game.groupMindTally.A} · {game.groupMindQuestion.optionA} — {game.groupMindQuestion.optionB} · {game.groupMindTally.B}
               </p>
@@ -657,6 +728,14 @@ export default function StatusView({
           Guarda lo schermo condiviso.
         </p>
       )}
+      {phase !== 'FINAL_AWARDS' &&
+        phase !== 'DUO_PORTRAIT' &&
+        phase !== 'TAPPA_RECAP' &&
+        phase !== 'STORY_INTRO' &&
+        phase !== 'SCENE_INTRO' &&
+        phase !== 'SCENE_CONSEQUENCE' &&
+        phase !== 'STORY_EPILOGUE' &&
+        narratorAdvance('Continua ▶')}
       {skipButton}
     </main>
   );

@@ -21,3 +21,5 @@ export { LiveVoterStatus } from './LiveVoterStatus';
 export { ShareInviteButton } from './ShareInviteButton';
 export { BivioBackdrop, leanFromSplit } from './BivioBackdrop';
 export { PauseOverlay } from './PauseOverlay';
+export { CompactAudioPlayer } from './CompactAudioPlayer';
+export { CruciverbaGrid } from './CruciverbaGrid';
