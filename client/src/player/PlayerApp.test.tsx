@@ -2307,6 +2307,25 @@ describe('PlayerApp', () => {
     expect(screen.getByText('Mare')).toBeInTheDocument();
   });
 
+  it('shows the create-room form with Da solo / In gruppo selector on /join?create=1', () => {
+    window.history.replaceState({}, '', '/join?create=1');
+    const emitSpy = vi.spyOn(fakeSocket, 'emit');
+    try {
+      render(<PlayerApp />);
+      expect(screen.getByText('Crea una partita')).toBeInTheDocument();
+      const soloBtn = screen.getByRole('button', { name: /👤 da solo/i });
+      expect(soloBtn).toBeInTheDocument();
+      fireEvent.click(soloBtn);
+      fireEvent.click(screen.getByRole('button', { name: /continua/i }));
+      expect(emitSpy).toHaveBeenCalledWith(
+        'player:createRoom',
+        expect.objectContaining({ nickname: 'Giocatore' }),
+      );
+    } finally {
+      window.history.replaceState({}, '', '/join');
+    }
+  });
+
   it('shows the leader setup panel when you are the leader', () => {
     render(<PlayerApp />);
     act(() => {
@@ -2324,8 +2343,10 @@ describe('PlayerApp', () => {
         leaderId: 'p1',
       });
     });
-    expect(screen.getByText(/componi la serata/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /avvia partita/i })).toBeInTheDocument();
+    expect(screen.getByText(/componi la partita/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /inizia la partita/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /dettagli opzione/i })).toBeNull();
+    expect(screen.queryByText('ⓘ')).toBeNull();
   });
 
   it('lets the leader pick a mood + delicate-theme opt-in and sends both when starting', () => {
@@ -2353,10 +2374,10 @@ describe('PlayerApp', () => {
       });
     });
     fireEvent.click(screen.getByRole('button', { name: /modalità classica/i }));
+    fireEvent.click(screen.getByRole('button', { name: /opzioni serata/i }));
     fireEvent.click(screen.getByRole('button', { name: /leggera/i }));
-    fireEvent.click(screen.getByText(/altre opzioni/i));
     fireEvent.click(screen.getByRole('button', { name: /temi delicati/i }));
-    fireEvent.click(screen.getByRole('button', { name: /avvia partita/i }));
+    fireEvent.click(screen.getByRole('button', { name: /inizia la partita/i }));
     expect(emitSpy).toHaveBeenCalledWith(
       'leader:startGame',
       expect.objectContaining({ mood: 'leggera', delicatoOptIn: true }),
@@ -2384,7 +2405,8 @@ describe('PlayerApp', () => {
       });
     });
     fireEvent.click(screen.getByRole('button', { name: /da solo/i }));
-    fireEvent.click(screen.getByRole('button', { name: /avvia partita/i }));
+    expect(screen.getByText(/chi gioca\? \(da solo/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /inizia la partita/i }));
     expect(emitSpy).toHaveBeenCalledWith(
       'leader:startGame',
       expect.objectContaining({ dilemmaCount: 5, serataLunga: false, partyMode: 'mix' }),
@@ -2416,8 +2438,9 @@ describe('PlayerApp', () => {
       });
     });
     fireEvent.click(screen.getByRole('button', { name: /modalità classica/i }));
+    fireEvent.click(screen.getByRole('button', { name: /opzioni serata/i }));
     fireEvent.click(screen.getByRole('button', { name: /alto.*twist quasi ogni round/i }));
-    fireEvent.click(screen.getByRole('button', { name: /avvia partita/i }));
+    fireEvent.click(screen.getByRole('button', { name: /inizia la partita/i }));
     expect(emitSpy).toHaveBeenCalledWith(
       'leader:startGame',
       expect.objectContaining({ caos: 'alto' }),
@@ -2448,9 +2471,10 @@ describe('PlayerApp', () => {
         leaderId: 'p1',
       });
     });
+    fireEvent.click(screen.getByRole('button', { name: /opzioni serata/i }));
     const famGroup = screen.getByRole('group', { name: 'Con chi giochi' });
     fireEvent.click(within(famGroup).getByRole('button', { name: /nuove conoscenze/i }));
-    fireEvent.click(screen.getByRole('button', { name: /inizia la festa/i }));
+    fireEvent.click(screen.getByRole('button', { name: /inizia la partita/i }));
     expect(emitSpy).toHaveBeenCalledWith(
       'leader:startGame',
       expect.objectContaining({ familiarita: 'nuove_conoscenze' }),
@@ -2483,7 +2507,7 @@ describe('PlayerApp', () => {
     fireEvent.click(screen.getByRole('button', { name: /modalità classica/i }));
     const tipoGroup = screen.getByRole('group', { name: 'Tipo di partita' });
     fireEvent.click(within(tipoGroup).getByRole('button', { name: /1v1 duello/i }));
-    fireEvent.click(screen.getByRole('button', { name: /avvia partita/i }));
+    fireEvent.click(screen.getByRole('button', { name: /inizia la partita/i }));
     expect(emitSpy).toHaveBeenCalledWith('leader:startGame', expect.objectContaining({ mode: 'duello' }));
   });
 
@@ -3024,9 +3048,9 @@ describe("Party Modes (Flash, Infiltrato, Coppie, Assurdo)", () => {
 
     const mixBtn = screen.getByRole('button', { name: /serata mix/i });
     expect(mixBtn).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.queryByRole('button', { name: /schierati flash/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /⚡ flash/i })).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: /inizia la festa/i }));
+    fireEvent.click(screen.getByRole('button', { name: /inizia la partita/i }));
     expect(emitSpy).toHaveBeenCalledWith(
       'leader:startGame',
       expect.objectContaining({
@@ -3040,15 +3064,15 @@ describe("Party Modes (Flash, Infiltrato, Coppie, Assurdo)", () => {
     joinLeader(3);
 
     fireEvent.click(screen.getByRole('button', { name: /scegli singolo gioco/i }));
-    const flashBtn = screen.getByRole('button', { name: /schierati flash/i });
+    const flashBtn = screen.getByRole('button', { name: /⚡ flash/i });
     expect(flashBtn).toBeInTheDocument();
     fireEvent.click(flashBtn);
-    expect(screen.getByPlaceholderText(/es. addio al celibato/i)).toBeInTheDocument();
 
-    const themeInput = screen.getByPlaceholderText(/es. addio al celibato/i);
+    fireEvent.click(screen.getByRole('button', { name: /opzioni serata/i }));
+    const themeInput = screen.getByPlaceholderText(/es\. vacanza/i);
     fireEvent.change(themeInput, { target: { value: 'Festa di Laurea' } });
 
-    const startBtn = screen.getByRole('button', { name: /inizia la festa/i });
+    const startBtn = screen.getByRole('button', { name: /inizia la partita/i });
     fireEvent.click(startBtn);
 
     expect(emitSpy).toHaveBeenCalledWith(
@@ -3065,10 +3089,10 @@ describe("Party Modes (Flash, Infiltrato, Coppie, Assurdo)", () => {
     joinLeader(3);
 
     fireEvent.click(screen.getByRole('button', { name: /scegli singolo gioco/i }));
-    const infiltratoBtn = screen.getByRole('button', { name: /l'infiltrato/i });
+    const infiltratoBtn = screen.getByRole('button', { name: /l’infiltrato/i });
     fireEvent.click(infiltratoBtn);
 
-    const startBtn = screen.getByRole('button', { name: /inizia la festa/i });
+    const startBtn = screen.getByRole('button', { name: /inizia la partita/i });
     fireEvent.click(startBtn);
 
     expect(emitSpy).toHaveBeenCalledWith(
@@ -3084,13 +3108,13 @@ describe("Party Modes (Flash, Infiltrato, Coppie, Assurdo)", () => {
     joinLeader(4);
 
     fireEvent.click(screen.getByRole('button', { name: /scegli singolo gioco/i }));
-    const coppieBtn = screen.getByRole('button', { name: /coppie & scintille/i });
+    const coppieBtn = screen.getByRole('button', { name: /🔥 coppie/i });
     fireEvent.click(coppieBtn);
 
     const piccantePill = screen.getByRole('button', { name: /piccante 18\+/i });
     fireEvent.click(piccantePill);
 
-    const startBtn = screen.getByRole('button', { name: /inizia la festa/i });
+    const startBtn = screen.getByRole('button', { name: /inizia la partita/i });
     fireEvent.click(startBtn);
 
     expect(emitSpy).toHaveBeenCalledWith(

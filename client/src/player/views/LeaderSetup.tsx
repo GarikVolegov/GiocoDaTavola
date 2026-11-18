@@ -1,11 +1,10 @@
-import { useState, type Dispatch, SetStateAction } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import {
   MODE_LABELS,
   CONTENT_REGISTERS,
   REGISTER_LABELS,
   SESSION_FORMATS,
-  FORMAT_LABELS,
-  CORSIE_META,
+  FORMAT_DILEMMA_COUNT,
   PERCORSI_CATALOG,
   getPercorsoMeta,
   DURATE,
@@ -17,8 +16,6 @@ import {
   FAMILIARITA_LABELS,
   CAOS_LEVELS,
   CAOS_LABELS,
-  estimatePercorsoDilemmi,
-  MIN_PLAYERS_TO_START,
   MIN_INFILTRATO_HUMANS,
   MIN_SQUADRE_PLAYERS,
   type GameMode,
@@ -27,7 +24,6 @@ import {
   type Durata,
   type TappaCounts,
   type PercorsoCounts,
-  type CorsiaTono,
   type CoppieIntensity,
   type InfiltratoTono,
   type StoriaCatalogItem,
@@ -36,10 +32,26 @@ import {
   type Caos,
   type PartyMode,
 } from '../../shared/events';
-import { Card, Pill, Button, Alert } from '../../shared/ui';
+import { Card, Pill, TextInput } from '../../shared/ui';
 import lobbyStyles from './LobbyScreen.module.css';
 
 export type TipoPartita = 'classica' | 'percorso' | 'storia';
+
+const PARTY_MODE_CARDS: Array<{
+  id: Exclude<PartyMode, 'mix'>;
+  label: string;
+  desc: string;
+  soloOk: boolean;
+}> = [
+  { id: 'flash', label: '⚡ Flash', desc: 'Zero fretta · Scegli la tua posizione e confrontati dal vivo', soloOk: true },
+  { id: 'classico', label: '🎭 Classico', desc: 'Dilemmi classici con discussione aperta, secondo voto e rilancio finale', soloOk: true },
+  { id: 'infiltrato', label: '🕵️ L’Infiltrato', desc: 'Domande segrete sui telefoni, 1 parola a testa e accusa al volo', soloOk: false },
+  { id: 'assurdo', label: '🤪 Assurdo', desc: 'Prove di dignità e gogna al tavolo senza timer', soloOk: true },
+  { id: 'coppie', label: '🔥 Coppie', desc: 'Coppie da 2 su nomi reali e sfide a punti', soloOk: false },
+  { id: 'preferiresti', label: '🔀 Preferiresti', desc: 'Quattro alternative assurde tra cui scegliere e confrontarsi', soloOk: true },
+  { id: 'cruciverba', label: '🧩 Cruciverba', desc: 'Cruciverba cooperativo a turni senza fretta né timer', soloOk: true },
+  { id: 'tribunale', label: '⚖️ Tribunale', desc: 'Arringhe faccia a faccia tra Accusa e Difesa davanti alla giuria', soloOk: false },
+];
 
 interface LeaderSetupProps {
   tipoPartita: TipoPartita;
@@ -77,9 +89,9 @@ interface LeaderSetupProps {
   humanCount: number;
   playMode?: 'solo' | 'gruppo';
   setPlayMode?: Dispatch<SetStateAction<'solo' | 'gruppo'>>;
-  canStart: boolean;
-  onStart: () => void;
-  startError: string | null;
+  canStart?: boolean;
+  onStart?: () => void;
+  startError?: string | null;
   partyMode?: PartyMode | null;
   setPartyMode?: Dispatch<SetStateAction<PartyMode | null>>;
   partyIntensity?: CoppieIntensity;
@@ -94,11 +106,6 @@ interface LeaderSetupProps {
   couplePairs?: Array<[string, string]>;
   onShuffleCouples?: () => void;
   onSwapCoupleMembers?: (idA: string, idB: string) => void;
-}
-
-function durataLabel(min: number): string {
-  if (min >= 90) return `~${Math.round(min / 60)}h`;
-  return `~${min} min`;
 }
 
 export default function LeaderSetup({
@@ -120,7 +127,7 @@ export default function LeaderSetup({
   setFormat,
   percorsoId = 'bussola',
   setPercorsoId,
-  percorsoCounts,
+  percorsoCounts: _percorsoCounts,
   startTappa,
   setStartTappa,
   durata,
@@ -133,13 +140,10 @@ export default function LeaderSetup({
   setInfiltratoOn,
   squadreOn,
   setSquadreOn,
-  tappaCounts,
-  humanCount,
+  tappaCounts: _tappaCounts,
+  humanCount: _humanCount,
   playMode = 'gruppo',
   setPlayMode,
-  canStart,
-  onStart,
-  startError,
   partyMode = 'mix',
   setPartyMode,
   partyIntensity = 'complicita',
@@ -157,39 +161,8 @@ export default function LeaderSetup({
 }: LeaderSetupProps) {
   const [activeTab, setActiveTab] = useState<'party' | 'classica'>('party');
   const [showSingleModes, setShowSingleModes] = useState(false);
-  const [openInfo, setOpenInfo] = useState<string | null>(null);
+  const [showAdvancedSetup, setShowAdvancedSetup] = useState(false);
   const [swapSelectionId, setSwapSelectionId] = useState<string | null>(null);
-  const toggleInfo = (id: string) => setOpenInfo((cur) => (cur === id ? null : id));
-
-  const renderInfoBtn = (id: string, _label: string) => {
-    const active = openInfo === id;
-    return (
-      <button
-        type="button"
-        aria-label="Dettagli opzione"
-        aria-expanded={active}
-        onClick={() => toggleInfo(id)}
-        style={{
-          minWidth: '2.75rem',
-          minHeight: '2.75rem',
-          padding: 0,
-          borderRadius: 'var(--radius-md)',
-          border: active ? '1.5px solid var(--gold)' : '1px solid rgba(255, 255, 255, 0.14)',
-          background: active ? 'rgba(229, 193, 88, 0.16)' : 'rgba(255, 255, 255, 0.04)',
-          color: active ? 'var(--gold)' : 'rgba(255, 255, 255, 0.72)',
-          fontSize: '0.9rem',
-          fontWeight: 700,
-          cursor: 'pointer',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >
-        ⓘ
-      </button>
-    );
-  };
 
   const isClassica = tipoPartita === 'classica';
   const isDuello = isClassica && gameMode === 'duello';
@@ -197,6 +170,7 @@ export default function LeaderSetup({
   const isStoria = tipoPartita === 'storia';
   const showSpecial = isPercorso || (isClassica && gameMode === 'gruppo');
   const discardsSubmitted = (isPercorso || isStoria) && submittedCount > 0;
+  const activeMeta = getPercorsoMeta(percorsoId);
   const storieGenres = [...new Set(storieCatalog.map((s) => s.genre))];
   const storieSubtitle =
     storieGenres.length > 0 ? storieGenres.map((g) => STORY_GENRE_LABELS[g]).join(' · ') : 'bivi da dibattere';
@@ -219,6 +193,21 @@ export default function LeaderSetup({
     if (!partyMode) setPartyMode?.('mix');
   };
 
+  const visiblePartyModes = PARTY_MODE_CARDS.filter((m) => playMode === 'gruppo' || m.soloOk);
+  const activePartyMeta = partyMode && partyMode !== 'mix'
+    ? PARTY_MODE_CARDS.find((m) => m.id === partyMode)
+    : null;
+
+  const roundCount = FORMAT_DILEMMA_COUNT[format];
+  const famLabel =
+    familiarita === 'nuove_conoscenze'
+      ? FAMILIARITA_LABELS.nuove_conoscenze.nome
+      : FAMILIARITA_LABELS.vecchi_amici.nome;
+  const advancedSummary =
+    activeTab === 'classica' && (isPercorso || isStoria)
+      ? famLabel
+      : `${roundCount} round · ${famLabel}`;
+
   return (
     <Card
       glow="accent"
@@ -226,34 +215,24 @@ export default function LeaderSetup({
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.75rem',
-        alignItems: 'center',
-        padding: '1rem 0.95rem',
+        gap: '0.9rem',
+        alignItems: 'stretch',
+        padding: '1rem',
       }}
     >
-      <h2 style={{ fontSize: '1.05rem', margin: 0 }}>Sei il leader — componi la serata</h2>
+      <div style={{ textAlign: 'center' }}>
+        <h2 style={{ fontSize: '1.1rem', margin: 0 }}>Componi la partita</h2>
+      </div>
 
+      {/* 1A. DA SOLO VS IN GRUPPO */}
       {setPlayMode && (
-        <div
-          role="group"
-          aria-label="Modalità di partecipazione"
-          style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}
-        >
-          <div
-            style={{
-              fontSize: '0.7rem',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              color: 'var(--muted)',
-              fontWeight: 700,
-            }}
-          >
-            Come giochi?
-          </div>
-          <div style={{ display: 'flex', gap: '0.45rem', width: '100%' }}>
+        <div role="group" aria-label="Modalità di partecipazione" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <div className={lobbyStyles.sectionLabel}>Come giochi?</div>
+          <div className={lobbyStyles.segmentGrid2}>
             <button
               type="button"
               aria-pressed={playMode === 'solo'}
+              className={`${lobbyStyles.segmentBtn} ${playMode === 'solo' ? lobbyStyles.segmentBtnActive : ''}`}
               onClick={() => {
                 setPlayMode('solo');
                 if (partyMode === 'infiltrato' || partyMode === 'coppie' || partyMode === 'tribunale') {
@@ -263,37 +242,14 @@ export default function LeaderSetup({
                 setInfiltratoOn(false);
                 setSquadreOn(false);
               }}
-              style={{
-                flex: 1,
-                minHeight: '2.75rem',
-                padding: '0.45rem 0.65rem',
-                borderRadius: '0.7rem',
-                border: playMode === 'solo' ? '1.5px solid var(--gold)' : '1px solid rgba(255, 255, 255, 0.14)',
-                background: playMode === 'solo' ? 'rgba(229, 193, 88, 0.14)' : 'rgba(255, 255, 255, 0.04)',
-                color: '#fff',
-                cursor: 'pointer',
-                fontWeight: 800,
-                fontSize: '0.82rem',
-              }}
             >
               👤 Da solo
             </button>
             <button
               type="button"
               aria-pressed={playMode === 'gruppo'}
+              className={`${lobbyStyles.segmentBtn} ${playMode === 'gruppo' ? lobbyStyles.segmentBtnActive : ''}`}
               onClick={() => setPlayMode('gruppo')}
-              style={{
-                flex: 1,
-                minHeight: '2.75rem',
-                padding: '0.45rem 0.65rem',
-                borderRadius: '0.7rem',
-                border: playMode === 'gruppo' ? '1.5px solid var(--gold)' : '1px solid rgba(255, 255, 255, 0.14)',
-                background: playMode === 'gruppo' ? 'rgba(229, 193, 88, 0.14)' : 'rgba(255, 255, 255, 0.04)',
-                color: '#fff',
-                cursor: 'pointer',
-                fontWeight: 800,
-                fontSize: '0.82rem',
-              }}
             >
               👥 In gruppo
             </button>
@@ -301,176 +257,76 @@ export default function LeaderSetup({
         </div>
       )}
 
-      {/* Group Familiarity Selector: Vecchi amici vs Nuove conoscenze */}
-      <div
-        role="group"
-        aria-label="Con chi giochi"
-        style={{
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.35rem',
-        }}
-      >
-        <div
-          style={{
-            fontSize: '0.7rem',
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            color: 'var(--muted)',
-            fontWeight: 700,
-          }}
-        >
-          Con chi giochi?
+      {/* 1B. MODALITÀ DI GIOCO: PARTY MODE VS MODALITÀ CLASSICA */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div className={lobbyStyles.sectionLabel}>1. Modalità di gioco</div>
+        <div className={lobbyStyles.segmentGrid2}>
+          <button
+            type="button"
+            aria-pressed={activeTab === 'party'}
+            className={`${lobbyStyles.segmentBtn} ${activeTab === 'party' ? lobbyStyles.segmentBtnActive : ''}`}
+            onClick={switchToParty}
+          >
+            🔥 Party Mode
+          </button>
+          <button
+            type="button"
+            aria-pressed={activeTab === 'classica'}
+            className={`${lobbyStyles.segmentBtn} ${activeTab === 'classica' ? lobbyStyles.segmentBtnActive : ''}`}
+            onClick={switchToClassic}
+          >
+            🏛️ Modalità Classica
+          </button>
         </div>
-        <div style={{ display: 'flex', gap: '0.45rem', width: '100%' }}>
-          {FAMILIARITA_VALUES.map((fam) => {
-            const active = familiarita === fam;
-            const meta = FAMILIARITA_LABELS[fam];
-            return (
-              <div key={fam} style={{ flex: 1, display: 'flex', gap: '0.25rem', alignItems: 'stretch', minWidth: 0 }}>
-                <button
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setFamiliarita?.(fam)}
-                  style={{
-                    flex: 1,
-                    minHeight: '2.75rem',
-                    textAlign: 'left',
-                    padding: '0.45rem 0.65rem',
-                    borderRadius: '0.7rem',
-                    border: active ? '1.5px solid var(--gold)' : '1px solid rgba(255, 255, 255, 0.14)',
-                    background: active ? 'rgba(229, 193, 88, 0.14)' : 'rgba(255, 255, 255, 0.04)',
-                    color: active ? '#fff' : 'rgba(255, 255, 255, 0.85)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontWeight: 800,
-                    fontSize: '0.82rem',
-                    transition: 'all 140ms ease',
-                  }}
-                >
-                  {meta.nome}
-                </button>
-                {renderInfoBtn(`fam-${fam}`, meta.nome)}
-              </div>
-            );
-          })}
-        </div>
-        {openInfo?.startsWith('fam-') && (
-          <p style={{ margin: '0.15rem 0 0', padding: '0.45rem 0.65rem', borderRadius: '0.55rem', background: 'rgba(255,255,255,0.06)', fontSize: '0.76rem', opacity: 0.9, lineHeight: 1.3 }}>
-            {FAMILIARITA_LABELS[openInfo.replace('fam-', '') as keyof typeof FAMILIARITA_LABELS]?.descr}
-          </p>
-        )}
-      </div>
 
-      {/* Tab Switcher */}
-      <div
-        style={{
-          display: 'flex',
-          width: '100%',
-          background: 'rgba(0, 0, 0, 0.35)',
-          padding: '0.25rem',
-          borderRadius: 'var(--radius-pill, 999px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-        }}
-      >
-        <button
-          type="button"
-          onClick={switchToParty}
-          style={{
-            flex: 1,
-            minHeight: '2.75rem',
-            padding: '0.5rem 0.6rem',
-            borderRadius: '999px',
-            border: 'none',
-            background: activeTab === 'party' ? 'linear-gradient(135deg, #f59e0b 0%, #ec4899 100%)' : 'transparent',
-            color: activeTab === 'party' ? '#fff' : 'rgba(255, 255, 255, 0.7)',
-            fontWeight: 800,
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            transition: 'all 150ms ease',
-            textShadow: activeTab === 'party' ? '0 1px 2px rgba(0,0,0,0.4)' : undefined,
-          }}
-        >
-          🔥 PARTY MODE
-        </button>
-        <button
-          type="button"
-          onClick={switchToClassic}
-          style={{
-            flex: 1,
-            minHeight: '2.75rem',
-            padding: '0.5rem 0.6rem',
-            borderRadius: '999px',
-            border: 'none',
-            background: activeTab === 'classica' ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
-            color: activeTab === 'classica' ? '#fff' : 'rgba(255, 255, 255, 0.7)',
-            fontWeight: 700,
-            fontSize: '0.82rem',
-            cursor: 'pointer',
-            transition: 'all 150ms ease',
-          }}
-        >
-          🏛️ Modalità Classica
-        </button>
-      </div>
-
-      {activeTab === 'party' ? (
-        <>
-          {/* Hero Default Mode: Serata Mix + Optional Single-Game Picker */}
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem' }} role="group" aria-label="Modalità party">
-            {/* Hero: Serata Mix Variabile */}
-            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch', width: '100%' }}>
-              <button
-                type="button"
-                aria-pressed={partyMode === 'mix'}
-                onClick={() => selectPartyMode('mix')}
-                style={{
-                  flex: 1,
-                  minHeight: '3.25rem',
-                  padding: '0.7rem 0.85rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: partyMode === 'mix' ? '2px solid var(--gold)' : '1px solid rgba(229, 193, 88, 0.35)',
-                  background: partyMode === 'mix'
-                    ? 'linear-gradient(135deg, rgba(229, 193, 88, 0.25) 0%, rgba(20, 26, 52, 0.85) 100%)'
-                    : 'rgba(25, 25, 40, 0.6)',
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.3rem',
-                  boxShadow: partyMode === 'mix' ? '0 0 14px rgba(229, 193, 88, 0.32)' : undefined,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.55rem', width: '100%' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.94rem', fontWeight: 900, color: 'var(--gold)' }}>
-                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🎲</span>
-                    SERATA MIX · Tutti i giochi casuali
-                  </span>
-                  <span style={{ fontSize: '0.66rem', padding: '0.12rem 0.45rem', borderRadius: '4px', background: 'rgba(229, 193, 88, 0.2)', color: 'var(--gold)', fontWeight: 700, flexShrink: 0 }}>
-                    Consigliata
-                  </span>
-                </div>
-                <span style={{ fontSize: '0.75rem', opacity: 0.85, lineHeight: 1.3 }}>
-                  Ogni round cambia giochino a sorpresa senza timer: Flash, Preferiresti, Assurdo, Cruciverba, Termometro, Telepatia, Mente del Gruppo, Coppie, Tribunale e Infiltrato!
-                </span>
-              </button>
-              {renderInfoBtn('party-mix', 'Serata Mix')}
-            </div>
-
-            {/* Collapsible Toggle for Individual Games */}
+        {activeTab === 'party' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }} role="group" aria-label="Modalità party">
             <button
               type="button"
-              className={lobbyStyles.accordionTrigger}
+              aria-pressed={partyMode === 'mix'}
+              onClick={() => selectPartyMode('mix')}
+              style={{
+                width: '100%',
+                minHeight: '3.25rem',
+                padding: '0.75rem 0.9rem',
+                borderRadius: 'var(--radius-md, 10px)',
+                border: partyMode === 'mix' ? '2px solid var(--gold)' : '1px solid rgba(229, 193, 88, 0.35)',
+                background:
+                  partyMode === 'mix'
+                    ? 'linear-gradient(135deg, rgba(229, 193, 88, 0.22) 0%, rgba(20, 26, 52, 0.85) 100%)'
+                    : 'rgba(255, 255, 255, 0.04)',
+                color: 'var(--text)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.3rem',
+                boxShadow: partyMode === 'mix' ? '0 0 0 1px rgba(229, 193, 88, 0.28)' : undefined,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', width: '100%' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '0.92rem', color: 'var(--gold)', textTransform: 'uppercase' }}>
+                  🎲 Serata Mix · Tutti i giochi casuali
+                </span>
+                <span style={{ fontSize: '0.68rem', padding: '0.12rem 0.45rem', borderRadius: '4px', background: 'rgba(229, 193, 88, 0.2)', color: 'var(--gold)', fontWeight: 700, flexShrink: 0 }}>
+                  Consigliata
+                </span>
+              </div>
+              <span style={{ fontSize: '0.78rem', opacity: 0.88, lineHeight: 1.35 }}>
+                Ogni round un giochino diverso a sorpresa senza timer!
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className={lobbyStyles.optionsToggleBtn}
               aria-expanded={showSingleModes || (partyMode !== null && partyMode !== 'mix')}
               onClick={() => setShowSingleModes((v) => !v)}
             >
-              <span>🎯 Scegli singolo gioco (opzionale)</span>
-              <span style={{ fontSize: '0.76rem', opacity: 0.78, fontWeight: 600 }}>
-                {partyMode && partyMode !== 'mix'
-                  ? `Attivo: ${partyMode.toUpperCase()} ▲`
+              <span>🎯 Scegli singolo gioco</span>
+              <span className={lobbyStyles.optionsSummary}>
+                {activePartyMeta
+                  ? `${activePartyMeta.label} ▲`
                   : showSingleModes
                     ? 'Nascondi ▲'
                     : 'Mostra ▼'}
@@ -478,635 +334,209 @@ export default function LeaderSetup({
             </button>
 
             {(showSingleModes || (partyMode !== null && partyMode !== 'mix')) && (
-              <div className={lobbyStyles.partyGrid}>
-                {/* Modalità 1: Flash */}
-                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
-                  <button
-                    type="button"
-                    aria-pressed={partyMode === 'flash'}
-                    onClick={() => selectPartyMode('flash')}
-                    style={{
-                      flex: 1,
-                      minHeight: '2.9rem',
-                      padding: '0.55rem 0.7rem',
-                      borderRadius: 'var(--radius-md)',
-                      border: partyMode === 'flash' ? '2px solid #f59e0b' : '1px solid rgba(245, 158, 11, 0.3)',
-                      background: partyMode === 'flash'
-                        ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(30, 25, 15, 0.8) 100%)'
-                        : 'rgba(25, 25, 40, 0.6)',
-                      color: 'var(--text)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      boxShadow: partyMode === 'flash' ? '0 0 14px rgba(245, 158, 11, 0.35)' : undefined,
-                    }}
-                  >
-                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>⚡</span>
-                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#f59e0b' }}>SCHIERATI FLASH</span>
-                  </button>
-                  {renderInfoBtn('party-flash', 'Schierati Flash')}
+              <>
+                <div className={lobbyStyles.modeGrid}>
+                  {visiblePartyModes.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      aria-pressed={partyMode === m.id}
+                      className={`${lobbyStyles.modeBtn} ${partyMode === m.id ? lobbyStyles.modeBtnActive : ''}`}
+                      onClick={() => selectPartyMode(m.id)}
+                    >
+                      <span className={lobbyStyles.modeBtnTitle}>{m.label}</span>
+                    </button>
+                  ))}
                 </div>
+                {activePartyMeta && <p className={lobbyStyles.modeDescBox}>{activePartyMeta.desc}</p>}
+              </>
+            )}
 
-                {/* Modalità 2: Infiltrato */}
-                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
+            {partyMode === 'infiltrato' && (
+              <div className={lobbyStyles.segmentGrid3}>
+                {([
+                  { id: 'risate', label: '😂 Risate' },
+                  { id: 'profondo', label: '🌊 Profondo' },
+                  { id: 'misto', label: '🎲 Misto' },
+                ] as const).map((t) => (
                   <button
+                    key={t.id}
                     type="button"
-                    disabled={playMode === 'solo'}
-                    aria-pressed={partyMode === 'infiltrato'}
-                    onClick={() => selectPartyMode('infiltrato')}
-                    style={{
-                      flex: 1,
-                      minHeight: '2.9rem',
-                      padding: '0.55rem 0.7rem',
-                      borderRadius: 'var(--radius-md)',
-                      border: partyMode === 'infiltrato' ? '2px solid #a78bfa' : '1px solid rgba(167, 139, 250, 0.3)',
-                      background: partyMode === 'infiltrato'
-                        ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(25, 20, 45, 0.8) 100%)'
-                        : 'rgba(25, 25, 40, 0.6)',
-                      color: 'var(--text)',
-                      cursor: playMode === 'solo' ? 'not-allowed' : 'pointer',
-                      opacity: playMode === 'solo' ? 0.45 : 1,
-                      textAlign: 'left',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      boxShadow: partyMode === 'infiltrato' ? '0 0 14px rgba(139, 92, 246, 0.35)' : undefined,
-                    }}
+                    aria-pressed={infiltratoTono === t.id}
+                    className={`${lobbyStyles.segmentBtn} ${infiltratoTono === t.id ? lobbyStyles.segmentBtnActive : ''}`}
+                    onClick={() => setInfiltratoTono?.(t.id)}
                   >
-                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🕵️</span>
-                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#c084fc' }}>L'INFILTRATO</span>
+                    {t.label}
                   </button>
-                  {renderInfoBtn('party-infiltrato', "L'Infiltrato")}
-                </div>
-
-                {/* Modalità 3: Coppie & Scintille */}
-                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
-                  <button
-                    type="button"
-                    disabled={playMode === 'solo'}
-                    aria-pressed={partyMode === 'coppie'}
-                    onClick={() => selectPartyMode('coppie')}
-                    style={{
-                      flex: 1,
-                      minHeight: '2.9rem',
-                      borderRadius: 'var(--radius-md)',
-                      border: partyMode === 'coppie' ? '2px solid #f472b6' : '1px solid rgba(244, 114, 182, 0.3)',
-                      background: partyMode === 'coppie'
-                        ? 'linear-gradient(135deg, rgba(236, 72, 153, 0.22) 0%, rgba(40, 15, 30, 0.8) 100%)'
-                        : 'rgba(25, 25, 40, 0.6)',
-                      padding: '0.55rem 0.7rem',
-                      boxShadow: partyMode === 'coppie' ? '0 0 14px rgba(236, 72, 153, 0.35)' : undefined,
-                      color: 'var(--text)',
-                      cursor: playMode === 'solo' ? 'not-allowed' : 'pointer',
-                      opacity: playMode === 'solo' ? 0.45 : 1,
-                      textAlign: 'left',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🌶️</span>
-                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#f472b6' }}>COPPIE & SCINTILLE</span>
-                  </button>
-                  {renderInfoBtn('party-coppie', 'Coppie & Scintille')}
-                </div>
-
-                {/* Modalità 4: Assurdo ma Semplice */}
-                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
-                  <button
-                    type="button"
-                    aria-pressed={partyMode === 'assurdo'}
-                    onClick={() => selectPartyMode('assurdo')}
-                    style={{
-                      flex: 1,
-                      minHeight: '2.9rem',
-                      padding: '0.55rem 0.7rem',
-                      borderRadius: 'var(--radius-md)',
-                      border: partyMode === 'assurdo' ? '2px solid #34d399' : '1px solid rgba(52, 211, 153, 0.3)',
-                      background: partyMode === 'assurdo'
-                        ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(15, 35, 25, 0.8) 100%)'
-                        : 'rgba(25, 25, 40, 0.6)',
-                      color: 'var(--text)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      boxShadow: partyMode === 'assurdo' ? '0 0 14px rgba(52, 211, 153, 0.35)' : undefined,
-                    }}
-                  >
-                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🤡</span>
-                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#34d399' }}>ASSURDO MA SEMPLICE</span>
-                  </button>
-                  {renderInfoBtn('party-assurdo', 'Assurdo ma Semplice')}
-                </div>
-
-                {/* Modalità 5: Preferiresti che... */}
-                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
-                  <button
-                    type="button"
-                    aria-pressed={partyMode === 'preferiresti'}
-                    onClick={() => selectPartyMode('preferiresti')}
-                    style={{
-                      flex: 1,
-                      minHeight: '2.9rem',
-                      padding: '0.55rem 0.7rem',
-                      borderRadius: 'var(--radius-md)',
-                      border: partyMode === 'preferiresti' ? '2px solid #38bdf8' : '1px solid rgba(56, 189, 248, 0.3)',
-                      background: partyMode === 'preferiresti'
-                        ? 'linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(15, 30, 50, 0.85) 100%)'
-                        : 'rgba(25, 25, 40, 0.6)',
-                      color: 'var(--text)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      boxShadow: partyMode === 'preferiresti' ? '0 0 14px rgba(56, 189, 248, 0.35)' : undefined,
-                    }}
-                  >
-                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🔀</span>
-                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#38bdf8' }}>PREFERIRESTI CHE...</span>
-                  </button>
-                  {renderInfoBtn('party-preferiresti', 'Preferiresti che...')}
-                </div>
-
-                {/* Modalità 6: Cruciverba Show */}
-                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
-                  <button
-                    type="button"
-                    aria-pressed={partyMode === 'cruciverba'}
-                    onClick={() => selectPartyMode('cruciverba')}
-                    style={{
-                      flex: 1,
-                      minHeight: '2.9rem',
-                      padding: '0.55rem 0.7rem',
-                      borderRadius: 'var(--radius-md)',
-                      border: partyMode === 'cruciverba' ? '2px solid #2dd4bf' : '1px solid rgba(45, 212, 191, 0.3)',
-                      background: partyMode === 'cruciverba'
-                        ? 'linear-gradient(135deg, rgba(45, 212, 191, 0.24) 0%, rgba(15, 35, 35, 0.85) 100%)'
-                        : 'rgba(25, 25, 40, 0.6)',
-                      color: 'var(--text)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      boxShadow: partyMode === 'cruciverba' ? '0 0 14px rgba(45, 212, 191, 0.35)' : undefined,
-                    }}
-                  >
-                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🧩</span>
-                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#2dd4bf' }}>CRUCIVERBA SHOW</span>
-                  </button>
-                  {renderInfoBtn('party-cruciverba', 'Cruciverba Show')}
-                </div>
-
-                {/* Modalità 7: Tribunale degli Amici */}
-                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
-                  <button
-                    type="button"
-                    disabled={playMode === 'solo'}
-                    aria-pressed={partyMode === 'tribunale'}
-                    onClick={() => selectPartyMode('tribunale')}
-                    style={{
-                      flex: 1,
-                      minHeight: '2.9rem',
-                      padding: '0.55rem 0.7rem',
-                      borderRadius: 'var(--radius-md)',
-                      border: partyMode === 'tribunale' ? '2px solid #fbbf24' : '1px solid rgba(251, 191, 36, 0.3)',
-                      background: partyMode === 'tribunale'
-                        ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.22) 0%, rgba(40, 30, 15, 0.85) 100%)'
-                        : 'rgba(25, 25, 40, 0.6)',
-                      color: 'var(--text)',
-                      cursor: playMode === 'solo' ? 'not-allowed' : 'pointer',
-                      opacity: playMode === 'solo' ? 0.45 : 1,
-                      textAlign: 'left',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      boxShadow: partyMode === 'tribunale' ? '0 0 14px rgba(251, 191, 36, 0.35)' : undefined,
-                    }}
-                  >
-                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>⚖️</span>
-                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#fbbf24' }}>TRIBUNALE DEGLI AMICI</span>
-                  </button>
-                  {renderInfoBtn('party-tribunale', 'Tribunale degli Amici')}
-                </div>
-
-                {/* Modalità 8: Classico */}
-                <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'stretch' }}>
-                  <button
-                    type="button"
-                    aria-pressed={partyMode === 'classico'}
-                    onClick={() => selectPartyMode('classico')}
-                    style={{
-                      flex: 1,
-                      minHeight: '2.9rem',
-                      padding: '0.55rem 0.7rem',
-                      borderRadius: 'var(--radius-md)',
-                      border: partyMode === 'classico' ? '2px solid #e5c158' : '1px solid rgba(229, 193, 88, 0.3)',
-                      background: partyMode === 'classico'
-                        ? 'linear-gradient(135deg, rgba(229, 193, 88, 0.22) 0%, rgba(25, 25, 40, 0.85) 100%)'
-                        : 'rgba(25, 25, 40, 0.6)',
-                      color: 'var(--text)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      boxShadow: partyMode === 'classico' ? '0 0 14px rgba(229, 193, 88, 0.35)' : undefined,
-                    }}
-                  >
-                    <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>🎭</span>
-                    <span style={{ fontSize: '0.88rem', fontWeight: 900, color: 'var(--gold)' }}>CLASSICO</span>
-                  </button>
-                  {renderInfoBtn('party-classico', 'Classico')}
-                </div>
+                ))}
               </div>
             )}
-          </div>
 
-          {openInfo?.startsWith('party-') && (
-            <p style={{ width: '100%', margin: 0, padding: '0.5rem 0.7rem', borderRadius: '0.55rem', background: 'rgba(255,255,255,0.06)', fontSize: '0.78rem', opacity: 0.92, lineHeight: 1.3 }}>
-              {openInfo === 'party-mix' && 'Variabile senza timer · Ogni round cambia gioco: Cruciverba Show, Tribunale degli Amici, Flash, Preferiresti che..., Termometro 1–10, Telepatia, Mente del Gruppo, Gogna, Scrivi e Infiltrato!'}
-              {openInfo === 'party-flash' && 'Dilemmi quotidiani divisivi senza timer: voti sul telefono e poi confronto dal vivo!'}
-              {openInfo === 'party-infiltrato' && 'Paranoia & accusa senza timer: domande segrete sui telefoni, 1 parola a testa, dibattito libero e accusa al volo!'}
-              {openInfo === 'party-coppie' && 'Coppie fisse da 2 (2, 4, 6 o 8 giocatori): tutte le coppie giocano insieme su nomi reali dei partner e sfide a punti!'}
-              {openInfo === 'party-assurdo' && 'La Gogna & 500€: "Chi tradirebbe tutti dopo 5 minuti?". Vota l\'amico e incoronalo con la Sentenza dell\'App!'}
-              {openInfo === 'party-preferiresti' && 'Quattro scelte assurde o scomode: ognuno vota sul telefono, poi chi è in minoranza difende la propria scelta senza timer!'}
-              {openInfo === 'party-cruciverba' && 'Cruciverba cooperativo a turni senza fretta né timer: indovinate insieme il tabellone!'}
-              {openInfo === 'party-tribunale' && 'Dispute assurde tra Accusa e Difesa davanti alla giuria del gruppo, senza limiti di tempo!'}
-              {openInfo === 'party-classico' && 'Dilemmi classici con discussione aperta, secondo voto e rilancio finale senza timer.'}
-            </p>
-          )}
-
-          {partyMode === 'infiltrato' && (
-            <div style={{ width: '100%', display: 'flex', gap: '0.4rem', padding: '0.4rem 0.5rem', background: 'rgba(139, 92, 246, 0.12)', borderRadius: 'var(--radius-sm)' }}>
-              {([
-                { id: 'risate', label: '😂 Risate' },
-                { id: 'profondo', label: '🧭 Profondo' },
-                { id: 'misto', label: '🎭 Misto' },
-              ] as const).map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setInfiltratoTono?.(t.id)}
-                  style={{
-                    flex: 1,
-                    minHeight: '2.75rem',
-                    padding: '0.35rem',
-                    borderRadius: 'var(--radius-sm)',
-                    border: infiltratoTono === t.id ? '1.5px solid #c084fc' : '1px solid rgba(255,255,255,0.1)',
-                    background: infiltratoTono === t.id ? 'rgba(167, 139, 250, 0.3)' : 'rgba(0,0,0,0.2)',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    fontSize: '0.76rem',
-                    fontWeight: 800,
-                  }}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {partyMode === 'coppie' && (
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ width: '100%', display: 'flex', gap: '0.4rem', padding: '0.4rem 0.5rem', background: 'rgba(236, 72, 153, 0.12)', borderRadius: 'var(--radius-sm)' }}>
-                <button
-                  type="button"
-                  onClick={() => setPartyIntensity?.('complicita')}
-                  style={{
-                    flex: 1,
-                    minHeight: '2.75rem',
-                    padding: '0.4rem',
-                    borderRadius: 'var(--radius-sm)',
-                    border: partyIntensity === 'complicita' ? '1.5px solid #ec4899' : '1px solid rgba(255,255,255,0.1)',
-                    background: partyIntensity === 'complicita' ? 'rgba(236, 72, 153, 0.35)' : 'rgba(0,0,0,0.2)',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    fontSize: '0.76rem',
-                    fontWeight: 800,
-                  }}
-                >
-                  💞 Complicità
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPartyIntensity?.('piccante')}
-                  style={{
-                    flex: 1,
-                    minHeight: '2.75rem',
-                    padding: '0.4rem',
-                    borderRadius: 'var(--radius-sm)',
-                    border: partyIntensity === 'piccante' ? '1.5px solid #ef4444' : '1px solid rgba(255,255,255,0.1)',
-                    background: partyIntensity === 'piccante' ? 'rgba(239, 68, 68, 0.35)' : 'rgba(0,0,0,0.2)',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    fontSize: '0.76rem',
-                    fontWeight: 800,
-                  }}
-                >
-                  🔞 Piccante 18+
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPartyIntensity?.('profondo')}
-                  style={{
-                    flex: 1,
-                    minHeight: '2.75rem',
-                    padding: '0.4rem',
-                    borderRadius: 'var(--radius-sm)',
-                    border: partyIntensity === 'profondo' ? '1.5px solid #38bdf8' : '1px solid rgba(255,255,255,0.1)',
-                    background: partyIntensity === 'profondo' ? 'rgba(56, 189, 248, 0.3)' : 'rgba(0,0,0,0.2)',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    fontSize: '0.76rem',
-                    fontWeight: 800,
-                  }}
-                >
-                  🧭 Profondo
-                </button>
-              </div>
-
-              {/* Fixed Pairs Builder / Odd-Count Guard */}
-              <div
-                style={{
-                  padding: '0.6rem 0.7rem',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'rgba(236, 72, 153, 0.08)',
-                  border: '1px solid rgba(236, 72, 153, 0.3)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.45rem',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#fbcfe8', textTransform: 'uppercase' }}>
-                    💕 Coppie della serata (2 per coppia)
-                  </span>
-                  {players.length >= 4 && players.length % 2 === 0 && onShuffleCouples && (
+            {partyMode === 'coppie' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div className={lobbyStyles.segmentGrid3}>
+                  {([
+                    { id: 'complicita', label: '🥂 Complicità' },
+                    { id: 'piccante', label: '🌶️ Piccante 18+' },
+                    { id: 'profondo', label: '🌊 Profondo' },
+                  ] as const).map((it) => (
                     <button
+                      key={it.id}
                       type="button"
-                      onClick={() => {
-                        setSwapSelectionId(null);
-                        onShuffleCouples();
-                      }}
-                      style={{
-                        background: 'rgba(255,255,255,0.08)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        color: '#fff',
-                        borderRadius: '8px',
-                        padding: '0.25rem 0.55rem',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                      }}
+                      aria-pressed={partyIntensity === it.id}
+                      className={`${lobbyStyles.segmentBtn} ${partyIntensity === it.id ? lobbyStyles.segmentBtnActive : ''}`}
+                      onClick={() => setPartyIntensity?.(it.id)}
                     >
-                      🔀 Mescola
+                      {it.label}
                     </button>
-                  )}
+                  ))}
                 </div>
 
-                {players.length < 2 || players.length % 2 !== 0 ? (
-                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#fda4af', fontWeight: 700 }}>
-                    ⚠️ Servono un numero pari di giocatori (2, 4, 6 o 8). Ora siete in {players.length}.
-                  </p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    {couplePairs.map(([idA, idB], idx) => {
-                      const nameA = players.find((p) => p.id === idA)?.nickname ?? idA;
-                      const nameB = players.find((p) => p.id === idB)?.nickname ?? idB;
-                      const renderMemberChip = (pid: string, name: string) => {
-                        const selected = swapSelectionId === pid;
-                        return (
-                          <button
-                            key={pid}
-                            type="button"
-                            onClick={() => {
-                              if (!onSwapCoupleMembers) return;
-                              if (!swapSelectionId) setSwapSelectionId(pid);
-                              else if (swapSelectionId === pid) setSwapSelectionId(null);
-                              else {
-                                onSwapCoupleMembers(swapSelectionId, pid);
-                                setSwapSelectionId(null);
-                              }
-                            }}
-                            style={{
-                              padding: '0.25rem 0.55rem',
-                              borderRadius: '8px',
-                              border: selected ? '1.5px solid #fbbf24' : '1px solid rgba(255,255,255,0.18)',
-                              background: selected ? 'rgba(251, 191, 36, 0.25)' : 'rgba(0,0,0,0.28)',
-                              color: '#fff',
-                              fontSize: '0.78rem',
-                              fontWeight: 700,
-                              cursor: onSwapCoupleMembers ? 'pointer' : 'default',
-                            }}
-                          >
-                            {name}
-                          </button>
-                        );
-                      };
-                      return (
-                        <div
-                          key={`${idA}-${idB}`}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '0.4rem',
-                            fontSize: '0.76rem',
-                          }}
-                        >
-                          <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>
-                            Coppia {idx + 1}
-                          </span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                            {renderMemberChip(idA, nameA)}
-                            <span>❤️</span>
-                            {renderMemberChip(idB, nameB)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {players.length >= 4 && (
-                      <span style={{ fontSize: '0.7rem', opacity: 0.72 }}>
-                        Tocca 2 nomi per scambiarli di coppia prima di iniziare.
-                      </span>
+                <div
+                  style={{
+                    padding: '0.6rem 0.7rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'rgba(236, 72, 153, 0.08)',
+                    border: '1px solid rgba(236, 72, 153, 0.3)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.45rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#fbcfe8', textTransform: 'uppercase' }}>
+                      💕 Coppie della serata
+                    </span>
+                    {players.length >= 4 && players.length % 2 === 0 && onShuffleCouples && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSwapSelectionId(null);
+                          onShuffleCouples();
+                        }}
+                        style={{
+                          background: 'rgba(255,255,255,0.08)',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          color: '#fff',
+                          borderRadius: '8px',
+                          padding: '0.25rem 0.55rem',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        🔀 Mescola
+                      </button>
                     )}
                   </div>
-                )}
-              </div>
-            </div>
-          )}
 
-          {/* Tema personalizzato della serata (Gemini Flash injection) */}
-          <div style={{ width: '100%', marginTop: '0.1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', marginBottom: '0.3rem' }}>
-              <label
-                htmlFor="party-theme-input"
-                style={{
-                  fontSize: '0.8rem',
-                  fontWeight: 800,
-                  color: 'var(--gold, #f59e0b)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                🔥 Tema della Serata (opzionale)
-              </label>
-              {renderInfoBtn('party-theme', 'Tema della serata')}
-            </div>
-            <input
-              id="party-theme-input"
-              name="partyTheme"
-              type="text"
-              value={theme}
-              onChange={(e) => setTheme?.(e.target.value)}
-              placeholder="es. Addio al celibato di Marco, Coinquilini fuorisede..."
-              style={{
-                width: '100%',
-                minHeight: '2.75rem',
-                padding: '0.6rem 0.75rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(0, 0, 0, 0.4)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                color: '#fff',
-                fontSize: '0.85rem',
-                boxSizing: 'border-box',
-                outline: 'none',
-              }}
-            />
-            {openInfo === 'party-theme' && (
-              <p style={{ margin: '0.3rem 0 0', padding: '0.4rem 0.6rem', borderRadius: '0.5rem', background: 'rgba(255,255,255,0.06)', fontSize: '0.75rem', opacity: 0.88 }}>
-                ✨ Gemini Flash genererà domande e dilemmi su misura per il vostro gruppo!
-              </p>
+                  {players.length < 2 || players.length % 2 !== 0 ? (
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: '#fda4af', fontWeight: 700 }}>
+                      Servono 2, 4, 6 o 8 giocatori (ora {players.length}).
+                    </p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      {couplePairs.map(([idA, idB], idx) => {
+                        const nameA = players.find((p) => p.id === idA)?.nickname ?? idA;
+                        const nameB = players.find((p) => p.id === idB)?.nickname ?? idB;
+                        const renderMemberChip = (pid: string, name: string) => {
+                          const selected = swapSelectionId === pid;
+                          return (
+                            <button
+                              key={pid}
+                              type="button"
+                              onClick={() => {
+                                if (!onSwapCoupleMembers) return;
+                                if (!swapSelectionId) setSwapSelectionId(pid);
+                                else if (swapSelectionId === pid) setSwapSelectionId(null);
+                                else {
+                                  onSwapCoupleMembers(swapSelectionId, pid);
+                                  setSwapSelectionId(null);
+                                }
+                              }}
+                              style={{
+                                padding: '0.25rem 0.55rem',
+                                borderRadius: '8px',
+                                border: selected ? '1.5px solid #fbbf24' : '1px solid rgba(255,255,255,0.18)',
+                                background: selected ? 'rgba(251, 191, 36, 0.25)' : 'rgba(0,0,0,0.28)',
+                                color: '#fff',
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                cursor: onSwapCoupleMembers ? 'pointer' : 'default',
+                              }}
+                            >
+                              {name}
+                            </button>
+                          );
+                        };
+                        return (
+                          <div
+                            key={`${idA}-${idB}`}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '0.4rem',
+                              fontSize: '0.76rem',
+                            }}
+                          >
+                            <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>
+                              Coppia {idx + 1}
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              {renderMemberChip(idA, nameA)}
+                              <span>❤️</span>
+                              {renderMemberChip(idB, nameB)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {players.length >= 4 && (
+                        <span style={{ fontSize: '0.7rem', opacity: 0.72 }}>
+                          Tocca 2 nomi per scambiarli di coppia prima di iniziare.
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
-
-          {/* Durata Party */}
-          <div style={{ width: '100%', marginTop: '0.2rem' }}>
-            <p style={{ opacity: 0.85, margin: '0 0 0.4rem', fontSize: '0.8rem', fontWeight: 700 }}>
-              Durata della sessione:
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.4rem' }}>
-              <Pill selected={format === 'assaggio'} onClick={() => setFormat('assaggio')}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>⚡ ~15 min</span>
-              </Pill>
-              <Pill selected={format === 'classica'} onClick={() => setFormat('classica')}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>🚀 ~30 min</span>
-              </Pill>
-              <Pill selected={format === 'maratona'} onClick={() => setFormat('maratona')}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>💥 ~45 min</span>
-              </Pill>
-            </div>
-          </div>
-
-          {humanCount === 2 && gameMode === 'gruppo' && (
-            <p style={{ opacity: 0.8, margin: '0.2rem 0 0', fontSize: '0.85rem', textAlign: 'center' }}>
-              Siete in 2: provate il{' '}
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+            <div
+              className={playMode === 'solo' ? lobbyStyles.segmentGrid3 : lobbyStyles.modeGrid}
+              role="group"
+              aria-label="Tipo di partita"
+            >
               <button
                 type="button"
-                onClick={() => {
-                  setGameMode('duello');
-                  setPartyMode?.('coppie');
-                }}
-                style={{ background: 'none', border: 'none', padding: 0, color: 'var(--gold)', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
-              >
-                Duello
-              </button>
-              ?
-            </p>
-          )}
-
-          {/* Hero START Button */}
-          <div className={lobbyStyles.stickyStartBar}>
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={onStart}
-              disabled={!canStart}
-              style={{
-                width: '100%',
-                minHeight: '3rem',
-                padding: '0.8rem',
-                fontSize: '1.08rem',
-                fontWeight: 900,
-                letterSpacing: '0.03em',
-                background: canStart
-                  ? 'linear-gradient(135deg, #f59e0b 0%, #ec4899 50%, #8b5cf6 100%)'
-                  : undefined,
-                boxShadow: canStart ? '0 0 20px rgba(245, 158, 11, 0.5)' : undefined,
-                border: canStart ? '2px solid rgba(255, 255, 255, 0.4)' : undefined,
-              }}
-            >
-              INIZIA LA FESTA 🚀 · Avvia partita
-            </Button>
-
-            {!canStart && (
-              <p style={{ opacity: 0.75, margin: 0, fontSize: '0.78rem', textAlign: 'center' }}>
-                {partyMode === 'coppie' && (players.length < 2 || players.length % 2 !== 0)
-                  ? 'Coppie & Scintille richiede un numero pari di giocatori (2, 4, 6 o 8)!'
-                  : partyMode === 'infiltrato' && humanCount < 3
-                    ? "L'Infiltrato richiede almeno 3 giocatori per divertirsi!"
-                    : partyMode === 'tribunale' && players.length < 3
-                      ? 'Il Tribunale richiede almeno 3 partecipanti!'
-                      : humanCount < 1
-                        ? 'Serve almeno un giocatore reale.'
-                        : playMode === 'gruppo' && players.length < 2
-                          ? 'In gruppo servono almeno 2 partecipanti (aggiungi amici o bot 🤖, oppure passa a Da solo 👤)'
-                          : `Servono almeno ${MIN_PLAYERS_TO_START} partecipanti!`}
-              </p>
-            )}
-
-            {startError && <Alert>{startError}</Alert>}
-          </div>
-        </>
-      ) : (
-        <>
-          {/* TAB 2: MODALITÀ CLASSICA (Dilemmi Filosofici, Percorso, Storie) */}
-          <div style={{ width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-              <p style={{ opacity: 0.85, margin: 0, fontWeight: 700 }}>Tipo di partita</p>
-              {renderInfoBtn('cls-tipo', 'Tipo di partita')}
-            </div>
-            <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Tipo di partita">
-              <Pill
-                selected={isClassica && gameMode === 'gruppo'}
+                aria-pressed={isClassica && gameMode === 'gruppo'}
+                className={`${lobbyStyles.segmentBtn} ${isClassica && gameMode === 'gruppo' ? lobbyStyles.segmentBtnActive : ''}`}
                 onClick={() => {
                   setTipoPartita('classica');
                   setGameMode('gruppo');
                 }}
                 aria-label="Gruppo: dilemmi classici, 1-8 persone"
               >
-                <span style={{ fontWeight: 700 }}>{MODE_LABELS.gruppo.nome}</span>
-              </Pill>
-              {playMode !== 'solo' && (
-                <Pill
-                  selected={isDuello}
-                  onClick={() => {
-                    setTipoPartita('classica');
-                    setGameMode('duello');
-                  }}
-                  aria-label="1v1 Duello, 2 giocatori"
-                >
-                  <span style={{ fontWeight: 700 }}>{MODE_LABELS.duello.nome}</span>
-                </Pill>
-              )}
-              <Pill
-                selected={isPercorso}
+                🎭 Dilemmi
+              </button>
+              <button
+                type="button"
+                aria-pressed={isPercorso}
+                className={`${lobbyStyles.segmentBtn} ${isPercorso ? lobbyStyles.segmentBtnActive : ''}`}
                 onClick={() => {
                   setTipoPartita('percorso');
                   setGameMode('gruppo');
                 }}
-                aria-label="Percorso: salita a tappe, 1-3 ore"
+                aria-label="Percorso: salita a tappe, senza timer"
               >
-                <span style={{ fontWeight: 700 }}>🧗 Percorso</span>
-              </Pill>
-              <Pill
-                selected={isStoria}
+                🧗 Percorso
+              </button>
+              <button
+                type="button"
+                aria-pressed={isStoria}
+                className={`${lobbyStyles.segmentBtn} ${isStoria ? lobbyStyles.segmentBtnActive : ''}`}
                 onClick={() => {
                   setTipoPartita('storia');
                   setGameMode('gruppo');
@@ -1114,316 +544,308 @@ export default function LeaderSetup({
                 }}
                 aria-label={`Storie: ${storieSubtitle}, con bivi da dibattere`}
               >
-                <span style={{ fontWeight: 700 }}>📖 Storie</span>
-              </Pill>
+                📖 Storie
+              </button>
+              {playMode !== 'solo' && (
+                <button
+                  type="button"
+                  aria-pressed={isDuello}
+                  className={`${lobbyStyles.segmentBtn} ${isDuello ? lobbyStyles.segmentBtnActive : ''}`}
+                  onClick={() => {
+                    setTipoPartita('classica');
+                    setGameMode('duello');
+                  }}
+                  aria-label="1v1 Duello, 2 giocatori"
+                >
+                  ⚔️ 1v1 Duello
+                </button>
+              )}
             </div>
-            {openInfo === 'cls-tipo' && (
-              <div style={{ marginTop: '0.45rem', padding: '0.5rem 0.65rem', borderRadius: '0.55rem', background: 'rgba(255,255,255,0.06)', fontSize: '0.75rem', opacity: 0.9, lineHeight: 1.4 }}>
-                <div><strong>{MODE_LABELS.gruppo.nome}</strong>: 3 · 5 · 7 dilemmi (1–8 giocatori)</div>
-                <div><strong>{MODE_LABELS.duello.nome}</strong>: {MODE_LABELS.duello.descr}</div>
-                <div><strong>🧗 Percorso</strong>: salita a tappe · 1–3h</div>
-                <div><strong>📖 Storie</strong>: {storieSubtitle}</div>
+
+            {isPercorso && (
+              <div className={lobbyStyles.optionsPanel}>
+                <div className={lobbyStyles.sectionLabel}>Tema del percorso</div>
+                <div className={lobbyStyles.modeGrid}>
+                  {PERCORSI_CATALOG.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      aria-pressed={activeMeta.id === p.id}
+                      className={`${lobbyStyles.modeBtn} ${activeMeta.id === p.id ? lobbyStyles.modeBtnActive : ''}`}
+                      onClick={() => setPercorsoId?.(p.id)}
+                    >
+                      <span className={lobbyStyles.modeBtnTitle}>
+                        {p.emoji} {p.nome}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className={lobbyStyles.sectionLabel}>Tappa di partenza</div>
+                <div className={lobbyStyles.segmentGrid2} role="group" aria-label="Tappa di partenza">
+                  {activeMeta.tappe.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      aria-pressed={startTappa === t.id}
+                      className={`${lobbyStyles.segmentBtn} ${startTappa === t.id ? lobbyStyles.segmentBtnActive : ''}`}
+                      onClick={() => setStartTappa(t.id)}
+                    >
+                      {t.emoji} {t.nome}
+                    </button>
+                  ))}
+                </div>
+
+                <div className={lobbyStyles.sectionLabel}>Lunghezza</div>
+                <div className={lobbyStyles.segmentGrid3} role="group" aria-label="Durata percorso">
+                  {DURATE.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      aria-pressed={durata === d}
+                      className={`${lobbyStyles.segmentBtn} ${durata === d ? lobbyStyles.segmentBtnActive : ''}`}
+                      onClick={() => setDurata(d)}
+                    >
+                      {DURATA_LABELS[d].nome}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
+
+            {isStoria && (
+              <div className={lobbyStyles.optionsPanel}>
+                <div className={lobbyStyles.sectionLabel}>Scegli la storia</div>
+                {storieCatalog.length === 0 ? (
+                  <p style={{ opacity: 0.65, margin: 0, fontSize: '0.82rem', textAlign: 'center' }}>
+                    Nessuna storia disponibile.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }} role="group" aria-label="Storie">
+                    {[...storieCatalog]
+                      .sort((a, b) => {
+                        const rank = (s: StoriaCatalogItem) =>
+                          s.familiarita === familiarita ? 0 : s.familiarita === 'tutti' || !s.familiarita ? 1 : 2;
+                        return rank(a) - rank(b);
+                      })
+                      .map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          aria-pressed={storyId === s.id}
+                          className={`${lobbyStyles.modeBtn} ${storyId === s.id ? lobbyStyles.modeBtnActive : ''}`}
+                          onClick={() => setStoryId(s.id)}
+                          style={{ textAlign: 'left', flexDirection: 'column', alignItems: 'flex-start', gap: '0.2rem' }}
+                        >
+                          <span className={lobbyStyles.modeBtnTitle}>
+                            {s.emoji} {s.title} · {STORY_GENRE_LABELS[s.genre]}
+                          </span>
+                          <span style={{ fontSize: '0.75rem', opacity: 0.85, fontWeight: 400 }}>
+                            {s.hook} ({s.scene} bivi)
+                          </span>
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isClassica && (
+              <p className={lobbyStyles.modeDescBox}>
+                {isDuello
+                  ? `${MODE_LABELS.duello.nome}: ${MODE_LABELS.duello.descr}`
+                  : 'Dilemmi classici schietti con discussione aperta, secondo voto e rilancio finale, senza timer.'}
+              </p>
+            )}
+
             {discardsSubmitted && (
-              <p style={{ opacity: 0.75, margin: '0.5rem 0 0', fontSize: '0.8rem', textAlign: 'center', color: 'var(--gold)' }}>
-                ⚠️ {isPercorso ? 'Percorso' : 'Storie'} non usa i {submittedCount} dilemmi scritti dal gruppo — restano per un'altra partita.
+              <p style={{ opacity: 0.75, margin: 0, fontSize: '0.78rem', textAlign: 'center', color: 'var(--gold)' }}>
+                {isPercorso ? 'Percorso' : 'Storie'} non usa i {submittedCount} dilemmi scritti dal gruppo.
               </p>
             )}
           </div>
+        )}
+      </div>
 
-          {isClassica && (
-            <>
-              <div style={{ width: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                  <p style={{ opacity: 0.85, margin: 0, fontWeight: 700 }}>Mood della serata</p>
-                  {renderInfoBtn('cls-mood', 'Mood della serata')}
-                </div>
-                <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Mood della serata">
-                  {MOODS.map((m) => (
-                    <Pill
-                      key={m}
-                      selected={mood === m}
-                      onClick={() => setMood(m)}
-                      aria-label={`${MOOD_LABELS[m].nome}, ${MOOD_LABELS[m].descr}`}
-                    >
-                      <span style={{ fontWeight: 700 }}>{MOOD_LABELS[m].nome}</span>
-                    </Pill>
-                  ))}
-                </div>
-                {openInfo === 'cls-mood' && (
-                  <div style={{ marginTop: '0.45rem', padding: '0.5rem 0.65rem', borderRadius: '0.55rem', background: 'rgba(255,255,255,0.06)', fontSize: '0.75rem', opacity: 0.9, lineHeight: 1.4 }}>
-                    {MOODS.map((m) => (
-                      <div key={m}><strong>{MOOD_LABELS[m].nome}</strong>: {MOOD_LABELS[m].descr}</div>
-                    ))}
-                  </div>
-                )}
-              </div>
+      {/* 1C. OPZIONI SERATA COLLASSATE */}
+      <div>
+        <button
+          type="button"
+          className={lobbyStyles.optionsToggleBtn}
+          aria-expanded={showAdvancedSetup}
+          onClick={() => setShowAdvancedSetup((v) => !v)}
+        >
+          <span>⚙️ Opzioni serata</span>
+          <span className={lobbyStyles.optionsSummary}>
+            {advancedSummary} {showAdvancedSetup ? '▲' : '▼'}
+          </span>
+        </button>
 
-              <div style={{ width: '100%' }}>
-                <p style={{ opacity: 0.85, margin: '0 0 0.4rem', fontWeight: 700 }}>Durata</p>
-                <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Formato">
+        {showAdvancedSetup && (
+          <div className={lobbyStyles.optionsPanel} style={{ marginTop: '0.55rem' }}>
+            {!(activeTab === 'classica' && (isPercorso || isStoria)) && (
+              <div>
+                <div className={lobbyStyles.sectionLabel}>Quanti round?</div>
+                <div className={lobbyStyles.segmentGrid3} role="group" aria-label="Formato">
                   {SESSION_FORMATS.map((f) => (
-                    <Pill
+                    <button
                       key={f}
-                      selected={format === f}
+                      type="button"
+                      aria-pressed={format === f}
+                      className={`${lobbyStyles.segmentBtn} ${format === f ? lobbyStyles.segmentBtnActive : ''}`}
                       onClick={() => setFormat(f)}
-                      aria-label={`${FORMAT_LABELS[f].nome}, ${FORMAT_LABELS[f].round} round, ${FORMAT_LABELS[f].durata}`}
                     >
-                      <span style={{ fontWeight: 700 }}>{FORMAT_LABELS[f].nome}</span>
-                    </Pill>
+                      {FORMAT_DILEMMA_COUNT[f]} round
+                    </button>
                   ))}
                 </div>
               </div>
+            )}
 
-              <div style={{ width: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                  <p style={{ opacity: 0.85, margin: 0, fontWeight: 700 }}>Caos (twist a sorpresa)</p>
-                  {renderInfoBtn('cls-caos', 'Caos')}
-                </div>
-                <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Caos">
-                  {CAOS_LEVELS.map((c) => (
-                    <Pill
-                      key={c}
-                      selected={caos === c}
-                      onClick={() => setCaos(c)}
-                      aria-label={`${CAOS_LABELS[c].nome}, ${CAOS_LABELS[c].descr}`}
+            <div>
+              <div className={lobbyStyles.sectionLabel}>Con chi giochi?</div>
+              <div className={lobbyStyles.segmentGrid2} role="group" aria-label="Con chi giochi">
+                {FAMILIARITA_VALUES.map((fam) => (
+                  <button
+                    key={fam}
+                    type="button"
+                    aria-pressed={familiarita === fam}
+                    className={`${lobbyStyles.segmentBtn} ${familiarita === fam ? lobbyStyles.segmentBtnActive : ''}`}
+                    onClick={() => setFamiliarita?.(fam)}
+                  >
+                    {FAMILIARITA_LABELS[fam].nome}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {activeTab === 'party' && (partyMode === 'coppie' || partyMode === 'mix') && (
+              <div>
+                <div className={lobbyStyles.sectionLabel}>Intensità Coppie</div>
+                <div className={lobbyStyles.segmentGrid3}>
+                  {([
+                    { id: 'complicita', label: '🥂 Complicità' },
+                    { id: 'piccante', label: '🌶️ Piccante 18+' },
+                    { id: 'profondo', label: '🌊 Profondo' },
+                  ] as const).map((it) => (
+                    <button
+                      key={it.id}
+                      type="button"
+                      aria-pressed={partyIntensity === it.id}
+                      className={`${lobbyStyles.segmentBtn} ${partyIntensity === it.id ? lobbyStyles.segmentBtnActive : ''}`}
+                      onClick={() => setPartyIntensity?.(it.id)}
                     >
-                      <span style={{ fontWeight: 700 }}>{CAOS_LABELS[c].nome}</span>
-                    </Pill>
+                      {it.label}
+                    </button>
                   ))}
                 </div>
-                {openInfo === 'cls-caos' && (
-                  <div style={{ marginTop: '0.45rem', padding: '0.5rem 0.65rem', borderRadius: '0.55rem', background: 'rgba(255,255,255,0.06)', fontSize: '0.75rem', opacity: 0.9, lineHeight: 1.4 }}>
-                    {CAOS_LEVELS.map((c) => (
-                      <div key={c}><strong>{CAOS_LABELS[c].nome}</strong>: {CAOS_LABELS[c].descr}</div>
+              </div>
+            )}
+
+            {activeTab === 'party' && (partyMode === 'infiltrato' || partyMode === 'mix') && (
+              <div>
+                <div className={lobbyStyles.sectionLabel}>Tono Infiltrato</div>
+                <div className={lobbyStyles.segmentGrid3}>
+                  {([
+                    { id: 'risate', label: '😂 Risate' },
+                    { id: 'profondo', label: '🌊 Profondo' },
+                    { id: 'misto', label: '🎲 Misto' },
+                  ] as const).map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      aria-pressed={infiltratoTono === t.id}
+                      className={`${lobbyStyles.segmentBtn} ${infiltratoTono === t.id ? lobbyStyles.segmentBtnActive : ''}`}
+                      onClick={() => setInfiltratoTono?.(t.id)}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'party' && (
+              <div>
+                <label htmlFor="party-theme-input" className={lobbyStyles.sectionLabel} style={{ display: 'block' }}>
+                  Tema personalizzato (opzionale)
+                </label>
+                <TextInput
+                  id="party-theme-input"
+                  name="partyTheme"
+                  value={theme}
+                  onChange={(e) => setTheme?.(e.target.value)}
+                  placeholder="Es. vacanza, coinquilini, ex..."
+                  maxLength={60}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            )}
+
+            {activeTab === 'classica' && isClassica && (
+              <>
+                <div>
+                  <div className={lobbyStyles.sectionLabel}>Mood della serata</div>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }} role="group" aria-label="Mood della serata">
+                    {MOODS.map((m) => (
+                      <Pill
+                        key={m}
+                        selected={mood === m}
+                        onClick={() => setMood(m)}
+                        aria-label={`${MOOD_LABELS[m].nome}, ${MOOD_LABELS[m].descr}`}
+                      >
+                        <span style={{ fontWeight: 700 }}>{MOOD_LABELS[m].nome}</span>
+                      </Pill>
                     ))}
                   </div>
-                )}
-              </div>
-            </>
-          )}
+                </div>
 
-          {isPercorso && (() => {
-            const activeMeta = getPercorsoMeta(percorsoId);
-            const activeCounts = percorsoCounts?.[activeMeta.id] ?? tappaCounts;
-            const corsie: CorsiaTono[] = ['risate', 'direzione', 'serio'];
-            const corsiaAccent: Record<CorsiaTono, string> = {
-              risate: '#f59e0b',
-              direzione: '#38bdf8',
-              serio: '#f472b6',
-            };
-            return (
-            <>
-              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <p style={{ opacity: 0.85, margin: 0, fontWeight: 700 }}>
-                  Scegli il Percorso (raggruppati per tono)
-                </p>
-                {corsie.map((corsia) => {
-                  const meta = CORSIE_META[corsia];
-                  const items = PERCORSI_CATALOG.filter((p) => p.corsia === corsia);
-                  const accent = corsiaAccent[corsia];
-                  return (
-                    <div
-                      key={corsia}
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.4rem',
-                        padding: '0.6rem',
-                        borderRadius: 'var(--radius-md)',
-                        border: `1px solid ${accent}44`,
-                        background: `${accent}0d`,
-                      }}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-                        <span style={{ fontSize: '0.86rem', fontWeight: 800, color: accent }}>
-                          {meta.emoji} {meta.nome}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', opacity: 0.75 }}>{meta.sottotitolo}</span>
-                      </div>
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(10.5rem, 1fr))',
-                          gap: '0.45rem',
-                        }}
-                        role="group"
-                        aria-label={`Percorsi ${meta.nome}`}
+                <div>
+                  <div className={lobbyStyles.sectionLabel}>Caos (twist a sorpresa)</div>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }} role="group" aria-label="Caos">
+                    {CAOS_LEVELS.map((c) => (
+                      <Pill
+                        key={c}
+                        selected={caos === c}
+                        onClick={() => setCaos(c)}
+                        aria-label={`${CAOS_LABELS[c].nome}, ${CAOS_LABELS[c].descr}`}
                       >
-                        {items.map((p) => {
-                          const selected = activeMeta.id === p.id;
-                          return (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => setPercorsoId?.(p.id)}
-                              aria-pressed={selected}
-                              style={{
-                                textAlign: 'left',
-                                padding: '0.55rem 0.65rem',
-                                borderRadius: 'var(--radius-sm)',
-                                border: selected ? `1.5px solid ${accent}` : '1px solid var(--border-strong)',
-                                background: selected ? `${accent}26` : 'rgba(0,0,0,0.22)',
-                                color: 'var(--text)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.15rem',
-                              }}
-                            >
-                              <span style={{ fontSize: '0.84rem', fontWeight: 800 }}>
-                                {p.emoji} {p.nome}
-                              </span>
-                              <span style={{ fontSize: '0.71rem', opacity: 0.8, lineHeight: 1.2 }}>
-                                {p.sottotitolo}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-                <p style={{ margin: 0, fontSize: '0.78rem', opacity: 0.85, textAlign: 'center' }}>
-                  {activeMeta.emoji} <strong>{activeMeta.nome}</strong>: {activeMeta.descrizione}
-                </p>
-              </div>
-
-              <div style={{ width: '100%' }}>
-                <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Tappa di partenza</p>
-                <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Tappa di partenza">
-                  {activeMeta.tappe.map((t) => (
-                    <Pill
-                      key={t.id}
-                      selected={startTappa === t.id}
-                      onClick={() => setStartTappa(t.id)}
-                      aria-label={`${t.nome}: ${t.sottotitolo}`}
-                    >
-                      <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                        <span style={{ fontWeight: 700 }}>{t.emoji} {t.nome}</span>
-                        <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{t.sottotitolo}</span>
-                      </span>
-                    </Pill>
-                  ))}
-                </div>
-                <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
-                  Si sale fino a {activeMeta.tappe[activeMeta.tappe.length - 1]?.emoji} {activeMeta.tappe[activeMeta.tappe.length - 1]?.nome}.
-                </p>
-              </div>
-
-              <div style={{ width: '100%' }}>
-                <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Durata</p>
-                <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Durata percorso">
-                  {DURATE.map((d) => (
-                    <Pill
-                      key={d}
-                      selected={durata === d}
-                      onClick={() => setDurata(d)}
-                      aria-label={`${DURATA_LABELS[d].nome}, ${DURATA_LABELS[d].durata}`}
-                    >
-                      <span style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', lineHeight: 1.1 }}>
-                        <span style={{ fontWeight: 700 }}>{DURATA_LABELS[d].nome}</span>
-                        <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{DURATA_LABELS[d].durata}</span>
-                      </span>
-                    </Pill>
-                  ))}
-                </div>
-                <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
-                  ~{estimatePercorsoDilemmi(activeCounts, startTappa, durata)} domande · {DURATA_LABELS[durata].durata}
-                </p>
-              </div>
-            </>
-            );
-          })()}
-
-          {isStoria && (
-            <div style={{ width: '100%' }}>
-              <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Scegli la storia</p>
-              {storieCatalog.length === 0 ? (
-                <p style={{ opacity: 0.6, margin: 0, fontSize: '0.85rem', textAlign: 'center' }}>
-                  Nessuna storia disponibile.
-                </p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }} role="group" aria-label="Storie">
-                  {[...storieCatalog]
-                    .sort((a, b) => {
-                      const rank = (s: StoriaCatalogItem) =>
-                        s.familiarita === familiarita ? 0 : s.familiarita === 'tutti' || !s.familiarita ? 1 : 2;
-                      return rank(a) - rank(b);
-                    })
-                    .map((s) => (
-                    <Pill
-                      key={s.id}
-                      selected={storyId === s.id}
-                      onClick={() => setStoryId(s.id)}
-                      aria-label={`${s.title}: ${s.hook}`}
-                      style={{ width: '100%', justifyContent: 'center', textAlign: 'center' }}
-                    >
-                      <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem', lineHeight: 1.15 }}>
-                        <span style={{ fontWeight: 700 }}>
-                          {s.emoji} {s.title}
-                          {s.familiarita === 'vecchi_amici' && familiarita === 'vecchi_amici' ? ' · 🫂 Per voi' : ''}
-                        </span>
-                        <span style={{ fontSize: '0.78rem', opacity: 0.8 }}>{s.hook}</span>
-                        <span style={{ fontSize: '0.72rem', opacity: 0.6 }}>
-                          {STORY_GENRE_LABELS[s.genre]} · {s.scene} bivi · {durataLabel(s.durataStimaMin)}
-                        </span>
-                      </span>
-                    </Pill>
-                  ))}
-                </div>
-              )}
-              <p style={{ opacity: 0.6, margin: '0.45rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
-                🔊 La storia è letta ad alta voce dal tuo telefono (sei tu il narratore). Tutti la leggono anche come testo.
-              </p>
-            </div>
-          )}
-
-          {!isStoria && (
-            <details style={{ width: '100%' }}>
-              <summary style={{ cursor: 'pointer', opacity: 0.8, fontSize: '0.9rem', textAlign: 'center' }}>
-                Altre opzioni ·{' '}
-                {[isClassica && 'argomenti', showSpecial && 'modalità speciale'].filter(Boolean).join(' e ')}
-              </summary>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginTop: '0.7rem' }}>
-                {isClassica && (
-                  <div style={{ width: '100%' }}>
-                    <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Argomenti</p>
-                    <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }} role="group" aria-label="Registro">
-                      {CONTENT_REGISTERS.map((r) => (
-                        <Pill
-                          key={r}
-                          selected={register === r}
-                          onClick={() => setRegister(r)}
-                          aria-label={REGISTER_LABELS[r]}
-                        >
-                          {REGISTER_LABELS[r]}
-                        </Pill>
-                      ))}
-                    </div>
+                        <span style={{ fontWeight: 700 }}>{CAOS_LABELS[c].nome}</span>
+                      </Pill>
+                    ))}
                   </div>
-                )}
+                </div>
 
-                {isClassica && (
-                  <div style={{ width: '100%' }}>
-                    <Pill
-                      selected={delicatoOptIn}
-                      onClick={() => setDelicatoOptIn((v) => !v)}
-                      aria-label="Includi temi delicati (eutanasia, lutto)"
-                    >
-                      ⚠️ Temi delicati {delicatoOptIn ? 'ON' : 'OFF'}
-                    </Pill>
-                    <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
-                      Di norma escludiamo i dilemmi più pesanti (eutanasia, lutto) — attiva se il gruppo se la sente.
-                    </p>
+                <div>
+                  <div className={lobbyStyles.sectionLabel}>Argomenti</div>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }} role="group" aria-label="Registro">
+                    {CONTENT_REGISTERS.map((r) => (
+                      <Pill
+                        key={r}
+                        selected={register === r}
+                        onClick={() => setRegister(r)}
+                        aria-label={REGISTER_LABELS[r]}
+                      >
+                        {REGISTER_LABELS[r]}
+                      </Pill>
+                    ))}
                   </div>
-                )}
+                </div>
+
+                <div>
+                  <Pill
+                    selected={delicatoOptIn}
+                    onClick={() => setDelicatoOptIn((v) => !v)}
+                    aria-label="Includi temi delicati (eutanasia, lutto)"
+                  >
+                    ⚠️ Temi delicati {delicatoOptIn ? 'ON' : 'OFF'}
+                  </Pill>
+                </div>
 
                 {showSpecial && playMode !== 'solo' && (
-                  <div style={{ width: '100%' }}>
-                    <p style={{ opacity: 0.8, margin: '0 0 0.4rem' }}>Modalità speciale</p>
-                    <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <div>
+                    <div className={lobbyStyles.sectionLabel}>Modalità speciale</div>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                       <Pill
                         selected={infiltratoOn}
                         onClick={() => {
@@ -1432,7 +854,7 @@ export default function LeaderSetup({
                         }}
                         aria-label="L'Infiltrato (un giocatore segreto)"
                       >
-                        🕵️ L'Infiltrato {infiltratoOn ? 'ON' : 'OFF'}
+                        🕵️ L&apos;Infiltrato {infiltratoOn ? 'ON' : 'OFF'}
                       </Pill>
                       <Pill
                         selected={squadreOn}
@@ -1445,36 +867,18 @@ export default function LeaderSetup({
                         🔵🟠 Squadre {squadreOn ? 'ON' : 'OFF'}
                       </Pill>
                     </div>
-                    <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.8rem', textAlign: 'center' }}>
+                    <p style={{ opacity: 0.6, margin: '0.35rem 0 0', fontSize: '0.78rem' }}>
                       {squadreOn
-                        ? `Blu contro Arancio: vince chi convince di più · servono ≥${MIN_SQUADRE_PLAYERS} giocatori`
+                        ? `Blu contro Arancio: servono ≥${MIN_SQUADRE_PLAYERS} giocatori`
                         : `Un giocatore segreto deve ribaltare il gruppo · servono ≥${MIN_INFILTRATO_HUMANS} persone`}
                     </p>
                   </div>
                 )}
-              </div>
-            </details>
-          )}
-
-          <div className={lobbyStyles.stickyStartBar}>
-            <Button variant="primary" size="lg" onClick={onStart} disabled={!canStart} style={{ width: '100%', minHeight: '3rem' }}>
-              Avvia partita
-            </Button>
-            {!canStart && (
-              <p style={{ opacity: 0.75, margin: 0, fontSize: '0.8rem', textAlign: 'center' }}>
-                {gameMode === 'duello'
-                  ? 'Il 1v1 richiede esattamente 2 giocatori.'
-                  : humanCount < 1
-                    ? 'Serve almeno una persona (i bot da soli non bastano).'
-                    : playMode === 'gruppo' && players.length < 2
-                      ? 'In gruppo servono almeno 2 partecipanti (aggiungi amici o bot 🤖, oppure passa a Da solo 👤)'
-                      : `Servono almeno ${MIN_PLAYERS_TO_START} partecipanti!`}
-              </p>
+              </>
             )}
-            {startError && <Alert>{startError}</Alert>}
           </div>
-        </>
-      )}
+        )}
+      </div>
     </Card>
   );
 }
