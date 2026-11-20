@@ -6,6 +6,7 @@ import {
   type PreferirestiChoice,
   type PartyCardPayload,
   type PlayerSecretQuestionPayload,
+  type SoloFeedbackPayload,
 } from '../../shared/events';
 import { Button, VoteOption, Alert, CompactAudioPlayer } from '../../shared/ui';
 import { formatWaitingList } from './layout';
@@ -41,6 +42,7 @@ interface VoteViewProps {
   onGognaVote?: (targetId: string) => void;
   players?: { id: string; nickname: string }[];
   myPlayerId?: string | null;
+  lastSoloFeedback?: SoloFeedbackPayload | null;
 }
 
 export default function VoteView({
@@ -63,9 +65,11 @@ export default function VoteView({
   onGognaVote,
   players,
   myPlayerId,
+  lastSoloFeedback = null,
 }: VoteViewProps) {
   const isCastPhase = phase === 'VOTE_1' || phase === 'DUO_SIDE_PICK' || phase === 'DUO_PICK';
   const isConfirmPhase = phase === 'VOTE_2' || phase === 'DUO_REPICK';
+  const isSolo = playerCount === 1;
 
   const isFlash = partyCard?.mode === 'flash';
   const isPreferiresti = partyCard?.mode === 'preferiresti';
@@ -110,7 +114,7 @@ export default function VoteView({
             partyCard?.optionC ?? 'Terza scelta',
             partyCard?.optionD ?? 'Quarta scelta',
           ].filter(Boolean)
-      ).slice(0, 4)
+      ).slice(0, isSolo ? 2 : 4)
     : [];
 
   const voteChoices: Array<{ letter: VoteChoice | PreferirestiChoice; label: string; faction: 'a' | 'b' | 'accent' }> =
@@ -164,6 +168,10 @@ export default function VoteView({
           <p style={{ opacity: 0.65, margin: 0, fontSize: '0.85rem' }}>
             Aspettiamo {formatWaitingList(missingVoters)}…
           </p>
+        ) : isSolo ? (
+          <p style={{ opacity: 0.65, margin: 0, fontSize: '0.85rem' }}>
+            1 tocco · Avanza subito
+          </p>
         ) : (
           <p style={{ opacity: 0.65, margin: 0, fontSize: '0.85rem' }}>
             Hanno votato {votedCount}/{playerCount}
@@ -208,6 +216,24 @@ export default function VoteView({
 
   return (
     <MobilePhaseShell title={PHASE_LABELS[phase]} dock={dock}>
+      {isSolo && lastSoloFeedback && (
+        <div
+          style={{
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            padding: '0.35rem 0.7rem',
+            borderRadius: '999px',
+            background: 'rgba(251, 191, 36, 0.14)',
+            border: '1px solid rgba(251, 191, 36, 0.35)',
+            color: '#fde68a',
+            textAlign: 'center',
+            maxWidth: 'min(90vw, 22rem)',
+          }}
+        >
+          🧭 Scelta precedente: «{lastSoloFeedback.chosenLabel}» · {lastSoloFeedback.crowdPct}% come te
+        </div>
+      )}
+
       {subtitle && (
         <p style={{ opacity: 0.85, margin: 0, textAlign: 'center', maxWidth: '20rem' }}>
           {subtitle}
@@ -222,16 +248,16 @@ export default function VoteView({
               fontSize: '0.85rem',
               padding: '0.45rem 0.85rem',
               borderRadius: '999px',
-              background: 'rgba(239, 68, 68, 0.25)',
-              border: '2px solid #ef4444',
-              color: '#f87171',
+              background: isSolo ? 'rgba(251, 191, 36, 0.2)' : 'rgba(239, 68, 68, 0.25)',
+              border: isSolo ? '2px solid #fbbf24' : '2px solid #ef4444',
+              color: isSolo ? '#fde68a' : '#f87171',
               fontWeight: 900,
               letterSpacing: '0.04em',
               textTransform: 'uppercase',
               animation: 'pulse 1s infinite alternate',
             }}
           >
-            ⚡ VOTA ADESSO! LA MINORANZA BEVE! 🍺
+            {isSolo ? '⚡ SCELTA LAMPO · 2 OPZIONI' : '⚡ VOTA ADESSO! LA MINORANZA BEVE! 🍺'}
           </div>
         </div>
       )}

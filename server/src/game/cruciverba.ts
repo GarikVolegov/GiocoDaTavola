@@ -3,6 +3,8 @@
 // Italian clues. Players take explicit 15-second turns solving or unlocking a
 // letter, while solved intersections immediately fill shared cells for everyone.
 
+export type CruciverbaMode = 'indizi' | 'scelte';
+
 export interface CruciverbaWord {
   id: string;
   number: number;
@@ -11,6 +13,7 @@ export interface CruciverbaWord {
   col: number;
   word: string;
   clue: string;
+  choices?: string[];
 }
 
 export interface CruciverbaBoard {
@@ -25,11 +28,16 @@ export type CruciverbaWordStatus = 'pending' | 'solved' | 'revealed';
 
 export interface CruciverbaRoundState {
   board: CruciverbaBoard;
+  mode: CruciverbaMode;
   turnOrder: string[];
   currentTurnIndex: number;
   /** Word currently spotlighted for the active player. */
   activeWordId: string;
   wordStatus: Record<string, CruciverbaWordStatus>;
+  /** Shuffled 4-choice options per word id (populated for `'scelte'` mode). */
+  wordChoices: Record<string, string[]>;
+  /** Normalized wrong choices already attempted per word id in `'scelte'` mode. */
+  wrongChoices: Record<string, string[]>;
   /** PlayerId who solved each word (if solved, not merely revealed). */
   solvedBy: Record<string, string>;
   /** Grid coordinates `"r,c"` whose letters are currently revealed to all. */
@@ -85,6 +93,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'SPRITZ',
         clue: 'Arancione o rosso, trasforma il "beviamo solo una cosa" in mezzanotte',
+        choices: ['SPRITZ', 'SPAGHI', 'CALICE', 'TONICA'],
       },
       {
         id: 'w2',
@@ -94,6 +103,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 1,
         word: 'PIZZA',
         clue: 'Quella che ordini alle 23 giurando di prendere "solo metà"',
+        choices: ['PIZZA', 'PASTA', 'PINSA', 'OLIVE'],
       },
       {
         id: 'w3',
@@ -103,6 +113,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 4,
         word: 'NOTTE',
         clue: 'Inizia con "sto a casa a dormire" e finisce con un cornetto caldo',
+        choices: ['NOTTE', 'BOTTE', 'FESTA', 'CORSO'],
       },
       {
         id: 'w4',
@@ -112,6 +123,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 1,
         word: 'AMARO',
         clue: 'Lo bevi "per digerire" anche dopo aver mangiato tre patatine',
+        choices: ['AMARO', 'ACQUA', 'AMICI', 'BIRRA'],
       },
     ],
   },
@@ -129,6 +141,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 1,
         word: 'VALIGIA',
         clue: 'La chiudi sedendotici sopra alle 5 del mattino prima di partire',
+        choices: ['VALIGIA', 'VACANZA', 'VIAGGIO', 'TURISMO'],
       },
       {
         id: 'w2',
@@ -138,6 +151,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 1,
         word: 'VOLO',
         clue: 'Partenza alle 06:15 per risparmiare 14 euro e perdere un anno di vita',
+        choices: ['VOLO', 'VANO', 'MARE', 'SOLE'],
       },
       {
         id: 'w3',
@@ -147,6 +161,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 3,
         word: 'SOLARE',
         clue: 'Crema che dici di aver messo ma alle 14 sembri un gambero',
+        choices: ['SOLARE', 'SALINA', 'PALUDE', 'ESTATE'],
       },
       {
         id: 'w4',
@@ -156,6 +171,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'HOTEL',
         clue: 'Sul sito era "vista mare", ma il mare si vede solo sporgendosi dal bagno',
+        choices: ['HOTEL', 'MOTEL', 'MAREA', 'TENDA'],
       },
     ],
   },
@@ -173,6 +189,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'MUTATO',
         clue: 'Come scopri di avere il microfono dopo un monologo appassionato su Meet',
+        choices: ['MUTATO', 'MINUTO', 'LAVORO', 'SCHEDA'],
       },
       {
         id: 'w2',
@@ -182,6 +199,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'CAMICIA',
         clue: 'La indossi elegante sopra, mentre sotto hai i pantaloni del pigiama',
+        choices: ['CAMICIA', 'DOMANDA', 'PIGIAMA', 'UFFICIO'],
       },
       {
         id: 'w3',
@@ -191,6 +209,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 3,
         word: 'CHAT',
         clue: 'Dove il collega scrive "ci sei?" senza dirti cosa vuole davvero',
+        choices: ['CHAT', 'SPAM', 'MAIL', 'CALL'],
       },
       {
         id: 'w4',
@@ -200,6 +219,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'AGENDA',
         clue: 'Il posto magico in cui rimandi tutto a "lunedì prossimo"',
+        choices: ['AGENDA', 'ATTESA', 'ORARIO', 'REPORT'],
       },
     ],
   },
@@ -217,6 +237,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'FRIGO',
         clue: 'Contiene il tuo yogurt col nome scritto col pennarello indelebile',
+        choices: ['FRIGO', 'FORNO', 'LETTO', 'PIANO'],
       },
       {
         id: 'w2',
@@ -226,6 +247,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'AFFITTO',
         clue: 'Ciò che svuota il tuo conto corrente ogni 1° del mese alle 08:00',
+        choices: ['AFFITTO', 'UFFICIO', 'BALCONE', 'PULIZIA'],
       },
       {
         id: 'w3',
@@ -235,6 +257,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 3,
         word: 'BAGNO',
         clue: 'Diventa misteriosamente occupato per 50 minuti quando hai fretta',
+        choices: ['BAGNO', 'FUGHE', 'PORTA', 'TENDA'],
       },
       {
         id: 'w4',
@@ -244,6 +267,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'OSPITE',
         clue: 'L’amico sul divano "solo per una notte" da ormai due settimane',
+        choices: ['OSPITE', 'ORDINE', 'DIVANO', 'CHIAVI'],
       },
     ],
   },
@@ -261,6 +285,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'TAVOLO',
         clue: 'Lo prenotate "per fare i signori" ma dividete la spesa in dodici',
+        choices: ['TAVOLO', 'TICKET', 'LOCALE', 'SERATA'],
       },
       {
         id: 'w2',
@@ -270,6 +295,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'AFTER',
         clue: 'Quello che propone l’amico con ancora troppe energie alle 06:00',
+        choices: ['AFTER', 'NOTTE', 'PISTA', 'CASSA'],
       },
       {
         id: 'w3',
@@ -279,6 +305,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 5,
         word: 'DISCO',
         clue: 'Locale dove dici "non si sente niente" ma torni senza voce',
+        choices: ['DISCO', 'BALLO', 'LISTA', 'DRINK'],
       },
       {
         id: 'w4',
@@ -288,6 +315,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'REMIX',
         clue: 'Versione velocizzata della hit anni 2000 che manda in delirio la pista',
+        choices: ['REMIX', 'RITMO', 'VOCAL', 'SUONO'],
       },
     ],
   },
@@ -305,6 +333,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'TINDER',
         clue: 'L’app su cui giudichi la compatibilità dell’anima in 0,4 secondi',
+        choices: ['TINDER', 'TESORO', 'COPPIA', 'AMANTI'],
       },
       {
         id: 'w2',
@@ -314,6 +343,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'STORIA',
         clue: 'Quella su Instagram con canzone strappalacrime messa per farti notare',
+        choices: ['STORIA', 'STELLA', 'SOCIAL', 'PAROLA'],
       },
       {
         id: 'w3',
@@ -323,6 +353,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 4,
         word: 'CUORE',
         clue: 'Emoji che invii per errore al posto del pollice su e non puoi più togliere',
+        choices: ['CUORE', 'AMORE', 'MATCH', 'FIORE'],
       },
       {
         id: 'w4',
@@ -332,6 +363,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'AMICO',
         clue: 'Ciò che diventi subito dopo la frase "ti vedo solo come un..."',
+        choices: ['AMICO', 'AMATO', 'BACIO', 'SOGNO'],
       },
     ],
   },
@@ -349,6 +381,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'RITARDO',
         clue: 'L’unica vera costante garantita dal tabellone partenze del venerdì',
+        choices: ['RITARDO', 'RIENTRO', 'DECOLLO', 'BAGAGLI'],
       },
       {
         id: 'w2',
@@ -358,6 +391,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'PREZZO',
         clue: 'Raddoppia magicamente dopo che hai ricaricato la pagina due volte',
+        choices: ['PREZZO', 'PRONTO', 'CODICE', 'VIAGGI'],
       },
       {
         id: 'w3',
@@ -367,6 +401,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 3,
         word: 'GATE',
         clue: 'È sempre in fondo al corridoio più lontano del terminal sbagliato',
+        choices: ['GATE', 'SALA', 'VOLO', 'TAXI'],
       },
       {
         id: 'w4',
@@ -376,6 +411,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'OFFERTA',
         clue: 'Biglietto "a 9 euro" che al pagamento diventa misteriosamente 118',
+        choices: ['OFFERTA', 'OPZIONE', 'TARIFFA', 'IMBARCO'],
       },
     ],
   },
@@ -393,6 +429,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'VOCALE',
         clue: 'Quello da 6 minuti e 40 secondi che sei costretto ad ascoltare a 2x',
+        choices: ['VOCALE', 'VISITA', 'GRUPPO', 'SCRIVO'],
       },
       {
         id: 'w2',
@@ -402,6 +439,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'INVITO',
         clue: 'Quello per una cena che organizzate da tre mesi ma poi saltano tutti',
+        choices: ['INVITO', 'AVVISO', 'SERATA', 'USCIRE'],
       },
       {
         id: 'w3',
@@ -411,6 +449,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 3,
         word: 'SPAM',
         clue: 'I trenta link consecutivi dell’amico che prova a piazzare biglietti',
+        choices: ['SPAM', 'CHAT', 'LINK', 'MEME'],
       },
       {
         id: 'w4',
@@ -420,6 +459,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'ORARIO',
         clue: 'L’unico dato fondamentale che nessuno legge nel messaggio fissato in alto',
+        choices: ['ORARIO', 'OPPURE', 'GIORNO', 'TAVOLA'],
       },
     ],
   },
@@ -437,6 +477,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'SPOILER',
         clue: 'La rivelazione killer che ti rovina il finale prima di cena',
+        choices: ['SPOILER', 'SCHERMO', 'PUNTATA', 'EPISODI'],
       },
       {
         id: 'w2',
@@ -446,6 +487,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'PISOLO',
         clue: 'Quello sul divano al minuto 12 urlando "non sto dormendo, ti ascolto!"',
+        choices: ['PISOLO', 'CASINO', 'DIVANO', 'CINEMA'],
       },
       {
         id: 'w3',
@@ -455,6 +497,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 3,
         word: 'SERIE',
         clue: 'Ne inizi una da 8 stagioni giurando di guardare "solo una puntata"',
+        choices: ['SERIE', 'AUDIO', 'TRAMA', 'VIDEO'],
       },
       {
         id: 'w4',
@@ -464,6 +507,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'OSCAR',
         clue: 'La notte in cui tutti diventano critici cinematografici professionisti',
+        choices: ['OSCAR', 'OPERA', 'SCENA', 'REGIA'],
       },
     ],
   },
@@ -481,6 +525,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'CONTO',
         clue: 'Appena arriva sul tavolo tutti iniziano magicamente a guardare lo schermo',
+        choices: ['CONTO', 'CARTA', 'PIZZA', 'FORNO'],
       },
       {
         id: 'w2',
@@ -490,6 +535,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'ACQUA',
         clue: 'Quella naturale che ordini insieme al fritto misto per pulirti la coscienza',
+        choices: ['ACQUA', 'ACETO', 'BIRRA', 'PASTA'],
       },
       {
         id: 'w3',
@@ -499,6 +545,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 3,
         word: 'SETE',
         clue: 'Quella implacabile alle 3 di notte dopo una pizza con salame piccante',
+        choices: ['SETE', 'NOTE', 'FAME', 'CIBO'],
       },
       {
         id: 'w4',
@@ -508,6 +555,7 @@ export const CRUCIVERBA_BOARDS: CruciverbaBoard[] = [
         col: 0,
         word: 'AVANZI',
         clue: 'Li porti via nel contenitore anche se sono esattamente tre patatine',
+        choices: ['AVANZI', 'ARANCE', 'ORDINE', 'PIATTO'],
       },
     ],
   },
@@ -541,6 +589,7 @@ export function initCruciverbaRound(
   board: CruciverbaBoard,
   playerIds: string[],
   rng: () => number = Math.random,
+  mode: CruciverbaMode = 'indizi',
 ): CruciverbaRoundState {
   const turnOrder = [...playerIds];
   for (let i = turnOrder.length - 1; i > 0; i--) {
@@ -548,19 +597,51 @@ export function initCruciverbaRound(
     [turnOrder[i], turnOrder[j]] = [turnOrder[j], turnOrder[i]];
   }
   const wordStatus: Record<string, CruciverbaWordStatus> = {};
+  const wordChoices: Record<string, string[]> = {};
   for (const w of board.words) {
     wordStatus[w.id] = 'pending';
+    const rawChoices =
+      w.choices && w.choices.length > 0
+        ? Array.from(new Set([w.word, ...w.choices]))
+        : [w.word];
+    for (let i = rawChoices.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [rawChoices[i], rawChoices[j]] = [rawChoices[j], rawChoices[i]];
+    }
+    wordChoices[w.id] = rawChoices;
   }
+
+  const revealedCells = new Set<string>();
+  if (mode === 'scelte' && board.words.length > 0) {
+    const firstWord = board.words[0];
+    const firstWordCells = getWordCells(firstWord);
+    const otherKeys = new Set<string>();
+    for (const w of board.words.slice(1)) {
+      for (const c of getWordCells(w)) otherKeys.add(cellKey(c.row, c.col));
+    }
+    const anchor =
+      firstWordCells.find((c) => otherKeys.has(cellKey(c.row, c.col))) ?? firstWordCells[0];
+    if (anchor) {
+      revealedCells.add(cellKey(anchor.row, anchor.col));
+    }
+  }
+
   return {
     board,
+    mode,
     turnOrder,
     currentTurnIndex: 0,
     activeWordId: board.words[0].id,
     wordStatus,
+    wordChoices,
+    wrongChoices: {},
     solvedBy: {},
-    revealedCells: new Set<string>(),
+    revealedCells,
     turnsTaken: 0,
-    maxTurns: Math.max(board.words.length * 2, turnOrder.length * 2),
+    maxTurns:
+      mode === 'scelte'
+        ? Math.max(board.words.length * 3, turnOrder.length * 3)
+        : Math.max(board.words.length * 2, turnOrder.length * 2),
   };
 }
 
@@ -644,6 +725,15 @@ export function submitCruciverbaAttempt(
   const normalizedGuess = normalizeCruciverbaInput(guess);
   const normalizedTarget = normalizeCruciverbaInput(word.word);
   if (!normalizedGuess || normalizedGuess !== normalizedTarget) {
+    if (state.mode === 'scelte') {
+      const prevWrong = state.wrongChoices[word.id] ?? [];
+      if (normalizedGuess && !prevWrong.includes(normalizedGuess)) {
+        state.wrongChoices[word.id] = [...prevWrong, normalizedGuess];
+      }
+      if (state.turnOrder.length > 1) {
+        state.currentTurnIndex = (state.currentTurnIndex + 1) % state.turnOrder.length;
+      }
+    }
     state.lastEvent = {
       playerId,
       kind: 'wrong',
@@ -766,6 +856,8 @@ export interface PublicCruciverbaWord {
   col: number;
   length: number;
   clue: string;
+  choices?: string[];
+  wrongChoices?: string[];
   status: CruciverbaWordStatus;
   solvedByName: string | null;
   answer?: string;
@@ -774,6 +866,7 @@ export interface PublicCruciverbaWord {
 export interface PublicCruciverbaState {
   boardId: string;
   theme: string;
+  mode: CruciverbaMode;
   rows: number;
   cols: number;
   activePlayerId: string | null;
@@ -831,6 +924,7 @@ export function serializeCruciverbaState(
   return {
     boardId: board.id,
     theme: board.theme,
+    mode: state.mode ?? 'indizi',
     rows: board.rows,
     cols: board.cols,
     activePlayerId,
@@ -841,6 +935,7 @@ export function serializeCruciverbaState(
     words: board.words.map((w) => {
       const status = state.wordStatus[w.id];
       const revealThisWord = includeAllAnswers || status !== 'pending';
+      const isChoices = state.mode === 'scelte';
       return {
         id: w.id,
         number: w.number,
@@ -848,7 +943,13 @@ export function serializeCruciverbaState(
         row: w.row,
         col: w.col,
         length: w.word.length,
-        clue: w.clue,
+        clue: isChoices ? '' : w.clue,
+        ...(isChoices
+          ? {
+              choices: state.wordChoices?.[w.id] ?? [],
+              wrongChoices: state.wrongChoices?.[w.id] ?? [],
+            }
+          : {}),
         status,
         solvedByName: state.solvedBy[w.id] ? resolvePlayerName(state.solvedBy[w.id]) : null,
         ...(revealThisWord ? { answer: w.word } : {}),

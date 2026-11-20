@@ -13,6 +13,7 @@ import {
   type Tappa,
 } from './deck';
 import { selectMatchedSequence } from './matcher';
+import { getSoloDilemmas, isSoloFriendlyText } from './soloDecks';
 
 /** Number of tappe in a full percorso (the summit is the last). */
 export const N_TAPPE = 4;
@@ -368,9 +369,26 @@ export function buildPercorsoPlan(
   const dilemmas: Dilemma[] = [];
   const tappe: number[] = [];
   for (let t = start; t <= N_TAPPE; t++) {
-    const rawStepPool = percorsoId
+    let rawStepPool = percorsoId
       ? dilemmasForPercorsoTappa(pool, t as Tappa)
       : dilemmasForTappa(pool, t as Tappa);
+    if (playerCount === 1) {
+      const soloFiltered = rawStepPool.filter((d) => !d.roster && isSoloFriendlyText(d.text));
+      if (soloFiltered.length > 0) rawStepPool = soloFiltered;
+      if (all.length > 50) {
+        const requiredCorsia = percorsoId ? getPercorsoMeta(percorsoId).corsia : undefined;
+        const soloAdditions = getSoloDilemmas().filter(
+          (d) =>
+            (d.percorsoTappa ?? d.tappa) === t &&
+            (!requiredCorsia || d.tono === requiredCorsia) &&
+            !(excludeIds && excludeIds.has(d.id)),
+        );
+        if (soloAdditions.length > 0) {
+          const existingIds = new Set(soloAdditions.map((d) => d.id));
+          rawStepPool = [...soloAdditions, ...rawStepPool.filter((d) => !existingIds.has(d.id))];
+        }
+      }
+    }
     const famPool = filterByFamiliarita(rawStepPool, familiarita);
     const target = alloc[t as Tappa];
     let stepPool = famPool;

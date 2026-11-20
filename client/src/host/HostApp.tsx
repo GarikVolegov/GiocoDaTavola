@@ -306,7 +306,15 @@ export default function HostApp() {
                     phase === 'TRIBUNALE_VOTE' ||
                     phase === 'TRIBUNALE_REVEAL' ||
                     phase === 'TELEPATHY' ||
-                    phase === 'TELEPATHY_REVEAL'
+                    phase === 'TELEPATHY_REVEAL' ||
+                    phase === 'GHIGLIOTTINA' ||
+                    phase === 'GHIGLIOTTINA_REVEAL' ||
+                    phase === 'STIMA_GUESS' ||
+                    phase === 'STIMA_REVEAL' ||
+                    phase === 'BUFALA_VOTE' ||
+                    phase === 'BUFALA_REVEAL' ||
+                    phase === 'INTESA_PLAY' ||
+                    phase === 'INTESA_REVEAL'
                   ? `Sfida ${game.dilemmaIndex}/${game.dilemmaCount}`
                   : `Dilemma ${game.dilemmaIndex}/${game.dilemmaCount}`}
           </p>
@@ -1106,6 +1114,10 @@ export default function HostApp() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', textAlign: 'left' }}>
                 {game.cruciverbaState.words.map((w) => {
                   const isActive = phase === 'CRUCIVERBA' && w.id === game.cruciverbaState?.activeWordId;
+                  const isScelteMode = game.cruciverbaState?.mode === 'scelte';
+                  const wrongSet = new Set(
+                    (w.wrongChoices ?? []).map((c) => c.trim().toUpperCase()),
+                  );
                   return (
                     <div
                       key={w.id}
@@ -1125,7 +1137,46 @@ export default function HostApp() {
                         {w.answer ? ` — ${w.answer}` : ''}
                         {w.solvedByName ? ` · ✓ ${w.solvedByName}` : ''}
                       </div>
-                      <div style={{ fontSize: '0.96rem', marginTop: '0.15rem' }}>{w.clue}</div>
+                      {isScelteMode ? (
+                        w.choices &&
+                        w.choices.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.35rem' }}>
+                            {w.choices.map((choice) => {
+                              const upper = choice.trim().toUpperCase();
+                              const isWrong = wrongSet.has(upper);
+                              const isAnswer = Boolean(w.answer && w.answer.trim().toUpperCase() === upper);
+                              return (
+                                <span
+                                  key={choice}
+                                  style={{
+                                    padding: '0.18rem 0.55rem',
+                                    borderRadius: '999px',
+                                    fontSize: '0.82rem',
+                                    fontWeight: 700,
+                                    border: isAnswer
+                                      ? '1px solid #34d399'
+                                      : isWrong
+                                        ? '1px solid rgba(244, 63, 94, 0.45)'
+                                        : '1px solid rgba(255,255,255,0.18)',
+                                    background: isAnswer
+                                      ? 'rgba(16, 185, 129, 0.24)'
+                                      : isWrong
+                                        ? 'rgba(244, 63, 94, 0.12)'
+                                        : 'rgba(255,255,255,0.06)',
+                                    color: isAnswer ? '#6ee7b7' : isWrong ? '#fda4af' : '#f8fafc',
+                                    textDecoration: isWrong ? 'line-through' : 'none',
+                                    opacity: isWrong ? 0.5 : 1,
+                                  }}
+                                >
+                                  {choice}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )
+                      ) : (
+                        <div style={{ fontSize: '0.96rem', marginTop: '0.15rem' }}>{w.clue}</div>
+                      )}
                     </div>
                   );
                 })}
@@ -1231,6 +1282,167 @@ export default function HostApp() {
                 );
               })}
             </div>
+          </Card>
+        )}
+
+        {(phase === 'GHIGLIOTTINA' || phase === 'GHIGLIOTTINA_REVEAL') && game.ghigliottinaState && (
+          <Card glow="accent" style={{ maxWidth: '52rem', width: 'min(94vw, 52rem)', padding: '1.6rem 2rem', display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'center', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', width: 'min(100%, 30rem)' }}>
+              {game.ghigliottinaState.clues.map((clue, i) => (
+                <div
+                  key={clue}
+                  style={{
+                    padding: '0.55rem 1rem',
+                    borderRadius: '10px',
+                    background: 'rgba(15, 23, 42, 0.72)',
+                    border: '1px solid rgba(251, 191, 36, 0.35)',
+                    fontSize: '1.3rem',
+                    fontWeight: 900,
+                    letterSpacing: '0.05em',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '1rem',
+                  }}
+                >
+                  <span>{clue}</span>
+                  {phase === 'GHIGLIOTTINA_REVEAL' && game.ghigliottinaState?.connections && (
+                    <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#fde68a' }}>
+                      {game.ghigliottinaState.connections[i]}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+            {phase === 'GHIGLIOTTINA' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', justifyContent: 'center' }}>
+                  {game.ghigliottinaState.choices.map((c) => (
+                    <span key={c} style={{ padding: '0.45rem 0.9rem', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', fontWeight: 800, fontSize: '1.1rem' }}>
+                      {c}
+                    </span>
+                  ))}
+                </div>
+                <p style={{ margin: 0, opacity: 0.85, fontSize: '1.1rem' }}>
+                  Risposte {game.ghigliottinaState.submittedCount}/{game.ghigliottinaState.totalPlayers}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: '2.8rem', fontWeight: 900, color: '#fbbf24' }}>
+                  🔗 {game.ghigliottinaState.answer}
+                </div>
+                {game.ghigliottinaState.results && game.ghigliottinaState.results.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', justifyContent: 'center' }}>
+                    {game.ghigliottinaState.results.map((r) => (
+                      <div key={r.playerId} style={{ padding: '0.55rem 0.9rem', borderRadius: '12px', background: r.correct ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.06)', border: r.correct ? '1.5px solid #34d399' : '1px solid rgba(255,255,255,0.14)' }}>
+                        <strong>{r.nickname}</strong>: {r.guess} {r.correct ? `✓ +${r.pointsAwarded}` : '✗'}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </Card>
+        )}
+
+        {(phase === 'STIMA_GUESS' || phase === 'STIMA_REVEAL') && game.stimaState && (
+          <Card glow="accent" style={{ maxWidth: '50rem', width: 'min(94vw, 50rem)', padding: '1.6rem 2rem', display: 'flex', flexDirection: 'column', gap: '0.9rem', textAlign: 'center', alignItems: 'center' }}>
+            <p style={{ fontSize: 'clamp(1.35rem, 3vw, 2rem)', fontWeight: 800, margin: 0 }}>
+              {game.stimaState.prompt}
+            </p>
+            {phase === 'STIMA_GUESS' ? (
+              <p style={{ margin: 0, fontSize: '1.15rem', opacity: 0.85 }}>
+                Scala da {game.stimaState.min} a {game.stimaState.max} {game.stimaState.unit} · Stime {game.stimaState.submittedCount}/{game.stimaState.totalPlayers}
+              </p>
+            ) : (
+              <>
+                <div style={{ fontSize: '3rem', fontWeight: 900, color: '#34d399', lineHeight: 1.05 }}>
+                  {game.stimaState.answer} <span style={{ fontSize: '1.25rem', opacity: 0.8 }}>{game.stimaState.unit}</span>
+                </div>
+                {game.stimaState.funFact && (
+                  <p style={{ margin: 0, fontSize: '1.05rem', opacity: 0.9, maxWidth: '40rem' }}>{game.stimaState.funFact}</p>
+                )}
+                {game.stimaState.results && game.stimaState.results.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', justifyContent: 'center' }}>
+                    {game.stimaState.results.map((r, i) => (
+                      <div key={r.playerId} style={{ padding: '0.55rem 0.95rem', borderRadius: '12px', background: r.isWinner ? 'rgba(251, 191, 36, 0.2)' : 'rgba(255,255,255,0.06)', border: r.isWinner ? '1.5px solid #fbbf24' : '1px solid rgba(255,255,255,0.14)' }}>
+                        <strong>{i === 0 ? '🏆 ' : ''}{r.nickname}</strong>: {r.guess} {game.stimaState?.unit} {r.pointsAwarded > 0 ? `(+${r.pointsAwarded})` : ''}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </Card>
+        )}
+
+        {(phase === 'BUFALA_VOTE' || phase === 'BUFALA_REVEAL') && game.bufalaState && (
+          <Card glow="accent" style={{ maxWidth: '50rem', width: 'min(94vw, 50rem)', padding: '1.6rem 2rem', display: 'flex', flexDirection: 'column', gap: '0.9rem', textAlign: 'center', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              🎭 {game.bufalaState.category}
+            </span>
+            <p style={{ fontSize: 'clamp(1.4rem, 3.2vw, 2.1rem)', fontWeight: 800, margin: 0 }}>
+              {game.bufalaState.statement}
+            </p>
+            {phase === 'BUFALA_VOTE' ? (
+              <p style={{ margin: 0, fontSize: '1.15rem', opacity: 0.85 }}>
+                Votate dal telefono · {game.bufalaState.submittedCount}/{game.bufalaState.totalPlayers}
+              </p>
+            ) : (
+              <>
+                <div style={{ fontSize: '2.6rem', fontWeight: 900, color: game.bufalaState.isTrue ? '#34d399' : '#fda4af' }}>
+                  {game.bufalaState.isTrue ? '✅ È VERO!' : '🤡 È UNA BUFALA!'}
+                </div>
+                {game.bufalaState.explanation && (
+                  <p style={{ margin: 0, fontSize: '1.1rem', opacity: 0.92, maxWidth: '40rem' }}>
+                    {game.bufalaState.explanation}
+                  </p>
+                )}
+              </>
+            )}
+          </Card>
+        )}
+
+        {(phase === 'INTESA_PLAY' || phase === 'INTESA_REVEAL') && game.intesaState && (
+          <Card glow="accent" style={{ maxWidth: '48rem', width: 'min(94vw, 48rem)', padding: '1.6rem 2rem', display: 'flex', flexDirection: 'column', gap: '0.9rem', textAlign: 'center', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              🚫 {game.intesaState.category}
+            </span>
+            {phase === 'INTESA_PLAY' ? (
+              <>
+                <div style={{ fontSize: 'clamp(1.6rem, 4vw, 2.5rem)', fontWeight: 900, color: '#fde68a' }}>
+                  🎙️ DESCRIVE {game.intesaState.speakerName.toUpperCase()}
+                </div>
+                <p style={{ margin: 0, fontSize: '1.2rem', opacity: 0.9 }}>
+                  Guarda solo {game.intesaState.speakerName}: gli altri indovinano a voce prima della parola vietata!
+                </p>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: '2.8rem', fontWeight: 900, color: '#fbbf24' }}>
+                  {game.intesaState.word}
+                </div>
+                {game.intesaState.forbidden && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center' }}>
+                    {game.intesaState.forbidden.map((fw) => (
+                      <span key={fw} style={{ padding: '0.35rem 0.75rem', borderRadius: '999px', background: 'rgba(244, 63, 94, 0.2)', border: '1px solid rgba(244, 63, 94, 0.45)', color: '#fda4af', fontWeight: 800 }}>
+                        🚫 {fw}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: game.intesaState.outcome === 'guessed' ? '#34d399' : '#fda4af' }}>
+                  {game.intesaState.outcome === 'guessed'
+                    ? game.intesaState.winnerName
+                      ? `🎉 ${game.intesaState.speakerName} & ${game.intesaState.winnerName} (+100 pt)!`
+                      : `🎉 Indovinata da ${game.intesaState.speakerName}!`
+                    : game.intesaState.outcome === 'taboo'
+                      ? '🚨 Parola vietata pronunciata!'
+                      : '⏭️ Round saltato'}
+                </p>
+              </>
+            )}
           </Card>
         )}
 

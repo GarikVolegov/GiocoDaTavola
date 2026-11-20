@@ -31,6 +31,7 @@ import {
   type Familiarita,
   type Caos,
   type PartyMode,
+  type CruciverbaMode,
 } from '../../shared/events';
 import { Card, Pill, TextInput } from '../../shared/ui';
 import lobbyStyles from './LobbyScreen.module.css';
@@ -51,6 +52,10 @@ const PARTY_MODE_CARDS: Array<{
   { id: 'preferiresti', label: '🔀 Preferiresti', desc: 'Quattro alternative assurde tra cui scegliere e confrontarsi', soloOk: true },
   { id: 'cruciverba', label: '🧩 Cruciverba', desc: 'Cruciverba cooperativo a turni senza fretta né timer', soloOk: true },
   { id: 'tribunale', label: '⚖️ Tribunale', desc: 'Arringhe faccia a faccia tra Accusa e Difesa davanti alla giuria', soloOk: false },
+  { id: 'ghigliottina', label: '🔗 Ghigliottina', desc: '5 parole-indizio e 1 sola parola misteriosa che le collega tutte', soloOk: true },
+  { id: 'stima', label: '💰 Quanto Vale?', desc: 'Stima prezzi, record e numeri reali con lo slider: chi si avvicina vince', soloOk: true },
+  { id: 'bufala', label: '🎭 Vero o Bufala?', desc: 'Fatti assurdi o leggende metropolitane: 2 scelte secche e spiegazione', soloOk: true },
+  { id: 'intesa', label: '🚫 Parola Vietata', desc: 'Descrivi la parola segreta al tavolo senza dire le 4 parole vietate', soloOk: false },
 ];
 
 interface LeaderSetupProps {
@@ -94,6 +99,10 @@ interface LeaderSetupProps {
   startError?: string | null;
   partyMode?: PartyMode | null;
   setPartyMode?: Dispatch<SetStateAction<PartyMode | null>>;
+  cruciverbaMode?: CruciverbaMode;
+  setCruciverbaMode?: Dispatch<SetStateAction<CruciverbaMode>>;
+  soloFast?: boolean;
+  setSoloFast?: Dispatch<SetStateAction<boolean>>;
   partyIntensity?: CoppieIntensity;
   setPartyIntensity?: Dispatch<SetStateAction<CoppieIntensity>>;
   infiltratoTono?: InfiltratoTono;
@@ -146,6 +155,10 @@ export default function LeaderSetup({
   setPlayMode,
   partyMode = 'mix',
   setPartyMode,
+  cruciverbaMode = 'indizi',
+  setCruciverbaMode,
+  soloFast = true,
+  setSoloFast,
   partyIntensity = 'complicita',
   setPartyIntensity,
   infiltratoTono = 'misto',
@@ -197,6 +210,42 @@ export default function LeaderSetup({
   const activePartyMeta = partyMode && partyMode !== 'mix'
     ? PARTY_MODE_CARDS.find((m) => m.id === partyMode)
     : null;
+  const activePartyDesc = activePartyMeta
+    ? playMode === 'solo' && activePartyMeta.id === 'preferiresti'
+      ? 'Due alternative strane e surreali tra cui scegliere con 1 tocco'
+      : playMode === 'solo' && activePartyMeta.id === 'assurdo'
+        ? 'Scenari bizzarri e scelte assurde a 2 opzioni solo per te'
+        : playMode === 'solo' && activePartyMeta.id === 'cruciverba'
+          ? 'Cruciverba veloce: scegli tra 4 parole o risolvi dagli indizi'
+          : playMode === 'solo' && activePartyMeta.id === 'flash'
+            ? 'Dilemmi strani e personali con scelta secca a 2 opzioni'
+            : activePartyMeta.desc
+    : null;
+
+  const renderCruciverbaModeToggle = () =>
+    setCruciverbaMode ? (
+      <div style={{ marginTop: '0.25rem' }}>
+        <div className={lobbyStyles.sectionLabel}>Modalità Cruciverba</div>
+        <div className={lobbyStyles.segmentGrid2} role="group" aria-label="Modalità Cruciverba">
+          <button
+            type="button"
+            aria-pressed={cruciverbaMode === 'indizi'}
+            className={`${lobbyStyles.segmentBtn} ${cruciverbaMode === 'indizi' ? lobbyStyles.segmentBtnActive : ''}`}
+            onClick={() => setCruciverbaMode('indizi')}
+          >
+            📝 Con indizi
+          </button>
+          <button
+            type="button"
+            aria-pressed={cruciverbaMode === 'scelte'}
+            className={`${lobbyStyles.segmentBtn} ${cruciverbaMode === 'scelte' ? lobbyStyles.segmentBtnActive : ''}`}
+            onClick={() => setCruciverbaMode('scelte')}
+          >
+            🎯 4 scelte
+          </button>
+        </div>
+      </div>
+    ) : null;
 
   const roundCount = FORMAT_DILEMMA_COUNT[format];
   const famLabel =
@@ -205,8 +254,14 @@ export default function LeaderSetup({
       : FAMILIARITA_LABELS.vecchi_amici.nome;
   const advancedSummary =
     activeTab === 'classica' && (isPercorso || isStoria)
-      ? famLabel
-      : `${roundCount} round · ${famLabel}`;
+      ? playMode === 'solo'
+        ? soloFast
+          ? '⚡ Veloce'
+          : '🧭 Riflessione'
+        : famLabel
+      : playMode === 'solo'
+        ? `${roundCount} round · ${soloFast ? '⚡ Veloce' : '🧭 Riflessione'}`
+        : `${roundCount} round · ${famLabel}`;
 
   return (
     <Card
@@ -235,7 +290,13 @@ export default function LeaderSetup({
               className={`${lobbyStyles.segmentBtn} ${playMode === 'solo' ? lobbyStyles.segmentBtnActive : ''}`}
               onClick={() => {
                 setPlayMode('solo');
-                if (partyMode === 'infiltrato' || partyMode === 'coppie' || partyMode === 'tribunale') {
+                setCruciverbaMode?.('scelte');
+                if (
+                  partyMode === 'infiltrato' ||
+                  partyMode === 'coppie' ||
+                  partyMode === 'tribunale' ||
+                  partyMode === 'intesa'
+                ) {
                   setPartyMode?.('mix');
                 }
                 if (gameMode === 'duello') setGameMode('gruppo');
@@ -249,11 +310,37 @@ export default function LeaderSetup({
               type="button"
               aria-pressed={playMode === 'gruppo'}
               className={`${lobbyStyles.segmentBtn} ${playMode === 'gruppo' ? lobbyStyles.segmentBtnActive : ''}`}
-              onClick={() => setPlayMode('gruppo')}
+              onClick={() => {
+                setPlayMode('gruppo');
+                setCruciverbaMode?.('indizi');
+              }}
             >
               👥 In gruppo
             </button>
           </div>
+          {playMode === 'solo' && setSoloFast && (
+            <div style={{ marginTop: '0.25rem' }}>
+              <div className={lobbyStyles.sectionLabel}>Ritmo da solo</div>
+              <div className={lobbyStyles.segmentGrid2} role="group" aria-label="Ritmo da solo">
+                <button
+                  type="button"
+                  aria-pressed={soloFast}
+                  className={`${lobbyStyles.segmentBtn} ${soloFast ? lobbyStyles.segmentBtnActive : ''}`}
+                  onClick={() => setSoloFast(true)}
+                >
+                  ⚡ Veloce (1 tocco)
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={!soloFast}
+                  className={`${lobbyStyles.segmentBtn} ${!soloFast ? lobbyStyles.segmentBtnActive : ''}`}
+                  onClick={() => setSoloFast(false)}
+                >
+                  🧭 Con riflessione
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -313,7 +400,9 @@ export default function LeaderSetup({
                 </span>
               </div>
               <span style={{ fontSize: '0.78rem', opacity: 0.88, lineHeight: 1.35 }}>
-                Ogni round un giochino diverso a sorpresa senza timer!
+                {playMode === 'solo'
+                  ? 'Dilemmi strani, Preferiresti a 2 scelte, Ghigliottina, Quanto Vale, Vero o Bufala e Cruciverba solo per te!'
+                  : 'Ogni round un giochino diverso tra quiz TV, dilemmi e sfide di gruppo senza timer!'}
               </span>
             </button>
 
@@ -348,7 +437,8 @@ export default function LeaderSetup({
                     </button>
                   ))}
                 </div>
-                {activePartyMeta && <p className={lobbyStyles.modeDescBox}>{activePartyMeta.desc}</p>}
+                {activePartyDesc && <p className={lobbyStyles.modeDescBox}>{activePartyDesc}</p>}
+                {partyMode === 'cruciverba' && renderCruciverbaModeToggle()}
               </>
             )}
 
@@ -702,24 +792,28 @@ export default function LeaderSetup({
               </div>
             )}
 
-            <div>
-              <div className={lobbyStyles.sectionLabel}>Con chi giochi?</div>
-              <div className={lobbyStyles.segmentGrid2} role="group" aria-label="Con chi giochi">
-                {FAMILIARITA_VALUES.map((fam) => (
-                  <button
-                    key={fam}
-                    type="button"
-                    aria-pressed={familiarita === fam}
-                    className={`${lobbyStyles.segmentBtn} ${familiarita === fam ? lobbyStyles.segmentBtnActive : ''}`}
-                    onClick={() => setFamiliarita?.(fam)}
-                  >
-                    {FAMILIARITA_LABELS[fam].nome}
-                  </button>
-                ))}
+            {playMode === 'gruppo' && (
+              <div>
+                <div className={lobbyStyles.sectionLabel}>Con chi giochi?</div>
+                <div className={lobbyStyles.segmentGrid2} role="group" aria-label="Con chi giochi">
+                  {FAMILIARITA_VALUES.map((fam) => (
+                    <button
+                      key={fam}
+                      type="button"
+                      aria-pressed={familiarita === fam}
+                      className={`${lobbyStyles.segmentBtn} ${familiarita === fam ? lobbyStyles.segmentBtnActive : ''}`}
+                      onClick={() => setFamiliarita?.(fam)}
+                    >
+                      {FAMILIARITA_LABELS[fam].nome}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {activeTab === 'party' && (partyMode === 'coppie' || partyMode === 'mix') && (
+            {activeTab === 'party' && partyMode === 'mix' && renderCruciverbaModeToggle()}
+
+            {playMode === 'gruppo' && activeTab === 'party' && (partyMode === 'coppie' || partyMode === 'mix') && (
               <div>
                 <div className={lobbyStyles.sectionLabel}>Intensità Coppie</div>
                 <div className={lobbyStyles.segmentGrid3}>
@@ -742,7 +836,7 @@ export default function LeaderSetup({
               </div>
             )}
 
-            {activeTab === 'party' && (partyMode === 'infiltrato' || partyMode === 'mix') && (
+            {playMode === 'gruppo' && activeTab === 'party' && (partyMode === 'infiltrato' || partyMode === 'mix') && (
               <div>
                 <div className={lobbyStyles.sectionLabel}>Tono Infiltrato</div>
                 <div className={lobbyStyles.segmentGrid3}>

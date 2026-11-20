@@ -103,11 +103,15 @@ export default function CruciverbaView({
   }
 
   const isMyTurn = Boolean(myId && state.activePlayerId === myId);
+  const isScelteMode = state.mode === 'scelte';
   const targetWord =
     state.words.find((w) => w.id === selectedWordId && w.status === 'pending') ??
     state.words.find((w) => w.id === state.activeWordId && w.status === 'pending') ??
     state.words.find((w) => w.status === 'pending') ??
     state.words[0];
+  const wrongSet = new Set(
+    (targetWord?.wrongChoices ?? []).map((c) => c.trim().toUpperCase()),
+  );
 
   return (
     <MobilePhaseShell
@@ -189,10 +193,23 @@ export default function CruciverbaView({
               lineHeight: 1.35,
             }}
           >
-            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fbbf24', marginBottom: '0.2rem' }}>
-              DEFINIZIONE {targetWord.number} {targetWord.direction === 'H' ? 'ORIZZONTALE' : 'VERTICALE'} · {targetWord.length} LETTERE
-            </div>
-            <div>{targetWord.clue}</div>
+            {isScelteMode ? (
+              <>
+                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fbbf24', marginBottom: '0.2rem' }}>
+                  🎯 4 SCELTE · {targetWord.number} {targetWord.direction === 'H' ? 'ORIZZONTALE' : 'VERTICALE'} · {targetWord.length} LETTERE
+                </div>
+                <div style={{ opacity: 0.85, fontSize: '0.82rem' }}>
+                  Scegli tra le 4 parole guardando gli incroci sulla griglia.
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fbbf24', marginBottom: '0.2rem' }}>
+                  DEFINIZIONE {targetWord.number} {targetWord.direction === 'H' ? 'ORIZZONTALE' : 'VERTICALE'} · {targetWord.length} LETTERE
+                </div>
+                <div>{targetWord.clue}</div>
+              </>
+            )}
           </div>
         )}
 
@@ -203,33 +220,114 @@ export default function CruciverbaView({
         )}
 
         {isMyTurn && targetWord && targetWord.status === 'pending' ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!guess.trim()) return;
-              onAttempt(guess, targetWord.id);
-            }}
-            style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
-          >
-            <TextInput
-              value={guess}
-              onChange={(e) => setGuess(e.target.value.toUpperCase())}
-              placeholder={`Scrivi la parola (${targetWord.length} lettere)...`}
-              autoComplete="off"
-              autoCapitalize="characters"
-            />
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <Button type="submit" variant="primary" disabled={!guess.trim()} style={{ flex: 1 }}>
-                Invia Parola ✓
-              </Button>
+          isScelteMode ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                  gap: '0.5rem',
+                }}
+                role="group"
+                aria-label="Scelte parola cruciverba"
+              >
+                {(targetWord.choices ?? []).map((choice) => {
+                  const isWrong = wrongSet.has(choice.trim().toUpperCase());
+                  return (
+                    <Button
+                      key={choice}
+                      type="button"
+                      variant="ghost"
+                      disabled={isWrong}
+                      onClick={() => onAttempt(choice, targetWord.id)}
+                      style={
+                        isWrong
+                          ? {
+                              opacity: 0.48,
+                              borderColor: 'rgba(244, 63, 94, 0.55)',
+                              background: 'rgba(244, 63, 94, 0.14)',
+                              textDecoration: 'line-through',
+                              color: '#fda4af',
+                            }
+                          : { fontWeight: 800 }
+                      }
+                    >
+                      {choice}
+                    </Button>
+                  );
+                })}
+              </div>
               <Button type="button" variant="ghost" onClick={onPassHint}>
                 💡 1 lettera
               </Button>
             </div>
-          </form>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!guess.trim()) return;
+                onAttempt(guess, targetWord.id);
+              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+            >
+              <TextInput
+                value={guess}
+                onChange={(e) => setGuess(e.target.value.toUpperCase())}
+                placeholder={`Scrivi la parola (${targetWord.length} lettere)...`}
+                autoComplete="off"
+                autoCapitalize="characters"
+              />
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <Button type="submit" variant="primary" disabled={!guess.trim()} style={{ flex: 1 }}>
+                  Invia Parola ✓
+                </Button>
+                <Button type="button" variant="ghost" onClick={onPassHint}>
+                  💡 1 lettera
+                </Button>
+              </div>
+            </form>
+          )
         ) : (
-          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-            Guarda il tabellone: quando tocca a te prova a risolvere o sblocca 1 lettera!
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+            {isScelteMode && targetWord?.choices && targetWord.choices.length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.35rem',
+                  justifyContent: 'center',
+                }}
+              >
+                {targetWord.choices.map((choice) => {
+                  const isWrong = wrongSet.has(choice.trim().toUpperCase());
+                  return (
+                    <span
+                      key={choice}
+                      style={{
+                        padding: '0.25rem 0.55rem',
+                        borderRadius: '999px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        border: isWrong
+                          ? '1px solid rgba(244, 63, 94, 0.4)'
+                          : '1px solid rgba(255, 255, 255, 0.16)',
+                        background: isWrong
+                          ? 'rgba(244, 63, 94, 0.12)'
+                          : 'rgba(255, 255, 255, 0.05)',
+                        color: isWrong ? '#fda4af' : '#e2e8f0',
+                        textDecoration: isWrong ? 'line-through' : 'none',
+                        opacity: isWrong ? 0.55 : 0.9,
+                      }}
+                    >
+                      {choice}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+              Guarda il tabellone: quando tocca a te prova a risolvere o sblocca 1 lettera!
+            </div>
           </div>
         )}
       </Card>

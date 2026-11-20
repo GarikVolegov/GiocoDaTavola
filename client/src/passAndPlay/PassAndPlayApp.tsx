@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/react';
 import {
   Button,
   Card,
+  CruciverbaGrid,
   Logo,
   Pill,
   TextInput,
@@ -40,6 +41,7 @@ import {
 } from '../shared/events';
 import {
   FALLBACK_DECKS,
+  SOLO_FALLBACK_DECKS,
   type PassAssurdoCard,
   type PassCard,
   type PassCardOriginMode,
@@ -58,14 +60,20 @@ import {
   getCurrentReaderPlayer,
   getCurrentTurnPlayer,
   isAssurdoCard,
+  isBufalaCard,
   isCoppieCard,
   isCruciverbaCard,
   isFlashOrClassicoCard,
+  isGhigliottinaCard,
   isInfiltratoCard,
+  isIntesaCard,
   isTribunaleCard,
   isPreferirestiCard,
+  isStimaCard,
   minPlayersForMode,
   passReducer,
+  toCruciverbaGridState,
+  type CruciverbaMode,
   type PassPlayer,
 } from './passAndPlayEngine';
 import PassFinaleView from './PassFinaleView';
@@ -103,6 +111,26 @@ const MODE_OPTIONS: Array<{ id: PassMode; label: string; desc: string }> = [
     desc: 'Quattro alternative assurde tra cui scegliere subito',
   },
   {
+    id: 'ghigliottina',
+    label: '🔗 Ghigliottina',
+    desc: '5 parole indizio e 1 parola segreta che le lega tutte (come in TV!)',
+  },
+  {
+    id: 'stima',
+    label: '💰 Quanto Vale?',
+    desc: 'Indovina numeri, altezze e prezzi reali: chi ci va più vicino vince!',
+  },
+  {
+    id: 'bufala',
+    label: '🎭 Vero o Bufala?',
+    desc: 'Fatto incredibile o leggenda metropolitana? Decidi subito!',
+  },
+  {
+    id: 'intesa',
+    label: '🚫 Parola Vietata',
+    desc: 'Descrivi la parola segreta al volo senza pronunciare le 4 parole vietate!',
+  },
+  {
     id: 'percorso',
     label: '🧗 Percorso',
     desc: 'Viaggio a tappe dalle scelte leggere fino ai bilanci profondi',
@@ -115,9 +143,26 @@ const MODE_OPTIONS: Array<{ id: PassMode; label: string; desc: string }> = [
   {
     id: 'mix',
     label: '🎲 Serata Mix · Tutti i giochi casuali',
-    desc: 'Ogni round cambia giochino a sorpresa: Flash, Preferiresti, Assurdo, Cruciverba, Tribunale, Coppie, Classico e Infiltrato!',
+    desc: '12 giochi a rotazione: Flash, Preferiresti, Ghigliottina, Quanto Vale?, Vero o Bufala, Parola Vietata, Cruciverba, Tribunale, Coppie, Classico, Assurdo e Infiltrato!',
   },
 ];
+
+function getModeDescription(mode: PassMode, playMode: 'solo' | 'gruppo'): string {
+  if (playMode === 'solo') {
+    if (mode === 'preferiresti') return 'Due scenari strani e surreali: scelta secca A o B';
+    if (mode === 'assurdo') return 'Scenari bizzarri e scelte assurde a 2 opzioni';
+    if (mode === 'cruciverba') return 'Cruciverba veloce: scegli tra 4 parole o risolvi dagli indizi';
+    if (mode === 'ghigliottina') return '5 parole indizio, 1 parola che le lega: scrivila o scegli tra 4!';
+    if (mode === 'stima') return 'Punta col cursore sul numero reale e scopri la tua precisione!';
+    if (mode === 'bufala') return 'Vero o Bufala? Metti alla prova il tuo fiuto in 1 tocco';
+    if (mode === 'mix') {
+      return 'Mix veloce da 8 giochi: dilemmi strani, Preferiresti a 2 scelte, Assurdo, Cruciverba, Ghigliottina, Quanto Vale? e Vero o Bufala!';
+    }
+    if (mode === 'flash') return 'Dilemmi strani e personali con scelta secca a 2 opzioni';
+    if (mode === 'classico') return 'Domande profonde e fuori dal comune per esplorare come ragioni';
+  }
+  return MODE_OPTIONS.find((m) => m.id === mode)?.desc ?? '';
+}
 
 const FALLBACK_STORIES_CATALOG: StoriaCatalogItem[] = [
   {
@@ -171,9 +216,13 @@ function shuffleSlice<T>(items: T[], count: number): T[] {
   return arr.slice(0, count);
 }
 
-function loadCachedDeck(mode: PassMode): PassCard[] {
+function deckCacheKey(mode: PassMode, isSolo: boolean): string {
+  return `${STORAGE_DECK_CACHE_PREFIX}${isSolo ? 'solo:' : ''}${mode}`;
+}
+
+function loadCachedDeck(mode: PassMode, isSolo = false): PassCard[] {
   try {
-    const raw = localStorage.getItem(`${STORAGE_DECK_CACHE_PREFIX}${mode}`);
+    const raw = localStorage.getItem(deckCacheKey(mode, isSolo));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     return Array.isArray(parsed) ? (parsed as PassCard[]) : [];
@@ -182,20 +231,31 @@ function loadCachedDeck(mode: PassMode): PassCard[] {
   }
 }
 
-function saveCachedDeck(mode: PassMode, cards: PassCard[]): void {
+function saveCachedDeck(mode: PassMode, cards: PassCard[], isSolo = false): void {
   try {
-    const existing = loadCachedDeck(mode);
+    const existing = loadCachedDeck(mode, isSolo);
     const byId = new Map<string, PassCard>();
     for (const c of [...cards, ...existing]) {
       if (c && typeof c.id === 'string' && !byId.has(c.id)) byId.set(c.id, c);
     }
     localStorage.setItem(
-      `${STORAGE_DECK_CACHE_PREFIX}${mode}`,
+      deckCacheKey(mode, isSolo),
       JSON.stringify([...byId.values()].slice(0, MAX_CACHED_CARDS_PER_MODE)),
     );
   } catch {
     // ignore storage quota errors
   }
+}
+
+function fallbackPoolForMode(sub: PassCardOriginMode, isSolo: boolean): PassCard[] {
+  if (isSolo) {
+    if (sub === 'flash') return SOLO_FALLBACK_DECKS.flash;
+    if (sub === 'classico') return SOLO_FALLBACK_DECKS.classico;
+    if (sub === 'preferiresti') return SOLO_FALLBACK_DECKS.preferiresti;
+    if (sub === 'assurdo') return SOLO_FALLBACK_DECKS.assurdo;
+    if (sub === 'percorso') return SOLO_FALLBACK_DECKS.percorso;
+  }
+  return FALLBACK_DECKS[sub];
 }
 
 function pickPassCards(
@@ -248,14 +308,26 @@ function buildOfflineMixDeck(
 ): PassCard[] {
   const subModes: PassCardOriginMode[] =
     playerCount >= 2
-      ? ['flash', 'preferiresti', 'assurdo', 'coppie', 'cruciverba', 'classico']
-      : ['flash', 'preferiresti', 'assurdo', 'cruciverba', 'classico'];
+      ? [
+          'flash',
+          'preferiresti',
+          'assurdo',
+          'coppie',
+          'cruciverba',
+          'classico',
+          'ghigliottina',
+          'stima',
+          'bufala',
+          'intesa',
+        ]
+      : ['flash', 'preferiresti', 'assurdo', 'cruciverba', 'classico', 'ghigliottina', 'stima', 'bufala'];
   if (playerCount >= 3) {
     subModes.push('infiltrato', 'tribunale');
   }
 
+  const isSolo = playerCount === 1;
   const cachedMixBySub = new Map<PassCardOriginMode, PassCard[]>();
-  for (const c of loadCachedDeck('mix')) {
+  for (const c of loadCachedDeck('mix', isSolo)) {
     const sub = effectivePassCardMode('mix', c);
     const list = cachedMixBySub.get(sub) ?? [];
     list.push(c);
@@ -268,13 +340,17 @@ function buildOfflineMixDeck(
       const byId = new Map<string, PassCard>();
       for (const c of [
         ...(cachedMixBySub.get(sub) ?? []),
-        ...loadCachedDeck(sub),
-        ...FALLBACK_DECKS[sub],
+        ...loadCachedDeck(sub, isSolo),
+        ...fallbackPoolForMode(sub, isSolo),
       ]) {
         if (playerCount < 2 && sub === 'assurdo' && isAssurdoCard(c) && c.cardType !== 'dignita') {
           continue;
         }
-        if (!byId.has(c.id)) byId.set(c.id, c);
+        const normalized =
+          isSolo && sub === 'preferiresti' && isPreferirestiCard(c)
+            ? { ...c, options: c.options.slice(0, 2) }
+            : c;
+        if (!byId.has(normalized.id)) byId.set(normalized.id, normalized);
       }
       const picked = pickPassCards(
         [...byId.values()],
@@ -340,6 +416,10 @@ export default function PassAndPlayApp() {
     loadSavedPlayers().length === 1 ? 'solo' : 'gruppo',
   );
   const [soloName, setSoloName] = useState<string>(() => loadSavedPlayers()[0]?.name || 'Tu');
+  const [cruciverbaMode, setCruciverbaMode] = useState<CruciverbaMode>(() =>
+    loadSavedPlayers().length === 1 ? 'scelte' : 'indizi',
+  );
+  const [soloFast, setSoloFast] = useState<boolean>(true);
   const [setupTab, setSetupTab] = useState<'party' | 'classica'>('party');
   const [classicSub, setClassicSub] = useState<'classico' | 'percorso' | 'storia'>('classico');
   const [percorsoId, setPercorsoId] = useState<string>(PERCORSI_CATALOG[0]?.id ?? 'bussola');
@@ -366,6 +446,10 @@ export default function PassAndPlayApp() {
   const [pickingCruciverbaSolver, setPickingCruciverbaSolver] = useState(false);
   const [selectedCoppieMatches, setSelectedCoppieMatches] = useState<string[]>([]);
   const [swapCoupleId, setSwapCoupleId] = useState<string | null>(null);
+  const [ghigliottinaInput, setGhigliottinaInput] = useState('');
+  const [ghigliottinaShowChoices, setGhigliottinaShowChoices] = useState(false);
+  const [stimaValue, setStimaValue] = useState(0);
+  const [stimaGroupRevealed, setStimaGroupRevealed] = useState(false);
 
   const effectivePlayers: PassPlayer[] =
     playMode === 'solo'
@@ -430,7 +514,17 @@ export default function PassAndPlayApp() {
   useEffect(() => {
     setPickingCruciverbaSolver(false);
     setSelectedCoppieMatches([]);
-  }, [state.roundIndex, state.phase, state.cruciverbaState?.turnsTaken]);
+    setGhigliottinaInput('');
+    setGhigliottinaShowChoices(false);
+    setStimaGroupRevealed(false);
+    if (currentPassCard && isStimaCard(currentPassCard)) {
+      const mid = (currentPassCard.min + currentPassCard.max) / 2;
+      const step = Math.max(1, currentPassCard.step);
+      const snapped =
+        Math.round((mid - currentPassCard.min) / step) * step + currentPassCard.min;
+      setStimaValue(Math.min(currentPassCard.max, Math.max(currentPassCard.min, snapped)));
+    }
+  }, [state.roundIndex, state.phase, state.cruciverbaState?.turnsTaken, currentPassCard]);
 
   // Sync saved players back to setup on rematch
   useEffect(() => {
@@ -607,6 +701,7 @@ export default function PassAndPlayApp() {
     setSetupError(null);
     setLoadingDeck(true);
 
+    const isSoloGame = effectivePlayers.length === 1;
     const seenIds = getSeenDilemmaIds();
     let cards: PassCard[] = [];
     if (online) {
@@ -638,7 +733,7 @@ export default function PassAndPlayApp() {
           if (Array.isArray(json.cards) && json.cards.length > 0) {
             cards = json.cards;
             if (selectedMode !== 'storia' && selectedMode !== 'percorso') {
-              saveCachedDeck(selectedMode, cards);
+              saveCachedDeck(selectedMode, cards, isSoloGame);
             }
           }
         }
@@ -657,11 +752,17 @@ export default function PassAndPlayApp() {
           familiarita,
           intensity,
         );
-      } else if (selectedMode === 'storia' || selectedMode === 'percorso') {
-        cards = [...FALLBACK_DECKS[selectedMode]];
+      } else if (selectedMode === 'storia') {
+        cards = [...FALLBACK_DECKS.storia];
+      } else if (selectedMode === 'percorso') {
+        cards = [...fallbackPoolForMode('percorso', isSoloGame)];
       } else {
         const mergedById = new Map<string, PassCard>();
-        for (const c of [...loadCachedDeck(selectedMode), ...FALLBACK_DECKS[selectedMode]]) {
+        const pool = [
+          ...loadCachedDeck(selectedMode, isSoloGame),
+          ...fallbackPoolForMode(selectedMode, isSoloGame),
+        ];
+        for (const c of pool) {
           if (
             effectivePlayers.length < 2 &&
             selectedMode === 'assurdo' &&
@@ -670,7 +771,11 @@ export default function PassAndPlayApp() {
           ) {
             continue;
           }
-          if (!mergedById.has(c.id)) mergedById.set(c.id, c);
+          const normalized =
+            isSoloGame && isPreferirestiCard(c)
+              ? { ...c, options: c.options.slice(0, 2) }
+              : c;
+          if (!mergedById.has(normalized.id)) mergedById.set(normalized.id, normalized);
         }
         cards = pickPassCards(
           [...mergedById.values()],
@@ -685,8 +790,39 @@ export default function PassAndPlayApp() {
     addSeenDilemmaIds(cards.map((c) => c.id));
     setLoadingDeck(false);
     unlockAudio();
-    dispatch({ type: 'START_GAME', mode: selectedMode, players: effectivePlayers, cards });
+    dispatch({
+      type: 'START_GAME',
+      mode: selectedMode,
+      players: effectivePlayers,
+      cards,
+      cruciverbaMode,
+      soloFast: isSoloGame ? soloFast : false,
+    });
   };
+
+  const renderCruciverbaModeToggle = () => (
+    <div style={{ marginTop: '0.35rem' }}>
+      <div className={styles.sectionLabel}>Modalità Cruciverba</div>
+      <div className={styles.segmentGrid2} role="group" aria-label="Modalità Cruciverba">
+        <button
+          type="button"
+          aria-pressed={cruciverbaMode === 'indizi'}
+          className={`${styles.segmentBtn} ${cruciverbaMode === 'indizi' ? styles.segmentBtnActive : ''}`}
+          onClick={() => setCruciverbaMode('indizi')}
+        >
+          📝 Con indizi
+        </button>
+        <button
+          type="button"
+          aria-pressed={cruciverbaMode === 'scelte'}
+          className={`${styles.segmentBtn} ${cruciverbaMode === 'scelte' ? styles.segmentBtnActive : ''}`}
+          onClick={() => setCruciverbaMode('scelte')}
+        >
+          🎯 4 scelte
+        </button>
+      </div>
+    </div>
+  );
 
   const currentCard = getCurrentCard(state);
   const currentPlayer = getCurrentTurnPlayer(state);
@@ -695,7 +831,10 @@ export default function PassAndPlayApp() {
   const playerAvatar = (id: string) => state.players.find((p) => p.id === id)?.avatar ?? '🎲';
   const nextInfiltratoPlayer =
     state.turnIndex + 1 < state.players.length ? state.players[state.turnIndex + 1] : null;
-  const advancedSummary = `${roundCount} round · ${FAMILIARITA_LABELS[familiarita === 'nuove_conoscenze' ? 'nuove_conoscenze' : 'vecchi_amici'].nome}${theme.trim() ? ` · "${theme.trim()}"` : ''}`;
+  const advancedSummary =
+    playMode === 'solo'
+      ? `${roundCount} round · ${soloFast ? '⚡ Veloce' : '🧭 Riflessione'}${theme.trim() ? ` · "${theme.trim()}"` : ''}`
+      : `${roundCount} round · ${FAMILIARITA_LABELS[familiarita === 'nuove_conoscenze' ? 'nuove_conoscenze' : 'vecchi_amici'].nome}${theme.trim() ? ` · "${theme.trim()}"` : ''}`;
 
   return (
     <main className={styles.page}>
@@ -720,7 +859,16 @@ export default function PassAndPlayApp() {
             <Logo size={22} />
           </div>
         ) : state.phase !== 'FINAL_AWARDS' ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {state.players.length === 1 && (
+              <Pill
+                selected={Boolean(state.soloFast)}
+                onClick={() => dispatch({ type: 'SET_SOLO_FAST', enabled: !state.soloFast })}
+                aria-label="Cambia ritmo partita da solo"
+              >
+                {state.soloFast ? '⚡ Veloce' : '🧭 Riflessione'}
+              </Pill>
+            )}
             <span className={styles.roundBadge}>
               Round {state.roundIndex + 1}/{state.cards.length}
             </span>
@@ -740,7 +888,9 @@ export default function PassAndPlayApp() {
           <div className={styles.setupHeader}>
             <h1 className={styles.title}>📱 Passa il Telefono</h1>
             <p className={styles.setupSub}>
-              Guardate gli amici, non lo schermo · Un lettore a turno, esiti con 1 tocco
+              {playMode === 'solo'
+                ? 'Dilemmi strani e personali solo per te · 2 scelte secche, ritmo rapido'
+                : 'Guardate gli amici, non lo schermo · Un lettore a turno, esiti con 1 tocco'}
             </p>
           </div>
 
@@ -756,6 +906,7 @@ export default function PassAndPlayApp() {
                     className={`${styles.segmentBtn} ${playMode === 'solo' ? styles.segmentBtnActive : ''}`}
                     onClick={() => {
                       setPlayMode('solo');
+                      setCruciverbaMode('scelte');
                       if (minPlayersForMode(selectedMode) > 1) {
                         setSelectedMode('mix');
                       }
@@ -767,7 +918,10 @@ export default function PassAndPlayApp() {
                     type="button"
                     aria-pressed={playMode === 'gruppo'}
                     className={`${styles.segmentBtn} ${playMode === 'gruppo' ? styles.segmentBtnActive : ''}`}
-                    onClick={() => setPlayMode('gruppo')}
+                    onClick={() => {
+                      setPlayMode('gruppo');
+                      setCruciverbaMode('indizi');
+                    }}
                   >
                     👥 In gruppo
                   </button>
@@ -871,7 +1025,9 @@ export default function PassAndPlayApp() {
                         </span>
                       </div>
                       <span style={{ fontSize: '0.78rem', opacity: 0.88, lineHeight: 1.35 }}>
-                        Ogni round un giochino diverso a sorpresa senza timer!
+                        {playMode === 'solo'
+                          ? '8 giochi per te: dilemmi strani, Ghigliottina, Quanto Vale?, Vero o Bufala e Cruciverba!'
+                          : '12 giochi a sorpresa ogni round (inclusi Ghigliottina, Quanto Vale?, Bufale e Parola Vietata)!'}
                       </span>
                     </button>
 
@@ -913,9 +1069,10 @@ export default function PassAndPlayApp() {
                         </div>
                         {selectedMode !== 'mix' && (
                           <p className={styles.modeDescBox}>
-                            {MODE_OPTIONS.find((m) => m.id === selectedMode)?.desc}
+                            {getModeDescription(selectedMode, playMode)}
                           </p>
                         )}
+                        {selectedMode === 'cruciverba' && renderCruciverbaModeToggle()}
                       </>
                     )}
                   </>
@@ -1066,23 +1223,27 @@ export default function PassAndPlayApp() {
                       </div>
                     )}
 
-                    <div>
-                      <div className={styles.sectionLabel}>Con chi giochi?</div>
-                      <div className={styles.segmentGrid2}>
-                        {FAMILIARITA_VALUES.map((fam) => (
-                          <button
-                            key={fam}
-                            type="button"
-                            className={`${styles.segmentBtn} ${familiarita === fam ? styles.segmentBtnActive : ''}`}
-                            onClick={() => setFamiliarita(fam)}
-                          >
-                            {FAMILIARITA_LABELS[fam].nome}
-                          </button>
-                        ))}
+                    {playMode === 'gruppo' && (
+                      <div>
+                        <div className={styles.sectionLabel}>Con chi giochi?</div>
+                        <div className={styles.segmentGrid2}>
+                          {FAMILIARITA_VALUES.map((fam) => (
+                            <button
+                              key={fam}
+                              type="button"
+                              className={`${styles.segmentBtn} ${familiarita === fam ? styles.segmentBtnActive : ''}`}
+                              onClick={() => setFamiliarita(fam)}
+                            >
+                              {FAMILIARITA_LABELS[fam].nome}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
-                    {(selectedMode === 'coppie' || selectedMode === 'mix') && (
+                    {selectedMode === 'mix' && renderCruciverbaModeToggle()}
+
+                    {playMode === 'gruppo' && (selectedMode === 'coppie' || selectedMode === 'mix') && (
                       <div>
                         <div className={styles.sectionLabel}>Intensità Coppie</div>
                         <div className={styles.segmentGrid3}>
@@ -1111,7 +1272,7 @@ export default function PassAndPlayApp() {
                       </div>
                     )}
 
-                    {(selectedMode === 'infiltrato' || selectedMode === 'mix') && (
+                    {playMode === 'gruppo' && (selectedMode === 'infiltrato' || selectedMode === 'mix') && (
                       <div>
                         <div className={styles.sectionLabel}>Tono Infiltrato</div>
                         <div className={styles.segmentGrid3}>
@@ -1163,21 +1324,46 @@ export default function PassAndPlayApp() {
 
             <div className={styles.setupCol}>
               {playMode === 'solo' ? (
-                <div>
-                  <label htmlFor="pass-solo-name" className={styles.sectionLabel} style={{ display: 'block' }}>
-                    2. Chi gioca? (Da solo · senza timer)
-                  </label>
-                  <TextInput
-                    id="pass-solo-name"
-                    name="soloName"
-                    style={{ width: '100%' }}
-                    value={soloName}
-                    onChange={(e) => setSoloName(e.target.value)}
-                    placeholder="Il tuo nome..."
-                    maxLength={18}
-                  />
-                  <p style={{ margin: '0.5rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                    Scegli d’impulso senza fretta: a fine partita riceverai il tuo profilo personalizzato.
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <div>
+                    <label htmlFor="pass-solo-name" className={styles.sectionLabel} style={{ display: 'block' }}>
+                      2. Chi gioca? (Da solo · senza timer)
+                    </label>
+                    <TextInput
+                      id="pass-solo-name"
+                      name="soloName"
+                      style={{ width: '100%' }}
+                      value={soloName}
+                      onChange={(e) => setSoloName(e.target.value)}
+                      placeholder="Il tuo nome..."
+                      maxLength={18}
+                    />
+                  </div>
+                  <div>
+                    <div className={styles.sectionLabel}>Ritmo da solo</div>
+                    <div className={styles.segmentGrid2} role="group" aria-label="Ritmo da solo">
+                      <button
+                        type="button"
+                        aria-pressed={soloFast}
+                        className={`${styles.segmentBtn} ${soloFast ? styles.segmentBtnActive : ''}`}
+                        onClick={() => setSoloFast(true)}
+                      >
+                        ⚡ Veloce (1 tocco)
+                      </button>
+                      <button
+                        type="button"
+                        aria-pressed={!soloFast}
+                        className={`${styles.segmentBtn} ${!soloFast ? styles.segmentBtnActive : ''}`}
+                        onClick={() => setSoloFast(false)}
+                      >
+                        🧭 Con riflessione
+                      </button>
+                    </div>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    {soloFast
+                      ? 'Ritmo lampo: 1 tocco e passi subito alla domanda successiva; profilo finale alla fine.'
+                      : 'Scegli con calma e confrontati con la Bussola del Mondo e l’Avvocato del Diavolo ad ogni round.'}
                   </p>
                 </div>
               ) : (
@@ -1344,7 +1530,7 @@ export default function PassAndPlayApp() {
         <div
           className={`${styles.stage} ${state.phase === 'FINAL_AWARDS' ? styles.stageTop : ''}`}
         >
-          {/* PRIVACY CURTAIN (SOLO L'INFILTRATO) */}
+          {/* PRIVACY CURTAIN (L'INFILTRATO & PAROLA VIETATA) */}
           {state.phase === 'PASS_CURTAIN' && currentPlayer && (
             <Card glow="accent" className={styles.curtain}>
               <div className={styles.curtainAvatar} aria-hidden="true">
@@ -1353,7 +1539,9 @@ export default function PassAndPlayApp() {
               <p className={styles.subtitle}>Passa il telefono a</p>
               <h2 className={styles.curtainName}>{currentPlayer.name}</h2>
               <p className={styles.subtitle}>
-                Assicurati che nessun altro guardi lo schermo ({state.turnIndex + 1}/{state.players.length})
+                {state.secretKind === 'intesa_speaker'
+                  ? `Nessun altro deve guardare: solo ${currentPlayer.name} vedrà la parola segreta!`
+                  : `Assicurati che nessun altro guardi lo schermo (${state.turnIndex + 1}/${state.players.length})`}
               </p>
               <Button
                 variant="primary"
@@ -1363,7 +1551,9 @@ export default function PassAndPlayApp() {
                   dispatch({ type: 'UNLOCK_TURN' });
                 }}
               >
-                Sono {currentPlayer.name} · Leggi domanda 👀
+                {state.secretKind === 'intesa_speaker'
+                  ? `Sono ${currentPlayer.name} · Vedi parola segreta 👀`
+                  : `Sono ${currentPlayer.name} · Leggi domanda 👀`}
               </Button>
             </Card>
           )}
@@ -1400,10 +1590,31 @@ export default function PassAndPlayApp() {
           {/* DEBATE / LIVE TABLE PHASE */}
           {state.phase === 'DEBATE' && currentCard && (
             <Card glow="accent" className={styles.card}>
-              {readerPlayer && (
-                <div className={styles.readerPill}>
-                  <span>📱 Legge {readerPlayer.avatar}</span>
-                  <span>{readerPlayer.name}</span>
+              {readerPlayer &&
+                state.players.length > 1 &&
+                effectivePassCardMode(state.mode, currentCard) !== 'intesa' && (
+                  <div className={styles.readerPill}>
+                    <span>📱 Legge {readerPlayer.avatar}</span>
+                    <span>{readerPlayer.name}</span>
+                  </div>
+                )}
+
+              {state.players.length === 1 && state.lastSoloToast && (
+                <div
+                  data-testid="solo-last-toast"
+                  style={{
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    padding: '0.35rem 0.7rem',
+                    borderRadius: '999px',
+                    background: 'rgba(251, 191, 36, 0.14)',
+                    border: '1px solid rgba(251, 191, 36, 0.35)',
+                    color: '#fde68a',
+                    textAlign: 'center',
+                    alignSelf: 'center',
+                  }}
+                >
+                  🧭 Scelta precedente: «{state.lastSoloToast.chosenLabel}» · {state.lastSoloToast.crowdPct}% come te
                 </div>
               )}
 
@@ -1478,20 +1689,22 @@ export default function PassAndPlayApp() {
                         : 'Scegli quale preferiresti:'}
                     </p>
                     <div className={styles.optionsStack}>
-                      {currentCard.options.slice(0, 4).map((opt, idx) => {
-                        const choice = (['A', 'B', 'C', 'D'] as const)[idx];
-                        return (
-                          <VoteOption
-                            key={choice}
-                            faction={idx % 2 === 0 ? 'a' : 'b'}
-                            label={opt}
-                            onClick={() => {
-                              vibrateTick();
-                              dispatch({ type: 'RESOLVE_PREFERIRESTI', choice });
-                            }}
-                          />
-                        );
-                      })}
+                      {currentCard.options
+                        .slice(0, state.players.length === 1 ? 2 : 4)
+                        .map((opt, idx) => {
+                          const choice = (['A', 'B', 'C', 'D'] as const)[idx];
+                          return (
+                            <VoteOption
+                              key={choice}
+                              faction={idx % 2 === 0 ? 'a' : 'b'}
+                              label={opt}
+                              onClick={() => {
+                                vibrateTick();
+                                dispatch({ type: 'RESOLVE_PREFERIRESTI', choice });
+                              }}
+                            />
+                          );
+                        })}
                     </div>
                   </>
                 )}
@@ -1762,6 +1975,13 @@ export default function PassAndPlayApp() {
                         <span>🧩 {cs.board.theme}</span>
                       </div>
 
+                      <CruciverbaGrid
+                        state={toCruciverbaGridState(cs)}
+                        selectedWordId={targetWord?.id}
+                        onSelectWord={(wId) => dispatch({ type: 'CRUCIVERBA_SELECT_WORD', wordId: wId })}
+                        size="sm"
+                      />
+
                       <div className={styles.wordPillsRow}>
                         {cs.board.words.map((w) => {
                           const st = cs.wordStatus[w.id];
@@ -1790,12 +2010,21 @@ export default function PassAndPlayApp() {
 
                       {targetWord && (
                         <>
-                          <p className={styles.liveCue}>
-                            {state.players.length === 1
-                              ? `Leggi l’indizio e trova la parola (${targetWord.word.length} lettere):`
-                              : `Leggi l’indizio al tavolo (${targetWord.word.length} lettere):`}
-                          </p>
-                          <h2 className={styles.promptHero}>{targetWord.clue}</h2>
+                          {cs.mode === 'scelte' ? (
+                            <p className={styles.liveCue}>
+                              🎯 Scegli la parola giusta ({targetWord.number}
+                              {targetWord.direction === 'H' ? '→' : '↓'} · {targetWord.word.length} lettere):
+                            </p>
+                          ) : (
+                            <>
+                              <p className={styles.liveCue}>
+                                {state.players.length === 1
+                                  ? `Leggi l’indizio e trova la parola (${targetWord.word.length} lettere):`
+                                  : `Leggi l’indizio al tavolo (${targetWord.word.length} lettere):`}
+                              </p>
+                              <h2 className={styles.promptHero}>{targetWord.clue}</h2>
+                            </>
+                          )}
                           <div className={styles.letterSlotsRow} aria-label="Lettere sbloccate">
                             {slots.map((ch, idx) => (
                               <span
@@ -1811,7 +2040,77 @@ export default function PassAndPlayApp() {
 
                       {cs.lastFeedback && <Alert>{cs.lastFeedback}</Alert>}
 
-                      {!pickingCruciverbaSolver ? (
+                      {cs.mode === 'scelte' && targetWord ? (
+                        <>
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                              gap: '0.5rem',
+                              width: '100%',
+                            }}
+                            role="group"
+                            aria-label="Scelte parola cruciverba"
+                          >
+                            {(
+                              cs.wordChoices[targetWord.id] ??
+                              targetWord.choices ??
+                              [targetWord.word]
+                            ).map((choice) => {
+                              const wrongSet = new Set(cs.wrongChoices[targetWord.id] ?? []);
+                              const isWrong = wrongSet.has(choice.toUpperCase());
+                              return (
+                                <button
+                                  key={choice}
+                                  type="button"
+                                  disabled={isWrong || cs.wordStatus[targetWord.id] !== 'pending'}
+                                  className={styles.segmentBtn}
+                                  style={
+                                    isWrong
+                                      ? {
+                                          opacity: 0.48,
+                                          borderColor: 'rgba(244, 63, 94, 0.55)',
+                                          background: 'rgba(244, 63, 94, 0.14)',
+                                          textDecoration: 'line-through',
+                                          cursor: 'not-allowed',
+                                        }
+                                      : undefined
+                                  }
+                                  onClick={() => {
+                                    vibrateTick();
+                                    dispatch({
+                                      type: 'CRUCIVERBA_GUESS_CHOICE',
+                                      wordId: targetWord.id,
+                                      choice,
+                                      solverId:
+                                        state.players.length === 1 ? state.players[0].id : null,
+                                    });
+                                  }}
+                                >
+                                  {choice}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className={styles.verdictGrid2}>
+                            <Button
+                              variant="ghost"
+                              onClick={() => {
+                                vibrateTick();
+                                dispatch({ type: 'CRUCIVERBA_PASS', reason: 'hint' });
+                              }}
+                            >
+                              💡 1 lettera
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              onClick={() => dispatch({ type: 'CRUCIVERBA_END_NOW' })}
+                            >
+                              Svela tutto
+                            </Button>
+                          </div>
+                        </>
+                      ) : !pickingCruciverbaSolver ? (
                         <>
                           <Button
                             variant="primary"
@@ -2002,6 +2301,396 @@ export default function PassAndPlayApp() {
                     </>
                   );
                 })()}
+
+              {/* 🔗 LA GHIGLIOTTINA */}
+              {effectivePassCardMode(state.mode, currentCard) === 'ghigliottina' &&
+                isGhigliottinaCard(currentCard) && (
+                  <>
+                    <span className={styles.twistBadge}>🔗 LA GHIGLIOTTINA</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', width: '100%' }}>
+                      {currentCard.clues.map((clue) => (
+                        <div
+                          key={clue}
+                          style={{
+                            padding: '0.55rem 0.9rem',
+                            borderRadius: '10px',
+                            background: 'rgba(15, 23, 42, 0.72)',
+                            border: '1px solid rgba(251, 191, 36, 0.35)',
+                            fontSize: '1.1rem',
+                            fontWeight: 900,
+                            letterSpacing: '0.06em',
+                            textAlign: 'center',
+                            color: '#fde68a',
+                          }}
+                        >
+                          {clue}
+                        </div>
+                      ))}
+                    </div>
+
+                    {state.players.length === 1 ? (
+                      <>
+                        <p className={styles.liveCue}>
+                          Quale parola lega tutti e 5 gli indizi? Scegli tra 4 o scrivila:
+                        </p>
+                        <div className={styles.verdictGrid2}>
+                          {(state.ghigliottinaState?.shuffledChoices ?? currentCard.choices).map((choice) => (
+                            <Button
+                              key={choice}
+                              variant="ghost"
+                              onClick={() => {
+                                vibrateTick();
+                                dispatch({ type: 'RESOLVE_GHIGLIOTTINA', guess: choice });
+                              }}
+                            >
+                              {choice}
+                            </Button>
+                          ))}
+                        </div>
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            if (!ghigliottinaInput.trim()) return;
+                            vibrateTick();
+                            dispatch({ type: 'RESOLVE_GHIGLIOTTINA', guess: ghigliottinaInput });
+                          }}
+                          style={{ display: 'flex', gap: '0.5rem', width: '100%' }}
+                        >
+                          <TextInput
+                            id="pass-ghigliottina-input"
+                            name="ghigliottinaGuess"
+                            value={ghigliottinaInput}
+                            onChange={(e) => setGhigliottinaInput(e.target.value)}
+                            placeholder="Oppure scrivi la parola..."
+                            style={{ width: '100%' }}
+                          />
+                          <Button type="submit" variant="primary" disabled={!ghigliottinaInput.trim()}>
+                            Invia
+                          </Button>
+                        </form>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="ghost"
+                          onClick={() => setGhigliottinaShowChoices((v) => !v)}
+                        >
+                          {ghigliottinaShowChoices ? 'Nascondi le 4 opzioni ▲' : 'Mostra le 4 opzioni aiuto ▼'}
+                        </Button>
+                        {ghigliottinaShowChoices && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', justifyContent: 'center' }}>
+                            {(state.ghigliottinaState?.shuffledChoices ?? currentCard.choices).map((c) => (
+                              <span
+                                key={c}
+                                style={{
+                                  padding: '0.35rem 0.75rem',
+                                  borderRadius: '999px',
+                                  background: 'rgba(255,255,255,0.08)',
+                                  border: '1px solid rgba(255,255,255,0.2)',
+                                  fontWeight: 800,
+                                  fontSize: '0.88rem',
+                                }}
+                              >
+                                {c}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <p className={styles.liveCue}>Chi ha indovinato al volo la parola?</p>
+                        <div className={styles.verdictGrid2}>
+                          {state.players.map((p) => (
+                            <Button
+                              key={p.id}
+                              variant="primary"
+                              onClick={() => {
+                                vibrateTick();
+                                dispatch({ type: 'RESOLVE_GHIGLIOTTINA', winnerId: p.id });
+                              }}
+                            >
+                              {p.avatar} {p.name}
+                            </Button>
+                          ))}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            vibrateTick();
+                            dispatch({ type: 'RESOLVE_GHIGLIOTTINA', winnerId: null });
+                          }}
+                        >
+                          👀 Svela parola (nessuno)
+                        </Button>
+                      </>
+                    )}
+                  </>
+                )}
+
+              {/* 💰 QUANTO VALE? (STIMA) */}
+              {effectivePassCardMode(state.mode, currentCard) === 'stima' &&
+                isStimaCard(currentCard) && (
+                  <>
+                    <span className={styles.twistBadge}>💰 QUANTO VALE?</span>
+                    <h2 className={styles.promptHero}>{currentCard.prompt}</h2>
+                    {state.players.length === 1 ? (
+                      <>
+                        <div
+                          style={{
+                            fontSize: '2.1rem',
+                            fontWeight: 900,
+                            color: '#fbbf24',
+                            textAlign: 'center',
+                          }}
+                        >
+                          {stimaValue}{' '}
+                          <span style={{ fontSize: '1rem', opacity: 0.8 }}>{currentCard.unit}</span>
+                        </div>
+                        <input
+                          type="range"
+                          aria-label="La tua stima"
+                          min={currentCard.min}
+                          max={currentCard.max}
+                          step={currentCard.step}
+                          value={stimaValue}
+                          onChange={(e) => setStimaValue(Number(e.target.value))}
+                          style={{ width: '100%', accentColor: '#fbbf24' }}
+                        />
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            width: '100%',
+                            fontSize: '0.78rem',
+                            color: 'var(--text-muted)',
+                          }}
+                        >
+                          <span>
+                            {currentCard.min} {currentCard.unit}
+                          </span>
+                          <span>
+                            {currentCard.max} {currentCard.unit}
+                          </span>
+                        </div>
+                        <Button
+                          variant="primary"
+                          size="lg"
+                          onClick={() => {
+                            vibrateTick();
+                            dispatch({ type: 'RESOLVE_STIMA', soloGuess: stimaValue });
+                          }}
+                        >
+                          Conferma stima 🎯
+                        </Button>
+                      </>
+                    ) : !stimaGroupRevealed ? (
+                      <>
+                        <p className={styles.liveCue}>
+                          Scala {currentCard.min}–{currentCard.max} {currentCard.unit}. Ognuno dica la propria stima ad alta voce!
+                        </p>
+                        <Button
+                          variant="primary"
+                          size="lg"
+                          onClick={() => {
+                            vibrateTick();
+                            setStimaGroupRevealed(true);
+                          }}
+                        >
+                          👀 Svela risposta esatta
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <div
+                          style={{
+                            fontSize: '2.2rem',
+                            fontWeight: 900,
+                            color: '#34d399',
+                            textAlign: 'center',
+                          }}
+                        >
+                          {currentCard.answer} {currentCard.unit}
+                        </div>
+                        <p className={styles.subtitle}>{currentCard.funFact}</p>
+                        <p className={styles.liveCue}>Chi ci è andato più vicino?</p>
+                        <div className={styles.verdictGrid2}>
+                          {state.players.map((p) => (
+                            <Button
+                              key={p.id}
+                              variant="primary"
+                              onClick={() => {
+                                vibrateTick();
+                                dispatch({ type: 'RESOLVE_STIMA', winnerId: p.id });
+                              }}
+                            >
+                              🏆 {p.name}
+                            </Button>
+                          ))}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            vibrateTick();
+                            dispatch({ type: 'RESOLVE_STIMA', winnerId: null });
+                          }}
+                        >
+                          Nessuno vicino
+                        </Button>
+                      </>
+                    )}
+                  </>
+                )}
+
+              {/* 🎭 VERO O BUFALA? */}
+              {effectivePassCardMode(state.mode, currentCard) === 'bufala' &&
+                isBufalaCard(currentCard) && (
+                  <>
+                    <span className={styles.twistBadge}>
+                      🎭 VERO O BUFALA? · {currentCard.category}
+                    </span>
+                    <h2 className={styles.promptHero}>{currentCard.statement}</h2>
+                    <p className={styles.liveCue}>
+                      {state.players.length === 1
+                        ? 'Fatto incredibile o leggenda metropolitana?'
+                        : 'Che verdetto dà il tavolo a maggioranza?'}
+                    </p>
+                    <div className={styles.verdictGrid2}>
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        onClick={() => {
+                          vibrateTick();
+                          dispatch({ type: 'RESOLVE_BUFALA', guessIsTrue: true });
+                        }}
+                      >
+                        ✅ È VERO!
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        onClick={() => {
+                          vibrateTick();
+                          dispatch({ type: 'RESOLVE_BUFALA', guessIsTrue: false });
+                        }}
+                      >
+                        🤡 È UNA BUFALA!
+                      </Button>
+                    </div>
+                    {state.players.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          vibrateTick();
+                          dispatch({ type: 'RESOLVE_BUFALA', guessIsTrue: null });
+                        }}
+                      >
+                        ⚖️ Tavolo diviso
+                      </Button>
+                    )}
+                  </>
+                )}
+
+              {/* 🚫 PAROLA VIETATA (INTESA / TABOO) */}
+              {effectivePassCardMode(state.mode, currentCard) === 'intesa' &&
+                isIntesaCard(currentCard) &&
+                (() => {
+                  const speakerId = state.intesaState?.speakerId ?? state.players[0]?.id ?? '';
+                  const speaker = state.players.find((p) => p.id === speakerId);
+                  const guessers = state.players.filter((p) => p.id !== speakerId);
+                  return (
+                    <>
+                      <span className={styles.twistBadge}>
+                        🚫 PAROLA VIETATA · {currentCard.category}
+                      </span>
+                      <div className={styles.readerPill}>
+                        <span>🎙️ Descrive {speaker?.avatar}</span>
+                        <span>{speaker?.name ?? 'Giocatore'}</span>
+                      </div>
+                      <div
+                        style={{
+                          padding: '1rem 1.2rem',
+                          borderRadius: '14px',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '2px solid rgba(251, 191, 36, 0.5)',
+                          textAlign: 'center',
+                          width: '100%',
+                        }}
+                      >
+                        <div style={{ fontSize: '0.75rem', opacity: 0.7, textTransform: 'uppercase' }}>
+                          Parola da far indovinare
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '2rem',
+                            fontWeight: 900,
+                            color: '#fbbf24',
+                            letterSpacing: '0.04em',
+                            marginTop: '0.2rem',
+                          }}
+                        >
+                          {currentCard.word}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', justifyContent: 'center' }}>
+                        {currentCard.forbidden.map((fw) => (
+                          <span
+                            key={fw}
+                            style={{
+                              padding: '0.35rem 0.7rem',
+                              borderRadius: '999px',
+                              background: 'rgba(244, 63, 94, 0.2)',
+                              border: '1px solid rgba(244, 63, 94, 0.45)',
+                              color: '#fda4af',
+                              fontWeight: 800,
+                              fontSize: '0.88rem',
+                            }}
+                          >
+                            🚫 {fw}
+                          </span>
+                        ))}
+                      </div>
+                      <p className={styles.liveCue}>
+                        Descrivi a voce senza dire le parole vietate! Chi l’ha indovinata?
+                      </p>
+                      <div className={styles.verdictGrid2}>
+                        {guessers.map((g) => (
+                          <Button
+                            key={g.id}
+                            variant="primary"
+                            onClick={() => {
+                              vibrateTick();
+                              dispatch({
+                                type: 'RESOLVE_INTESA',
+                                outcome: 'guessed',
+                                winnerId: g.id,
+                              });
+                            }}
+                          >
+                            🎉 {g.name}
+                          </Button>
+                        ))}
+                      </div>
+                      <div className={styles.verdictGrid2}>
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            vibrateTick();
+                            dispatch({ type: 'RESOLVE_INTESA', outcome: 'taboo' });
+                          }}
+                        >
+                          🚨 Parola vietata!
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            vibrateTick();
+                            dispatch({ type: 'RESOLVE_INTESA', outcome: 'skipped' });
+                          }}
+                        >
+                          ⏭️ Passa
+                        </Button>
+                      </div>
+                    </>
+                  );
+                })()}
             </Card>
           )}
 
@@ -2067,7 +2756,9 @@ export default function PassAndPlayApp() {
 
                       {isPreferirestiCard(currentCard) && state.roundOutcome.crowdSplitPcts ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                          {currentCard.options.slice(0, 4).map((opt, idx) => {
+                          {currentCard.options
+                            .slice(0, state.players.length === 1 ? 2 : 4)
+                            .map((opt, idx) => {
                             const pct = state.roundOutcome?.crowdSplitPcts?.[idx] ?? 25;
                             const isMine = state.roundOutcome?.chosenOptionIndex === idx;
                             return (
@@ -2373,6 +3064,88 @@ export default function PassAndPlayApp() {
                       {currentCard.penalty}
                     </div>
                   )}
+                </>
+              )}
+
+              {state.roundOutcome.kind === 'ghigliottina' && isGhigliottinaCard(currentCard) && (
+                <>
+                  <span className={styles.twistBadge}>🔗 LA GHIGLIOTTINA</span>
+                  <h2 className={styles.promptHero} style={{ color: '#fbbf24' }}>
+                    {currentCard.answer}
+                  </h2>
+                  <p className={styles.liveCue}>{state.roundOutcome.liveVerdictLabel}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', width: '100%' }}>
+                    {currentCard.clues.map((clue, i) => (
+                      <div key={clue} className={styles.spuntiBox} style={{ textAlign: 'left' }}>
+                        <strong>{clue}</strong>: {currentCard.connections[i]}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {state.roundOutcome.kind === 'stima' && isStimaCard(currentCard) && (
+                <>
+                  <span className={styles.twistBadge}>💰 QUANTO VALE?</span>
+                  <h2 className={styles.promptHero} style={{ color: '#34d399' }}>
+                    {currentCard.answer} {currentCard.unit}
+                  </h2>
+                  <p className={styles.liveCue}>
+                    {state.roundOutcome.soloMode && state.roundOutcome.stimaSoloGuess !== undefined
+                      ? `La tua stima: ${state.roundOutcome.stimaSoloGuess} ${currentCard.unit} · ${
+                          state.roundOutcome.stimaExact
+                            ? '🎯 Centro Perfetto!'
+                            : `Precisione ${state.roundOutcome.stimaPrecisionPct ?? 0}%`
+                        }`
+                      : state.roundOutcome.liveVerdictLabel}
+                  </p>
+                  <div className={styles.spuntiBox} style={{ textAlign: 'left' }}>
+                    💡 {currentCard.funFact}
+                  </div>
+                </>
+              )}
+
+              {state.roundOutcome.kind === 'bufala' && isBufalaCard(currentCard) && (
+                <>
+                  <span className={styles.twistBadge}>🎭 VERO O BUFALA?</span>
+                  <h2
+                    className={styles.promptHero}
+                    style={{ color: currentCard.isTrue ? '#34d399' : '#fda4af' }}
+                  >
+                    {currentCard.isTrue ? '✅ ERA VERO!' : '🤡 ERA UNA BUFALA!'}
+                  </h2>
+                  <p className={styles.liveCue}>{state.roundOutcome.liveVerdictLabel}</p>
+                  <div className={styles.spuntiBox} style={{ textAlign: 'left' }}>
+                    {currentCard.explanation}
+                  </div>
+                </>
+              )}
+
+              {state.roundOutcome.kind === 'intesa' && isIntesaCard(currentCard) && (
+                <>
+                  <span className={styles.twistBadge}>🚫 PAROLA VIETATA</span>
+                  <h2 className={styles.promptHero} style={{ color: '#fbbf24' }}>
+                    {currentCard.word}
+                  </h2>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', justifyContent: 'center' }}>
+                    {currentCard.forbidden.map((fw) => (
+                      <span
+                        key={fw}
+                        style={{
+                          padding: '0.3rem 0.65rem',
+                          borderRadius: '999px',
+                          background: 'rgba(244, 63, 94, 0.2)',
+                          border: '1px solid rgba(244, 63, 94, 0.45)',
+                          color: '#fda4af',
+                          fontWeight: 700,
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        🚫 {fw}
+                      </span>
+                    ))}
+                  </div>
+                  <p className={styles.liveCue}>{state.roundOutcome.liveVerdictLabel}</p>
                 </>
               )}
 

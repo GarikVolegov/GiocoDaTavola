@@ -4,6 +4,12 @@
 // true secrecy is needed (L'Infiltrato secret question).
 
 import type {
+  CruciverbaMode,
+  CruciverbaCellPayload,
+  CruciverbaStatePayload,
+  CruciverbaWordPayload,
+} from '../shared/events';
+import type {
   PassMode,
   PassCard,
   PassFlashCard,
@@ -13,7 +19,13 @@ import type {
   PassCruciverbaCard,
   PassTribunaleCard,
   PassPreferirestiCard,
+  PassGhigliottinaCard,
+  PassStimaCard,
+  PassBufalaCard,
+  PassIntesaCard,
 } from './fallbackDeck';
+
+export type { CruciverbaMode };
 
 export interface PassPlayer {
   id: string;
@@ -29,7 +41,15 @@ export type PassPhase =
   | 'ROUND_RESULT'
   | 'FINAL_AWARDS';
 
-export type SecretActionKind = 'infiltrato_read';
+export type SecretActionKind = 'infiltrato_read' | 'intesa_speaker';
+
+export interface GhigliottinaPassState {
+  shuffledChoices: string[];
+}
+
+export interface IntesaPassState {
+  speakerId: string;
+}
 
 export interface PassCouplePair {
   id: string;
@@ -62,11 +82,14 @@ export interface CoppiePassState {
 }
 
 export interface CruciverbaPassState {
+  mode: CruciverbaMode;
   board: PassCruciverbaCard;
   turnOrder: string[];
   turnIndex: number;
   activeWordId: string;
   wordStatus: Record<string, 'pending' | 'solved' | 'revealed'>;
+  wordChoices: Record<string, string[]>;
+  wrongChoices: Record<string, string[]>;
   solvedBy: Record<string, string>;
   revealedCells: string[];
   turnsTaken: number;
@@ -97,7 +120,11 @@ export interface RoundOutcome {
     | 'coppie_align'
     | 'coppie_challenge'
     | 'cruciverba'
-    | 'tribunale';
+    | 'tribunale'
+    | 'ghigliottina'
+    | 'stima'
+    | 'bufala'
+    | 'intesa';
   countA: number;
   countB: number;
   liveVerdictLabel?: string;
@@ -120,6 +147,18 @@ export interface RoundOutcome {
   tribunaleLoserId?: string | null;
   tribunaleAccusaVotes?: number;
   tribunaleDifesaVotes?: number;
+  ghigliottinaGuess?: string;
+  ghigliottinaCorrect?: boolean;
+  ghigliottinaWinnerId?: string | null;
+  stimaSoloGuess?: number;
+  stimaPrecisionPct?: number;
+  stimaExact?: boolean;
+  stimaWinnerId?: string | null;
+  bufalaGuessIsTrue?: boolean | null;
+  bufalaCorrect?: boolean;
+  intesaOutcome?: 'guessed' | 'taboo' | 'skipped';
+  intesaSpeakerId?: string;
+  intesaWinnerId?: string | null;
   chosenSide?: 'A' | 'B';
   chosenOptionIndex?: number;
   crowdPctForChoice?: number;
@@ -137,6 +176,7 @@ export interface PlayerPassStats {
   infiltratoCatches: number;
   coopWins: number;
   tribunaleWins?: number;
+  tvQuizWins?: number;
   rounds?: number;
   majorityCount?: number;
   steadyCount?: number;
@@ -235,10 +275,15 @@ export interface PassState {
   secretKind: SecretActionKind;
   turnIndex: number;
   infiltratoId: string | null;
+  cruciverbaMode?: CruciverbaMode;
+  soloFast?: boolean;
+  lastSoloToast?: { chosenLabel: string; crowdPct: number } | null;
   classicoState: ClassicoPassState | null;
   coppieState: CoppiePassState | null;
   cruciverbaState: CruciverbaPassState | null;
   tribunaleState: TribunalePassState | null;
+  ghigliottinaState: GhigliottinaPassState | null;
+  intesaState: IntesaPassState | null;
   roundOutcome: RoundOutcome | null;
   stats: Record<string, PlayerPassStats>;
   debateDurationSec: number;
@@ -247,7 +292,16 @@ export interface PassState {
 }
 
 export type PassAction =
-  | { type: 'START_GAME'; mode: PassMode; players: PassPlayer[]; cards: PassCard[]; rng?: () => number }
+  | {
+      type: 'START_GAME';
+      mode: PassMode;
+      players: PassPlayer[];
+      cards: PassCard[];
+      rng?: () => number;
+      cruciverbaMode?: CruciverbaMode;
+      soloFast?: boolean;
+    }
+  | { type: 'SET_SOLO_FAST'; enabled: boolean }
   | { type: 'UNLOCK_TURN' }
   | { type: 'ACK_SECRET' }
   | { type: 'RESOLVE_FLASH'; result: 'A' | 'B' | 'SPLIT' | 'UNANIMOUS'; rng?: () => number }
@@ -256,15 +310,20 @@ export type PassAction =
   | { type: 'SOLO_FLIP_AFTER_OBJECTION' }
   | { type: 'RESOLVE_INFILTRATO_ACCUSATION'; accusedId: string | null }
   | { type: 'RESOLVE_GOGNA'; targetId: string | null }
-  | { type: 'RESOLVE_DIGNITA'; outcome: 'YES' | 'SPLIT' | 'NO' }
+  | { type: 'RESOLVE_DIGNITA'; outcome: 'YES' | 'SPLIT' | 'NO'; rng?: () => number }
   | { type: 'RESOLVE_COPPIE_ALIGN'; matchedCoupleIds: string[] }
   | { type: 'RESOLVE_COPPIE_CHALLENGE'; completed: boolean; rng?: () => number }
   | { type: 'CRUCIVERBA_SELECT_WORD'; wordId: string }
   | { type: 'CRUCIVERBA_SOLVE_WORD'; wordId: string; solverId: string | null }
+  | { type: 'CRUCIVERBA_GUESS_CHOICE'; wordId: string; choice: string; solverId?: string | null }
   | { type: 'CRUCIVERBA_PASS'; reason?: 'hint' | 'timeout'; rng?: () => number }
   | { type: 'CRUCIVERBA_END_NOW' }
   | { type: 'TRIBUNALE_NEXT_SPEAKER' }
   | { type: 'TRIBUNALE_RESOLVE'; winner: 'ACCUSA' | 'DIFESA' | 'TIE' }
+  | { type: 'RESOLVE_GHIGLIOTTINA'; guess?: string; winnerId?: string | null }
+  | { type: 'RESOLVE_STIMA'; soloGuess?: number; winnerId?: string | null }
+  | { type: 'RESOLVE_BUFALA'; guessIsTrue: boolean | null }
+  | { type: 'RESOLVE_INTESA'; outcome: 'guessed' | 'taboo' | 'skipped'; winnerId?: string | null }
   | { type: 'NEXT_ROUND'; rng?: () => number }
   | { type: 'RESET_TO_SETUP' };
 
@@ -276,7 +335,7 @@ export const PASS_AVATARS = ['🦊', '🐙', '🦁', '🐸', '🦉', '🐼', '�
 
 export function minPlayersForMode(mode: PassMode): number {
   if (mode === 'infiltrato' || mode === 'tribunale') return 3;
-  if (mode === 'coppie') return 2;
+  if (mode === 'coppie' || mode === 'intesa') return 2;
   return 1;
 }
 
@@ -292,10 +351,15 @@ export function createInitialPassState(): PassState {
     secretKind: 'infiltrato_read',
     turnIndex: 0,
     infiltratoId: null,
+    cruciverbaMode: 'indizi',
+    soloFast: false,
+    lastSoloToast: null,
     classicoState: null,
     coppieState: null,
     cruciverbaState: null,
     tribunaleState: null,
+    ghigliottinaState: null,
+    intesaState: null,
     roundOutcome: null,
     stats: {},
     debateDurationSec: 0,
@@ -313,6 +377,7 @@ function emptyPlayerStats(): PlayerPassStats {
     infiltratoCatches: 0,
     coopWins: 0,
     tribunaleWins: 0,
+    tvQuizWins: 0,
     rounds: 0,
     majorityCount: 0,
     steadyCount: 0,
@@ -339,6 +404,7 @@ function readStat(stats: Record<string, PlayerPassStats>, playerId: string): Pla
     infiltratoCatches: s?.infiltratoCatches ?? 0,
     coopWins: s?.coopWins ?? 0,
     tribunaleWins: s?.tribunaleWins ?? 0,
+    tvQuizWins: s?.tvQuizWins ?? 0,
     rounds: s?.rounds ?? 0,
     majorityCount: s?.majorityCount ?? 0,
     steadyCount: s?.steadyCount ?? 0,
@@ -415,6 +481,10 @@ export function effectivePassCardMode(
   if (isCruciverbaCard(card)) return 'cruciverba';
   if (isTribunaleCard(card)) return 'tribunale';
   if (isPreferirestiCard(card)) return 'preferiresti';
+  if (isGhigliottinaCard(card)) return 'ghigliottina';
+  if (isStimaCard(card)) return 'stima';
+  if (isBufalaCard(card)) return 'bufala';
+  if (isIntesaCard(card)) return 'intesa';
   if (card.cardMode) return card.cardMode;
   return 'flash';
 }
@@ -477,17 +547,68 @@ function initPassCoppieState(
   };
 }
 
-function initPassCruciverbaState(board: PassCruciverbaCard, players: PassPlayer[]): CruciverbaPassState {
+function shuffleStringsWithRng(items: readonly string[], rng: () => number): string[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function findCruciverbaAnchorCell(board: PassCruciverbaCard): string | null {
+  const first = board.words[0];
+  if (!first) return null;
+  const otherCells = new Set<string>();
+  for (let wi = 1; wi < board.words.length; wi++) {
+    const w = board.words[wi];
+    for (let i = 0; i < w.word.length; i++) {
+      const r = w.direction === 'V' ? w.row + i : w.row;
+      const c = w.direction === 'H' ? w.col + i : w.col;
+      otherCells.add(`${r},${c}`);
+    }
+  }
+  for (let i = 0; i < first.word.length; i++) {
+    const r = first.direction === 'V' ? first.row + i : first.row;
+    const c = first.direction === 'H' ? first.col + i : first.col;
+    const key = `${r},${c}`;
+    if (otherCells.has(key)) return key;
+  }
+  return `${first.row},${first.col}`;
+}
+
+function initPassCruciverbaState(
+  board: PassCruciverbaCard,
+  players: PassPlayer[],
+  mode: CruciverbaMode = 'indizi',
+  rng: () => number = Math.random,
+): CruciverbaPassState {
   const wordStatus: Record<string, 'pending' | 'solved' | 'revealed'> = {};
-  for (const w of board.words) wordStatus[w.id] = 'pending';
+  const wordChoices: Record<string, string[]> = {};
+  for (const w of board.words) {
+    wordStatus[w.id] = 'pending';
+    const rawChoices =
+      w.choices && w.choices.length > 0
+        ? w.choices.map((c) => c.toUpperCase())
+        : [w.word.toUpperCase()];
+    wordChoices[w.id] = shuffleStringsWithRng(rawChoices, rng);
+  }
+  const revealedCells: string[] = [];
+  if (mode === 'scelte') {
+    const anchor = findCruciverbaAnchorCell(board);
+    if (anchor) revealedCells.push(anchor);
+  }
   return {
+    mode,
     board,
     turnOrder: players.map((p) => p.id),
     turnIndex: 0,
     activeWordId: board.words[0].id,
     wordStatus,
+    wordChoices,
+    wrongChoices: {},
     solvedBy: {},
-    revealedCells: [],
+    revealedCells,
     turnsTaken: 0,
     maxTurns: Math.max(board.words.length * 3, 8),
     hintsUsed: 0,
@@ -522,12 +643,15 @@ function enterCurrentRound(state: PassState, rng: () => number): PassState {
   const cardMode = effectivePassCardMode(state.mode, card);
   const baseCleared = {
     ...state,
+    secretKind: 'infiltrato_read' as SecretActionKind,
     turnIndex: 0,
     infiltratoId: null,
     classicoState: null,
     coppieState: null,
     cruciverbaState: null,
     tribunaleState: null,
+    ghigliottinaState: null,
+    intesaState: null,
     roundOutcome: null,
     debateDurationSec: debateSecondsForMode(cardMode),
   };
@@ -541,12 +665,40 @@ function enterCurrentRound(state: PassState, rng: () => number): PassState {
     };
   }
 
+  if (cardMode === 'intesa' && isIntesaCard(card)) {
+    const nPlayers = Math.max(1, state.players.length);
+    const speakerIdx = state.roundIndex % nPlayers;
+    const speakerId = state.players[speakerIdx]?.id ?? '';
+    return {
+      ...baseCleared,
+      phase: 'PASS_CURTAIN',
+      secretKind: 'intesa_speaker',
+      turnIndex: speakerIdx,
+      intesaState: { speakerId },
+    };
+  }
+
+  if (cardMode === 'ghigliottina' && isGhigliottinaCard(card)) {
+    return {
+      ...baseCleared,
+      phase: 'DEBATE',
+      ghigliottinaState: {
+        shuffledChoices: shuffleStringsWithRng(card.choices, rng),
+      },
+    };
+  }
+
   if (cardMode === 'cruciverba' && isCruciverbaCard(card)) {
     return {
       ...baseCleared,
       phase: 'DEBATE',
       debateDurationSec: CRUCIVERBA_TURN_SEC,
-      cruciverbaState: initPassCruciverbaState(card, state.players),
+      cruciverbaState: initPassCruciverbaState(
+        card,
+        state.players,
+        state.cruciverbaMode ?? 'indizi',
+        rng,
+      ),
     };
   }
 
@@ -575,7 +727,7 @@ function enterCurrentRound(state: PassState, rng: () => number): PassState {
     };
   }
 
-  // flash, assurdo
+  // flash, assurdo, stima, bufala
   return {
     ...baseCleared,
     phase: 'DEBATE',
@@ -590,6 +742,10 @@ function cardPromptForHighlight(card: PassCard | null): string {
   if (isCruciverbaCard(card)) return `Cruciverba · ${card.theme}`;
   if (isTribunaleCard(card)) return `${card.title}: ${card.scenario}`;
   if (isPreferirestiCard(card)) return card.prompt;
+  if (isGhigliottinaCard(card)) return `La Ghigliottina: ${card.clues.join(' · ')}`;
+  if (isStimaCard(card)) return card.prompt;
+  if (isBufalaCard(card)) return card.statement;
+  if (isIntesaCard(card)) return `Parola Vietata · ${card.category}`;
   return '';
 }
 
@@ -742,6 +898,40 @@ function computeMomentBadge(outcome: RoundOutcome): PassMomentBadge {
       : { emoji: '⚖️', label: 'Verdetto del Tribunale!', tone: 'gold' };
   }
 
+  if (outcome.kind === 'ghigliottina') {
+    return outcome.ghigliottinaCorrect
+      ? { emoji: '🔗', label: 'Ghigliottina Centrata!', tone: 'success' }
+      : { emoji: '💡', label: 'Ghigliottina Svelata', tone: 'gold' };
+  }
+
+  if (outcome.kind === 'stima') {
+    if (outcome.stimaExact) return { emoji: '🎯', label: 'Centro Perfetto!', tone: 'success' };
+    if (outcome.soloMode && outcome.stimaPrecisionPct !== undefined) {
+      return {
+        emoji: '💰',
+        label: `Precisione ${outcome.stimaPrecisionPct}%`,
+        tone: outcome.stimaPrecisionPct >= 80 ? 'success' : 'gold',
+      };
+    }
+    return { emoji: '💰', label: 'Stima Svelata!', tone: 'gold' };
+  }
+
+  if (outcome.kind === 'bufala') {
+    return outcome.bufalaCorrect
+      ? { emoji: '🎭', label: 'Bufala Smascherata!', tone: 'success' }
+      : { emoji: '🤡', label: 'Trappola Scattata!', tone: 'danger' };
+  }
+
+  if (outcome.kind === 'intesa') {
+    if (outcome.intesaOutcome === 'guessed') {
+      return { emoji: '🙌', label: 'Intesa Perfetta!', tone: 'success' };
+    }
+    if (outcome.intesaOutcome === 'taboo') {
+      return { emoji: '🚨', label: 'Parola Vietata!', tone: 'danger' };
+    }
+    return { emoji: '⏭️', label: 'Parola Saltata', tone: 'b' };
+  }
+
   return (outcome.cruciverbaSolvedCount ?? 0) === (outcome.cruciverbaTotalCount ?? 4)
     ? { emoji: '🧩', label: 'Tabellone Completo!', tone: 'success' }
     : { emoji: '💡', label: 'Cruciverba Svelato', tone: 'a' };
@@ -850,6 +1040,87 @@ function syncRevealedWordStatuses(
   return nextStatus;
 }
 
+function applyCruciverbaSolve(
+  state: PassState,
+  cs: CruciverbaPassState,
+  word: PassCruciverbaCard['words'][number],
+  solverId: string | null,
+): PassState {
+  const revealedCells = revealWordCells(cs.board.words, cs.revealedCells, word.id);
+  const cellsSet = new Set(revealedCells);
+  const nextStatus = syncRevealedWordStatuses(
+    cs.board.words,
+    { ...cs.wordStatus, [word.id]: 'solved' as const },
+    cellsSet,
+  );
+
+  const nextStats = { ...state.stats };
+  const effectiveSolverId =
+    solverId ?? (state.players.length === 1 ? state.players[0]?.id ?? null : null);
+  const solverName =
+    (effectiveSolverId && state.players.find((p) => p.id === effectiveSolverId)?.name) ||
+    (state.players.length === 1 ? 'Tu' : 'Tavolo');
+  if (effectiveSolverId) {
+    const cur = readStat(nextStats, effectiveSolverId);
+    nextStats[effectiveSolverId] = { ...cur, coopWins: cur.coopWins + 1 };
+  }
+
+  const pending = cs.board.words.filter((w) => nextStatus[w.id] === 'pending');
+  const nextTurnsTaken = cs.turnsTaken + 1;
+  const updatedSolvedBy = { ...cs.solvedBy, [word.id]: solverName };
+
+  if (pending.length === 0) {
+    const allCells = revealWordCells(cs.board.words, revealedCells);
+    const solvedCount = cs.board.words.filter((w) => nextStatus[w.id] === 'solved').length;
+    const roundOutcome: RoundOutcome = {
+      kind: 'cruciverba',
+      countA: solvedCount,
+      countB: cs.board.words.length - solvedCount,
+      cruciverbaSolvedCount: solvedCount,
+      cruciverbaTotalCount: cs.board.words.length,
+    };
+    return {
+      ...state,
+      stats: incrementAllPlayersRound(nextStats, state.players),
+      cruciverbaState: {
+        ...cs,
+        wordStatus: nextStatus,
+        solvedBy: updatedSolvedBy,
+        revealedCells: allCells,
+        turnsTaken: nextTurnsTaken,
+        lastFeedback: `✓ ${solverName}: ${word.word}!`,
+      },
+      phase: 'ROUND_RESULT',
+      roundOutcome,
+      roundHistory: upsertRoundHighlight(state, roundOutcome),
+    };
+  }
+
+  return {
+    ...state,
+    stats: nextStats,
+    debateDurationSec: CRUCIVERBA_TURN_SEC,
+    cruciverbaState: {
+      ...cs,
+      activeWordId: pending[0].id,
+      wordStatus: nextStatus,
+      solvedBy: updatedSolvedBy,
+      revealedCells,
+      turnsTaken: nextTurnsTaken,
+      lastFeedback: `✓ ${solverName}: ${word.word}!`,
+    },
+  };
+}
+
+function normalizePassWord(text: string): string {
+  return text
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+}
+
 export function passReducer(state: PassState, action: PassAction): PassState {
   switch (action.type) {
     case 'START_GAME': {
@@ -862,14 +1133,26 @@ export function passReducer(state: PassState, action: PassAction): PassState {
         couples: action.players.length % 2 === 0 ? buildPassCouples(action.players) : [],
         cards: action.cards,
         roundIndex: 0,
+        cruciverbaMode: action.cruciverbaMode ?? 'indizi',
+        soloFast: action.soloFast ?? false,
+        lastSoloToast: null,
         stats: emptyStats(action.players),
         roundHistory: [],
       };
       return enterCurrentRound(initial, action.rng ?? Math.random);
     }
 
+    case 'SET_SOLO_FAST':
+      return {
+        ...state,
+        soloFast: action.enabled,
+      };
+
     case 'UNLOCK_TURN': {
       if (state.phase !== 'PASS_CURTAIN') return state;
+      if (state.secretKind === 'intesa_speaker') {
+        return { ...state, phase: 'DEBATE', debateDurationSec: 0 };
+      }
       return { ...state, phase: 'SECRET_TURN' };
     }
 
@@ -995,6 +1278,16 @@ export function passReducer(state: PassState, action: PassAction): PassState {
         storyChoicesA:
           (state.storyChoicesA ?? 0) + (cardMode === 'storia' && chosenSide === 'A' ? 1 : 0),
       };
+      if (isSolo && state.soloFast && cardMode !== 'storia') {
+        const fastUpdated: PassState = {
+          ...updated,
+          lastSoloToast: {
+            chosenLabel: liveVerdictLabel,
+            crowdPct: crowdPctForChoice ?? 50,
+          },
+        };
+        return advanceToNextRound(fastUpdated, action.rng ?? Math.random);
+      }
       if (
         isSolo ||
         (card &&
@@ -1003,10 +1296,11 @@ export function passReducer(state: PassState, action: PassAction): PassState {
       ) {
         return {
           ...updated,
+          lastSoloToast: null,
           phase: 'ROUND_RESULT',
         };
       }
-      return advanceToNextRound(updated, action.rng ?? Math.random);
+      return advanceToNextRound({ ...updated, lastSoloToast: null }, action.rng ?? Math.random);
     }
 
     case 'RESOLVE_PREFERIRESTI': {
@@ -1014,7 +1308,7 @@ export function passReducer(state: PassState, action: PassAction): PassState {
       const card = getCurrentCard(state);
       const n = state.players.length;
       const isSolo = n === 1;
-      const opts = card && isPreferirestiCard(card) ? card.options.slice(0, 4) : [];
+      const opts = card && isPreferirestiCard(card) ? card.options.slice(0, isSolo ? 2 : 4) : [];
       let countA = 0;
       let countB = 0;
       let liveVerdictLabel = 'Tutte scelte diverse!';
@@ -1029,7 +1323,7 @@ export function passReducer(state: PassState, action: PassAction): PassState {
       if (isSolo) {
         const splitPcts = computeSoloCrowdSplit(
           card?.id ?? `pref_${state.roundIndex}`,
-          Math.max(2, opts.length || 4),
+          2,
         );
         crowdSplitPcts = splitPcts;
         if (action.choice === 'SPLIT') {
@@ -1115,13 +1409,24 @@ export function passReducer(state: PassState, action: PassAction): PassState {
         roundOutcome,
         roundHistory: upsertRoundHighlight(state, roundOutcome),
       };
+      if (isSolo && state.soloFast) {
+        const fastUpdated: PassState = {
+          ...updated,
+          lastSoloToast: {
+            chosenLabel: liveVerdictLabel,
+            crowdPct: crowdPctForChoice ?? 50,
+          },
+        };
+        return advanceToNextRound(fastUpdated, action.rng ?? Math.random);
+      }
       if (isSolo || (card && isPreferirestiCard(card) && card.penalty)) {
         return {
           ...updated,
+          lastSoloToast: null,
           phase: 'ROUND_RESULT',
         };
       }
-      return advanceToNextRound(updated, action.rng ?? Math.random);
+      return advanceToNextRound({ ...updated, lastSoloToast: null }, action.rng ?? Math.random);
     }
 
     case 'RESOLVE_CLASSICO': {
@@ -1242,6 +1547,16 @@ export function passReducer(state: PassState, action: PassAction): PassState {
         storyChoicesA:
           (state.storyChoicesA ?? 0) + (cardMode === 'storia' && chosenSide === 'A' ? 1 : 0),
       };
+      if (isSolo && state.soloFast && cardMode !== 'storia') {
+        const fastUpdated: PassState = {
+          ...updated,
+          lastSoloToast: {
+            chosenLabel: liveVerdictLabel,
+            crowdPct: crowdPctForChoice ?? 50,
+          },
+        };
+        return advanceToNextRound(fastUpdated, action.rng ?? Math.random);
+      }
       if (
         isSolo ||
         (card &&
@@ -1250,10 +1565,11 @@ export function passReducer(state: PassState, action: PassAction): PassState {
       ) {
         return {
           ...updated,
+          lastSoloToast: null,
           phase: 'ROUND_RESULT',
         };
       }
-      return advanceToNextRound(updated, action.rng ?? Math.random);
+      return advanceToNextRound({ ...updated, lastSoloToast: null }, action.rng ?? Math.random);
     }
 
     case 'SOLO_FLIP_AFTER_OBJECTION': {
@@ -1456,12 +1772,28 @@ export function passReducer(state: PassState, action: PassAction): PassState {
         ...(isSolo ? { soloMode: true } : {}),
       };
 
-      return {
+      const updated: PassState = {
         ...state,
-        phase: 'ROUND_RESULT',
         stats: nextStats,
         roundOutcome,
         roundHistory: upsertRoundHighlight(state, roundOutcome),
+      };
+      if (isSolo && state.soloFast) {
+        return advanceToNextRound(
+          {
+            ...updated,
+            lastSoloToast: {
+              chosenLabel: liveVerdictLabel,
+              crowdPct: crowdPctForChoice ?? 50,
+            },
+          },
+          action.rng ?? Math.random,
+        );
+      }
+      return {
+        ...updated,
+        lastSoloToast: null,
+        phase: 'ROUND_RESULT',
       };
     }
 
@@ -1595,69 +1927,30 @@ export function passReducer(state: PassState, action: PassAction): PassState {
       if (state.phase !== 'DEBATE' || !cs) return state;
       const word = cs.board.words.find((w) => w.id === action.wordId);
       if (!word || cs.wordStatus[word.id] !== 'pending') return state;
+      return applyCruciverbaSolve(state, cs, word, action.solverId);
+    }
 
-      const revealedCells = revealWordCells(cs.board.words, cs.revealedCells, word.id);
-      const cellsSet = new Set(revealedCells);
-      const nextStatus = syncRevealedWordStatuses(
-        cs.board.words,
-        { ...cs.wordStatus, [word.id]: 'solved' as const },
-        cellsSet,
-      );
-
-      const nextStats = { ...state.stats };
-      const effectiveSolverId =
-        action.solverId ?? (state.players.length === 1 ? state.players[0]?.id ?? null : null);
-      const solverName =
-        (effectiveSolverId && state.players.find((p) => p.id === effectiveSolverId)?.name) ||
-        (state.players.length === 1 ? 'Tu' : 'Tavolo');
-      if (effectiveSolverId) {
-        const cur = readStat(nextStats, effectiveSolverId);
-        nextStats[effectiveSolverId] = { ...cur, coopWins: cur.coopWins + 1 };
+    case 'CRUCIVERBA_GUESS_CHOICE': {
+      const cs = state.cruciverbaState;
+      if (state.phase !== 'DEBATE' || !cs) return state;
+      const word = cs.board.words.find((w) => w.id === action.wordId);
+      if (!word || cs.wordStatus[word.id] !== 'pending') return state;
+      const norm = (s: string) => s.trim().toUpperCase().replace(/[^A-Z]/g, '');
+      if (norm(action.choice) === norm(word.word)) {
+        return applyCruciverbaSolve(state, cs, word, action.solverId ?? null);
       }
-
-      const pending = cs.board.words.filter((w) => nextStatus[w.id] === 'pending');
-      const nextTurnsTaken = cs.turnsTaken + 1;
-      const updatedSolvedBy = { ...cs.solvedBy, [word.id]: solverName };
-
-      if (pending.length === 0) {
-        const allCells = revealWordCells(cs.board.words, revealedCells);
-        const solvedCount = cs.board.words.filter((w) => nextStatus[w.id] === 'solved').length;
-        const roundOutcome: RoundOutcome = {
-          kind: 'cruciverba',
-          countA: solvedCount,
-          countB: cs.board.words.length - solvedCount,
-          cruciverbaSolvedCount: solvedCount,
-          cruciverbaTotalCount: cs.board.words.length,
-        };
-        return {
-          ...state,
-          stats: incrementAllPlayersRound(nextStats, state.players),
-          cruciverbaState: {
-            ...cs,
-            wordStatus: nextStatus,
-            solvedBy: updatedSolvedBy,
-            revealedCells: allCells,
-            turnsTaken: nextTurnsTaken,
-            lastFeedback: `✓ ${solverName}: ${word.word}!`,
-          },
-          phase: 'ROUND_RESULT',
-          roundOutcome,
-          roundHistory: upsertRoundHighlight(state, roundOutcome),
-        };
-      }
-
+      const wrongVal = action.choice.trim().toUpperCase();
+      const prevWrong = cs.wrongChoices[word.id] ?? [];
+      const nextWrong = prevWrong.includes(wrongVal) ? prevWrong : [...prevWrong, wrongVal];
       return {
         ...state,
-        stats: nextStats,
-        debateDurationSec: CRUCIVERBA_TURN_SEC,
         cruciverbaState: {
           ...cs,
-          activeWordId: pending[0].id,
-          wordStatus: nextStatus,
-          solvedBy: updatedSolvedBy,
-          revealedCells,
-          turnsTaken: nextTurnsTaken,
-          lastFeedback: `✓ ${solverName}: ${word.word}!`,
+          wrongChoices: {
+            ...cs.wrongChoices,
+            [word.id]: nextWrong,
+          },
+          lastFeedback: '✗ Non è questa! Guarda gli incroci o sblocca 1 lettera.',
         },
       };
     }
@@ -1826,9 +2119,196 @@ export function passReducer(state: PassState, action: PassAction): PassState {
       };
     }
 
+    case 'RESOLVE_GHIGLIOTTINA': {
+      if (state.phase !== 'DEBATE') return state;
+      const card = getCurrentCard(state);
+      if (!card || !isGhigliottinaCard(card)) return state;
+      const nextStats = incrementAllPlayersRound(state.stats, state.players);
+      let correct = false;
+      let effectiveWinnerId: string | null = action.winnerId ?? null;
+      if (action.guess !== undefined) {
+        correct = normalizePassWord(action.guess) === normalizePassWord(card.answer);
+        if (action.winnerId === undefined) {
+          effectiveWinnerId =
+            correct && state.players.length === 1 ? (state.players[0]?.id ?? null) : null;
+        }
+        if (effectiveWinnerId) correct = true;
+      } else if (effectiveWinnerId) {
+        correct = true;
+      }
+      if (effectiveWinnerId) {
+        const cur = readStat(nextStats, effectiveWinnerId);
+        nextStats[effectiveWinnerId] = { ...cur, tvQuizWins: (cur.tvQuizWins ?? 0) + 1 };
+      }
+      const winnerName = effectiveWinnerId
+        ? state.players.find((p) => p.id === effectiveWinnerId)?.name
+        : undefined;
+      const liveVerdictLabel = correct
+        ? winnerName && state.players.length > 1
+          ? `${card.answer} · Indovinata da ${winnerName}!`
+          : `${card.answer} · Risposta esatta!`
+        : `${card.answer} · Nessuno l’ha presa`;
+      const roundOutcome: RoundOutcome = {
+        kind: 'ghigliottina',
+        countA: correct ? 1 : 0,
+        countB: correct ? 0 : 1,
+        liveVerdictLabel,
+        ...(action.guess !== undefined ? { ghigliottinaGuess: action.guess } : {}),
+        ghigliottinaCorrect: correct,
+        ghigliottinaWinnerId: effectiveWinnerId,
+        soloMode: state.players.length === 1,
+      };
+      return {
+        ...state,
+        stats: nextStats,
+        phase: 'ROUND_RESULT',
+        roundOutcome,
+        roundHistory: upsertRoundHighlight(state, roundOutcome),
+      };
+    }
+
+    case 'RESOLVE_STIMA': {
+      if (state.phase !== 'DEBATE') return state;
+      const card = getCurrentCard(state);
+      if (!card || !isStimaCard(card)) return state;
+      const nextStats = incrementAllPlayersRound(state.stats, state.players);
+      let precision: number | undefined;
+      let exact = false;
+      let effectiveWinnerId: string | null = action.winnerId ?? null;
+      if (action.soloGuess !== undefined) {
+        const span = Math.max(1, card.max - card.min);
+        const diff = Math.abs(action.soloGuess - card.answer);
+        precision = Math.max(0, Math.min(100, Math.round((1 - diff / span) * 100)));
+        exact = diff <= Math.max(card.step, span * 0.05);
+        if ((exact || precision >= 80) && state.players.length === 1 && state.players[0]) {
+          effectiveWinnerId = state.players[0].id;
+        }
+      }
+      if (effectiveWinnerId) {
+        const cur = readStat(nextStats, effectiveWinnerId);
+        nextStats[effectiveWinnerId] = { ...cur, tvQuizWins: (cur.tvQuizWins ?? 0) + 1 };
+      }
+      const winnerName = effectiveWinnerId
+        ? state.players.find((p) => p.id === effectiveWinnerId)?.name
+        : undefined;
+      const liveVerdictLabel =
+        action.soloGuess !== undefined
+          ? exact
+            ? `Centro perfetto! ${card.answer} ${card.unit}`
+            : `Precisione ${precision}% · Risposta ${card.answer} ${card.unit}`
+          : winnerName
+            ? `${winnerName} più vicino (${card.answer} ${card.unit})`
+            : `Risposta esatta: ${card.answer} ${card.unit}`;
+      const roundOutcome: RoundOutcome = {
+        kind: 'stima',
+        countA: effectiveWinnerId ? 1 : 0,
+        countB: effectiveWinnerId ? 0 : 1,
+        liveVerdictLabel,
+        ...(action.soloGuess !== undefined ? { stimaSoloGuess: action.soloGuess } : {}),
+        ...(precision !== undefined ? { stimaPrecisionPct: precision } : {}),
+        stimaExact: exact,
+        stimaWinnerId: effectiveWinnerId,
+        soloMode: state.players.length === 1,
+      };
+      return {
+        ...state,
+        stats: nextStats,
+        phase: 'ROUND_RESULT',
+        roundOutcome,
+        roundHistory: upsertRoundHighlight(state, roundOutcome),
+      };
+    }
+
+    case 'RESOLVE_BUFALA': {
+      if (state.phase !== 'DEBATE') return state;
+      const card = getCurrentCard(state);
+      if (!card || !isBufalaCard(card)) return state;
+      const nextStats = incrementAllPlayersRound(state.stats, state.players);
+      const correct = action.guessIsTrue !== null && action.guessIsTrue === card.isTrue;
+      if (correct) {
+        if (state.players.length === 1 && state.players[0]) {
+          const cur = readStat(nextStats, state.players[0].id);
+          nextStats[state.players[0].id] = { ...cur, tvQuizWins: (cur.tvQuizWins ?? 0) + 1 };
+        } else {
+          for (const p of state.players) {
+            const cur = readStat(nextStats, p.id);
+            nextStats[p.id] = { ...cur, tvQuizWins: (cur.tvQuizWins ?? 0) + 1 };
+          }
+        }
+      }
+      const truthLabel = card.isTrue ? 'Era VERO!' : 'Era una BUFALA!';
+      const liveVerdictLabel =
+        action.guessIsTrue === null
+          ? `Tavolo diviso · ${truthLabel}`
+          : correct
+            ? `Presa! ${truthLabel}`
+            : `Trappola! ${truthLabel}`;
+      const roundOutcome: RoundOutcome = {
+        kind: 'bufala',
+        countA: correct ? 1 : 0,
+        countB: correct ? 0 : 1,
+        liveVerdictLabel,
+        bufalaGuessIsTrue: action.guessIsTrue,
+        bufalaCorrect: correct,
+        soloMode: state.players.length === 1,
+      };
+      return {
+        ...state,
+        stats: nextStats,
+        phase: 'ROUND_RESULT',
+        roundOutcome,
+        roundHistory: upsertRoundHighlight(state, roundOutcome),
+      };
+    }
+
+    case 'RESOLVE_INTESA': {
+      if (state.phase !== 'DEBATE') return state;
+      const card = getCurrentCard(state);
+      if (!card || !isIntesaCard(card)) return state;
+      const nextStats = incrementAllPlayersRound(state.stats, state.players);
+      const speakerId = state.intesaState?.speakerId ?? state.players[0]?.id ?? '';
+      const winnerId = action.winnerId ?? null;
+      if (action.outcome === 'guessed') {
+        if (speakerId) {
+          const cur = readStat(nextStats, speakerId);
+          nextStats[speakerId] = { ...cur, tvQuizWins: (cur.tvQuizWins ?? 0) + 1 };
+        }
+        if (winnerId && winnerId !== speakerId) {
+          const cur = readStat(nextStats, winnerId);
+          nextStats[winnerId] = { ...cur, tvQuizWins: (cur.tvQuizWins ?? 0) + 1 };
+        }
+      }
+      const speakerName = state.players.find((p) => p.id === speakerId)?.name ?? 'Chi descrive';
+      const winnerName = winnerId ? state.players.find((p) => p.id === winnerId)?.name : undefined;
+      const liveVerdictLabel =
+        action.outcome === 'guessed'
+          ? winnerName
+            ? `🎉 ${speakerName} & ${winnerName}: ${card.word}!`
+            : `🎉 ${card.word} indovinata!`
+          : action.outcome === 'taboo'
+            ? `🚨 Parola vietata! Era ${card.word}`
+            : `⏭️ Saltata (${card.word})`;
+      const roundOutcome: RoundOutcome = {
+        kind: 'intesa',
+        countA: action.outcome === 'guessed' ? 1 : 0,
+        countB: action.outcome === 'guessed' ? 0 : 1,
+        liveVerdictLabel,
+        intesaOutcome: action.outcome,
+        intesaSpeakerId: speakerId,
+        intesaWinnerId: winnerId,
+      };
+      return {
+        ...state,
+        stats: nextStats,
+        phase: 'ROUND_RESULT',
+        roundOutcome,
+        roundHistory: upsertRoundHighlight(state, roundOutcome),
+      };
+    }
+
     case 'NEXT_ROUND': {
       if (state.phase !== 'DEBATE' && state.phase !== 'ROUND_RESULT') return state;
-      return advanceToNextRound(state, action.rng ?? Math.random);
+      return advanceToNextRound({ ...state, lastSoloToast: null }, action.rng ?? Math.random);
     }
 
     case 'RESET_TO_SETUP':
@@ -1836,6 +2316,8 @@ export function passReducer(state: PassState, action: PassAction): PassState {
         ...createInitialPassState(),
         mode: state.mode,
         players: state.players,
+        cruciverbaMode: state.cruciverbaMode,
+        soloFast: state.soloFast,
       };
 
     default:
@@ -1959,6 +2441,17 @@ export function computePassAwards(state: PassState): PassAward[] {
           emoji: '🧩',
           title: 'Solutore Solitario',
           description: `Hai risolto ${s.coopWins} ${s.coopWins === 1 ? 'parola' : 'parole'} nel Cruciverba Show.`,
+        },
+        sole,
+      );
+    }
+    if ((s.tvQuizWins ?? 0) >= 2) {
+      pushAward(
+        {
+          id: 'campionetv',
+          emoji: '🏆',
+          title: 'Campione del Quiz',
+          description: `Hai centrato ${s.tvQuizWins} sfide tra Ghigliottina, Stima e Bufale.`,
         },
         sole,
       );
@@ -2099,6 +2592,16 @@ export function computePassAwards(state: PassState): PassAward[] {
       description: 'Allineamento telepatico e sfide vinte in coppia.',
     },
     pickTop((s) => s.coppieMatches ?? 0),
+  );
+
+  pushAward(
+    {
+      id: 'campionetv',
+      emoji: '🏆',
+      title: 'Campione del Quiz',
+      description: 'Ha dominato i round TV tra Ghigliottina, Stime, Bufale e Intesa!',
+    },
+    pickTop((s) => s.tvQuizWins ?? 0),
   );
 
   const awardedIds = new Set(awards.map((a) => a.winnerId));
@@ -2300,6 +2803,9 @@ function computePassPlayerProfile(
   }
   if ((stats.tribunaleWins ?? 0) > 0) {
     statPills.push({ label: 'Cause vinte', value: stats.tribunaleWins ?? 0 });
+  }
+  if ((stats.tvQuizWins ?? 0) > 0) {
+    statPills.push({ label: 'Quiz TV', value: stats.tvQuizWins ?? 0 });
   }
   while (statPills.length < 3) {
     if (!statPills.some((p) => p.label === 'Round giocati')) {
@@ -2595,4 +3101,88 @@ export function isTribunaleCard(card: PassCard): card is PassTribunaleCard {
 
 export function isPreferirestiCard(card: PassCard): card is PassPreferirestiCard {
   return 'options' in card && Array.isArray((card as PassPreferirestiCard).options);
+}
+
+export function isGhigliottinaCard(card: PassCard): card is PassGhigliottinaCard {
+  return (
+    'clues' in card &&
+    Array.isArray((card as PassGhigliottinaCard).clues) &&
+    'connections' in card
+  );
+}
+
+export function isStimaCard(card: PassCard): card is PassStimaCard {
+  return (
+    'unit' in card &&
+    'min' in card &&
+    'max' in card &&
+    typeof (card as PassStimaCard).answer === 'number'
+  );
+}
+
+export function isBufalaCard(card: PassCard): card is PassBufalaCard {
+  return 'statement' in card && typeof (card as PassBufalaCard).isTrue === 'boolean';
+}
+
+export function isIntesaCard(card: PassCard): card is PassIntesaCard {
+  return (
+    'word' in card &&
+    'forbidden' in card &&
+    Array.isArray((card as PassIntesaCard).forbidden)
+  );
+}
+
+/** Converts Pass & Play Cruciverba state into the shared 2D CruciverbaGrid payload. */
+export function toCruciverbaGridState(
+  cs: CruciverbaPassState,
+): Pick<CruciverbaStatePayload, 'rows' | 'cols' | 'words' | 'cells' | 'activeWordId'> & {
+  theme: string;
+} {
+  const revealedSet = new Set(cs.revealedCells);
+  const cells: Array<Array<CruciverbaCellPayload | null>> = Array.from(
+    { length: cs.board.rows },
+    () => Array.from({ length: cs.board.cols }, () => null),
+  );
+
+  for (const w of cs.board.words) {
+    for (let i = 0; i < w.word.length; i++) {
+      const r = w.direction === 'V' ? w.row + i : w.row;
+      const c = w.direction === 'H' ? w.col + i : w.col;
+      if (r < 0 || r >= cs.board.rows || c < 0 || c >= cs.board.cols) continue;
+      const existing = cells[r][c];
+      const revealed = revealedSet.has(`${r},${c}`);
+      const letter = revealed ? w.word[i] : '';
+      const wordNumbers = existing ? [...existing.wordNumbers] : [];
+      if (i === 0 && !wordNumbers.includes(w.number)) {
+        wordNumbers.push(w.number);
+      }
+      cells[r][c] = {
+        letter: existing?.letter || letter,
+        wordNumbers,
+      };
+    }
+  }
+
+  const words: CruciverbaWordPayload[] = cs.board.words.map((w) => ({
+    id: w.id,
+    number: w.number,
+    direction: w.direction,
+    row: w.row,
+    col: w.col,
+    length: w.word.length,
+    clue: cs.mode === 'scelte' ? '' : w.clue,
+    choices: cs.mode === 'scelte' ? cs.wordChoices[w.id] ?? w.choices : undefined,
+    wrongChoices: cs.mode === 'scelte' ? cs.wrongChoices[w.id] ?? [] : undefined,
+    status: cs.wordStatus[w.id] ?? 'pending',
+    solvedByName: cs.solvedBy[w.id] ?? null,
+  }));
+
+  return {
+    theme: cs.board.theme,
+    rows: cs.board.rows,
+    cols: cs.board.cols,
+    activeWordId: cs.activeWordId,
+    words,
+    cells,
+  };
 }

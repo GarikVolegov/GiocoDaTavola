@@ -8,9 +8,10 @@ import {
   computePassFinaleSummary,
   computeSoloCrowdSplit,
   getCurrentReaderPlayer,
+  minPlayersForMode,
   type PassPlayer,
 } from './passAndPlayEngine';
-import { FALLBACK_DECKS } from './fallbackDeck';
+import { FALLBACK_DECKS, SOLO_FALLBACK_DECKS } from './fallbackDeck';
 
 const PLAYERS_3: PassPlayer[] = [
   { id: 'p1', name: 'Marco', avatar: '🦊' },
@@ -377,23 +378,168 @@ describe('passAndPlayEngine', () => {
     expect(soloSummary.verdict.title).toBeTruthy();
   });
 
-  it('supports solo Preferiresti (4 choices) with 4-way crowd distribution', () => {
+  it('supports solo Preferiresti (capped to 2 choices) with 2-way crowd distribution and pure 4-way helper', () => {
     const split4 = computeSoloCrowdSplit(FALLBACK_DECKS.preferiresti[0].id, 4);
     expect(split4).toHaveLength(4);
     expect(split4.reduce((a, b) => a + b, 0)).toBe(100);
+
+    const card = SOLO_FALLBACK_DECKS.preferiresti[0];
+    const split2 = computeSoloCrowdSplit(card.id, 2);
+    expect(split2).toHaveLength(2);
+    expect(split2[0] + split2[1]).toBe(100);
 
     let s = createInitialPassState();
     s = passReducer(s, {
       type: 'START_GAME',
       mode: 'preferiresti',
       players: [PLAYERS_3[0]],
-      cards: FALLBACK_DECKS.preferiresti.slice(0, 1),
+      cards: [card],
     });
     s = passReducer(s, { type: 'RESOLVE_PREFERIRESTI', choice: 'B' });
     expect(s.phase).toBe('ROUND_RESULT');
     expect(s.roundOutcome?.chosenOptionIndex).toBe(1);
-    expect(s.roundOutcome?.crowdSplitPcts).toEqual(split4);
+    expect(s.roundOutcome?.crowdSplitPcts).toEqual(split2);
     s = passReducer(s, { type: 'NEXT_ROUND' });
     expect(s.phase).toBe('FINAL_AWARDS');
+  });
+
+  it('skips ROUND_RESULT on 1 tap when soloFast is true, sets lastSoloToast, and finishes on FINAL_AWARDS', () => {
+    let s = createInitialPassState();
+    s = passReducer(s, {
+      type: 'START_GAME',
+      mode: 'flash',
+      players: [PLAYERS_3[0]],
+      cards: SOLO_FALLBACK_DECKS.flash.slice(0, 2),
+      soloFast: true,
+    });
+    expect(s.phase).toBe('DEBATE');
+    expect(s.roundIndex).toBe(0);
+
+    s = passReducer(s, { type: 'RESOLVE_FLASH', result: 'A' });
+    expect(s.phase).toBe('DEBATE');
+    expect(s.roundIndex).toBe(1);
+    expect(s.lastSoloToast?.chosenLabel).toBe(SOLO_FALLBACK_DECKS.flash[0].optionA);
+    expect(typeof s.lastSoloToast?.crowdPct).toBe('number');
+
+    s = passReducer(s, { type: 'RESOLVE_FLASH', result: 'B' });
+    expect(s.phase).toBe('FINAL_AWARDS');
+    expect(s.roundHistory).toHaveLength(2);
+  });
+
+  it('supports Cruciverba scelte mode with pre-revealed anchor cell, wrongChoices tracking, and CRUCIVERBA_GUESS_CHOICE solve', () => {
+    const board = FALLBACK_DECKS.cruciverba[0];
+    let s = createInitialPassState();
+    s = passReducer(s, {
+      type: 'START_GAME',
+      mode: 'cruciverba',
+      players: [PLAYERS_3[0]],
+      cards: [board],
+      cruciverbaMode: 'scelte',
+      rng: () => 0.2,
+    });
+    expect(s.phase).toBe('DEBATE');
+    expect(s.cruciverbaState?.mode).toBe('scelte');
+    expect(s.cruciverbaState?.revealedCells).toHaveLength(1);
+
+    const w1 = board.words[0];
+    const choices = s.cruciverbaState!.wordChoices[w1.id];
+    expect(choices).toHaveLength(4);
+    expect(choices).toContain(w1.word);
+
+    const wrongChoice = choices.find((c) => c !== w1.word)!;
+    s = passReducer(s, {
+      type: 'CRUCIVERBA_GUESS_CHOICE',
+      wordId: w1.id,
+      choice: wrongChoice,
+      solverId: PLAYERS_3[0].id,
+    });
+    expect(s.cruciverbaState?.wordStatus[w1.id]).toBe('pending');
+    expect(s.cruciverbaState?.wrongChoices[w1.id]).toContain(wrongChoice);
+
+    s = passReducer(s, {
+      type: 'CRUCIVERBA_GUESS_CHOICE',
+      wordId: w1.id,
+      choice: w1.word,
+      solverId: PLAYERS_3[0].id,
+    });
+    expect(s.cruciverbaState?.wordStatus[w1.id]).toBe('solved');
+    expect(s.stats.p1.coopWins).toBe(1);
+  });
+
+  it('supports Ghigliottina, Stima, Bufala in solo/group and single-curtain Intesa in group with tvQuizWins', () => {
+    expect(minPlayersForMode('ghigliottina')).toBe(1);
+    expect(minPlayersForMode('stima')).toBe(1);
+    expect(minPlayersForMode('bufala')).toBe(1);
+    expect(minPlayersForMode('intesa')).toBe(2);
+
+    // 1) Solo Mix across Ghigliottina, Stima, Bufala -> awards Campione del Quiz
+    const ghCard = FALLBACK_DECKS.ghigliottina[0];
+    const stCard = FALLBACK_DECKS.stima[0];
+    const bfCard = FALLBACK_DECKS.bufala[0];
+
+    let sSolo = createInitialPassState();
+    sSolo = passReducer(sSolo, {
+      type: 'START_GAME',
+      mode: 'mix',
+      players: [PLAYERS_3[0]],
+      cards: [ghCard, stCard, bfCard],
+      soloFast: true,
+      rng: () => 0.1,
+    });
+    expect(sSolo.phase).toBe('DEBATE');
+    expect(sSolo.ghigliottinaState?.shuffledChoices).toContain(ghCard.answer);
+
+    // Even with soloFast: true, TV modes enter ROUND_RESULT so explanation/connections are shown
+    sSolo = passReducer(sSolo, { type: 'RESOLVE_GHIGLIOTTINA', guess: ghCard.answer.toLowerCase() });
+    expect(sSolo.phase).toBe('ROUND_RESULT');
+    expect(sSolo.roundOutcome?.ghigliottinaCorrect).toBe(true);
+    expect(sSolo.stats.p1.tvQuizWins).toBe(1);
+
+    sSolo = passReducer(sSolo, { type: 'NEXT_ROUND' });
+    expect(sSolo.phase).toBe('DEBATE');
+    sSolo = passReducer(sSolo, { type: 'RESOLVE_STIMA', soloGuess: stCard.answer });
+    expect(sSolo.phase).toBe('ROUND_RESULT');
+    expect(sSolo.roundOutcome?.stimaExact).toBe(true);
+    expect(sSolo.roundOutcome?.stimaPrecisionPct).toBe(100);
+    expect(sSolo.stats.p1.tvQuizWins).toBe(2);
+
+    sSolo = passReducer(sSolo, { type: 'NEXT_ROUND' });
+    sSolo = passReducer(sSolo, { type: 'RESOLVE_BUFALA', guessIsTrue: bfCard.isTrue });
+    expect(sSolo.phase).toBe('ROUND_RESULT');
+    expect(sSolo.roundOutcome?.bufalaCorrect).toBe(true);
+    expect(sSolo.stats.p1.tvQuizWins).toBe(3);
+
+    sSolo = passReducer(sSolo, { type: 'NEXT_ROUND' });
+    expect(sSolo.phase).toBe('FINAL_AWARDS');
+    const soloAwards = computePassAwards(sSolo);
+    expect(soloAwards.some((a) => a.id === 'campionetv')).toBe(true);
+
+    // 2) Group Intesa: 1 single PASS_CURTAIN -> UNLOCK_TURN goes directly to DEBATE -> both speaker & guesser earn tvQuizWins
+    const inCard = FALLBACK_DECKS.intesa[0];
+    let sIntesa = createInitialPassState();
+    sIntesa = passReducer(sIntesa, {
+      type: 'START_GAME',
+      mode: 'intesa',
+      players: PLAYERS_2,
+      cards: [inCard],
+    });
+    expect(sIntesa.phase).toBe('PASS_CURTAIN');
+    expect(sIntesa.secretKind).toBe('intesa_speaker');
+    expect(sIntesa.intesaState?.speakerId).toBe('p1');
+
+    sIntesa = passReducer(sIntesa, { type: 'UNLOCK_TURN' });
+    expect(sIntesa.phase).toBe('DEBATE');
+
+    sIntesa = passReducer(sIntesa, {
+      type: 'RESOLVE_INTESA',
+      outcome: 'guessed',
+      winnerId: 'p2',
+    });
+    expect(sIntesa.phase).toBe('ROUND_RESULT');
+    expect(sIntesa.stats.p1.tvQuizWins).toBe(1);
+    expect(sIntesa.stats.p2.tvQuizWins).toBe(1);
+
+    const summary = computePassFinaleSummary(sIntesa);
+    expect(summary.awards.some((a) => a.id === 'campionetv')).toBe(true);
   });
 });

@@ -18,10 +18,23 @@ import { persistSnapshot, loadAllSnapshots, deleteSnapshot } from './snapshotSto
 import { createRateLimiter } from './rateLimit';
 import { getOrGenerateTts, MAX_TTS_TEXT_LENGTH } from './audioTts';
 import { generatePartyCards, getCuratedCards, isGeminiAvailable, type PartyMode, type CoppieIntensity, type PartyCard, type AssurdoCard } from './game/geminiGenerator';
-import { CRUCIVERBA_BOARDS, getCurrentCruciverbaPlayerId } from './game/cruciverba';
+import { CRUCIVERBA_BOARDS, getCurrentCruciverbaPlayerId, type CruciverbaMode } from './game/cruciverba';
+import { getSoloDilemmas, enforceTwoOptionsForSolo } from './game/soloDecks';
 import { TRIBUNALE_CASES, getTribunaleSpeakerId } from './game/tribunale';
+import { GHIGLIOTTINA_PUZZLES } from './game/ghigliottina';
+import { STIMA_QUESTIONS } from './game/stima';
+import { BUFALA_QUESTIONS } from './game/bufala';
+import { INTESA_CARDS } from './game/intesa';
 import { buildPercorsoPlan, isDurata, getPercorsoMeta } from './game/percorso';
 import { buildStoriaPlan } from './game/storie';
+import {
+  buildCspHeader,
+  extractClientIp,
+  isOriginAllowed,
+  resolveAllowedOrigins,
+  sanitizeAiTheme,
+  sanitizeTtsText,
+} from './security';
 
 // Load server/.env (DATABASE_URL, CLERK_SECRET_KEY, AI_BASE_URL/AI_MODEL, …) if
 // present. Zero-dependency: uses Node's built-in env-file loader (Node 20.12+).
@@ -50,14 +63,22 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 const app = express();
+app.disable('x-powered-by');
 app.set('trust proxy', 1);
 app.use(compression());
 // Baseline HTTP security headers (no extra dependency needed).
-app.use((_req, res, next) => {
+app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  res.setHeader('Content-Security-Policy', buildCspHeader());
+  if (req.secure || req.header('x-forwarded-proto') === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
   next();
 });
 // Parse JSON request bodies (the profile PUT). Capped well above a resized
@@ -66,23 +87,55 @@ app.use(express.json({ limit: '500kb' }));
 // Exported so integration tests can listen on an ephemeral port without the
 // module auto-starting on its own (see the NODE_ENV guard around listen below).
 export const httpServer = createServer(app);
-// In prod set CLIENT_ORIGIN to the deploy origin to restrict Socket.IO CORS;
-// unset (dev) falls back to '*'. The client is served same-origin in prod, so a
-// single origin is enough.
+const allowedOrigins = resolveAllowedOrigins(process.env);
 const io = new Server(httpServer, {
-  cors: { origin: process.env.CLIENT_ORIGIN || '*' },
+  cors: { origin: allowedOrigins, methods: ['GET', 'POST'] },
+  allowRequest: (req, callback) => {
+    if (isOriginAllowed(req.headers.origin, allowedOrigins)) {
+      callback(null, true);
+    } else {
+      callback('ORIGIN_NOT_ALLOWED', false);
+    }
+  },
   maxHttpBufferSize: 100 * 1024, // 100 KB cap per socket packet
 });
 
 // Authoritative in-memory room store (no DB).
 const rooms = new RoomStore();
-// Throttle room create/join per socket: at most 10 attempts / 10s, so one
-// socket can't spam the room space or flood joins.
+// Throttle room create/join per socket & per IP: bounds room spam, join floods, and bursts.
 const joinLimiter = createRateLimiter(10, 10_000);
 const ttsLimiter = createRateLimiter(30, 60_000);
 const reactLimiter = createRateLimiter(15, 5_000);
 const writeLimiter = createRateLimiter(12, 30_000);
 const identifyLimiter = createRateLimiter(10, 10_000);
+const MAX_SOCKETS_PER_IP = 30;
+const socketsPerIp = new Map<string, number>();
+const socketIpById = new Map<string, string>();
+const ipCreateRoomLimiter = createRateLimiter(15, 60_000);
+const ipJoinLimiter = createRateLimiter(60, 60_000);
+const ipIdentifyLimiter = createRateLimiter(30, 60_000);
+const actionLimiter = createRateLimiter(60, 10_000);
+const apiMeLimiter = createRateLimiter(60, 60_000);
+
+function socketClientIp(socket: { handshake: { headers: Record<string, string | string[] | undefined>; address: string } }): string {
+  return extractClientIp(socket.handshake.headers['x-forwarded-for'], socket.handshake.address, true);
+}
+
+io.use((socket, next) => {
+  if (process.env.NODE_ENV === 'test') {
+    next();
+    return;
+  }
+  const ip = socketClientIp(socket);
+  const current = socketsPerIp.get(ip) ?? 0;
+  if (current >= MAX_SOCKETS_PER_IP) {
+    next(new Error('TOO_MANY_CONNECTIONS'));
+    return;
+  }
+  socketsPerIp.set(ip, current + 1);
+  socketIpById.set(socket.id, ip);
+  next();
+});
 // Available dilemmas per tappa, computed once at boot — surfaced to the host so
 // the percorso setup can show an accurate (capped) length estimate. Static data.
 const ALL_DILEMMAS = loadDilemmas();
@@ -172,6 +225,12 @@ function refreshAfterRosterChange(code: string): void {
     advanceAndBroadcast(code);
   } else if (room.phase === 'TELEPATHY' && rooms.telepathyPhaseComplete(code)) {
     advanceAndBroadcast(code);
+  } else if (room.phase === 'GHIGLIOTTINA' && rooms.ghigliottinaComplete(code)) {
+    advanceAndBroadcast(code);
+  } else if (room.phase === 'STIMA_GUESS' && rooms.stimaComplete(code)) {
+    advanceAndBroadcast(code);
+  } else if (room.phase === 'BUFALA_VOTE' && rooms.bufalaComplete(code)) {
+    advanceAndBroadcast(code);
   } else {
     if (rooms.maybeArmSoftTimeout(code)) schedulePhase(code);
     broadcastGameState(code);
@@ -258,6 +317,10 @@ function gameStatePayload(room: Room) {
     telepathyPrompt: rooms.publicTelepathyPrompt(room.code),
     telepathyProgress: rooms.telepathyProgress(room.code),
     telepathyReveal: rooms.publicTelepathyReveal(room.code),
+    ghigliottinaState: rooms.publicGhigliottinaState(room.code),
+    stimaState: rooms.publicStimaState(room.code),
+    bufalaState: rooms.publicBufalaState(room.code),
+    intesaState: rooms.publicIntesaState(room.code),
     // "L'Infiltrato": how many have accused (ACCUSE) + the FINAL_AWARDS reveal.
     accusedCount: room.accusations.size,
     infiltratoResult: rooms.publicInfiltratoResult(room.code),
@@ -331,6 +394,8 @@ function gameStatePayload(room: Room) {
     duoPortrait: rooms.publicDuoPortrait(room.code),
     partyMode: room.partyMode ?? undefined,
     partyCard: rooms.publicPartyCard(room.code),
+    soloFast: room.soloFast,
+    lastSoloFeedback: room.lastSoloFeedback,
   };
 }
 
@@ -524,6 +589,16 @@ function emitSecretQuestionIfNeeded(room: Room | undefined, targetPlayerId?: str
   }
 }
 
+function emitIntesaSecretIfNeeded(room: Room | undefined, targetPlayerId?: string): void {
+  if (!room || room.phase !== 'INTESA_PLAY' || !room.intesaState) return;
+  const speakerId = room.intesaState.speakerId;
+  if (targetPlayerId && targetPlayerId !== speakerId) return;
+  const sid = playerSocket.get(speakerId);
+  if (!sid) return;
+  const secret = rooms.privateIntesaSecret(room.code, speakerId);
+  if (secret) io.to(sid).emit('player:intesaSecret', secret);
+}
+
 // Broadcast + side effects shared by every path that lands the room on a new
 // phase: the leader's force-advance, a timer expiry, AND the leader's
 // "Scarta dilemma" (which also re-enters DILEMMA_REVEAL or can fall through
@@ -535,6 +610,7 @@ function broadcastAdvance(code: string, hadLateJoiners: boolean): void {
   // receive their round-scoped clue, secret question, and write-vote token
   // synchronously before switching screens.
   emitSecretQuestionIfNeeded(snapRoom);
+  emitIntesaSecretIfNeeded(snapRoom);
   if (snapRoom && snapRoom.phase === 'WRITE_VOTE') {
     for (const player of snapRoom.players.values()) {
       if (player.isBot) continue;
@@ -596,6 +672,21 @@ function advanceAndBroadcast(code: string): void {
   const hadLateJoiners = (rooms.get(code)?.lateJoiners.size ?? 0) > 0;
   const result = rooms.advancePhase(code);
   if (!result.ok) return;
+  if (result.room.players.size === 1 && result.room.soloFast) {
+    const fastSkipPhases = new Set([
+      'SPLIT_REVEAL',
+      'PHASE_RESULTS',
+      'GROUP_MIND_REVEAL',
+      'TAPPA_INTRO',
+      'TAPPA_RECAP',
+    ]);
+    let guard = 0;
+    while (fastSkipPhases.has(result.room.phase) && guard < 4) {
+      const next = rooms.advancePhase(code);
+      if (!next.ok) break;
+      guard++;
+    }
+  }
   broadcastAdvance(code, hadLateJoiners);
 }
 
@@ -641,7 +732,7 @@ app.get('/api/audio/tts', async (req, res) => {
     res.status(429).json({ error: 'too-many-requests' });
     return;
   }
-  const text = typeof req.query.text === 'string' ? req.query.text.trim() : '';
+  const text = sanitizeTtsText(typeof req.query.text === 'string' ? req.query.text : '');
   if (!text) {
     res.status(400).json({ error: 'Testo mancante' });
     return;
@@ -659,6 +750,15 @@ app.get('/api/audio/tts', async (req, res) => {
     console.error('[tts] generation error:', err);
     res.status(500).json({ error: 'Errore generazione voce narrante' });
   }
+});
+
+app.use('/api/me', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  if (!apiMeLimiter.allow(req.ip || 'unknown')) {
+    res.status(429).json({ error: 'too-many-requests' });
+    return;
+  }
+  next();
 });
 
 // The caller's own saved awards. Bearer token (Clerk) → userId → their rows only.
@@ -813,7 +913,7 @@ app.post('/api/me/pass-and-play-record', dbRoute(async (req, res) => {
   }
 
   const body = (req.body ?? {}) as Record<string, unknown>;
-  const validModes = ['flash', 'infiltrato', 'coppie', 'assurdo', 'preferiresti', 'cruciverba', 'tribunale', 'mix', 'classico', 'percorso', 'storia'];
+  const validModes = ['flash', 'infiltrato', 'coppie', 'assurdo', 'preferiresti', 'cruciverba', 'tribunale', 'ghigliottina', 'stima', 'bufala', 'intesa', 'mix', 'classico', 'percorso', 'storia'];
   const partyMode = typeof body.partyMode === 'string' && validModes.includes(body.partyMode)
     ? body.partyMode
     : null;
@@ -886,6 +986,7 @@ app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
     return;
   }
 
+  try {
   const body = (req.body ?? {}) as Record<string, unknown>;
   const modeRaw = typeof body.mode === 'string' ? body.mode : 'flash';
   const countRaw = typeof body.count === 'number' && Number.isFinite(body.count) ? Math.floor(body.count) : 5;
@@ -909,7 +1010,7 @@ app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
       : typeof body.topic === 'string'
         ? body.topic
         : undefined;
-  const theme = rawTheme ? rawTheme.trim().slice(0, 80) || undefined : undefined;
+  const theme = rawTheme ? sanitizeAiTheme(rawTheme) || undefined : undefined;
   const registerRaw = typeof body.register === 'string' ? body.register : 'misto';
   const register: ContentRegister =
     registerRaw === 'vita' || registerRaw === 'business' || registerRaw === 'carriera' ? registerRaw : 'misto';
@@ -919,6 +1020,7 @@ app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
     typeof body.playerCount === 'number' && Number.isFinite(body.playerCount)
       ? Math.max(1, Math.floor(body.playerCount))
       : 4;
+  const isSolo = playerCount === 1;
   const excludeSet = new Set<string>(
     Array.isArray(body.excludeIds)
       ? body.excludeIds.filter((v): v is string => typeof v === 'string' && v.trim().length > 0).slice(0, 200)
@@ -926,8 +1028,10 @@ app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
   );
 
   const getPassClassicoCards = (limit: number) => {
-    const basePool = dilemmasForRegister(ALL_DILEMMAS, register).filter((d) => !d.delicato && !d.roster);
-    const famPool = filterByFamiliarita(basePool, familiarita);
+    const basePool = isSolo
+      ? getSoloDilemmas()
+      : dilemmasForRegister(ALL_DILEMMAS, register).filter((d) => !d.delicato && !d.roster);
+    const famPool = isSolo ? basePool : filterByFamiliarita(basePool, familiarita);
     const freshPool = famPool.filter((d) => !cardMatchesExclude(d as unknown as Record<string, unknown>, excludeSet));
     const arr = freshPool.length > 0 ? [...freshPool] : [...famPool];
     const capped = Math.min(limit, arr.length);
@@ -997,14 +1101,22 @@ app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
     return;
   }
 
-  const getPassCruciverbaCards = (limit: number) => {
-    const fresh = CRUCIVERBA_BOARDS.filter((b) => !excludeSet.has(b.id));
-    const source = [...(fresh.length >= limit ? fresh : CRUCIVERBA_BOARDS)];
+  function pickPassDeckSlice<T extends { id: string }>(
+    allItems: readonly T[],
+    limit: number,
+    mapFn: (item: T) => Record<string, unknown>,
+  ): Array<Record<string, unknown>> {
+    const fresh = allItems.filter((item) => !excludeSet.has(item.id));
+    const source = [...(fresh.length >= limit ? fresh : allItems)];
     for (let i = source.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [source[i], source[j]] = [source[j], source[i]];
     }
-    return source.slice(0, limit).map((b) => ({
+    return source.slice(0, limit).map(mapFn);
+  }
+
+  const getPassCruciverbaCards = (limit: number) =>
+    pickPassDeckSlice(CRUCIVERBA_BOARDS, limit, (b) => ({
       id: b.id,
       cardMode: 'cruciverba',
       theme: b.theme,
@@ -1012,16 +1124,9 @@ app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
       cols: b.cols,
       words: b.words,
     }));
-  };
 
-  const getPassTribunaleCards = (limit: number) => {
-    const fresh = TRIBUNALE_CASES.filter((c) => !excludeSet.has(c.id));
-    const source = [...(fresh.length >= limit ? fresh : TRIBUNALE_CASES)];
-    for (let i = source.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [source[i], source[j]] = [source[j], source[i]];
-    }
-    return source.slice(0, limit).map((c) => ({
+  const getPassTribunaleCards = (limit: number) =>
+    pickPassDeckSlice(TRIBUNALE_CASES, limit, (c) => ({
       id: c.id,
       cardMode: 'tribunale',
       title: c.title,
@@ -1030,7 +1135,48 @@ app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
       difesaRole: c.difesaRole,
       penalty: c.penalty,
     }));
-  };
+
+  const getPassGhigliottinaCards = (limit: number) =>
+    pickPassDeckSlice(GHIGLIOTTINA_PUZZLES, limit, (p) => ({
+      id: p.id,
+      cardMode: 'ghigliottina',
+      clues: [...p.clues],
+      answer: p.answer,
+      choices: [...p.choices],
+      connections: [...p.connections],
+    }));
+
+  const getPassStimaCards = (limit: number) =>
+    pickPassDeckSlice(STIMA_QUESTIONS, limit, (q) => ({
+      id: q.id,
+      cardMode: 'stima',
+      prompt: q.prompt,
+      unit: q.unit,
+      min: q.min,
+      max: q.max,
+      step: q.step,
+      answer: q.answer,
+      funFact: q.funFact,
+    }));
+
+  const getPassBufalaCards = (limit: number) =>
+    pickPassDeckSlice(BUFALA_QUESTIONS, limit, (q) => ({
+      id: q.id,
+      cardMode: 'bufala',
+      statement: q.statement,
+      isTrue: q.isTrue,
+      explanation: q.explanation,
+      category: q.category,
+    }));
+
+  const getPassIntesaCards = (limit: number) =>
+    pickPassDeckSlice(INTESA_CARDS, limit, (c) => ({
+      id: c.id,
+      cardMode: 'intesa',
+      word: c.word,
+      forbidden: [...c.forbidden],
+      category: c.category,
+    }));
 
   if (modeRaw === 'cruciverba') {
     res.json({ mode: 'cruciverba', cards: getPassCruciverbaCards(count), source: 'curated' });
@@ -1038,6 +1184,22 @@ app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
   }
   if (modeRaw === 'tribunale') {
     res.json({ mode: 'tribunale', cards: getPassTribunaleCards(count), source: 'curated' });
+    return;
+  }
+  if (modeRaw === 'ghigliottina') {
+    res.json({ mode: 'ghigliottina', cards: getPassGhigliottinaCards(count), source: 'curated' });
+    return;
+  }
+  if (modeRaw === 'stima') {
+    res.json({ mode: 'stima', cards: getPassStimaCards(count), source: 'curated' });
+    return;
+  }
+  if (modeRaw === 'bufala') {
+    res.json({ mode: 'bufala', cards: getPassBufalaCards(count), source: 'curated' });
+    return;
+  }
+  if (modeRaw === 'intesa') {
+    res.json({ mode: 'intesa', cards: getPassIntesaCards(count), source: 'curated' });
     return;
   }
 
@@ -1049,26 +1211,33 @@ app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
     const subModes: Array<Exclude<PartyMode, 'mix'>> =
       playerCount >= 2 ? ['flash', 'preferiresti', 'assurdo', 'coppie'] : ['flash', 'preferiresti', 'assurdo'];
     if (playerCount >= 3) subModes.push('infiltrato');
-    const totalSubModes = subModes.length + 2 + (playerCount >= 3 ? 1 : 0);
+    const totalSubModes = subModes.length + 5 + (playerCount >= 2 ? 1 : 0) + (playerCount >= 3 ? 1 : 0);
     const perMode = Math.max(1, Math.ceil(count / totalSubModes));
     const rawBuckets = await Promise.all([
       ...subModes.map(async (sub) => {
         const fetchCount = sub === 'assurdo' && playerCount < 2 ? perMode * 2 : perMode;
         const rawCards = useAi
-          ? await generatePartyCards(sub, { count: fetchCount, intensity, infiltratoTono, familiarita, theme })
-          : getCuratedCards(sub, { count: fetchCount, intensity, infiltratoTono, familiarita, excludeIds: excludeSet });
+          ? await generatePartyCards(sub, { count: fetchCount, intensity, infiltratoTono, familiarita, theme, isSolo })
+          : getCuratedCards(sub, { count: fetchCount, intensity, infiltratoTono, familiarita, excludeIds: excludeSet, isSolo });
         const soloSafe =
-          sub === 'assurdo' && playerCount < 2
+          sub === 'assurdo' && isSolo
             ? rawCards.filter((c) => (c as AssurdoCard).cardType === 'dignita')
             : rawCards;
         const baseCards = soloSafe.length > 0 ? soloSafe : rawCards;
         const filtered = baseCards.filter((c) => !cardMatchesExclude(c as unknown as Record<string, unknown>, excludeSet));
         const finalSlice = filtered.length > 0 ? filtered : baseCards;
-        return finalSlice.slice(0, perMode).map((c) => ({ ...(c as object), cardMode: sub }) as Record<string, unknown>);
+        return finalSlice.slice(0, perMode).map((c) => {
+          const normalized = isSolo ? enforceTwoOptionsForSolo(c) : c;
+          return { ...(normalized as object), cardMode: sub } as Record<string, unknown>;
+        });
       }),
-      Promise.resolve(getPassCruciverbaCards(perMode) as Array<Record<string, unknown>>),
-      Promise.resolve(getPassClassicoCards(perMode) as Array<Record<string, unknown>>),
-      ...(playerCount >= 3 ? [Promise.resolve(getPassTribunaleCards(perMode) as Array<Record<string, unknown>>)] : []),
+      Promise.resolve(getPassCruciverbaCards(perMode)),
+      Promise.resolve(getPassClassicoCards(perMode)),
+      Promise.resolve(getPassGhigliottinaCards(perMode)),
+      Promise.resolve(getPassStimaCards(perMode)),
+      Promise.resolve(getPassBufalaCards(perMode)),
+      ...(playerCount >= 2 ? [Promise.resolve(getPassIntesaCards(perMode))] : []),
+      ...(playerCount >= 3 ? [Promise.resolve(getPassTribunaleCards(perMode))] : []),
     ]);
     const buckets = rawBuckets
       .filter((cards) => cards.length > 0)
@@ -1095,21 +1264,28 @@ app.post('/api/pass-and-play/deck', async (req: Request, res: Response) => {
     return;
   }
 
-  const fetchCount = partyMode === 'assurdo' && playerCount < 2 ? count * 2 : count;
+  const fetchCount = partyMode === 'assurdo' && isSolo ? count * 2 : count;
   const rawCards: PartyCard[] = useAi
-    ? await generatePartyCards(partyMode, { count: fetchCount, intensity, infiltratoTono, familiarita, theme })
-    : getCuratedCards(partyMode, { count: fetchCount, intensity, infiltratoTono, familiarita, excludeIds: excludeSet });
+    ? await generatePartyCards(partyMode, { count: fetchCount, intensity, infiltratoTono, familiarita, theme, isSolo })
+    : getCuratedCards(partyMode, { count: fetchCount, intensity, infiltratoTono, familiarita, excludeIds: excludeSet, isSolo });
   const soloSafe =
-    partyMode === 'assurdo' && playerCount < 2
+    partyMode === 'assurdo' && isSolo
       ? rawCards.filter((c) => (c as AssurdoCard).cardType === 'dignita')
       : rawCards;
   const baseCards = soloSafe.length > 0 ? soloSafe : rawCards;
   const filtered = baseCards.filter((c) => !cardMatchesExclude(c as unknown as Record<string, unknown>, excludeSet));
+  const outCards = (filtered.length > 0 ? filtered : baseCards)
+    .slice(0, count)
+    .map((c) => (isSolo ? enforceTwoOptionsForSolo(c) : c));
   res.json({
     mode: partyMode,
-    cards: (filtered.length > 0 ? filtered : baseCards).slice(0, count),
+    cards: outCards,
     source: useAi ? 'gemini' : 'curated',
   });
+  } catch (err) {
+    console.error('[deck] failed:', err instanceof Error ? err.message : err);
+    if (!res.headersSent) res.status(500).json({ error: 'deck-generation-failed' });
+  }
 });
 
 io.on('connection', (socket) => {
@@ -1118,7 +1294,10 @@ io.on('connection', (socket) => {
   // A player creates a room from their phone: they join as a player AND become
   // the room's leader (the controls live on their phone; the TV is optional).
   socket.on('player:createRoom', (payload: { nickname?: string }) => {
-    if (!joinLimiter.allow(socket.id)) {
+    if (
+      !joinLimiter.allow(socket.id) ||
+      (process.env.NODE_ENV !== 'test' && !ipCreateRoomLimiter.allow(socketClientIp(socket)))
+    ) {
       socket.emit('player:joinError', { error: 'RATE_LIMITED' });
       return;
     }
@@ -1154,7 +1333,10 @@ io.on('connection', (socket) => {
 
   // A spectator screen (TV) attaches to an existing room in read-only mode.
   socket.on('spectator:join', (payload: { code?: string }) => {
-    if (!joinLimiter.allow(socket.id)) {
+    if (
+      !joinLimiter.allow(socket.id) ||
+      (process.env.NODE_ENV !== 'test' && !ipJoinLimiter.allow(socketClientIp(socket)))
+    ) {
       socket.emit('player:joinError', { error: 'RATE_LIMITED' });
       return;
     }
@@ -1171,7 +1353,8 @@ io.on('connection', (socket) => {
 
   // The leader starts the game for their room, choosing the dilemma count.
   // Gated: only the socket whose player is the room leader may start.
-  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string; percorsoId?: string; storyId?: string; mood?: string; delicatoOptIn?: boolean; serataLunga?: boolean; caos?: string; seenDilemmaIds?: string[]; partyMode?: string; partyIntensity?: string; infiltratoTono?: string; familiarita?: string; theme?: string; couples?: Array<[string, string]> }) => {
+  socket.on('leader:startGame', (payload: { dilemmaCount?: number; register?: string; mode?: string; infiltrato?: boolean; squadre?: boolean; format?: string; startTappa?: number; durata?: string; percorsoId?: string; storyId?: string; mood?: string; delicatoOptIn?: boolean; serataLunga?: boolean; caos?: string; seenDilemmaIds?: string[]; partyMode?: string; partyIntensity?: string; infiltratoTono?: string; familiarita?: string; theme?: string; couples?: Array<[string, string]>; cruciverbaMode?: string; soloFast?: boolean }) => {
+    if (!actionLimiter.allow(socket.id)) return;
     const code = leaderCodeFor(socket.id);
     if (!code) {
       socket.emit('leader:startError', { error: 'ROOM_NOT_FOUND' });
@@ -1199,7 +1382,7 @@ io.on('connection', (socket) => {
           .map((id) => String(id).trim())
           .filter((id) => id.length > 0 && id.length <= 64)
       : [];
-    const partyMode = payload?.partyMode && ['flash', 'infiltrato', 'coppie', 'assurdo', 'preferiresti', 'cruciverba', 'tribunale', 'classico', 'mix'].includes(payload.partyMode)
+    const partyMode = payload?.partyMode && ['flash', 'infiltrato', 'coppie', 'assurdo', 'preferiresti', 'cruciverba', 'tribunale', 'ghigliottina', 'stima', 'bufala', 'intesa', 'classico', 'mix'].includes(payload.partyMode)
       ? (payload.partyMode as PartyMode)
       : undefined;
     const partyIntensity =
@@ -1216,12 +1399,14 @@ io.on('connection', (socket) => {
       typeof payload?.familiarita === 'string' && isFamiliarita(payload.familiarita)
         ? payload.familiarita
         : 'misto';
-    const theme = typeof payload?.theme === 'string' ? payload.theme.trim().slice(0, 80) : undefined;
+    const theme = typeof payload?.theme === 'string' ? sanitizeAiTheme(payload.theme) : undefined;
     const couples = Array.isArray(payload?.couples)
       ? payload.couples
           .filter((pair): pair is [string, string] => Array.isArray(pair) && pair.length === 2)
           .map(([a, b]) => [String(a), String(b)] as [string, string])
       : undefined;
+    const cruciverbaMode: CruciverbaMode = payload?.cruciverbaMode === 'scelte' ? 'scelte' : 'indizi';
+    const soloFast = Boolean(payload?.soloFast);
 
     const result = rooms.startGame(
       code,
@@ -1243,18 +1428,22 @@ io.on('connection', (socket) => {
       infiltratoTono,
       familiarita,
       couples,
+      cruciverbaMode,
+      soloFast,
     );
     if (!result.ok) {
       socket.emit('leader:startError', { error: result.error });
       return;
     }
+    const isSoloRoom = result.room.players.size === 1;
     if (partyMode && isGeminiAvailable()) {
       if (partyMode !== 'mix' && ['flash', 'infiltrato', 'coppie', 'assurdo', 'preferiresti'].includes(partyMode)) {
-        generatePartyCards(partyMode, { count: Number(payload?.dilemmaCount) || 5, intensity: partyIntensity, infiltratoTono, familiarita, theme })
+        generatePartyCards(partyMode, { count: Number(payload?.dilemmaCount) || 5, intensity: partyIntensity, infiltratoTono, familiarita, theme, isSolo: isSoloRoom })
           .then((aiCards) => {
             const r = rooms.get(code);
             if (r && r.partyMode === partyMode && aiCards.length > 0) {
-              r.partyCards.splice(r.dilemmaIndex, aiCards.length, ...aiCards);
+              const safeCards = r.players.size === 1 ? aiCards.map((c) => enforceTwoOptionsForSolo(c)) : aiCards;
+              r.partyCards.splice(r.dilemmaIndex, safeCards.length, ...safeCards);
             }
           })
           .catch(() => {});
@@ -1265,13 +1454,13 @@ io.on('connection', (socket) => {
             .map((k, idx) => (k === sub ? idx : -1))
             .filter((idx) => idx >= 0);
           if (matchingIndices.length === 0) continue;
-          generatePartyCards(sub, { count: matchingIndices.length, intensity: partyIntensity, infiltratoTono, familiarita, theme })
+          generatePartyCards(sub, { count: matchingIndices.length, intensity: partyIntensity, infiltratoTono, familiarita, theme, isSolo: isSoloRoom })
             .then((aiCards) => {
               const r = rooms.get(code);
               if (!r || r.partyMode !== 'mix' || aiCards.length === 0) return;
               matchingIndices.forEach((slotIdx, aiIdx) => {
                 if (slotIdx >= r.dilemmaIndex && aiCards[aiIdx]) {
-                  r.partyCards[slotIdx] = aiCards[aiIdx];
+                  r.partyCards[slotIdx] = r.players.size === 1 ? enforceTwoOptionsForSolo(aiCards[aiIdx]) : aiCards[aiIdx];
                 }
               });
             })
@@ -1289,12 +1478,19 @@ io.on('connection', (socket) => {
         });
       }
     }
+    if (result.room.players.size === 1 && result.room.soloFast && result.room.format !== 'storia') {
+      rooms.advancePhase(code);
+      if (result.room.phase === 'TAPPA_INTRO') {
+        rooms.advancePhase(code);
+      }
+    }
     broadcastGameState(code);
     schedulePhase(code);
   });
 
   // The leader force-advances the state machine (skip the remaining countdown).
   socket.on('leader:advancePhase', () => {
+    if (!actionLimiter.allow(socket.id)) return;
     const code = leaderCodeFor(socket.id);
     if (!code) return;
     advanceAndBroadcast(code);
@@ -1307,6 +1503,7 @@ io.on('connection', (socket) => {
   // covers the rest exactly like a normal advance (blind spots, awards
   // persistence, …) so this path can't silently skip them.
   socket.on('leader:skipDilemma', () => {
+    if (!actionLimiter.allow(socket.id)) return;
     const code = leaderCodeFor(socket.id);
     if (!code) return;
     const hadLateJoiners = (rooms.get(code)?.lateJoiners.size ?? 0) > 0;
@@ -1393,7 +1590,10 @@ io.on('connection', (socket) => {
   // A player joins from their phone with a room code + nickname. An optional
   // `token` from a previous session reclaims the same seat (reconnection).
   socket.on('player:join', (payload: { code?: string; nickname?: string; token?: string }) => {
-    if (!joinLimiter.allow(socket.id)) {
+    if (
+      !joinLimiter.allow(socket.id) ||
+      (process.env.NODE_ENV !== 'test' && !ipJoinLimiter.allow(socketClientIp(socket)))
+    ) {
       socket.emit('player:joinError', { error: 'RATE_LIMITED' });
       return;
     }
@@ -1441,6 +1641,7 @@ io.on('connection', (socket) => {
       if (token) socket.emit('player:myWriteToken', { token });
     }
     emitSecretQuestionIfNeeded(room, playerId);
+    emitIntesaSecretIfNeeded(room, playerId);
     broadcastLobby(code);
     if (reconnecting && room && isVotingPhase(room.phase)) broadcastGameState(code);
   });
@@ -1846,6 +2047,90 @@ io.on('connection', (socket) => {
     }
   });
 
+  // La Ghigliottina: submit guess via free text (+150) or 4-choice quick pick (+100).
+  socket.on('player:ghigliottina', (payload: { guess?: string; usedChoices?: boolean }) => {
+    if (!actionLimiter.allow(socket.id)) return;
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.submitGhigliottina(
+      code,
+      playerId,
+      String(payload?.guess ?? ''),
+      payload?.usedChoices !== false,
+    );
+    if (!result.ok) {
+      socket.emit('player:ghigliottinaError', { error: result.error });
+      return;
+    }
+    socket.emit('player:ghigliottinaSubmitted', { guess: result.guess });
+    if (rooms.ghigliottinaComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code);
+    }
+  });
+
+  // Quanto Vale? (Stima): submit numeric slider estimate.
+  socket.on('player:stima', (payload: { value?: number }) => {
+    if (!actionLimiter.allow(socket.id)) return;
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.submitStima(code, playerId, Number(payload?.value));
+    if (!result.ok) {
+      socket.emit('player:stimaError', { error: result.error });
+      return;
+    }
+    socket.emit('player:stimaSubmitted', { value: result.value });
+    if (rooms.stimaComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code);
+    }
+  });
+
+  // Vero o Bufala?: submit boolean vote.
+  socket.on('player:bufala', (payload: { vote?: boolean }) => {
+    if (!actionLimiter.allow(socket.id)) return;
+    const session = sessions.get(socket.id);
+    if (!session) return;
+    const { code, playerId } = session;
+    const result = rooms.submitBufala(code, playerId, Boolean(payload?.vote));
+    if (!result.ok) {
+      socket.emit('player:bufalaError', { error: result.error });
+      return;
+    }
+    socket.emit('player:bufalaSubmitted', { vote: result.vote });
+    if (rooms.bufalaComplete(code)) {
+      advanceAndBroadcast(code);
+    } else {
+      broadcastGameState(code);
+    }
+  });
+
+  // Parola Vietata (Intesa / Taboo): speaker or leader resolves round.
+  socket.on(
+    'player:intesaResolve',
+    (payload: { outcome?: 'guessed' | 'taboo' | 'skipped'; winnerId?: string | null }) => {
+      if (!actionLimiter.allow(socket.id)) return;
+      const session = sessions.get(socket.id);
+      if (!session) return;
+      const { code, playerId } = session;
+      const outcome =
+        payload?.outcome === 'guessed' || payload?.outcome === 'taboo' || payload?.outcome === 'skipped'
+          ? payload.outcome
+          : 'skipped';
+      const winnerId = typeof payload?.winnerId === 'string' ? payload.winnerId : null;
+      const result = rooms.resolveIntesa(code, playerId, outcome, winnerId);
+      if (!result.ok) {
+        socket.emit('player:intesaError', { error: result.error });
+        return;
+      }
+      advanceAndBroadcast(code);
+    },
+  );
+
   // A player writes their own dilemma in the LOBBY (max 2/player). The store
   // validates + caps it; on success the room's submitted count is broadcast.
   socket.on('player:submitDilemma', (payload: { text?: string; optionA?: string; optionB?: string }) => {
@@ -1951,7 +2236,12 @@ io.on('connection', (socket) => {
   // server can attribute saved awards. A late identify on the awards screen
   // triggers a re-save (idempotent) so results aren't lost.
   socket.on('player:identify', async (payload: { token?: string }) => {
-    if (!identifyLimiter.allow(socket.id)) return;
+    if (
+      !identifyLimiter.allow(socket.id) ||
+      (process.env.NODE_ENV !== 'test' && !ipIdentifyLimiter.allow(socketClientIp(socket)))
+    ) {
+      return;
+    }
     const session = sessions.get(socket.id);
     if (!session) return;
     const userId = await verifyClerkToken(typeof payload?.token === 'string' ? payload.token : undefined);
@@ -1959,6 +2249,7 @@ io.on('connection', (socket) => {
     rooms.setPlayerUser(session.code, session.playerId, userId);
     const room = rooms.get(session.code);
     emitSecretQuestionIfNeeded(room, session.playerId);
+    emitIntesaSecretIfNeeded(room, session.playerId);
     if (room && (room.phase === 'FINAL_AWARDS' || room.phase === 'DUO_PORTRAIT')) {
       saveAwards(awardsToPersist(room)).catch((e) => console.error('[db] saveAwards (identify) failed', e));
       saveGameRecords(gamesToPersist(room)).catch((e) => console.error('[db] saveGameRecords (identify) failed', e));
@@ -1966,6 +2257,13 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    const connIp = socketIpById.get(socket.id);
+    if (connIp) {
+      socketIpById.delete(socket.id);
+      const nextCount = (socketsPerIp.get(connIp) ?? 1) - 1;
+      if (nextCount <= 0) socketsPerIp.delete(connIp);
+      else socketsPerIp.set(connIp, nextCount);
+    }
     const session = sessions.get(socket.id);
     sessions.delete(socket.id);
     if (!session) return;

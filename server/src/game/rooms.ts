@@ -10,13 +10,18 @@ import type { WritePrompt, PublicWrittenAnswer, WriteRevealAnswer } from './writ
 import * as hotTake from './hotTake';
 import type { HotTakePrompt, HotTakeReveal, HotTakeSubmitResult } from './hotTake';
 import * as cruciverba from './cruciverba';
-import type { CruciverbaRoundState, PublicCruciverbaState } from './cruciverba';
+import type { CruciverbaMode, CruciverbaRoundState, PublicCruciverbaState } from './cruciverba';
+import { getSoloDilemmas, enforceTwoOptionsForSolo } from './soloDecks';
 import * as tribunale from './tribunale';
 import type { TribunaleRoundState } from './tribunale';
 import * as coppie from './coppie';
 import type { CouplePair, CoupleRoundOutcome } from './coppie';
 import * as telepathy from './telepathy';
 import type { TelepathyPrompt, TelepathyReveal } from './telepathy';
+import * as ghigliottina from './ghigliottina';
+import * as stima from './stima';
+import * as bufala from './bufala';
+import * as intesa from './intesa';
 import * as twists from './twists';
 import type { Twist, Caos } from './twists';
 import * as rosterDilemmas from './rosterDilemmas';
@@ -678,7 +683,12 @@ export interface Room {
   usedHotTakeIds: Set<string>;
   /** "Cruciverba Show": turn-based 2D crossword state for the current round. */
   cruciverbaState: CruciverbaRoundState | null;
+  cruciverbaMode: CruciverbaMode;
   usedCruciverbaIds: Set<string>;
+  /** Solo fast mode (1-tap straight to next question, no intermediate reveal screens). */
+  soloFast: boolean;
+  /** Compact feedback from the previous solo answer shown as a subtle header chip. */
+  lastSoloFeedback: { prompt: string; chosenLabel: string; crowdPct: number } | null;
   /** "Tribunale degli Amici": courtroom face-off state for the current round. */
   tribunaleState: TribunaleRoundState | null;
   usedTribunaleIds: Set<string>;
@@ -694,6 +704,19 @@ export interface Room {
   usedTelepathyIds: Set<string>;
   telepathyAnswers: Map<string, string>;
   telepathyReveal: TelepathyReveal | null;
+  /** "La Ghigliottina": 5 clues -> 1 mystery word. */
+  ghigliottinaState: ghigliottina.GhigliottinaRoundState | null;
+  usedGhigliottinaIds: Set<string>;
+  /** "Quanto Vale?": real-world numeric slider estimation. */
+  stimaState: stima.StimaRoundState | null;
+  usedStimaIds: Set<string>;
+  /** "Vero o Bufala?": true/false fact vs urban myth quiz. */
+  bufalaState: bufala.BufalaRoundState | null;
+  usedBufalaIds: Set<string>;
+  /** "Parola Vietata" (Intesa / Taboo): 1 speaker describes word without 4 forbidden words. */
+  intesaState: intesa.IntesaRoundState | null;
+  usedIntesaIds: Set<string>;
+  intesaAppearances: Map<string, number>;
   /** Cross-game anti-repeat tracking for party cards. */
   usedPartyCardIds: Set<string>;
   /** Dynamic mini-game sequence when partyMode === 'mix'. */
@@ -711,25 +734,55 @@ export type MixRoundKind =
   | 'coppie'
   | 'cruciverba'
   | 'tribunale'
-  | 'telepatia';
+  | 'telepatia'
+  | 'ghigliottina'
+  | 'stima'
+  | 'bufala'
+  | 'intesa';
+
+function buildShuffledBagPlan(
+  pool: MixRoundKind[],
+  count: number,
+  rng: () => number,
+): MixRoundKind[] {
+  const plan: MixRoundKind[] = [];
+  let bag: MixRoundKind[] = [];
+  for (let i = 0; i < count; i++) {
+    if (bag.length === 0) {
+      bag = [...pool];
+      for (let k = bag.length - 1; k > 0; k--) {
+        const j = Math.floor(rng() * (k + 1));
+        [bag[k], bag[j]] = [bag[j], bag[k]];
+      }
+      if (i > 0 && bag.length > 1 && bag[0] === plan[i - 1]) {
+        [bag[0], bag[1]] = [bag[1], bag[0]];
+      }
+    }
+    plan.push(bag.shift()!);
+  }
+  return plan;
+}
 
 /**
  * Build a variable, non-repeating sequence of mini-games for "Serata Mix".
- * Guarantees no two consecutive rounds share the same mini-game kind, requires
- * even player counts for fixed-pair `coppie`, and blends competitive, TV-show
- * ("cruciverba"), courtroom ("tribunale"), and sync ("telepatia") rounds.
+ * Guarantees maximum variety without consecutive duplicates, requires
+ * even player counts for fixed-pair `coppie`, and blends party debates,
+ * TV game shows ("cruciverba", "ghigliottina", "stima", "bufala", "intesa"),
+ * courtroom ("tribunale"), and sync ("telepatia") rounds.
  */
 export function buildMixPlan(count: number, playerCount: number, rng: () => number): MixRoundKind[] {
   if (playerCount < 2) {
-    const soloPool: MixRoundKind[] = ['flash', 'preferiresti', 'assurdo', 'cruciverba', 'hotTake', 'groupMind'];
-    const plan: MixRoundKind[] = [];
-    for (let i = 0; i < count; i++) {
-      const prev = i > 0 ? plan[i - 1] : null;
-      const candidates = soloPool.filter((k) => k !== prev);
-      const chosen = candidates[Math.floor(rng() * candidates.length)];
-      plan.push(chosen);
-    }
-    return plan;
+    const soloPool: MixRoundKind[] = [
+      'flash',
+      'preferiresti',
+      'assurdo',
+      'cruciverba',
+      'groupMind',
+      'ghigliottina',
+      'stima',
+      'bufala',
+    ];
+    return buildShuffledBagPlan(soloPool, count, rng);
   }
   const basePool: MixRoundKind[] = [
     'flash',
@@ -737,19 +790,19 @@ export function buildMixPlan(count: number, playerCount: number, rng: () => numb
     'groupMind',
     'write',
     'assurdo',
+    'preferiresti',
     'cruciverba',
     'telepatia',
+    'ghigliottina',
+    'stima',
+    'bufala',
+    'intesa',
   ];
   if (playerCount >= 3) basePool.push('tribunale');
   if (playerCount >= 2 && playerCount % 2 === 0) basePool.push('coppie');
   if (playerCount >= 4) basePool.push('infiltrato');
-  const plan: MixRoundKind[] = [];
-  for (let i = 0; i < count; i++) {
-    const prev = i > 0 ? plan[i - 1] : null;
-    const candidates = basePool.filter((k) => k !== prev);
-    const chosen = candidates[Math.floor(rng() * candidates.length)];
-    plan.push(chosen);
-  }
+
+  const plan = buildShuffledBagPlan(basePool, count, rng);
   const pinned = new Set<number>();
   const ensureIncluded = (target: MixRoundKind) => {
     const existingIdx = plan.indexOf(target);
@@ -767,25 +820,32 @@ export function buildMixPlan(count: number, playerCount: number, rng: () => numb
         return;
       }
     }
+    if (!pinned.has(0) && count > 0 && (count <= 1 || plan[1] !== target)) {
+      plan[0] = target;
+      pinned.add(0);
+    }
   };
   if (count >= 4) ensureIncluded('cruciverba');
-  if (count >= 5 && playerCount >= 3) ensureIncluded('tribunale');
   if (count >= 4) ensureIncluded('telepatia');
-  const missingKinds: MixRoundKind[] = [
-    ...(plan.includes('preferiresti') ? [] : (['preferiresti'] as const)),
-    ...basePool.filter((k) => !plan.includes(k)),
-  ];
-  for (const target of missingKinds) {
-    for (let i = count - 1; i >= 1; i--) {
-      if (pinned.has(i)) continue;
-      if (plan.indexOf(plan[i]) >= i) continue;
-      const prev = plan[i - 1];
-      const next = i + 1 < count ? plan[i + 1] : null;
-      if (prev !== target && next !== target) {
-        plan[i] = target;
-        pinned.add(i);
-        break;
-      }
+  if (count >= 4) ensureIncluded('preferiresti');
+  if (count >= 5 && playerCount >= 3) ensureIncluded('tribunale');
+  if (count >= 7 && playerCount >= 4) ensureIncluded('infiltrato');
+  if (count >= 8) ensureIncluded('write');
+  if (count >= 8 && playerCount >= 2 && playerCount % 2 === 0) ensureIncluded('coppie');
+
+  const tvNewModes: MixRoundKind[] = ['ghigliottina', 'stima', 'bufala', 'intesa'];
+  for (let i = 0; i < plan.length; i++) {
+    if (tvNewModes.includes(plan[i])) pinned.add(i);
+  }
+  const presentTvCount = tvNewModes.filter((k) => plan.includes(k)).length;
+  const minTv = 2;
+  if (count >= 5 && presentTvCount < minTv) {
+    let needed = minTv - presentTvCount;
+    for (const candidate of tvNewModes) {
+      if (needed <= 0) break;
+      if (plan.includes(candidate)) continue;
+      ensureIncluded(candidate);
+      needed--;
     }
   }
   return plan;
@@ -799,6 +859,10 @@ export function mixEntryPhase(kind: MixRoundKind): GamePhase {
   if (kind === 'cruciverba') return 'CRUCIVERBA';
   if (kind === 'tribunale') return 'TRIBUNALE_ARGUE';
   if (kind === 'telepatia') return 'TELEPATHY';
+  if (kind === 'ghigliottina') return 'GHIGLIOTTINA';
+  if (kind === 'stima') return 'STIMA_GUESS';
+  if (kind === 'bufala') return 'BUFALA_VOTE';
+  if (kind === 'intesa') return 'INTESA_PLAY';
   return 'VOTE_1';
 }
 
@@ -1277,7 +1341,10 @@ function emptyRoom(code: string, createdAt: number): Room {
     currentHotTakePrompt: null,
     usedHotTakeIds: new Set(),
     cruciverbaState: null,
+    cruciverbaMode: 'indizi',
     usedCruciverbaIds: new Set(),
+    soloFast: false,
+    lastSoloFeedback: null,
     tribunaleState: null,
     usedTribunaleIds: new Set(),
     tribunaleAppearances: new Map(),
@@ -1289,6 +1356,15 @@ function emptyRoom(code: string, createdAt: number): Room {
     usedTelepathyIds: new Set(),
     telepathyAnswers: new Map(),
     telepathyReveal: null,
+    ghigliottinaState: null,
+    usedGhigliottinaIds: new Set(),
+    stimaState: null,
+    usedStimaIds: new Set(),
+    bufalaState: null,
+    usedBufalaIds: new Set(),
+    intesaState: null,
+    usedIntesaIds: new Set(),
+    intesaAppearances: new Map(),
     usedPartyCardIds: new Set(),
     mixPlan: [],
   };
@@ -1310,6 +1386,9 @@ function normalizeRestoredRoom(room: Room): Room {
   return merged;
 }
 
+const defaultMakeDeck = (register: ContentRegister) =>
+  new Deck(dilemmasForRegister(loadDilemmas(), register));
+
 export class RoomStore {
   private readonly rooms = new Map<string, Room>();
 
@@ -1319,8 +1398,7 @@ export class RoomStore {
   constructor(
     private readonly genCode: () => string = generateRoomCode,
     private readonly now: () => number = () => Date.now(),
-    private readonly makeDeck: (register: ContentRegister) => Deck =
-      (register) => new Deck(dilemmasForRegister(loadDilemmas(), register)),
+    private readonly makeDeck: (register: ContentRegister) => Deck = defaultMakeDeck,
     private readonly rng: () => number = Math.random,
     // Injectable so tests can supply a small deterministic story catalog instead
     // of reading server/data/stories.json.
@@ -1585,7 +1663,10 @@ export class RoomStore {
     room.currentHotTakePrompt = null;
     room.usedHotTakeIds = new Set();
     room.cruciverbaState = null;
+    room.cruciverbaMode = 'indizi';
     room.usedCruciverbaIds = new Set();
+    room.soloFast = false;
+    room.lastSoloFeedback = null;
     room.tribunaleState = null;
     room.usedTribunaleIds = new Set();
     room.tribunaleAppearances = new Map();
@@ -1597,6 +1678,15 @@ export class RoomStore {
     room.usedTelepathyIds = new Set();
     room.telepathyAnswers = new Map();
     room.telepathyReveal = null;
+    room.ghigliottinaState = null;
+    room.usedGhigliottinaIds = new Set();
+    room.stimaState = null;
+    room.usedStimaIds = new Set();
+    room.bufalaState = null;
+    room.usedBufalaIds = new Set();
+    room.intesaState = null;
+    room.usedIntesaIds = new Set();
+    room.intesaAppearances = new Map();
     room.mixPlan = [];
     return { ok: true, room };
   }
@@ -1630,6 +1720,8 @@ export class RoomStore {
     infiltratoTono?: 'risate' | 'profondo' | 'misto',
     familiarita: Familiarita = 'misto',
     explicitCouples?: Array<[string, string]>,
+    cruciverbaMode: CruciverbaMode = 'indizi',
+    soloFast: boolean = false,
   ): StartGameResult {
     const safeFamiliarita: Familiarita = isFamiliarita(familiarita) ? familiarita : 'misto';
     const room = this.rooms.get(code);
@@ -1709,6 +1801,8 @@ export class RoomStore {
       if (humanCount < 3) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
     } else if (partyMode === 'tribunale') {
       if (room.players.size < 3 || humanCount < 1) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
+    } else if (partyMode === 'intesa') {
+      if (room.players.size < 2 || humanCount < 1) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
     } else {
       if (room.players.size < MIN_PLAYERS_TO_START) return { ok: false, error: 'NOT_ENOUGH_PLAYERS' };
       // Solo play is allowed (1 human, with or without bots), never bots-only.
@@ -1745,6 +1839,9 @@ export class RoomStore {
 
     room.mode = mode;
     room.familiarita = safeFamiliarita;
+    room.cruciverbaMode = cruciverbaMode === 'scelte' ? 'scelte' : 'indizi';
+    room.soloFast = Boolean(soloFast && room.players.size === 1);
+    room.lastSoloFeedback = null;
     room.defenseMaxMs = serataLunga ? DEFENSE_MAX_MS_LUNGA : DEFENSE_MAX_MS_NORMALE;
     room.dilemmaIndex = 0;
     room.phase = 'PHASE_INTRO';
@@ -1801,7 +1898,16 @@ export class RoomStore {
       room.plannedTappe = [];
       // Validated above in this same (classic) branch via isContentRegister.
       room.register = register as ContentRegister;
-      room.deck = this.makeDeck(register as ContentRegister);
+      const useSoloClassic =
+        !partyMode &&
+        room.players.size === 1 &&
+        this.makeDeck === defaultMakeDeck &&
+        room.submittedDilemmas.length === 0;
+      const soloClassicCards = useSoloClassic ? getSoloDilemmas() : null;
+      room.deck =
+        soloClassicCards && soloClassicCards.length > 0
+          ? new Deck(soloClassicCards)
+          : this.makeDeck(register as ContentRegister);
       // A rematch remembers the just-finished game's dilemmas so they don't
       // repeat here; consumed once (cleared immediately) so a THIRD game
       // doesn't keep excluding a game from two rematches ago. Merged with the
@@ -1819,8 +1925,12 @@ export class RoomStore {
           : dilemmaCount;
       const needed = Math.max(0, targetCount - room.submittedDilemmas.length);
       const cards = room.deck.cards;
-      const moodEligible = filterByMood(cards, mood as Mood, delicatoOptIn);
-      let famEligible = filterByFamiliarita(moodEligible, safeFamiliarita);
+      const moodEligible = useSoloClassic
+        ? cards
+        : filterByMood(cards, mood as Mood, delicatoOptIn);
+      let famEligible = useSoloClassic
+        ? moodEligible
+        : filterByFamiliarita(moodEligible, safeFamiliarita);
       if (famEligible.length < needed && famEligible.length < moodEligible.length) {
         const famIds = new Set(famEligible.map((d) => d.id));
         famEligible = [...famEligible, ...moodEligible.filter((d) => !famIds.has(d.id))];
@@ -1893,9 +2003,20 @@ export class RoomStore {
     // Configure revamped party mode if requested
     if (
       partyMode &&
-      ['flash', 'infiltrato', 'coppie', 'assurdo', 'preferiresti', 'cruciverba', 'tribunale', 'mix'].includes(
-        partyMode,
-      )
+      [
+        'flash',
+        'infiltrato',
+        'coppie',
+        'assurdo',
+        'preferiresti',
+        'cruciverba',
+        'tribunale',
+        'ghigliottina',
+        'stima',
+        'bufala',
+        'intesa',
+        'mix',
+      ].includes(partyMode)
     ) {
       room.partyMode = partyMode;
       room.partyIntensity =
@@ -1912,6 +2033,11 @@ export class RoomStore {
       room.cruciverbaState = null;
       room.tribunaleState = null;
       room.tribunaleAppearances = new Map();
+      room.ghigliottinaState = null;
+      room.stimaState = null;
+      room.bufalaState = null;
+      room.intesaState = null;
+      room.intesaAppearances = new Map();
       room.turnExpiresAt = null;
       room.readingEndsAt = null;
       room.pausedReadingRemainingMs = null;
@@ -1936,27 +2062,31 @@ export class RoomStore {
       }
       room.defenseMaxMs = DEFENSE_MAX_MS_NORMALE;
       const count = dilemmaCount || 5;
-      if (partyMode === 'cruciverba') {
-        room.mixPlan = Array.from({ length: count }, () => 'cruciverba');
-        room.partyCards = [];
-        room.dilemmaCount = count;
-      } else if (partyMode === 'tribunale') {
-        room.mixPlan = Array.from({ length: count }, () => 'tribunale');
+      if (
+        partyMode === 'cruciverba' ||
+        partyMode === 'tribunale' ||
+        partyMode === 'ghigliottina' ||
+        partyMode === 'stima' ||
+        partyMode === 'bufala' ||
+        partyMode === 'intesa'
+      ) {
+        room.mixPlan = Array.from({ length: count }, () => partyMode);
         room.partyCards = [];
         room.dilemmaCount = count;
       } else if (partyMode === 'mix') {
+        const isSoloRoom = room.players.size === 1;
         room.mixPlan = buildMixPlan(count, room.players.size, this.rng);
         // Pre-draw cards for party-card slots in mixPlan (only tag used for actual card slots)
-        const flashCards = getCuratedCards('flash', { count, familiarita: safeFamiliarita, rng: this.rng, excludeIds: room.usedPartyCardIds });
-        const rawAssurdoCards = getCuratedCards('assurdo', { count: count * 2, familiarita: safeFamiliarita, rng: this.rng, excludeIds: room.usedPartyCardIds });
+        const flashCards = getCuratedCards('flash', { count, familiarita: safeFamiliarita, rng: this.rng, excludeIds: room.usedPartyCardIds, isSolo: isSoloRoom });
+        const rawAssurdoCards = getCuratedCards('assurdo', { count: count * 2, familiarita: safeFamiliarita, rng: this.rng, excludeIds: room.usedPartyCardIds, isSolo: isSoloRoom });
         const assurdoCards =
-          room.players.size < 2
+          isSoloRoom
             ? rawAssurdoCards.filter((c) => (c as AssurdoCard).cardType === 'dignita')
             : rawAssurdoCards;
         const infiltratoCards = getCuratedCards('infiltrato', { count, familiarita: safeFamiliarita, rng: this.rng, excludeIds: room.usedPartyCardIds });
         const coppieCards = getCuratedCards('coppie', { count, intensity: room.partyIntensity, familiarita: safeFamiliarita, rng: this.rng, excludeIds: room.usedPartyCardIds });
         const preferirestiRng = this.rng === Math.random ? Math.random : () => 0.5;
-        const preferirestiCards = getCuratedCards('preferiresti', { count, familiarita: safeFamiliarita, rng: preferirestiRng, excludeIds: room.usedPartyCardIds });
+        const preferirestiCards = getCuratedCards('preferiresti', { count, familiarita: safeFamiliarita, rng: preferirestiRng, excludeIds: room.usedPartyCardIds, isSolo: isSoloRoom });
         let fi = 0;
         let ai = 0;
         let ii = 0;
@@ -1969,6 +2099,7 @@ export class RoomStore {
           else if (kind === 'coppie') drawn = coppieCards[ci++ % coppieCards.length];
           else if (kind === 'preferiresti') drawn = preferirestiCards[pi++ % preferirestiCards.length];
           else drawn = flashCards[fi++ % flashCards.length];
+          if (isSoloRoom) drawn = enforceTwoOptionsForSolo(drawn);
           if (drawn && (kind === 'flash' || kind === 'assurdo' || kind === 'infiltrato' || kind === 'coppie' || kind === 'preferiresti')) {
             room.usedPartyCardIds.add(drawn.id);
           }
@@ -1976,19 +2107,24 @@ export class RoomStore {
         });
         room.dilemmaCount = room.mixPlan.length;
       } else {
+        const isSoloRoom = room.players.size === 1;
         let cards = getCuratedCards(partyMode, {
-          count: partyMode === 'assurdo' && room.players.size < 2 ? count * 2 : count,
+          count: partyMode === 'assurdo' && isSoloRoom ? count * 2 : count,
           intensity: room.partyIntensity,
           infiltratoTono,
           familiarita: safeFamiliarita,
           rng: this.rng,
           excludeIds: room.usedPartyCardIds,
+          isSolo: isSoloRoom,
         });
-        if (partyMode === 'assurdo' && room.players.size < 2) {
+        if (partyMode === 'assurdo' && isSoloRoom) {
           const dignitaOnly = cards.filter((c) => (c as AssurdoCard).cardType === 'dignita');
           if (dignitaOnly.length > 0) cards = dignitaOnly.slice(0, count);
         } else {
           cards = cards.slice(0, count);
+        }
+        if (isSoloRoom) {
+          cards = cards.map((c) => enforceTwoOptionsForSolo(c));
         }
         for (const c of cards) room.usedPartyCardIds.add(c.id);
         room.partyCards = cards;
@@ -2018,6 +2154,11 @@ export class RoomStore {
       room.cruciverbaState = null;
       room.tribunaleState = null;
       room.tribunaleAppearances = new Map();
+      room.ghigliottinaState = null;
+      room.stimaState = null;
+      room.bufalaState = null;
+      room.intesaState = null;
+      room.intesaAppearances = new Map();
       room.turnExpiresAt = null;
       room.readingEndsAt = null;
       room.pausedReadingRemainingMs = null;
@@ -2240,12 +2381,29 @@ export class RoomStore {
               : { phase: 'FINAL_AWARDS', dilemmaIndex: idx };
           }
         }
-        if (room.partyMode === 'cruciverba') {
-          if (phase === 'PHASE_INTRO') return { phase: 'CRUCIVERBA', dilemmaIndex: 1 };
-          if (phase === 'CRUCIVERBA') return { phase: 'CRUCIVERBA_REVEAL', dilemmaIndex: idx };
-          if (phase === 'CRUCIVERBA_REVEAL') {
+        if (
+          room.partyMode === 'cruciverba' ||
+          room.partyMode === 'ghigliottina' ||
+          room.partyMode === 'stima' ||
+          room.partyMode === 'bufala' ||
+          room.partyMode === 'intesa'
+        ) {
+          const playPhase = mixEntryPhase(room.partyMode);
+          const revealPhase: GamePhase =
+            room.partyMode === 'cruciverba'
+              ? 'CRUCIVERBA_REVEAL'
+              : room.partyMode === 'ghigliottina'
+                ? 'GHIGLIOTTINA_REVEAL'
+                : room.partyMode === 'stima'
+                  ? 'STIMA_REVEAL'
+                  : room.partyMode === 'bufala'
+                    ? 'BUFALA_REVEAL'
+                    : 'INTESA_REVEAL';
+          if (phase === 'PHASE_INTRO') return { phase: playPhase, dilemmaIndex: 1 };
+          if (phase === playPhase) return { phase: revealPhase, dilemmaIndex: idx };
+          if (phase === revealPhase) {
             return idx < total
-              ? { phase: 'CRUCIVERBA', dilemmaIndex: idx + 1 }
+              ? { phase: playPhase, dilemmaIndex: idx + 1 }
               : { phase: 'FINAL_AWARDS', dilemmaIndex: idx };
           }
         }
@@ -2284,6 +2442,18 @@ export class RoomStore {
           } else if (curKind === 'cruciverba') {
             if (phase === 'CRUCIVERBA') return { phase: 'CRUCIVERBA_REVEAL', dilemmaIndex: idx };
             if (phase === 'CRUCIVERBA_REVEAL') return advanceToNextMixRound(idx);
+          } else if (curKind === 'ghigliottina') {
+            if (phase === 'GHIGLIOTTINA') return { phase: 'GHIGLIOTTINA_REVEAL', dilemmaIndex: idx };
+            if (phase === 'GHIGLIOTTINA_REVEAL') return advanceToNextMixRound(idx);
+          } else if (curKind === 'stima') {
+            if (phase === 'STIMA_GUESS') return { phase: 'STIMA_REVEAL', dilemmaIndex: idx };
+            if (phase === 'STIMA_REVEAL') return advanceToNextMixRound(idx);
+          } else if (curKind === 'bufala') {
+            if (phase === 'BUFALA_VOTE') return { phase: 'BUFALA_REVEAL', dilemmaIndex: idx };
+            if (phase === 'BUFALA_REVEAL') return advanceToNextMixRound(idx);
+          } else if (curKind === 'intesa') {
+            if (phase === 'INTESA_PLAY') return { phase: 'INTESA_REVEAL', dilemmaIndex: idx };
+            if (phase === 'INTESA_REVEAL') return advanceToNextMixRound(idx);
           } else if (curKind === 'tribunale') {
             if (phase === 'TRIBUNALE_ARGUE') return { phase: 'TRIBUNALE_VOTE', dilemmaIndex: idx };
             if (phase === 'TRIBUNALE_VOTE') return { phase: 'TRIBUNALE_REVEAL', dilemmaIndex: idx };
@@ -2540,12 +2710,13 @@ export class RoomStore {
           };
         } else if (activeSubMode === 'preferiresti') {
           const pc = card as PreferirestiCard;
-          const opts = pc.options ?? [
+          const rawOpts = pc.options ?? [
             pc.optionA ?? 'Prima scelta',
             pc.optionB ?? 'Seconda scelta',
             pc.optionC ?? 'Terza scelta',
             pc.optionD ?? 'Quarta scelta',
           ];
+          const opts = room.players.size === 1 ? rawOpts.slice(0, 2) : rawOpts;
           room.currentDilemma = {
             id: pc.id,
             text: pc.prompt,
@@ -2638,7 +2809,11 @@ export class RoomStore {
       transition.phase === 'HOT_TAKE_VOTE' ||
       transition.phase === 'CRUCIVERBA' ||
       transition.phase === 'TRIBUNALE_ARGUE' ||
-      transition.phase === 'TELEPATHY';
+      transition.phase === 'TELEPATHY' ||
+      transition.phase === 'GHIGLIOTTINA' ||
+      transition.phase === 'STIMA_GUESS' ||
+      transition.phase === 'BUFALA_VOTE' ||
+      transition.phase === 'INTESA_PLAY';
     if (isStandaloneMiniGameEntry) {
       room.currentDilemma = null;
       room.currentPartyCard = null;
@@ -2663,14 +2838,19 @@ export class RoomStore {
         room.currentTelepathyPrompt = null;
         room.telepathyReveal = null;
       }
+      if (transition.phase !== 'GHIGLIOTTINA') room.ghigliottinaState = null;
+      if (transition.phase !== 'STIMA_GUESS') room.stimaState = null;
+      if (transition.phase !== 'BUFALA_VOTE') room.bufalaState = null;
+      if (transition.phase !== 'INTESA_PLAY') room.intesaState = null;
     }
     // Entering GROUP_MIND (4.1): draw a fresh question, reset this round's
     // answers/guesses, and have bots answer immediately so they never block it.
     if (transition.phase === 'GROUP_MIND') {
-      let q = groupMind.pickGroupMindQuestion(room.usedGroupMindIds, this.rng, room.familiarita);
+      const isSolo = room.players.size < 2;
+      let q = groupMind.pickGroupMindQuestion(room.usedGroupMindIds, this.rng, room.familiarita, isSolo);
       if (!q) {
         room.usedGroupMindIds.clear();
-        q = groupMind.pickGroupMindQuestion(room.usedGroupMindIds, this.rng, room.familiarita);
+        q = groupMind.pickGroupMindQuestion(room.usedGroupMindIds, this.rng, room.familiarita, isSolo);
       }
       room.groupMindQuestion = q;
       if (room.groupMindQuestion) room.usedGroupMindIds.add(room.groupMindQuestion.id);
@@ -2712,7 +2892,7 @@ export class RoomStore {
         .filter((p) => p.connected !== false && !room.lateJoiners.has(p.id))
         .map((p) => p.id);
       const turnIds = activeIds.length > 0 ? activeIds : [...room.players.keys()];
-      room.cruciverbaState = cruciverba.initCruciverbaRound(board, turnIds, this.rng);
+      room.cruciverbaState = cruciverba.initCruciverbaRound(board, turnIds, this.rng, room.cruciverbaMode);
       room.readingEndsAt = null;
       room.turnExpiresAt = null;
     }
@@ -2749,6 +2929,40 @@ export class RoomStore {
       room.telepathyAnswers = new Map();
       room.telepathyReveal = null;
       telepathy.fillBotTelepathyAnswers(room, this.rng);
+    }
+    if (transition.phase === 'GHIGLIOTTINA') {
+      const puzzle = ghigliottina.drawGhigliottinaPuzzle(room.usedGhigliottinaIds, this.rng);
+      room.usedGhigliottinaIds.add(puzzle.id);
+      room.ghigliottinaState = ghigliottina.initGhigliottinaRound(puzzle, this.rng);
+      const bots = [...room.players.values()].filter((p) => p.isBot && !room.lateJoiners.has(p.id));
+      ghigliottina.fillBotGhigliottinaGuesses(room.ghigliottinaState, bots, this.rng);
+    }
+    if (transition.phase === 'STIMA_GUESS') {
+      const q = stima.drawStimaQuestion(room.usedStimaIds, this.rng);
+      room.usedStimaIds.add(q.id);
+      room.stimaState = stima.initStimaRound(q);
+      const bots = [...room.players.values()].filter((p) => p.isBot && !room.lateJoiners.has(p.id));
+      stima.fillBotStimaGuesses(room.stimaState, bots, this.rng);
+    }
+    if (transition.phase === 'BUFALA_VOTE') {
+      const q = bufala.drawBufalaQuestion(room.usedBufalaIds, this.rng);
+      room.usedBufalaIds.add(q.id);
+      room.bufalaState = bufala.initBufalaRound(q);
+      const bots = [...room.players.values()].filter((p) => p.isBot && !room.lateJoiners.has(p.id));
+      bufala.fillBotBufalaVotes(room.bufalaState, bots, this.rng);
+    }
+    if (transition.phase === 'INTESA_PLAY') {
+      const card = intesa.drawIntesaCard(room.usedIntesaIds, this.rng);
+      room.usedIntesaIds.add(card.id);
+      const humanIds = [...room.players.values()]
+        .filter((p) => !p.isBot && p.connected !== false && !room.lateJoiners.has(p.id))
+        .map((p) => p.id);
+      const poolIds = humanIds.length > 0 ? humanIds : [...room.players.keys()];
+      const speakerId = intesa.pickIntesaSpeaker(poolIds, room.intesaAppearances, this.rng);
+      if (speakerId) {
+        room.intesaAppearances.set(speakerId, (room.intesaAppearances.get(speakerId) ?? 0) + 1);
+        room.intesaState = intesa.initIntesaRound(card, speakerId);
+      }
     }
     // Entering WRITE_VOTE: freeze the anonymized shuffled order, then bots vote.
     if (transition.phase === 'WRITE_VOTE') {
@@ -2796,7 +3010,8 @@ export class RoomStore {
         }
       } else if (voteSubMode === 'preferiresti') {
         const pc = room.currentPartyCard as PreferirestiCard | null;
-        const optLen = Math.max(2, Math.min(4, pc?.options?.length ?? 4));
+        const maxOpts = room.players.size === 1 ? 2 : 4;
+        const optLen = Math.max(2, Math.min(maxOpts, pc?.options?.length ?? maxOpts));
         const choices = PREFERIRESTI_CHOICES.slice(0, optLen);
         for (const p of room.players.values()) {
           if (p.isBot) {
@@ -3007,7 +3222,7 @@ export class RoomStore {
               pc?.optionC ?? 'Scelta 3',
               pc?.optionD ?? 'Scelta 4',
             ].filter(Boolean);
-        const optLabels = rawOpts.slice(0, 4);
+        const optLabels = rawOpts.slice(0, room.players.size === 1 ? 2 : 4);
         const optionTallies: PreferirestiOptionTally[] = optLabels.map((label, idx) => ({
           letter: PREFERIRESTI_CHOICES[idx],
           label,
@@ -3119,6 +3334,47 @@ export class RoomStore {
         room.tappaDilemmas++;
         if (predictions.leadFlipped(room)) room.tappaSwings++;
       }
+      if (room.players.size === 1 && room.currentDilemma) {
+        const soleVote = [...room.votes.values()][0] ?? [...room.votes1.values()][0];
+        if (soleVote === 'A' || soleVote === 'B') {
+          const seed = room.currentDilemma.id || `r${transition.dilemmaIndex}`;
+          room.lastSoloFeedback = {
+            prompt: room.currentDilemma.text,
+            chosenLabel: soleVote === 'A' ? room.currentDilemma.optionA : room.currentDilemma.optionB,
+            crowdPct: roundStats.computeSoloChoicePct(seed, soleVote === 'B'),
+          };
+        }
+      }
+    }
+    if (transition.phase === 'SPLIT_REVEAL' && room.players.size === 1) {
+      const splitSub =
+        room.partyMode === 'mix' ? (room.mixPlan[transition.dilemmaIndex - 1] ?? 'flash') : room.partyMode;
+      const solePref = [...room.preferirestiVotes.values()][0];
+      const soleVote = [...room.votes.values()][0];
+      if (splitSub === 'preferiresti' && solePref) {
+        const pc = room.currentPartyCard as PreferirestiCard | null;
+        const optA = pc?.options?.[0] ?? pc?.optionA ?? room.currentDilemma?.optionA ?? 'Scelta 1';
+        const optB = pc?.options?.[1] ?? pc?.optionB ?? room.currentDilemma?.optionB ?? 'Scelta 2';
+        const isB = solePref !== 'A';
+        const seed = room.currentPartyCard?.id ?? `pref_${transition.dilemmaIndex}`;
+        room.lastSoloFeedback = {
+          prompt: pc?.prompt ?? room.currentDilemma?.text ?? '',
+          chosenLabel: isB ? optB : optA,
+          crowdPct: roundStats.computeSoloChoicePct(seed, isB),
+        };
+      } else if (soleVote === 'A' || soleVote === 'B') {
+        const seed = room.currentPartyCard?.id ?? room.currentDilemma?.id ?? `flash_${transition.dilemmaIndex}`;
+        const prompt =
+          room.currentDilemma?.text ??
+          (room.currentPartyCard && 'text' in room.currentPartyCard ? room.currentPartyCard.text : '');
+        const optA = room.currentDilemma?.optionA ?? 'Scelta A';
+        const optB = room.currentDilemma?.optionB ?? 'Scelta B';
+        room.lastSoloFeedback = {
+          prompt,
+          chosenLabel: soleVote === 'A' ? optA : optB,
+          crowdPct: roundStats.computeSoloChoicePct(seed, soleVote === 'B'),
+        };
+      }
     }
     if (transition.phase === 'GROUP_MIND_REVEAL') {
       for (const o of groupMind.groupMindResults(room)) {
@@ -3130,6 +3386,16 @@ export class RoomStore {
           room.partyScores.set(o.playerId, (room.partyScores.get(o.playerId) ?? 0) + 50);
         } else {
           st.minorityCount++;
+        }
+      }
+      if (room.players.size === 1 && room.groupMindQuestion) {
+        const soleAns = [...room.groupMindAnswers.values()][0];
+        if (soleAns === 'A' || soleAns === 'B') {
+          room.lastSoloFeedback = {
+            prompt: room.groupMindQuestion.prompt,
+            chosenLabel: soleAns === 'A' ? room.groupMindQuestion.optionA : room.groupMindQuestion.optionB,
+            crowdPct: roundStats.computeSoloChoicePct(room.groupMindQuestion.id, soleAns === 'B'),
+          };
         }
       }
     }
@@ -3236,6 +3502,63 @@ export class RoomStore {
             ensureStats(room, reveal.highest.playerId).defendedCount++;
           }
         }
+      }
+    }
+    if (transition.phase === 'GHIGLIOTTINA_REVEAL' && room.ghigliottinaState) {
+      const results = ghigliottina.resolveGhigliottinaScores(
+        room.ghigliottinaState,
+        (id) => room.players.get(id)?.nickname ?? 'Giocatore',
+      );
+      for (const r of results) {
+        const st = ensureStats(room, r.playerId);
+        st.rounds++;
+        if (r.correct) {
+          st.tvQuizWins = (st.tvQuizWins ?? 0) + 1;
+          st.majorityCount++;
+          room.partyScores.set(r.playerId, (room.partyScores.get(r.playerId) ?? 0) + r.pointsAwarded);
+        } else {
+          st.minorityCount++;
+        }
+      }
+    }
+    if (transition.phase === 'STIMA_REVEAL' && room.stimaState) {
+      const results = stima.resolveStimaResults(
+        room.stimaState,
+        (id) => room.players.get(id)?.nickname ?? 'Giocatore',
+      );
+      for (const r of results) {
+        const st = ensureStats(room, r.playerId);
+        st.rounds++;
+        if (r.pointsAwarded > 0) {
+          st.tvQuizWins = (st.tvQuizWins ?? 0) + 1;
+          st.majorityCount++;
+          room.partyScores.set(r.playerId, (room.partyScores.get(r.playerId) ?? 0) + r.pointsAwarded);
+        } else {
+          st.minorityCount++;
+        }
+      }
+    }
+    if (transition.phase === 'BUFALA_REVEAL' && room.bufalaState) {
+      const results = bufala.resolveBufalaResults(
+        room.bufalaState,
+        (id) => room.players.get(id)?.nickname ?? 'Giocatore',
+      );
+      for (const r of results) {
+        const st = ensureStats(room, r.playerId);
+        st.rounds++;
+        if (r.correct) {
+          st.tvQuizWins = (st.tvQuizWins ?? 0) + 1;
+          st.majorityCount++;
+          room.partyScores.set(r.playerId, (room.partyScores.get(r.playerId) ?? 0) + r.pointsAwarded);
+        } else {
+          st.minorityCount++;
+        }
+      }
+    }
+    if (transition.phase === 'INTESA_REVEAL' && room.intesaState) {
+      for (const p of room.players.values()) {
+        if (room.lateJoiners.has(p.id)) continue;
+        ensureStats(room, p.id).rounds++;
       }
     }
     return { ok: true, room };
@@ -3766,6 +4089,178 @@ export class RoomStore {
     };
   }
 
+  /** Helper: connected non-late-joiner human players participating in active quizzes. */
+  private activeHumanPlayers(room: Room): Array<{ id: string; nickname: string }> {
+    const all = [...room.players.values()].filter((p) => !room.lateJoiners.has(p.id));
+    const humans = all.filter((p) => !p.isBot && p.connected !== false);
+    return (humans.length > 0 ? humans : all).map((p) => ({ id: p.id, nickname: p.nickname }));
+  }
+
+  submitGhigliottina(
+    code: string,
+    playerId: string,
+    guess: string,
+    usedChoices = true,
+  ): { ok: true; room: Room; guess: string } | { ok: false; error: string } {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'GHIGLIOTTINA' || !room.ghigliottinaState) {
+      return { ok: false, error: 'NOT_GHIGLIOTTINA_PHASE' };
+    }
+    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
+    const res = ghigliottina.submitGhigliottinaGuess(room.ghigliottinaState, playerId, guess, usedChoices);
+    if (!res.ok) return { ok: false, error: res.error };
+    return { ok: true, room, guess: res.guess };
+  }
+
+  ghigliottinaComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'GHIGLIOTTINA' || !room.ghigliottinaState) return false;
+    const active = this.activeHumanPlayers(room);
+    return active.length > 0 && active.every((p) => room.ghigliottinaState!.submissions.has(p.id));
+  }
+
+  publicGhigliottinaState(code: string): ghigliottina.PublicGhigliottinaState | null {
+    const room = this.rooms.get(code);
+    if (!room || !room.ghigliottinaState) return null;
+    if (room.phase !== 'GHIGLIOTTINA' && room.phase !== 'GHIGLIOTTINA_REVEAL') return null;
+    const active = this.activeHumanPlayers(room);
+    return ghigliottina.serializeGhigliottinaState(
+      room.ghigliottinaState,
+      active,
+      (id) => room.players.get(id)?.nickname ?? 'Giocatore',
+      room.phase === 'GHIGLIOTTINA_REVEAL',
+    );
+  }
+
+  submitStima(
+    code: string,
+    playerId: string,
+    value: number,
+  ): { ok: true; room: Room; value: number } | { ok: false; error: string } {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'STIMA_GUESS' || !room.stimaState) {
+      return { ok: false, error: 'NOT_STIMA_PHASE' };
+    }
+    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
+    const res = stima.submitStimaGuess(room.stimaState, playerId, value);
+    if (!res.ok) return { ok: false, error: res.error };
+    return { ok: true, room, value: res.value };
+  }
+
+  stimaComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'STIMA_GUESS' || !room.stimaState) return false;
+    const active = this.activeHumanPlayers(room);
+    return active.length > 0 && active.every((p) => room.stimaState!.guesses.has(p.id));
+  }
+
+  publicStimaState(code: string): stima.PublicStimaState | null {
+    const room = this.rooms.get(code);
+    if (!room || !room.stimaState) return null;
+    if (room.phase !== 'STIMA_GUESS' && room.phase !== 'STIMA_REVEAL') return null;
+    const active = this.activeHumanPlayers(room);
+    return stima.serializeStimaState(
+      room.stimaState,
+      active,
+      (id) => room.players.get(id)?.nickname ?? 'Giocatore',
+      room.phase === 'STIMA_REVEAL',
+    );
+  }
+
+  submitBufala(
+    code: string,
+    playerId: string,
+    vote: boolean,
+  ): { ok: true; room: Room; vote: boolean } | { ok: false; error: string } {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'BUFALA_VOTE' || !room.bufalaState) {
+      return { ok: false, error: 'NOT_BUFALA_PHASE' };
+    }
+    if (!room.players.has(playerId)) return { ok: false, error: 'NOT_IN_ROOM' };
+    const res = bufala.submitBufalaVote(room.bufalaState, playerId, vote);
+    return { ok: true, room, vote: res.vote };
+  }
+
+  bufalaComplete(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'BUFALA_VOTE' || !room.bufalaState) return false;
+    const active = this.activeHumanPlayers(room);
+    return active.length > 0 && active.every((p) => room.bufalaState!.votes.has(p.id));
+  }
+
+  publicBufalaState(code: string): bufala.PublicBufalaState | null {
+    const room = this.rooms.get(code);
+    if (!room || !room.bufalaState) return null;
+    if (room.phase !== 'BUFALA_VOTE' && room.phase !== 'BUFALA_REVEAL') return null;
+    const active = this.activeHumanPlayers(room);
+    return bufala.serializeBufalaState(
+      room.bufalaState,
+      active,
+      (id) => room.players.get(id)?.nickname ?? 'Giocatore',
+      room.phase === 'BUFALA_REVEAL',
+    );
+  }
+
+  resolveIntesa(
+    code: string,
+    actingPlayerId: string,
+    outcome: Exclude<intesa.IntesaOutcome, 'pending'>,
+    winnerId: string | null = null,
+  ): { ok: true; room: Room } | { ok: false; error: 'NOT_INTESA_PHASE' | 'NOT_AUTHORIZED' } {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'INTESA_PLAY' || !room.intesaState) {
+      return { ok: false, error: 'NOT_INTESA_PHASE' };
+    }
+    if (room.intesaState.outcome !== 'pending') {
+      return { ok: false, error: 'NOT_INTESA_PHASE' };
+    }
+    if (actingPlayerId !== room.intesaState.speakerId && actingPlayerId !== room.leaderId) {
+      return { ok: false, error: 'NOT_AUTHORIZED' };
+    }
+    const safeWinnerId = winnerId && room.players.has(winnerId) ? winnerId : null;
+    const resolved = intesa.resolveIntesaOutcome(room.intesaState, outcome, safeWinnerId);
+    if (resolved.speakerPoints > 0) {
+      const sid = room.intesaState.speakerId;
+      room.partyScores.set(sid, (room.partyScores.get(sid) ?? 0) + resolved.speakerPoints);
+      const spSt = ensureStats(room, sid);
+      spSt.tvQuizWins = (spSt.tvQuizWins ?? 0) + 1;
+      spSt.majorityCount++;
+    }
+    if (resolved.winnerPoints > 0 && resolved.winnerId) {
+      const wid = resolved.winnerId;
+      room.partyScores.set(wid, (room.partyScores.get(wid) ?? 0) + resolved.winnerPoints);
+      const winSt = ensureStats(room, wid);
+      winSt.tvQuizWins = (winSt.tvQuizWins ?? 0) + 1;
+      winSt.majorityCount++;
+    }
+    return { ok: true, room };
+  }
+
+  publicIntesaState(code: string): intesa.PublicIntesaState | null {
+    const room = this.rooms.get(code);
+    if (!room || !room.intesaState) return null;
+    if (room.phase !== 'INTESA_PLAY' && room.phase !== 'INTESA_REVEAL') return null;
+    return intesa.serializeIntesaState(
+      room.intesaState,
+      (id) => room.players.get(id)?.nickname ?? 'Giocatore',
+      room.phase === 'INTESA_REVEAL',
+    );
+  }
+
+  privateIntesaSecret(code: string, playerId: string): intesa.IntesaSecretPayload | null {
+    const room = this.rooms.get(code);
+    if (!room || room.phase !== 'INTESA_PLAY' || !room.intesaState) return null;
+    if (room.intesaState.speakerId !== playerId) return null;
+    const card = room.intesaState.card;
+    return {
+      cardId: card.id,
+      word: card.word,
+      forbidden: [...card.forbidden] as [string, string, string, string],
+      category: card.category,
+      round: room.dilemmaIndex,
+    };
+  }
+
   /** A fresh shuffled copy of `arr` using the injectable rng (Fisher–Yates). */
 
   /**
@@ -3965,7 +4460,7 @@ export class RoomStore {
     }
     if (partySubMode === 'preferiresti') {
       const pc = card as PreferirestiCard;
-      const opts = pc.options?.length
+      const rawOpts = pc.options?.length
         ? pc.options
         : [
             pc.optionA ?? 'Prima scelta',
@@ -3973,6 +4468,7 @@ export class RoomStore {
             pc.optionC ?? 'Terza scelta',
             pc.optionD ?? 'Quarta scelta',
           ].filter(Boolean);
+      const opts = room.players.size === 1 ? rawOpts.slice(0, 2) : rawOpts;
       return {
         mode: 'preferiresti' as const,
         cardType: 'dilemma' as const,

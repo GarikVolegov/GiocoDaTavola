@@ -126,6 +126,12 @@ function pickForPartyMode(
     }
     return pickFromPool(['party', 'synth:quirky-bounce', 'synth:chaos-twist'], seed);
   }
+  if (mode === 'ghigliottina' || mode === 'stima') {
+    return pickFromPool(['synth:focus-drive', 'tension', 'synth:quirky-bounce'], seed);
+  }
+  if (mode === 'bufala' || mode === 'intesa') {
+    return pickFromPool(['party', 'synth:quirky-bounce', 'synth:arcade-rush'], seed);
+  }
   return pickFromPool(['party', 'synth:quirky-bounce', 'sneaky', 'chill', 'synth:arcade-rush'], seed);
 }
 
@@ -283,6 +289,14 @@ export function pickMusicThemeForPass(
   if (mode === 'tribunale') {
     if (phase === 'DEBATE' || phase === 'SECRET_TURN') return pickFromPool(['tension', 'synth:ethics-tension'], seed);
     return pickFromPool(['party', 'tension', 'synth:focus-drive'], seed);
+  }
+
+  if (mode === 'ghigliottina' || mode === 'stima') {
+    return pickFromPool(['synth:focus-drive', 'tension', 'synth:quirky-bounce'], seed);
+  }
+
+  if (mode === 'bufala' || mode === 'intesa') {
+    return pickFromPool(['party', 'synth:quirky-bounce', 'synth:arcade-rush'], seed);
   }
 
   // Classico in Pass & Play

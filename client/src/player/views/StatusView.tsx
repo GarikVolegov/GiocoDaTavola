@@ -634,36 +634,73 @@ export default function StatusView({
           </>
         )
       ) : phase === 'GROUP_MIND_REVEAL' ? (
-        <>
-          {game?.groupMindQuestion && game?.groupMindTally && (
-            <Card
-              glow="accent"
-              style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
-            >
-              <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{game.groupMindQuestion.prompt}</p>
-              <SplitBar
-                split={game.groupMindTally}
-                optionA={game.groupMindQuestion.optionA}
-                optionB={game.groupMindQuestion.optionB}
-              />
-              <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>
-                {game.groupMindTally.A} · {game.groupMindQuestion.optionA} — {game.groupMindQuestion.optionB} · {game.groupMindTally.B}
+        isSolo && game?.groupMindQuestion && game?.groupMindTally ? (
+          (() => {
+            const gm = game.groupMindQuestion;
+            const gmSplit = computeSoloCrowdSplit(gm.id || gm.prompt, 2);
+            const chosenSide =
+              myVote === 'A' || myVote === 'B'
+                ? myVote
+                : game.groupMindTally.A >= game.groupMindTally.B
+                  ? 'A'
+                  : 'B';
+            const minePct = chosenSide === 'A' ? gmSplit[0] : gmSplit[1];
+            return (
+              <Card
+                glow="accent"
+                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
+              >
+                <p style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fbbf24', margin: 0, textTransform: 'uppercase' }}>
+                  🧭 Tu vs La Bussola del Mondo
+                </p>
+                <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{gm.prompt}</p>
+                <SplitBar
+                  split={{ A: gmSplit[0], B: gmSplit[1] }}
+                  optionA={gm.optionA}
+                  optionB={gm.optionB}
+                />
+                <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#fbbf24' }}>
+                  {minePct >= 55
+                    ? `🎯 In Sintonia (${minePct}% come te)`
+                    : minePct <= 45
+                      ? `⚡ Controcorrente (${minePct}% come te)`
+                      : `⚖️ Sul Filo (${minePct}% come te)`}
+                </p>
+              </Card>
+            );
+          })()
+        ) : (
+          <>
+            {game?.groupMindQuestion && game?.groupMindTally && (
+              <Card
+                glow="accent"
+                style={{ width: 'min(90vw, 22rem)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', textAlign: 'center' }}
+              >
+                <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>{game.groupMindQuestion.prompt}</p>
+                <SplitBar
+                  split={game.groupMindTally}
+                  optionA={game.groupMindQuestion.optionA}
+                  optionB={game.groupMindQuestion.optionB}
+                />
+                <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>
+                  {game.groupMindTally.A} · {game.groupMindQuestion.optionA} — {game.groupMindQuestion.optionB} · {game.groupMindTally.B}
+                </p>
+                <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>
+                  🔮 {game.groupMindTally.correctGuessers} {game.groupMindTally.correctGuessers === 1 ? 'ha letto' : 'hanno letto'} bene il gruppo
+                </p>
+              </Card>
+            )}
+            {groupMindResult && (
+              <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+                {groupMindResult.actual == null
+                  ? '🔮 Pareggio: nessuna ipotesi vince.'
+                  : groupMindResult.correct
+                    ? '✅ Hai letto bene il gruppo!'
+                    : wrongGroupMindTitle}
               </p>
-              <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>
-                🔮 {game.groupMindTally.correctGuessers} {game.groupMindTally.correctGuessers === 1 ? 'ha letto' : 'hanno letto'} bene il gruppo
-              </p>
-            </Card>
-          )}
-          {groupMindResult && (
-            <p style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-              {groupMindResult.actual == null
-                ? '🔮 Pareggio: nessuna ipotesi vince.'
-                : groupMindResult.correct
-                  ? '✅ Hai letto bene il gruppo!'
-                  : wrongGroupMindTitle}
-            </p>
-          )}
-        </>
+            )}
+          </>
+        )
       ) : phase === 'WRITE_REVEAL' ? (
         <>
           {game?.writePrompt && (

@@ -276,4 +276,155 @@ describe('Serata Mix (variable mini-game mode) & party bug regressions', () => {
       expect(store.allVoted(code)).toBe(true);
     }
   });
+
+  it('excludes hotTake from solo buildMixPlan, serves solo questionari & 2-option preferiresti, and passes cruciverbaMode scelte', () => {
+    const soloPlan = buildMixPlan(12, 1, () => 0.37);
+    expect(soloPlan).toHaveLength(12);
+    expect(soloPlan).not.toContain('hotTake');
+    expect(soloPlan).not.toContain('coppie');
+    expect(soloPlan).not.toContain('infiltrato');
+    expect(soloPlan).not.toContain('tribunale');
+    expect(soloPlan).not.toContain('telepatia');
+
+    const store = new RoomStore(
+      generateRoomCode,
+      () => 5_000,
+      undefined,
+      () => 0.2,
+    );
+
+    // 1) Solo Preferiresti emits strictly 2 options
+    const rPref = store.create();
+    store.join(rPref.code, 'solo1', 'Viandante');
+    const prefStart = store.startGame(
+      rPref.code,
+      3,
+      'misto',
+      'gruppo',
+      false,
+      false,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      false,
+      'assente',
+      undefined,
+      'preferiresti',
+      undefined,
+      undefined,
+      undefined,
+      'misto',
+      undefined,
+      'scelte',
+      true,
+    );
+    expect(prefStart.ok).toBe(true);
+    store.advancePhase(rPref.code);
+    const prefRoom = store.get(rPref.code)!;
+    expect(prefRoom.phase).toBe('VOTE_1');
+    const prefPublic = store.publicPartyCard(rPref.code);
+    expect(prefPublic?.mode).toBe('preferiresti');
+    if (prefPublic?.mode === 'preferiresti' && 'options' in prefPublic) {
+      expect(prefPublic.options).toHaveLength(2);
+    }
+
+    // 2) Solo Cruciverba with cruciverbaMode: 'scelte' initializes 4-choice mode with blank clues
+    const rCruc = store.create();
+    store.join(rCruc.code, 'solo2', 'Enigmista');
+    store.startGame(
+      rCruc.code,
+      3,
+      'misto',
+      'gruppo',
+      false,
+      false,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      false,
+      'assente',
+      undefined,
+      'cruciverba',
+      undefined,
+      undefined,
+      undefined,
+      'misto',
+      undefined,
+      'scelte',
+      true,
+    );
+    store.advancePhase(rCruc.code);
+    const crucRoom = store.get(rCruc.code)!;
+    expect(crucRoom.phase).toBe('CRUCIVERBA');
+    expect(crucRoom.cruciverbaState?.mode).toBe('scelte');
+    expect(crucRoom.cruciverbaState?.revealedCells.size).toBe(1);
+
+    // 3) Solo GROUP_MIND inside Mix draws from solo questionari
+    const rMix = store.create();
+    store.join(rMix.code, 'solo3', 'Curioso');
+    store.startGame(
+      rMix.code,
+      10,
+      'misto',
+      'gruppo',
+      false,
+      false,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      false,
+      'assente',
+      undefined,
+      'mix',
+      undefined,
+      undefined,
+      undefined,
+      'misto',
+      undefined,
+      'scelte',
+      true,
+    );
+    const mixRoom = store.get(rMix.code)!;
+    let guard = 0;
+    while (mixRoom.phase !== 'GROUP_MIND' && mixRoom.phase !== 'FINAL_AWARDS' && guard < 40) {
+      store.advancePhase(rMix.code);
+      guard++;
+    }
+    if (mixRoom.phase === 'GROUP_MIND') {
+      expect(mixRoom.groupMindQuestion?.id.startsWith('sq')).toBe(true);
+    }
+  });
+
+  it('expands Solo Mix to 8 distinct games excluding intesa and 12-round Group Mix to >= 11 games with TV modes', () => {
+    let seed = 7;
+    const rng = () => {
+      seed = (seed * 16807) % 2147483647;
+      return (seed - 1) / 2147483646;
+    };
+
+    const soloPlan = buildMixPlan(8, 1, rng);
+    expect(soloPlan).toHaveLength(8);
+    expect(new Set(soloPlan).size).toBe(8);
+    expect(soloPlan).toContain('ghigliottina');
+    expect(soloPlan).toContain('stima');
+    expect(soloPlan).toContain('bufala');
+    expect(soloPlan).not.toContain('intesa');
+    for (let i = 1; i < soloPlan.length; i++) {
+      expect(soloPlan[i]).not.toBe(soloPlan[i - 1]);
+    }
+
+    const groupPlan12 = buildMixPlan(12, 4, rng);
+    expect(groupPlan12).toHaveLength(12);
+    expect(new Set(groupPlan12).size).toBeGreaterThanOrEqual(11);
+    const tvNewCount = ['ghigliottina', 'stima', 'bufala', 'intesa'].filter((k) =>
+      groupPlan12.includes(k as (typeof groupPlan12)[number]),
+    ).length;
+    expect(tvNewCount).toBeGreaterThanOrEqual(2);
+    for (let i = 1; i < groupPlan12.length; i++) {
+      expect(groupPlan12[i]).not.toBe(groupPlan12[i - 1]);
+    }
+  });
 });

@@ -59,6 +59,8 @@ import {
   RAISE_HAND_ERROR_MESSAGES,
   INFILTRATO_TOOL_ERROR_MESSAGES,
   type PartyMode,
+  type CruciverbaMode,
+  type IntesaSecretPayload,
   type PlayerSecretQuestionPayload,
 } from '../shared/events';
 import { vibrateInfiltrator } from '../shared/haptics';
@@ -84,6 +86,10 @@ import HotTakeView from './views/HotTakeView';
 import CruciverbaView from './views/CruciverbaView';
 import TribunaleView from './views/TribunaleView';
 import TelepathyView from './views/TelepathyView';
+import GhigliottinaView from './views/GhigliottinaView';
+import StimaView from './views/StimaView';
+import BufalaView from './views/BufalaView';
+import IntesaView from './views/IntesaView';
 import DuoArgueView from './views/DuoArgueView';
 import PickPredictView from './views/PickPredictView';
 import WaverView from './views/WaverView';
@@ -192,6 +198,10 @@ export default function PlayerApp() {
   const [tribunaleVote, setTribunaleVote] = useState<'ACCUSA' | 'DIFESA' | null>(null);
   const [telepathyText, setTelepathyText] = useState('');
   const [telepathySubmitted, setTelepathySubmitted] = useState<string | null>(null);
+  const [ghigliottinaSubmitted, setGhigliottinaSubmitted] = useState<string | null>(null);
+  const [stimaSubmitted, setStimaSubmitted] = useState<number | null>(null);
+  const [bufalaSubmitted, setBufalaSubmitted] = useState<boolean | null>(null);
+  const [intesaSecret, setIntesaSecret] = useState<IntesaSecretPayload | null>(null);
   // This player's own answer's opaque token this round (private emit on
   // entering WRITE_VOTE / on reconnect) — used to filter our own entry out
   // of the anonymized list without ever comparing real player ids.
@@ -201,6 +211,8 @@ export default function PlayerApp() {
   const [secretQuestion, setSecretQuestion] = useState<PlayerSecretQuestionPayload | null>(null);
   const [gognaVotedTarget, setGognaVotedTarget] = useState<string | null>(null);
   const [partyMode, setPartyMode] = useState<PartyMode | null>('mix');
+  const [cruciverbaMode, setCruciverbaMode] = useState<CruciverbaMode>('indizi');
+  const [soloFast, setSoloFast] = useState<boolean>(true);
   const [partyIntensity, setPartyIntensity] = useState<'complicita' | 'piccante' | 'profondo'>('complicita');
   const [infiltratoTono, setInfiltratoTono] = useState<'risate' | 'profondo' | 'misto'>('misto');
   const [familiarita, setFamiliarita] = useState<Familiarita>('vecchi_amici');
@@ -339,6 +351,10 @@ export default function PlayerApp() {
     };
     const onTribunaleVoted = ({ choice }: { choice: 'ACCUSA' | 'DIFESA' }) => setTribunaleVote(choice);
     const onTelepathySubmitted = ({ word }: { word: string }) => setTelepathySubmitted(word);
+    const onGhigliottinaSubmitted = ({ guess }: { guess: string }) => setGhigliottinaSubmitted(guess);
+    const onStimaSubmitted = ({ value }: { value: number }) => setStimaSubmitted(value);
+    const onBufalaSubmitted = ({ vote }: { vote: boolean }) => setBufalaSubmitted(vote);
+    const onIntesaSecret = (payload: IntesaSecretPayload) => setIntesaSecret(payload);
     const onInfiltratoRole = (payload: PlayerInfiltratoRolePayload) => setInfiltratoRole(payload);
     const onSecretQuestion = (payload: PlayerSecretQuestionPayload) => {
       const normalized = {
@@ -391,6 +407,10 @@ export default function PlayerApp() {
     socket.on(SocketEvents.PlayerCruciverbaFeedback, onCruciverbaFeedback);
     socket.on(SocketEvents.PlayerTribunaleVoted, onTribunaleVoted);
     socket.on(SocketEvents.PlayerTelepathySubmitted, onTelepathySubmitted);
+    socket.on(SocketEvents.PlayerGhigliottinaSubmitted, onGhigliottinaSubmitted);
+    socket.on(SocketEvents.PlayerStimaSubmitted, onStimaSubmitted);
+    socket.on(SocketEvents.PlayerBufalaSubmitted, onBufalaSubmitted);
+    socket.on(SocketEvents.PlayerIntesaSecret, onIntesaSecret);
     socket.on(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
     socket.on(SocketEvents.PlayerSecretQuestion, onSecretQuestion);
     socket.on(SocketEvents.PlayerGognaVoted, onGognaVoted);
@@ -455,6 +475,10 @@ export default function PlayerApp() {
       socket.off(SocketEvents.PlayerCruciverbaFeedback, onCruciverbaFeedback);
       socket.off(SocketEvents.PlayerTribunaleVoted, onTribunaleVoted);
       socket.off(SocketEvents.PlayerTelepathySubmitted, onTelepathySubmitted);
+      socket.off(SocketEvents.PlayerGhigliottinaSubmitted, onGhigliottinaSubmitted);
+      socket.off(SocketEvents.PlayerStimaSubmitted, onStimaSubmitted);
+      socket.off(SocketEvents.PlayerBufalaSubmitted, onBufalaSubmitted);
+      socket.off(SocketEvents.PlayerIntesaSecret, onIntesaSecret);
       socket.off(SocketEvents.PlayerInfiltratoRole, onInfiltratoRole);
       socket.off(SocketEvents.PlayerSecretQuestion, onSecretQuestion);
       socket.off(SocketEvents.PlayerGognaVoted, onGognaVoted);
@@ -501,6 +525,10 @@ export default function PlayerApp() {
     setTribunaleVote(null);
     setTelepathyText('');
     setTelepathySubmitted(null);
+    setGhigliottinaSubmitted(null);
+    setStimaSubmitted(null);
+    setBufalaSubmitted(null);
+    setIntesaSecret(null);
   };
 
   // Leave the room on purpose: forget the saved seat and reset to the join form.
@@ -562,6 +590,10 @@ export default function PlayerApp() {
     game?.cruciverbaState?.boardId,
     game?.tribunaleState?.caseData?.id,
     game?.telepathyPrompt?.id,
+    game?.ghigliottinaState?.puzzleId,
+    game?.stimaState?.questionId,
+    game?.bufalaState?.questionId,
+    game?.intesaState?.cardId,
   ]);
 
   useEffect(() => {
@@ -741,12 +773,23 @@ export default function PlayerApp() {
     getSocket().emit(SocketEvents.PlayerPredict, { choice });
   };
 
+  const isSoloSession =
+    players.length === 1 &&
+    (game?.groupMindProgress?.total ?? 1) <= 1 &&
+    (game?.votedCount ?? 0) <= 1 &&
+    (game?.missingVoters?.length ?? 0) <= 1;
+
   // GROUP_MIND (4.1) submits both parts together in one call; each tap updates
   // its own local state and — once the OTHER part is already chosen — re-emits
   // the combined submission (so either tap order, and later changes, both work).
   const castGroupMindAnswer = (choice: VoteChoice) => {
     setGroupMindAnswer(choice); // optimistic; confirmed via player:groupMindSubmitted
     buzz(25);
+    if (isSoloSession) {
+      setGroupMindGuess(choice);
+      getSocket().emit(SocketEvents.PlayerGroupMind, { answer: choice, guess: choice });
+      return;
+    }
     if (groupMindGuess) getSocket().emit(SocketEvents.PlayerGroupMind, { answer: choice, guess: groupMindGuess });
   };
 
@@ -937,6 +980,8 @@ export default function PlayerApp() {
         squadre: squadreOn,
         serataLunga,
         caos,
+        cruciverbaMode,
+        soloFast: players.length <= 1 ? soloFast : false,
       });
       return;
     }
@@ -952,6 +997,8 @@ export default function PlayerApp() {
       caos,
       seenDilemmaIds: getSeenDilemmaIds(), // 5.1: avoid déjà-vu across separate games on this device
       partyMode: partyMode ?? undefined,
+      cruciverbaMode,
+      soloFast: players.length <= 1 ? soloFast : false,
       partyIntensity: partyIntensity ?? 'complicita',
       infiltratoTono,
       familiarita,
@@ -1000,9 +1047,11 @@ export default function PlayerApp() {
           ? humanCount >= 3
           : partyMode === 'tribunale'
             ? players.length >= 3 && humanCount >= 1
-            : effectivePlayMode === 'solo'
-              ? players.length >= MIN_PLAYERS_TO_START && humanCount >= 1
-              : players.length >= 2 && humanCount >= 1;
+            : partyMode === 'intesa'
+              ? players.length >= 2 && humanCount >= 1
+              : effectivePlayMode === 'solo'
+                ? players.length >= MIN_PLAYERS_TO_START && humanCount >= 1
+                : players.length >= 2 && humanCount >= 1;
   const canAddBot = gameMode !== 'duello' && players.length < 8;
 
   // Phases that run a server-side countdown the leader may skip (everything past
@@ -1036,7 +1085,10 @@ export default function PlayerApp() {
     p === 'WRITE_VOTE' ||
     p === 'HOT_TAKE_VOTE' ||
     p === 'TRIBUNALE_VOTE' ||
-    p === 'TELEPATHY';
+    p === 'TELEPATHY' ||
+    p === 'GHIGLIOTTINA' ||
+    p === 'STIMA_GUESS' ||
+    p === 'BUFALA_VOTE';
 
   // The leader's "skip the rest of this phase" button — only shown to the leader
   // during a phase that has a countdown. Rendered in each in-game branch.
@@ -1185,6 +1237,7 @@ export default function PlayerApp() {
         onGognaVote={(targetId) => getSocket().emit(SocketEvents.PlayerGognaVote, { targetId })}
         players={players}
         myPlayerId={playerId}
+        lastSoloFeedback={game?.lastSoloFeedback ?? null}
         skipButton={
           <>
             {discardButton}
@@ -1363,6 +1416,8 @@ export default function PlayerApp() {
         onAnswer={castGroupMindAnswer}
         onGuess={castGroupMindGuess}
         progress={game?.groupMindProgress ?? null}
+        isSolo={isSoloSession}
+        lastSoloFeedback={game?.lastSoloFeedback ?? null}
         skipButton={skipButton}
       />
     );
@@ -1481,6 +1536,72 @@ export default function PlayerApp() {
     );
   }
 
+  if (joinedCode && (phase === 'GHIGLIOTTINA' || phase === 'GHIGLIOTTINA_REVEAL')) {
+    return withLeaveMenu(
+      <GhigliottinaView
+        phase={phase}
+        state={game?.ghigliottinaState ?? null}
+        submittedGuess={ghigliottinaSubmitted}
+        onSubmit={(guess, usedChoices) => {
+          setGhigliottinaSubmitted(guess);
+          buzz(25);
+          getSocket().emit(SocketEvents.PlayerGhigliottina, { guess, usedChoices });
+        }}
+        skipButton={skipButton}
+      />
+    );
+  }
+
+  if (joinedCode && (phase === 'STIMA_GUESS' || phase === 'STIMA_REVEAL')) {
+    return withLeaveMenu(
+      <StimaView
+        phase={phase}
+        state={game?.stimaState ?? null}
+        submittedValue={stimaSubmitted}
+        onSubmit={(value) => {
+          setStimaSubmitted(value);
+          buzz(25);
+          getSocket().emit(SocketEvents.PlayerStima, { value });
+        }}
+        skipButton={skipButton}
+      />
+    );
+  }
+
+  if (joinedCode && (phase === 'BUFALA_VOTE' || phase === 'BUFALA_REVEAL')) {
+    return withLeaveMenu(
+      <BufalaView
+        phase={phase}
+        state={game?.bufalaState ?? null}
+        submittedVote={bufalaSubmitted}
+        onVote={(voteBool) => {
+          setBufalaSubmitted(voteBool);
+          buzz(25);
+          getSocket().emit(SocketEvents.PlayerBufala, { vote: voteBool });
+        }}
+        skipButton={skipButton}
+      />
+    );
+  }
+
+  if (joinedCode && (phase === 'INTESA_PLAY' || phase === 'INTESA_REVEAL')) {
+    return withLeaveMenu(
+      <IntesaView
+        phase={phase}
+        state={game?.intesaState ?? null}
+        secret={intesaSecret}
+        myId={playerId}
+        isLeader={isLeader}
+        players={players}
+        onResolve={(outcome, winnerId) => {
+          buzz(25);
+          getSocket().emit(SocketEvents.PlayerIntesaResolve, { outcome, winnerId });
+        }}
+        skipButton={skipButton}
+      />
+    );
+  }
+
   if (joinedCode && phase === 'ACCUSE') {
     const candidates = players.filter((p) => p.id !== playerId);
     return withLeaveMenu(
@@ -1531,7 +1652,9 @@ export default function PlayerApp() {
             ? "L'Infiltrato richiede almeno 3 giocatori."
             : partyMode === 'tribunale' && players.length < 3
               ? 'Il Tribunale richiede almeno 3 partecipanti.'
-              : humanCount < 1
+              : partyMode === 'intesa' && players.length < 2
+                ? 'Parola Vietata richiede almeno 2 partecipanti.'
+                : humanCount < 1
                 ? 'Serve almeno una persona reale.'
                 : effectivePlayMode === 'gruppo' && players.length < 2
                   ? 'In gruppo servono almeno 2 partecipanti (aggiungi amici o bot 🤖, oppure passa a Da solo 👤).'
@@ -1585,6 +1708,10 @@ export default function PlayerApp() {
               startError={startError}
               partyMode={partyMode}
               setPartyMode={setPartyMode}
+              cruciverbaMode={cruciverbaMode}
+              setCruciverbaMode={setCruciverbaMode}
+              soloFast={soloFast}
+              setSoloFast={setSoloFast}
               partyIntensity={partyIntensity}
               setPartyIntensity={setPartyIntensity}
               infiltratoTono={infiltratoTono}
@@ -1861,7 +1988,13 @@ export default function PlayerApp() {
                 className={`${lobbyStyles.segmentBtn} ${playMode === 'solo' ? lobbyStyles.segmentBtnActive : ''}`}
                 onClick={() => {
                   setPlayMode('solo');
-                  if (partyMode === 'infiltrato' || partyMode === 'coppie' || partyMode === 'tribunale') {
+                  setCruciverbaMode('scelte');
+                  if (
+                    partyMode === 'infiltrato' ||
+                    partyMode === 'coppie' ||
+                    partyMode === 'tribunale' ||
+                    partyMode === 'intesa'
+                  ) {
                     setPartyMode('mix');
                   }
                   if (gameMode === 'duello') setGameMode('gruppo');
@@ -1875,7 +2008,10 @@ export default function PlayerApp() {
                 type="button"
                 aria-pressed={playMode === 'gruppo'}
                 className={`${lobbyStyles.segmentBtn} ${playMode === 'gruppo' ? lobbyStyles.segmentBtnActive : ''}`}
-                onClick={() => setPlayMode('gruppo')}
+                onClick={() => {
+                  setPlayMode('gruppo');
+                  setCruciverbaMode('indizi');
+                }}
               >
                 👥 In gruppo
               </button>

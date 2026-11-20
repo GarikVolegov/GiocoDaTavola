@@ -75,6 +75,8 @@ export interface PlayerStats {
   writeVotes?: number;
   /** Courtroom trials won in "Tribunale degli Amici". Optional + only set once non-zero. */
   tribunaleWins?: number;
+  /** Correct rounds / wins across TV show mini-games (Ghigliottina, Stima, Bufala, Parola Vietata). */
+  tvQuizWins?: number;
 }
 
 /** The fun end-of-game superlatives (persuasion-themed + party mini-game honors). */
@@ -97,6 +99,7 @@ export type AwardId =
   | 'pennadoro'
   | 'lettoregruppo'
   | 'avvocato'
+  | 'campionetv'
   // Jolly pool (2.5): each goes to an otherwise empty-handed player, one apiece
   // — never competed for like the awards above. See computeAwards's jolly pass.
   | 'fulmine'
@@ -166,6 +169,9 @@ export function computeAwards(room: Room): Award[] {
     { id: 'avvocato', title: 'Principe del Foro', emoji: '⚖️',
       description: 'Ha vinto più cause nel Tribunale degli Amici.',
       winner: winnerBy((s) => s.tribunaleWins ?? 0, (s) => (s.tribunaleWins ?? 0) > 0) },
+    { id: 'campionetv', title: 'Campione del Quiz', emoji: '🏆',
+      description: 'Ha brillato tra Ghigliottina, Quanto Vale, Vero o Bufala e Parola Vietata.',
+      winner: winnerBy((s) => s.tvQuizWins ?? 0, (s) => (s.tvQuizWins ?? 0) > 0) },
     { id: 'sincronia', title: 'Onda Telepatica', emoji: '⚡',
       description: 'Ha indovinato la stessa parola del gruppo in Telepatia.',
       winner: winnerBy((s) => s.telepathyMatches ?? 0, (s) => (s.telepathyMatches ?? 0) > 0) },

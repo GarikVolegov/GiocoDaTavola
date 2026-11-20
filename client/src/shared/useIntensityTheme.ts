@@ -32,7 +32,14 @@ export function resolveIntensityLevel(input: IntensityInput): IntensityLevel {
   ) {
     return 'intense';
   }
-  if (complessita === 'sorbetto' || partyMode === 'flash' || partyMode === 'preferiresti' || mood === 'leggera') {
+  if (
+    complessita === 'sorbetto' ||
+    partyMode === 'flash' ||
+    partyMode === 'preferiresti' ||
+    partyMode === 'bufala' ||
+    partyMode === 'stima' ||
+    mood === 'leggera'
+  ) {
     return 'light';
   }
   return 'medium';

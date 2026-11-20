@@ -25,13 +25,21 @@ function deterministicHash(seed: string): number {
   return h >>> 0;
 }
 
+export function computeSoloBinaryPctA(seed: string): number {
+  return 28 + (deterministicHash(seed || 'schierati') % 47);
+}
+
 /**
  * Deterministic community majority side for solo benchmark ("Tu vs La Bussola del Mondo").
  * Mirrors `computeSoloCrowdSplit` on the client so server awards & UI stay consistent.
  */
 export function computeSoloMajoritySide(seed: string): VoteChoice {
-  const pctA = 28 + (deterministicHash(seed || 'schierati') % 47);
-  return pctA >= 50 ? 'A' : 'B';
+  return computeSoloBinaryPctA(seed) >= 50 ? 'A' : 'B';
+}
+
+export function computeSoloChoicePct(seed: string, isOptionB: boolean): number {
+  const pctA = computeSoloBinaryPctA(seed);
+  return isOptionB ? 100 - pctA : pctA;
 }
 
 export function computeSoloPreferirestiTopIndex(seed: string, optionCount: number): number {

@@ -185,6 +185,22 @@ export const SocketEvents = {
   PlayerGognaVote: 'player:gognaVote',
   /** Server confirms the gogna vote back to the voter. */
   PlayerGognaVoted: 'player:gognaVoted',
+  /** La Ghigliottina: submit guess via free text or 4 choices. */
+  PlayerGhigliottina: 'player:ghigliottina',
+  PlayerGhigliottinaSubmitted: 'player:ghigliottinaSubmitted',
+  PlayerGhigliottinaError: 'player:ghigliottinaError',
+  /** Quanto Vale? (Stima): submit numeric slider estimate. */
+  PlayerStima: 'player:stima',
+  PlayerStimaSubmitted: 'player:stimaSubmitted',
+  PlayerStimaError: 'player:stimaError',
+  /** Vero o Bufala?: submit boolean vote. */
+  PlayerBufala: 'player:bufala',
+  PlayerBufalaSubmitted: 'player:bufalaSubmitted',
+  PlayerBufalaError: 'player:bufalaError',
+  /** Parola Vietata (Intesa): private word/forbidden cards + speaker/leader resolve. */
+  PlayerIntesaSecret: 'player:intesaSecret',
+  PlayerIntesaResolve: 'player:intesaResolve',
+  PlayerIntesaError: 'player:intesaError',
 } as const;
 
 /**
@@ -550,6 +566,10 @@ export const PARTY_MODES = [
   'preferiresti',
   'cruciverba',
   'tribunale',
+  'ghigliottina',
+  'stima',
+  'bufala',
+  'intesa',
   'classico',
   'mix',
 ] as const;
@@ -578,6 +598,8 @@ export interface HotTakeRevealPayload {
   communityAverage?: number;
 }
 
+export type CruciverbaMode = 'indizi' | 'scelte';
+
 export interface CruciverbaWordPayload {
   id: string;
   number: number;
@@ -586,6 +608,8 @@ export interface CruciverbaWordPayload {
   col: number;
   length: number;
   clue: string;
+  choices?: string[];
+  wrongChoices?: string[];
   status: 'pending' | 'solved' | 'revealed';
   solvedByName: string | null;
   answer?: string;
@@ -599,6 +623,7 @@ export interface CruciverbaCellPayload {
 export interface CruciverbaStatePayload {
   boardId: string;
   theme: string;
+  mode?: CruciverbaMode;
   rows: number;
   cols: number;
   activePlayerId: string | null;
@@ -667,6 +692,89 @@ export interface TelepathyRevealPayload {
   totalPlayers: number;
   syncedCount: number;
   biggestMatch: TelepathyClusterPayload | null;
+}
+
+export interface GhigliottinaStatePayload {
+  puzzleId: string;
+  clues: string[];
+  choices: string[];
+  submittedCount: number;
+  totalPlayers: number;
+  missingNicknames: string[];
+  answer?: string;
+  connections?: string[];
+  results?: Array<{
+    playerId: string;
+    nickname: string;
+    guess: string;
+    correct: boolean;
+    usedChoices: boolean;
+    pointsAwarded: number;
+  }>;
+}
+
+export interface StimaStatePayload {
+  questionId: string;
+  prompt: string;
+  unit: string;
+  min: number;
+  max: number;
+  step: number;
+  submittedCount: number;
+  totalPlayers: number;
+  missingNicknames: string[];
+  answer?: number;
+  funFact?: string;
+  results?: Array<{
+    playerId: string;
+    nickname: string;
+    guess: number;
+    diff: number;
+    isWinner: boolean;
+    isExact: boolean;
+    pointsAwarded: number;
+  }>;
+  soloPrecisionPct?: number;
+}
+
+export interface BufalaStatePayload {
+  questionId: string;
+  statement: string;
+  category: string;
+  submittedCount: number;
+  totalPlayers: number;
+  missingNicknames: string[];
+  isTrue?: boolean;
+  explanation?: string;
+  trueCount?: number;
+  falseCount?: number;
+  results?: Array<{
+    playerId: string;
+    nickname: string;
+    vote: boolean;
+    correct: boolean;
+    pointsAwarded: number;
+  }>;
+}
+
+export interface IntesaStatePayload {
+  cardId: string;
+  category: string;
+  speakerId: string;
+  speakerName: string;
+  outcome: 'pending' | 'guessed' | 'taboo' | 'skipped';
+  winnerId: string | null;
+  winnerName: string | null;
+  word?: string;
+  forbidden?: string[];
+}
+
+export interface IntesaSecretPayload {
+  cardId: string;
+  word: string;
+  forbidden: [string, string, string, string];
+  category: string;
+  round: number;
 }
 
 export type PartyIntensity = 'complicita' | 'piccante';
@@ -891,6 +999,18 @@ export type GamePhase =
   // "Telepatia" silent 1-word sync mini-game.
   | 'TELEPATHY'
   | 'TELEPATHY_REVEAL'
+  // "La Ghigliottina": 5 clues -> 1 connecting word.
+  | 'GHIGLIOTTINA'
+  | 'GHIGLIOTTINA_REVEAL'
+  // "Quanto Vale?": numeric estimation slider -> closest wins.
+  | 'STIMA_GUESS'
+  | 'STIMA_REVEAL'
+  // "Vero o Bufala?": True/False quiz + explanation.
+  | 'BUFALA_VOTE'
+  | 'BUFALA_REVEAL'
+  // "Parola Vietata" (Intesa / Taboo): describe without forbidden words.
+  | 'INTESA_PLAY'
+  | 'INTESA_REVEAL'
   // "Percorso" mode chapter framing (mirror server phases.ts).
   | 'TAPPA_INTRO'
   | 'TAPPA_RECAP'
@@ -1496,6 +1616,14 @@ export interface GameStatePayload {
   telepathyProgress?: { done: number; total: number; missingNicknames: string[] } | null;
   /** Mind-sync clusters reveal in TELEPATHY_REVEAL; null otherwise. */
   telepathyReveal?: TelepathyRevealPayload | null;
+  /** "La Ghigliottina" state; null outside GHIGLIOTTINA/GHIGLIOTTINA_REVEAL. */
+  ghigliottinaState?: GhigliottinaStatePayload | null;
+  /** "Quanto Vale?" state; null outside STIMA_GUESS/STIMA_REVEAL. */
+  stimaState?: StimaStatePayload | null;
+  /** "Vero o Bufala?" state; null outside BUFALA_VOTE/BUFALA_REVEAL. */
+  bufalaState?: BufalaStatePayload | null;
+  /** "Parola Vietata" state; null outside INTESA_PLAY/INTESA_REVEAL. */
+  intesaState?: IntesaStatePayload | null;
   /**
    * The swing + per-defender attribution, shown only in PHASE_RESULTS; null
    * otherwise. Aggregate counts only — never who voted what.
@@ -1550,6 +1678,16 @@ export interface GameStatePayload {
   partyMode?: PartyMode;
   /** Active party card metadata and mode-specific state; null if classic mode. */
   partyCard?: PartyCardPayload | null;
+  /** Solo fast mode (1 tap per question straight to next round). */
+  soloFast?: boolean;
+  /** Compact feedback chip from the previous solo answer. */
+  lastSoloFeedback?: SoloFeedbackPayload | null;
+}
+
+export interface SoloFeedbackPayload {
+  prompt: string;
+  chosenLabel: string;
+  crowdPct: number;
 }
 
 /** "La Mente del Gruppo" (4.1): a short A/B question everyone answers + predicts. */
@@ -1950,6 +2088,14 @@ export const PHASE_LABELS: Record<GamePhase, string> = {
   TRIBUNALE_REVEAL: 'Sentenza!',
   TELEPATHY: 'Telepatia',
   TELEPATHY_REVEAL: 'Sintonia mentale',
+  GHIGLIOTTINA: 'La Ghigliottina',
+  GHIGLIOTTINA_REVEAL: 'La Parola Misteriosa',
+  STIMA_GUESS: 'Quanto Vale?',
+  STIMA_REVEAL: 'Il Prezzo Giusto',
+  BUFALA_VOTE: 'Vero o Bufala?',
+  BUFALA_REVEAL: 'La Verità',
+  INTESA_PLAY: 'Parola Vietata',
+  INTESA_REVEAL: 'Esito Parola Vietata',
   TAPPA_INTRO: 'Nuova tappa',
   TAPPA_RECAP: 'Fine tappa',
   STORY_INTRO: 'La storia',

@@ -5,6 +5,8 @@ import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { GoogleGenAI } from '@google/genai';
 import type { DilemmaFamiliarita, Familiarita } from './deck';
+import { enforceTwoOptionsForSolo, getSoloPartyCards } from './soloDecks';
+import { sanitizeAiTheme } from '../security';
 
 export type PartyMode =
   | 'flash'
@@ -14,6 +16,10 @@ export type PartyMode =
   | 'preferiresti'
   | 'cruciverba'
   | 'tribunale'
+  | 'ghigliottina'
+  | 'stima'
+  | 'bufala'
+  | 'intesa'
   | 'classico'
   | 'mix';
 
@@ -93,6 +99,15 @@ REGOLE DI SCRITTURA:
 2. PROFONDITÀ AUTENTICA: Parla di paure nascoste, desideri rimandati, confini nei legami, priorità di vita, cosa conta davvero.
 3. FORMATO JSON RIGOROSO: Rispondi esclusivamente in formato JSON valido secondo lo schema richiesto.`;
 
+export const SOLO_SYSTEM_PROMPT = `Sei l'autore creativo di un gioco interattivo per UN SOLO GIOCATORE ("tu").
+Genera dilemmi e scenari STRANI, PARTICOLARI, SURREALI E PERSONALI rivolti direttamente alla singola persona.
+
+REGOLE TASSATIVE:
+1. ZERO GRUPPO / ZERO TAVOLO / ZERO PENITENZE DA BERE: Vietato parlare di "gruppo", "chi di voi", "amici al tavolo", "giocatore alla tua sinistra" o "chi resta in minoranza beve".
+2. SOLO 2 SCELTE SECCHE (A o B): Anche in Preferiresti ci devono essere ESATTAMENTE 2 opzioni brevi e incisive (3-8 parole).
+3. STRANEZZA E CURIOSITÀ PERSONALE: Sogni, porte segrete, superpoteri assurdi, psicologia notturna, abitudini segrete, scelte intime bizzarre.
+4. FORMATO JSON RIGOROSO: Rispondi esclusivamente in formato JSON valido secondo lo schema richiesto, senza testo extra.`;
+
 interface PartyDecksData {
   flash: FlashCard[];
   infiltrato: InfiltratoCard[];
@@ -136,10 +151,32 @@ export function getCuratedCards(
     familiarita?: Familiarita;
     rng?: () => number;
     excludeIds?: Set<string>;
+    isSolo?: boolean;
   } = {},
 ): PartyCard[] {
-  const decks = loadCuratedDecks();
   const rng = options.rng ?? Math.random;
+  if (options.isSolo && (mode === 'flash' || mode === 'preferiresti' || mode === 'assurdo' || mode === 'mix')) {
+    if (mode === 'mix') {
+      const combined = [
+        ...getSoloPartyCards('flash', { rng, excludeIds: options.excludeIds }),
+        ...getSoloPartyCards('preferiresti', { rng, excludeIds: options.excludeIds }),
+        ...getSoloPartyCards('assurdo', { rng, excludeIds: options.excludeIds }),
+      ];
+      for (let i = combined.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [combined[i], combined[j]] = [combined[j], combined[i]];
+      }
+      const count = options.count ?? combined.length;
+      return combined.slice(0, count).map((c) => enforceTwoOptionsForSolo(c));
+    }
+    return getSoloPartyCards(mode, {
+      count: options.count,
+      rng,
+      excludeIds: options.excludeIds,
+    });
+  }
+
+  const decks = loadCuratedDecks();
   let pool: PartyCard[] = [];
 
   if (mode === 'flash') {
@@ -209,7 +246,7 @@ export function isGeminiAvailable(): boolean {
  */
 export async function generatePartyCards(
   mode: PartyMode,
-  options: { count?: number; intensity?: CoppieIntensity; infiltratoTono?: 'risate' | 'profondo' | 'misto'; familiarita?: Familiarita; theme?: string } = {},
+  options: { count?: number; intensity?: CoppieIntensity; infiltratoTono?: 'risate' | 'profondo' | 'misto'; familiarita?: Familiarita; theme?: string; isSolo?: boolean } = {},
 ): Promise<PartyCard[]> {
   const count = options.count ?? 5;
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
@@ -222,8 +259,12 @@ export async function generatePartyCards(
   const useDeepPrompt =
     (mode === 'coppie' && options.intensity === 'profondo') ||
     (mode === 'infiltrato' && options.infiltratoTono === 'profondo');
-  const systemPrompt = useDeepPrompt ? DEEP_SYSTEM_PROMPT : SYSTEM_PROMPT;
-  const userPrompt = getUserPromptForMode(mode, count, options.intensity, options.theme, options.infiltratoTono, options.familiarita);
+  const systemPrompt = options.isSolo
+    ? SOLO_SYSTEM_PROMPT
+    : useDeepPrompt
+      ? DEEP_SYSTEM_PROMPT
+      : SYSTEM_PROMPT;
+  const userPrompt = getUserPromptForMode(mode, count, options.intensity, options.theme, options.infiltratoTono, options.familiarita, options.isSolo);
 
   // Strict 3.5s timeout: if Gemini Flash or network takes longer, fallback immediately to curated cards!
   const timeoutPromise = new Promise<never>((_, reject) =>
@@ -274,8 +315,10 @@ export async function generatePartyCards(
 
     const rawJson = await Promise.race([fetchAi(), timeoutPromise]);
     if (rawJson) {
-      const parsed = parseGeneratedCards(mode, rawJson);
-      if (parsed.length > 0) return parsed;
+      const parsed = parseGeneratedCards(mode, rawJson, options.isSolo);
+      if (parsed.length > 0) {
+        return options.isSolo ? parsed.map((c) => enforceTwoOptionsForSolo(c)) : parsed;
+      }
     }
   } catch (err) {
     console.warn('[geminiGenerator] AI generation error/timeout (<=3.5s), falling back to curated deck:', err instanceof Error ? err.message : err);
@@ -291,13 +334,16 @@ function getUserPromptForMode(
   theme?: string,
   infiltratoTono?: 'risate' | 'profondo' | 'misto',
   familiarita?: Familiarita,
+  isSolo?: boolean,
 ): string {
   const famContext =
-    familiarita === 'vecchi_amici'
-      ? '\nCONTESTO GRUPPO: I giocatori sono VECCHI AMICI che si conoscono benissimo da anni. Vietate domande banali o da sconosciuti: punta su dinamiche vere di gruppo, non detti, ipocrisie affettuose, scelte che svelano chi sono davvero.'
-      : familiarita === 'nuove_conoscenze'
-        ? '\nCONTESTO GRUPPO: I giocatori sono NUOVE CONOSCENZE o un gruppo misto. Fai domande accessibili, divertenti e coinvolgenti per rompere il ghiaccio senza creare imbarazzo eccessivo.'
-        : '';
+    isSolo
+      ? '\nCONTESTO: Il giocatore gioca DA SOLO. Vietate domande per gruppi o penitenze da bere.'
+      : familiarita === 'vecchi_amici'
+        ? '\nCONTESTO GRUPPO: I giocatori sono VECCHI AMICI che si conoscono benissimo da anni. Vietate domande banali o da sconosciuti: punta su dinamiche vere di gruppo, non detti, ipocrisie affettuose, scelte che svelano chi sono davvero.'
+        : familiarita === 'nuove_conoscenze'
+          ? '\nCONTESTO GRUPPO: I giocatori sono NUOVE CONOSCENZE o un gruppo misto. Fai domande accessibili, divertenti e coinvolgenti per rompere il ghiaccio senza creare imbarazzo eccessivo.'
+          : '';
   let prompt = '';
   switch (mode) {
     case 'flash':
@@ -386,7 +432,21 @@ Rispondi con un JSON array di oggetti:
       break;
 
     case 'preferiresti':
-      prompt = `Genera ${count} carte per la modalità "PREFERIRESTI CHE..." con 4 scelte.
+      prompt = isSolo
+        ? `Genera ${count} carte per la modalità "PREFERIRESTI CHE..." DA SOLO con ESATTAMENTE 2 scelte strane e personali.
+Ogni carta deve avere un incipit breve ("Preferiresti che...") e SOLO 2 opzioni brevi e bizzarre tra cui scegliere d'istinto.
+Rispondi con un JSON array di oggetti:
+[
+  {
+    "id": "gen_pr_solo_1",
+    "prompt": "Preferiresti scoprire che...",
+    "options": [
+      "Ogni tuo sogno viene registrato sul telefono",
+      "Una pianta in casa commenta ogni tuo acquisto"
+    ]
+  }
+]`
+        : `Genera ${count} carte per la modalità "PREFERIRESTI CHE..." con 4 scelte.
 Ogni carta deve avere un incipit breve ("Preferiresti che...") e 4 opzioni assurde, scomode o divisivissime tra cui i giocatori devono scegliere e dibattere.
 Rispondi con un JSON array di oggetti:
 [
@@ -406,7 +466,10 @@ Rispondi con un JSON array di oggetti:
   }
 
   if (theme && theme.trim().length > 0) {
-    prompt += `\n\nTEMA DELLA SERATA RICHIESTO DAL GRUPPO: "${theme.trim()}". Ambientate e contestualizzate le situazioni a questo tema!`;
+    const cleanTheme = sanitizeAiTheme(theme);
+    if (cleanTheme.length > 0) {
+      prompt += `\n\nTEMA DELLA SERATA RICHIESTO DAL GRUPPO: "${cleanTheme}". Ambientate e contestualizzate le situazioni a questo tema!`;
+    }
   }
   if (famContext) {
     prompt += `\n${famContext}`;
@@ -415,7 +478,7 @@ Rispondi con un JSON array di oggetti:
   return prompt;
 }
 
-function parseGeneratedCards(mode: PartyMode, rawText: string): PartyCard[] {
+function parseGeneratedCards(mode: PartyMode, rawText: string, isSolo?: boolean): PartyCard[] {
   let cleaned = rawText.trim();
   // Strip Markdown fences if present
   if (cleaned.startsWith('```')) {
@@ -441,7 +504,7 @@ function parseGeneratedCards(mode: PartyMode, rawText: string): PartyCard[] {
         return (
           typeof item.prompt === 'string' &&
           Array.isArray(item.options) &&
-          item.options.length >= 3 &&
+          item.options.length >= (isSolo ? 2 : 3) &&
           item.options.every((opt) => typeof opt === 'string')
         );
       }

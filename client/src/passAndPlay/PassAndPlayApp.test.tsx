@@ -182,14 +182,39 @@ describe('PassAndPlayApp UI', () => {
     });
   });
 
-  it('starts solo play (Da solo) immediately, shows Bussola del Mondo + Avvocato del Diavolo, allows flip, and reaches Specchio Decisionale finale', async () => {
+  it('starts solo play (Da solo) in fast 1-tap mode by default, uses 2-choice solo decks, and allows switching to Con riflessione', async () => {
     renderPassApp();
     fireEvent.click(screen.getByRole('button', { name: /👤 da solo/i }));
+
+    // Fast mode is active by default -> tapping an option jumps straight to Round 2 with previous-choice toast
     fireEvent.click(screen.getByRole('button', { name: /scegli singolo gioco/i }));
-    fireEvent.click(screen.getByRole('button', { name: /⚡ flash/i }));
+    fireEvent.click(screen.getByRole('button', { name: /🔀 preferiresti/i }));
 
     fireEvent.click(screen.getByRole('button', { name: /opzioni serata/i }));
     fireEvent.click(screen.getByRole('button', { name: /3 round/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /inizia la partita/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/round 1\/3/i)).toBeInTheDocument();
+    });
+
+    // Solo Preferiresti shows strictly 2 options
+    const soloPrefBtns = document.querySelectorAll<HTMLButtonElement>('button[class*="_option_"]');
+    expect(soloPrefBtns).toHaveLength(2);
+    expect(screen.queryByText(/legge/i)).toBeNull();
+
+    fireEvent.click(soloPrefBtns[0]);
+    await waitFor(() => {
+      expect(screen.getByText(/round 2\/3/i)).toBeInTheDocument();
+      expect(screen.getByTestId('solo-last-toast')).toBeInTheDocument();
+    });
+
+    // Leave back to setup and test Con riflessione mode (Bussola + Avvocato del Diavolo + flip)
+    fireEvent.click(screen.getByRole('button', { name: /✕ esci/i }));
+    fireEvent.click(screen.getByRole('button', { name: /👤 da solo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /🧭 con riflessione/i }));
+    fireEvent.click(screen.getByRole('button', { name: /scegli singolo gioco/i }));
+    fireEvent.click(screen.getByRole('button', { name: /⚡ flash/i }));
 
     const startBtn = screen.getByRole('button', { name: /inizia la partita/i });
     expect(startBtn).not.toBeDisabled();
@@ -224,6 +249,68 @@ describe('PassAndPlayApp UI', () => {
     await waitFor(() => {
       expect(screen.getByText(/specchio decisionale/i)).toBeInTheDocument();
       expect(screen.getByText(/il tuo archetipo decisionale/i)).toBeInTheDocument();
+    });
+  });
+
+  it('runs Solo Cruciverba in 4-scelte mode hiding clues, showing grid + 4 choices, and disabling wrong guesses', async () => {
+    renderPassApp();
+    fireEvent.click(screen.getByRole('button', { name: /👤 da solo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /scegli singolo gioco/i }));
+    fireEvent.click(screen.getByRole('button', { name: /🧩 cruciverba/i }));
+
+    expect(screen.getByRole('button', { name: /🎯 4 scelte/i })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: /inizia la partita/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('grid')).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: /scelte parola cruciverba/i })).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/indovinata dal tavolo/i)).toBeNull();
+    const choiceBtns = Array.from(
+      screen.getByRole('group', { name: /scelte parola cruciverba/i }).querySelectorAll('button'),
+    );
+    expect(choiceBtns).toHaveLength(4);
+
+    // Clicking a choice either advances to the next word (if right) or disables that wrong button
+    const firstLabel = choiceBtns[0].textContent;
+    fireEvent.click(choiceBtns[0]);
+    const stillVisibleSameBtn = screen
+      .getByRole('group', { name: /scelte parola cruciverba/i })
+      .querySelectorAll('button');
+    if (stillVisibleSameBtn[0]?.textContent === firstLabel) {
+      expect(stillVisibleSameBtn[0]).toBeDisabled();
+    }
+  });
+
+  it('hides group-only Parola Vietata in Solo, shows new TV modes, and plays through Vero o Bufala', async () => {
+    renderPassApp();
+    fireEvent.click(screen.getByRole('button', { name: /👤 da solo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /scegli singolo gioco/i }));
+
+    expect(screen.getByRole('button', { name: /🔗 ghigliottina/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /💰 quanto vale\?/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /🎭 vero o bufala\?/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /🚫 parola vietata/i })).toBeNull();
+
+    // Switching back to Gruppo reveals Parola Vietata
+    fireEvent.click(screen.getByRole('button', { name: /👥 in gruppo/i }));
+    expect(screen.getByRole('button', { name: /🚫 parola vietata/i })).toBeInTheDocument();
+
+    // Switch to Solo and play Vero o Bufala round
+    fireEvent.click(screen.getByRole('button', { name: /👤 da solo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /🎭 vero o bufala\?/i }));
+    fireEvent.click(screen.getByRole('button', { name: /inizia la partita/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /✅ è vero!/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /🤡 è una bufala!/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /✅ è vero!/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /era vero!|era una bufala!/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /prossimo round/i })).toBeInTheDocument();
     });
   });
 });

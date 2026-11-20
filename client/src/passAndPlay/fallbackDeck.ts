@@ -9,6 +9,10 @@ export type PassMode =
   | 'cruciverba'
   | 'tribunale'
   | 'preferiresti'
+  | 'ghigliottina'
+  | 'stima'
+  | 'bufala'
+  | 'intesa'
   | 'classico'
   | 'percorso'
   | 'storia'
@@ -88,6 +92,7 @@ export interface PassCruciverbaWord {
   col: number;
   word: string;
   clue: string;
+  choices?: string[];
 }
 
 export interface PassCruciverbaCard {
@@ -120,6 +125,48 @@ export interface PassPreferirestiCard {
   familiarita?: PassFamiliarita;
 }
 
+export interface PassGhigliottinaCard {
+  id: string;
+  cardMode?: PassCardOriginMode;
+  clues: string[];
+  answer: string;
+  choices: string[];
+  connections: string[];
+  familiarita?: PassFamiliarita;
+}
+
+export interface PassStimaCard {
+  id: string;
+  cardMode?: PassCardOriginMode;
+  prompt: string;
+  unit: string;
+  min: number;
+  max: number;
+  step: number;
+  answer: number;
+  funFact: string;
+  familiarita?: PassFamiliarita;
+}
+
+export interface PassBufalaCard {
+  id: string;
+  cardMode?: PassCardOriginMode;
+  statement: string;
+  isTrue: boolean;
+  explanation: string;
+  category: string;
+  familiarita?: PassFamiliarita;
+}
+
+export interface PassIntesaCard {
+  id: string;
+  cardMode?: PassCardOriginMode;
+  word: string;
+  forbidden: string[];
+  category: string;
+  familiarita?: PassFamiliarita;
+}
+
 export type PassCard =
   | PassFlashCard
   | PassInfiltratoCard
@@ -127,7 +174,11 @@ export type PassCard =
   | PassAssurdoCard
   | PassCruciverbaCard
   | PassTribunaleCard
-  | PassPreferirestiCard;
+  | PassPreferirestiCard
+  | PassGhigliottinaCard
+  | PassStimaCard
+  | PassBufalaCard
+  | PassIntesaCard;
 
 export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
   flash: [
@@ -481,10 +532,10 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       rows: 7,
       cols: 6,
       words: [
-        { id: 'w1', number: 1, direction: 'H', row: 2, col: 0, word: 'SPRITZ', clue: 'Arancione o rosso, trasforma il "beviamo solo una cosa" in mezzanotte' },
-        { id: 'w2', number: 2, direction: 'V', row: 2, col: 1, word: 'PIZZA', clue: 'Quella che ordini alle 23 giurando di prendere "solo metà"' },
-        { id: 'w3', number: 3, direction: 'V', row: 0, col: 4, word: 'NOTTE', clue: 'Inizia con "sto a casa a dormire" e finisce con un cornetto caldo' },
-        { id: 'w4', number: 4, direction: 'H', row: 6, col: 1, word: 'AMARO', clue: 'Lo bevi "per digerire" anche dopo aver mangiato tre patatine' },
+        { id: 'w1', number: 1, direction: 'H', row: 2, col: 0, word: 'SPRITZ', clue: 'Arancione o rosso, trasforma il "beviamo solo una cosa" in mezzanotte', choices: ['SPRITZ', 'SPAGHI', 'CALICE', 'TONICA'] },
+        { id: 'w2', number: 2, direction: 'V', row: 2, col: 1, word: 'PIZZA', clue: 'Quella che ordini alle 23 giurando di prendere "solo metà"', choices: ['PIZZA', 'PASTA', 'PINSA', 'OLIVE'] },
+        { id: 'w3', number: 3, direction: 'V', row: 0, col: 4, word: 'NOTTE', clue: 'Inizia con "sto a casa a dormire" e finisce con un cornetto caldo', choices: ['NOTTE', 'BOTTE', 'FESTA', 'CORSO'] },
+        { id: 'w4', number: 4, direction: 'H', row: 6, col: 1, word: 'AMARO', clue: 'Lo bevi "per digerire" anche dopo aver mangiato tre patatine', choices: ['AMARO', 'ACQUA', 'AMICI', 'BIRRA'] },
       ],
     },
     {
@@ -493,10 +544,10 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       rows: 6,
       cols: 8,
       words: [
-        { id: 'w1', number: 1, direction: 'H', row: 2, col: 1, word: 'VALIGIA', clue: 'La chiudi sedendotici sopra alle 5 del mattino prima di partire' },
-        { id: 'w2', number: 2, direction: 'V', row: 2, col: 1, word: 'VOLO', clue: 'Partenza alle 06:15 per risparmiare 14 euro e perdere un anno di vita' },
-        { id: 'w3', number: 3, direction: 'V', row: 0, col: 3, word: 'SOLARE', clue: 'Crema che dici di aver messo ma alle 14 sembri un gambero' },
-        { id: 'w4', number: 4, direction: 'H', row: 5, col: 0, word: 'HOTEL', clue: 'Sul sito era "vista mare", ma il mare si vede solo dal bagno' },
+        { id: 'w1', number: 1, direction: 'H', row: 2, col: 1, word: 'VALIGIA', clue: 'La chiudi sedendotici sopra alle 5 del mattino prima di partire', choices: ['VALIGIA', 'VACANZA', 'VIAGGIO', 'TURISMO'] },
+        { id: 'w2', number: 2, direction: 'V', row: 2, col: 1, word: 'VOLO', clue: 'Partenza alle 06:15 per risparmiare 14 euro e perdere un anno di vita', choices: ['VOLO', 'VANO', 'MARE', 'SOLE'] },
+        { id: 'w3', number: 3, direction: 'V', row: 0, col: 3, word: 'SOLARE', clue: 'Crema che dici di aver messo ma alle 14 sembri un gambero', choices: ['SOLARE', 'SALINA', 'PALUDE', 'ESTATE'] },
+        { id: 'w4', number: 4, direction: 'H', row: 5, col: 0, word: 'HOTEL', clue: 'Sul sito era "vista mare", ma il mare si vede solo dal bagno', choices: ['HOTEL', 'MOTEL', 'MAREA', 'TENDA'] },
       ],
     },
     {
@@ -505,10 +556,10 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       rows: 7,
       cols: 6,
       words: [
-        { id: 'w1', number: 1, direction: 'H', row: 2, col: 0, word: 'MUTATO', clue: 'Come scopri di avere il microfono dopo un monologo su Meet' },
-        { id: 'w2', number: 2, direction: 'V', row: 0, col: 0, word: 'CAMICIA', clue: 'Elegante sopra, mentre sotto hai i pantaloni del pigiama' },
-        { id: 'w3', number: 3, direction: 'V', row: 0, col: 3, word: 'CHAT', clue: 'Dove il collega scrive "ci sei?" senza dirti cosa vuole davvero' },
-        { id: 'w4', number: 4, direction: 'H', row: 6, col: 0, word: 'AGENDA', clue: 'Il posto magico in cui rimandi tutto a "lunedì prossimo"' },
+        { id: 'w1', number: 1, direction: 'H', row: 2, col: 0, word: 'MUTATO', clue: 'Come scopri di avere il microfono dopo un monologo su Meet', choices: ['MUTATO', 'MINUTO', 'LAVORO', 'SCHEDA'] },
+        { id: 'w2', number: 2, direction: 'V', row: 0, col: 0, word: 'CAMICIA', clue: 'Elegante sopra, mentre sotto hai i pantaloni del pigiama', choices: ['CAMICIA', 'DOMANDA', 'PIGIAMA', 'UFFICIO'] },
+        { id: 'w3', number: 3, direction: 'V', row: 0, col: 3, word: 'CHAT', clue: 'Dove il collega scrive "ci sei?" senza dirti cosa vuole davvero', choices: ['CHAT', 'SPAM', 'MAIL', 'CALL'] },
+        { id: 'w4', number: 4, direction: 'H', row: 6, col: 0, word: 'AGENDA', clue: 'Il posto magico in cui rimandi tutto a "lunedì prossimo"', choices: ['AGENDA', 'ATTESA', 'ORARIO', 'REPORT'] },
       ],
     },
     {
@@ -517,10 +568,10 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       rows: 7,
       cols: 6,
       words: [
-        { id: 'w1', number: 1, direction: 'H', row: 2, col: 0, word: 'FRIGO', clue: 'Contiene il tuo yogurt col nome scritto col pennarello indelebile' },
-        { id: 'w2', number: 2, direction: 'V', row: 0, col: 0, word: 'AFFITTO', clue: 'Svuota il tuo conto corrente ogni 1° del mese alle 08:00' },
-        { id: 'w3', number: 3, direction: 'V', row: 0, col: 3, word: 'BAGNO', clue: 'Diventa occupato per 50 minuti esatti proprio quando hai fretta' },
-        { id: 'w4', number: 4, direction: 'H', row: 6, col: 0, word: 'OSPITE', clue: 'L’amico sul divano "solo per stasera" da ormai due settimane' },
+        { id: 'w1', number: 1, direction: 'H', row: 2, col: 0, word: 'FRIGO', clue: 'Contiene il tuo yogurt col nome scritto col pennarello indelebile', choices: ['FRIGO', 'FORNO', 'LETTO', 'PIANO'] },
+        { id: 'w2', number: 2, direction: 'V', row: 0, col: 0, word: 'AFFITTO', clue: 'Svuota il tuo conto corrente ogni 1° del mese alle 08:00', choices: ['AFFITTO', 'UFFICIO', 'BALCONE', 'PULIZIA'] },
+        { id: 'w3', number: 3, direction: 'V', row: 0, col: 3, word: 'BAGNO', clue: 'Diventa occupato per 50 minuti esatti proprio quando hai fretta', choices: ['BAGNO', 'FUGHE', 'PORTA', 'TENDA'] },
+        { id: 'w4', number: 4, direction: 'H', row: 6, col: 0, word: 'OSPITE', clue: 'L’amico sul divano "solo per stasera" da ormai due settimane', choices: ['OSPITE', 'ORDINE', 'DIVANO', 'CHIAVI'] },
       ],
     },
     {
@@ -529,10 +580,10 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       rows: 7,
       cols: 6,
       words: [
-        { id: 'w1', number: 1, direction: 'H', row: 4, col: 0, word: 'TAVOLO', clue: 'Lo prenotate "per fare i signori" ma dividete la spesa in dodici' },
-        { id: 'w2', number: 2, direction: 'V', row: 2, col: 0, word: 'AFTER', clue: 'Quello che propone l’amico con troppe energie alle 06:00' },
-        { id: 'w3', number: 3, direction: 'V', row: 0, col: 5, word: 'DISCO', clue: 'Locale dove dici "non si sente niente" ma torni senza voce' },
-        { id: 'w4', number: 4, direction: 'H', row: 6, col: 0, word: 'REMIX', clue: 'Versione velocizzata della hit anni 2000 che mette il DJ alle 3' },
+        { id: 'w1', number: 1, direction: 'H', row: 4, col: 0, word: 'TAVOLO', clue: 'Lo prenotate "per fare i signori" ma dividete la spesa in dodici', choices: ['TAVOLO', 'TICKET', 'LOCALE', 'SERATA'] },
+        { id: 'w2', number: 2, direction: 'V', row: 2, col: 0, word: 'AFTER', clue: 'Quello che propone l’amico con troppe energie alle 06:00', choices: ['AFTER', 'NOTTE', 'PISTA', 'CASSA'] },
+        { id: 'w3', number: 3, direction: 'V', row: 0, col: 5, word: 'DISCO', clue: 'Locale dove dici "non si sente niente" ma torni senza voce', choices: ['DISCO', 'BALLO', 'LISTA', 'DRINK'] },
+        { id: 'w4', number: 4, direction: 'H', row: 6, col: 0, word: 'REMIX', clue: 'Versione velocizzata della hit anni 2000 che mette il DJ alle 3', choices: ['REMIX', 'RITMO', 'VOCAL', 'SUONO'] },
       ],
     },
     {
@@ -541,10 +592,10 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       rows: 9,
       cols: 6,
       words: [
-        { id: 'w1', number: 1, direction: 'H', row: 4, col: 0, word: 'TINDER', clue: 'L’app su cui giudichi la compatibilità dell’anima in 0,4 secondi' },
-        { id: 'w2', number: 2, direction: 'V', row: 3, col: 0, word: 'STORIA', clue: 'Quella su Instagram con canzone triste messa per farti notare' },
-        { id: 'w3', number: 3, direction: 'V', row: 0, col: 4, word: 'CUORE', clue: 'Emoji inviata per errore al posto del pollice su' },
-        { id: 'w4', number: 4, direction: 'H', row: 8, col: 0, word: 'AMICO', clue: 'Ciò che diventi subito dopo "ti vedo solo come un..."' },
+        { id: 'w1', number: 1, direction: 'H', row: 4, col: 0, word: 'TINDER', clue: 'L’app su cui giudichi la compatibilità dell’anima in 0,4 secondi', choices: ['TINDER', 'TESORO', 'COPPIA', 'AMANTI'] },
+        { id: 'w2', number: 2, direction: 'V', row: 3, col: 0, word: 'STORIA', clue: 'Quella su Instagram con canzone triste messa per farti notare', choices: ['STORIA', 'STELLA', 'SOCIAL', 'PAROLA'] },
+        { id: 'w3', number: 3, direction: 'V', row: 0, col: 4, word: 'CUORE', clue: 'Emoji inviata per errore al posto del pollice su', choices: ['CUORE', 'AMORE', 'MATCH', 'FIORE'] },
+        { id: 'w4', number: 4, direction: 'H', row: 8, col: 0, word: 'AMICO', clue: 'Ciò che diventi subito dopo "ti vedo solo come un..."', choices: ['AMICO', 'AMATO', 'BACIO', 'SOGNO'] },
       ],
     },
     {
@@ -553,10 +604,10 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       rows: 6,
       cols: 6,
       words: [
-        { id: 'w1', number: 1, direction: 'H', row: 2, col: 0, word: 'VOCALE', clue: 'Quello da 6 minuti e 40 secondi che sei costretto ad ascoltare a 2x' },
-        { id: 'w2', number: 2, direction: 'V', row: 0, col: 0, word: 'INVITO', clue: 'Cena che organizzate da tre mesi ma poi saltano tutti' },
-        { id: 'w3', number: 3, direction: 'V', row: 0, col: 3, word: 'SPAM', clue: 'I trenta link consecutivi dell’amico che piazza i biglietti' },
-        { id: 'w4', number: 4, direction: 'H', row: 5, col: 0, word: 'ORARIO', clue: 'L’unico dato che nessuno legge mai nel messaggio fissato in alto' },
+        { id: 'w1', number: 1, direction: 'H', row: 2, col: 0, word: 'VOCALE', clue: 'Quello da 6 minuti e 40 secondi che sei costretto ad ascoltare a 2x', choices: ['VOCALE', 'VISITA', 'GRUPPO', 'SCRIVO'] },
+        { id: 'w2', number: 2, direction: 'V', row: 0, col: 0, word: 'INVITO', clue: 'Cena che organizzate da tre mesi ma poi saltano tutti', choices: ['INVITO', 'AVVISO', 'SERATA', 'USCIRE'] },
+        { id: 'w3', number: 3, direction: 'V', row: 0, col: 3, word: 'SPAM', clue: 'I trenta link consecutivi dell’amico che piazza i biglietti', choices: ['SPAM', 'CHAT', 'LINK', 'MEME'] },
+        { id: 'w4', number: 4, direction: 'H', row: 5, col: 0, word: 'ORARIO', clue: 'L’unico dato che nessuno legge mai nel messaggio fissato in alto', choices: ['ORARIO', 'OPPURE', 'GIORNO', 'TAVOLA'] },
       ],
     },
     {
@@ -565,10 +616,34 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       rows: 6,
       cols: 6,
       words: [
-        { id: 'w1', number: 1, direction: 'H', row: 2, col: 0, word: 'CONTO', clue: 'Appena arriva sul tavolo tutti guardano improvvisamente lo schermo' },
-        { id: 'w2', number: 2, direction: 'V', row: 1, col: 0, word: 'ACQUA', clue: 'Quella liscia che ordini insieme al fritto misto per sentirti sano' },
-        { id: 'w3', number: 3, direction: 'V', row: 0, col: 3, word: 'SETE', clue: 'Quella feroce alle 3 di notte dopo una pizza piccante' },
-        { id: 'w4', number: 4, direction: 'H', row: 5, col: 0, word: 'AVANZI', clue: 'Li porti via nel contenitore anche se sono tre patatine' },
+        { id: 'w1', number: 1, direction: 'H', row: 2, col: 0, word: 'CONTO', clue: 'Appena arriva sul tavolo tutti guardano improvvisamente lo schermo', choices: ['CONTO', 'CARTA', 'PIZZA', 'FORNO'] },
+        { id: 'w2', number: 2, direction: 'V', row: 1, col: 0, word: 'ACQUA', clue: 'Quella liscia che ordini insieme al fritto misto per sentirti sano', choices: ['ACQUA', 'ACETO', 'BIRRA', 'PASTA'] },
+        { id: 'w3', number: 3, direction: 'V', row: 0, col: 3, word: 'SETE', clue: 'Quella feroce alle 3 di notte dopo una pizza piccante', choices: ['SETE', 'NOTE', 'FAME', 'CIBO'] },
+        { id: 'w4', number: 4, direction: 'H', row: 5, col: 0, word: 'AVANZI', clue: 'Li porti via nel contenitore anche se sono tre patatine', choices: ['AVANZI', 'ARANCE', 'ORDINE', 'PIATTO'] },
+      ],
+    },
+    {
+      id: 'fb_cb9',
+      theme: 'Aereo & Aeroporto',
+      rows: 7,
+      cols: 7,
+      words: [
+        { id: 'w1', number: 1, direction: 'H', row: 2, col: 0, word: 'RITARDO', clue: 'L’unica vera costante garantita dal tabellone partenze del venerdì', choices: ['RITARDO', 'RIENTRO', 'DECOLLO', 'BAGAGLI'] },
+        { id: 'w2', number: 2, direction: 'V', row: 1, col: 0, word: 'PREZZO', clue: 'Raddoppia magicamente dopo che hai ricaricato la pagina due volte', choices: ['PREZZO', 'PRONTO', 'CODICE', 'VIAGGI'] },
+        { id: 'w3', number: 3, direction: 'V', row: 1, col: 3, word: 'GATE', clue: 'È sempre in fondo al corridoio più lontano del terminal sbagliato', choices: ['GATE', 'SALA', 'VOLO', 'TAXI'] },
+        { id: 'w4', number: 4, direction: 'H', row: 6, col: 0, word: 'OFFERTA', clue: 'Biglietto "a 9 euro" che al pagamento diventa misteriosamente 118', choices: ['OFFERTA', 'OPZIONE', 'TARIFFA', 'IMBARCO'] },
+      ],
+    },
+    {
+      id: 'fb_cb10',
+      theme: 'Divano & Serie TV',
+      rows: 7,
+      cols: 7,
+      words: [
+        { id: 'w1', number: 1, direction: 'H', row: 3, col: 0, word: 'SPOILER', clue: 'La rivelazione killer che ti rovina il finale prima di cena', choices: ['SPOILER', 'SCHERMO', 'PUNTATA', 'EPISODI'] },
+        { id: 'w2', number: 2, direction: 'V', row: 1, col: 0, word: 'PISOLO', clue: 'Quello sul divano al minuto 12 urlando "non sto dormendo, ti ascolto!"', choices: ['PISOLO', 'CASINO', 'DIVANO', 'CINEMA'] },
+        { id: 'w3', number: 3, direction: 'V', row: 0, col: 3, word: 'SERIE', clue: 'Ne inizi una da 8 stagioni giurando di guardare "solo una puntata"', choices: ['SERIE', 'AUDIO', 'TRAMA', 'VIDEO'] },
+        { id: 'w4', number: 4, direction: 'H', row: 6, col: 0, word: 'OSCAR', clue: 'La notte in cui tutti diventano critici cinematografici professionisti', choices: ['OSCAR', 'OPERA', 'SCENA', 'REGIA'] },
       ],
     },
   ],
@@ -917,10 +992,10 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
       rows: 7,
       cols: 6,
       words: [
-        { id: 'w1', number: 1, direction: 'H', row: 2, col: 0, word: 'SPRITZ', clue: 'Arancione o rosso, trasforma il "beviamo solo una cosa" in mezzanotte' },
-        { id: 'w2', number: 2, direction: 'V', row: 2, col: 1, word: 'PIZZA', clue: 'Quella che ordini alle 23 giurando di prendere "solo metà"' },
-        { id: 'w3', number: 3, direction: 'V', row: 0, col: 4, word: 'NOTTE', clue: 'Inizia con "sto a casa a dormire" e finisce con un cornetto caldo' },
-        { id: 'w4', number: 4, direction: 'H', row: 6, col: 1, word: 'AMARO', clue: 'Lo bevi "per digerire" anche dopo aver mangiato tre patatine' },
+        { id: 'w1', number: 1, direction: 'H', row: 2, col: 0, word: 'SPRITZ', clue: 'Arancione o rosso, trasforma il "beviamo solo una cosa" in mezzanotte', choices: ['SPRITZ', 'SPAGHI', 'CALICE', 'TONICA'] },
+        { id: 'w2', number: 2, direction: 'V', row: 2, col: 1, word: 'PIZZA', clue: 'Quella che ordini alle 23 giurando di prendere "solo metà"', choices: ['PIZZA', 'PASTA', 'PINSA', 'OLIVE'] },
+        { id: 'w3', number: 3, direction: 'V', row: 0, col: 4, word: 'NOTTE', clue: 'Inizia con "sto a casa a dormire" e finisce con un cornetto caldo', choices: ['NOTTE', 'BOTTE', 'FESTA', 'CORSO'] },
+        { id: 'w4', number: 4, direction: 'H', row: 6, col: 1, word: 'AMARO', clue: 'Lo bevi "per digerire" anche dopo aver mangiato tre patatine', choices: ['AMARO', 'ACQUA', 'AMICI', 'BIRRA'] },
       ],
     },
     {
@@ -955,6 +1030,941 @@ export const FALLBACK_DECKS: Record<PassMode, PassCard[]> = {
         'Lavorare 60 ore a settimana per andare in pensione milionario a 45 anni',
       ],
       penalty: 'Chi resta in minoranza si difende!',
+    },
+  ],
+  ghigliottina: [
+    {
+      id: 'fb_gh1',
+      cardMode: 'ghigliottina',
+      clues: ['DENTE', 'SOVRANO', 'SPINE', 'ALLORO', 'MESSICO'],
+      answer: 'CORONA',
+      choices: ['CORONA', 'PIETRA', 'ANELLO', 'CARTA'],
+      connections: [
+        'La parte visibile o protesica del dente',
+        'Il simbolo regale del sovrano',
+        'La corona di spine',
+        'La corona d’alloro dei laureati',
+        'La celebre birra messicana Corona',
+      ],
+    },
+    {
+      id: 'fb_gh2',
+      cardMode: 'ghigliottina',
+      clues: ['NOTTE', 'CASA', 'ARMA', 'FUMATA', 'BANDIERA'],
+      answer: 'BIANCA',
+      choices: ['BIANCA', 'ROSSA', 'CHIARA', 'LIBERA'],
+      connections: [
+        'La Notte Bianca degli eventi cittadini',
+        'La Casa Bianca presidenziale',
+        'Un’arma bianca (lama o punta)',
+        'La fumata bianca dal comignolo',
+        'Alzare bandiera bianca per resa',
+      ],
+    },
+    {
+      id: 'fb_gh3',
+      cardMode: 'ghigliottina',
+      clues: ['SOL', 'CASA', 'PORTA', 'INGLESE', 'LETTURA'],
+      answer: 'CHIAVE',
+      choices: ['CHIAVE', 'NOTA', 'CODA', 'PORTA'],
+      connections: [
+        'La chiave di sol sul pentagramma',
+        'Le chiavi di casa',
+        'La chiave per aprire la porta',
+        'La chiave inglese da officina',
+        'La chiave di lettura di un testo',
+      ],
+    },
+    {
+      id: 'fb_gh4',
+      cardMode: 'ghigliottina',
+      clues: ['FEBBRE', 'ETÀ', 'MEDAGLIA', 'NOZZE', 'MINIERA'],
+      answer: 'ORO',
+      choices: ['ORO', 'FERRO', 'FUOCO', 'LUCE'],
+      connections: [
+        'La corsa / febbre dell’oro',
+        'L’età dell’oro',
+        'La medaglia d’oro olimpica',
+        'I cinquant’anni: nozze d’oro',
+        'Una miniera d’oro',
+      ],
+    },
+    {
+      id: 'fb_gh5',
+      cardMode: 'ghigliottina',
+      clues: ['MACCHINA', 'LINEA', 'PERDITA', 'SPAZIO', 'PASSATO'],
+      answer: 'TEMPO',
+      choices: ['TEMPO', 'GIRO', 'PUNTO', 'CAMPO'],
+      connections: [
+        'La macchina del tempo',
+        'La linea del tempo storica',
+        'Una perdita di tempo',
+        'Il tessuto spazio-tempo',
+        'Il tempo passato in grammatica',
+      ],
+    },
+    {
+      id: 'fb_gh6',
+      cardMode: 'ghigliottina',
+      clues: ['BATTESIMO', 'CERCHIO', 'BOCCA', 'PAGLIA', 'ARTIFICIO'],
+      answer: 'FUOCO',
+      choices: ['FUOCO', 'ACQUA', 'FIAMMA', 'VENTO'],
+      connections: [
+        'Il battesimo del fuoco',
+        'Il cerchio di fuoco circense',
+        'Una bocca da fuoco',
+        'Un fuoco di paglia che dura poco',
+        'I fuochi d’artificio',
+      ],
+    },
+    {
+      id: 'fb_gh7',
+      cardMode: 'ghigliottina',
+      clues: ['CADENTE', 'MARINA', 'POLARE', 'CINEMA', 'NATALE'],
+      answer: 'STELLA',
+      choices: ['STELLA', 'LUNA', 'PIANTA', 'ROSA'],
+      connections: [
+        'Una stella cadente d’agosto',
+        'La stella marina sugli scogli',
+        'La Stella Polare per orientarsi',
+        'Una stella del cinema',
+        'La stella di Natale sul balcone',
+      ],
+    },
+    {
+      id: 'fb_gh8',
+      cardMode: 'ghigliottina',
+      clues: ['MONDO', 'ITALIA', 'VITE', 'BOA', 'VALZER'],
+      answer: 'GIRO',
+      choices: ['GIRO', 'PASSO', 'SALTO', 'CORSA'],
+      connections: [
+        'Il giro del mondo',
+        'Il Giro d’Italia in bici',
+        'Un giro di vite',
+        'Il giro di boa a metà percorso',
+        'Un giro di valzer',
+      ],
+    },
+    {
+      id: 'fb_gh9',
+      cardMode: 'ghigliottina',
+      clues: ['FIUME', 'CASTELLO', 'FERRO', 'CAMERA', 'OSPEDALE'],
+      answer: 'LETTO',
+      choices: ['LETTO', 'PONTE', 'PIANO', 'SALA'],
+      connections: [
+        'Il letto in cui scorre il fiume',
+        'Il letto a castello',
+        'La struttura in ferro battuto',
+        'La camera da letto',
+        'Un letto d’ospedale',
+      ],
+    },
+    {
+      id: 'fb_gh10',
+      cardMode: 'ghigliottina',
+      clues: ['DATI', 'SANGUE', 'SEME', 'ITALIA', 'SVIZZERA'],
+      answer: 'BANCA',
+      choices: ['BANCA', 'CASA', 'CASSETTA', 'TORRE'],
+      connections: [
+        'Una banca dati digitale',
+        'La banca del sangue per donazioni',
+        'La banca del seme o dei semi',
+        'La Banca d’Italia',
+        'La tradizione bancaria svizzera',
+      ],
+    },
+  ],
+  stima: [
+    {
+      id: 'fb_st1',
+      cardMode: 'stima',
+      prompt: 'Quanto è lunga un’intera corsia interna della pista d’atletica regolamentare?',
+      unit: 'm',
+      min: 100,
+      max: 1000,
+      step: 50,
+      answer: 400,
+      funFact: 'Un giro completo nella corsia 1 misura esattamente 400 metri!',
+    },
+    {
+      id: 'fb_st2',
+      cardMode: 'stima',
+      prompt: 'In che anno uscì al cinema il primo «Toy Story»?',
+      unit: 'anno',
+      min: 1980,
+      max: 2010,
+      step: 1,
+      answer: 1995,
+      funFact: 'Toy Story (1995) fu il primo lungometraggio nella storia realizzato interamente in animazione CGI.',
+    },
+    {
+      id: 'fb_st3',
+      cardMode: 'stima',
+      prompt: 'Quante carte compongono un mazzo tradizionale italiano (napoletane o piacentine)?',
+      unit: 'carte',
+      min: 20,
+      max: 60,
+      step: 2,
+      answer: 40,
+      funFact: 'Quattro semi da dieci carte ciascuno (dall’asso al re): esattamente 40 carte.',
+    },
+    {
+      id: 'fb_st4',
+      cardMode: 'stima',
+      prompt: 'Quanti tasti ha un pianoforte da concerto standard tra bianchi e neri?',
+      unit: 'tasti',
+      min: 52,
+      max: 112,
+      step: 2,
+      answer: 88,
+      funFact: 'Un pianoforte moderno ha 52 tasti bianchi e 36 tasti neri, per un totale di 88 tasti.',
+    },
+    {
+      id: 'fb_st5',
+      cardMode: 'stima',
+      prompt: 'Qual è l’altezza del Monte Bianco (vetta principale tra Italia e Francia)?',
+      unit: 'm',
+      min: 3500,
+      max: 6000,
+      step: 10,
+      answer: 4810,
+      funFact: 'Secondo la misura topografica recente la calotta nevosa oscilla intorno ai 4.806–4.810 metri.',
+    },
+    {
+      id: 'fb_st6',
+      cardMode: 'stima',
+      prompt: 'Quanti secondi impiega la luce del Sole per raggiungere la Terra?',
+      unit: 'secondi',
+      min: 100,
+      max: 1000,
+      step: 10,
+      answer: 500,
+      funFact: 'Circa 499 secondi (poco più di 8 minuti e 19 secondi) per percorrere 150 milioni di km!',
+    },
+    {
+      id: 'fb_st7',
+      cardMode: 'stima',
+      prompt: 'Quante caselle formano in totale una scacchiera standard?',
+      unit: 'caselle',
+      min: 32,
+      max: 128,
+      step: 4,
+      answer: 64,
+      funFact: 'Griglia 8×8 divisa perfettamente a metà tra 32 caselle chiare e 32 scure.',
+    },
+    {
+      id: 'fb_st8',
+      cardMode: 'stima',
+      prompt: 'Quanti denti permanenti ha un adulto umano inclusi i quattro del giudizio?',
+      unit: 'denti',
+      min: 20,
+      max: 44,
+      step: 1,
+      answer: 32,
+      funFact: 'La dentatura permanente completa conta 32 denti, sedici sull’arcata superiore e sedici su quella inferiore.',
+    },
+    {
+      id: 'fb_st9',
+      cardMode: 'stima',
+      prompt: 'Quanti giorni terrestri dura un anno completo di Marte attorno al Sole?',
+      unit: 'giorni',
+      min: 400,
+      max: 900,
+      step: 1,
+      answer: 687,
+      funFact: 'Un anno marziano dura circa 687 giorni terrestri, quasi il doppio del nostro!',
+    },
+    {
+      id: 'fb_st10',
+      cardMode: 'stima',
+      prompt: 'Quanti chilometri è lunga una maratona olimpica (arrotondata all’intero)?',
+      unit: 'km',
+      min: 20,
+      max: 65,
+      step: 1,
+      answer: 42,
+      funFact: 'La distanza ufficiale è 42,195 km, fissata definitivamente alle Olimpiadi di Londra del 1908.',
+    },
+  ],
+  bufala: [
+    {
+      id: 'fb_bf1',
+      cardMode: 'bufala',
+      category: 'Curiosità',
+      statement: 'Le banconote in euro non sono fatte di carta ricavata dal legno, ma di fibra di cotone.',
+      isTrue: true,
+      explanation: 'È vero: la carta delle banconote in euro è prodotta con fibre di cotone puro al 100%, per resistere meglio a pieghe e lavaggi.',
+    },
+    {
+      id: 'fb_bf2',
+      cardMode: 'bufala',
+      category: 'Natura',
+      statement: 'I pesci rossi hanno una memoria di soli 3 secondi e dimenticano subito tutto.',
+      isTrue: false,
+      explanation: 'È una bufala classica: numerosi studi dimostrano che i pesci rossi ricordano percorsi e segnali anche per mesi.',
+    },
+    {
+      id: 'fb_bf3',
+      cardMode: 'bufala',
+      category: 'Animali',
+      statement: 'Le impronte digitali di un koala sono così simili alle nostre da poter confondere perfino un esame al microscopio.',
+      isTrue: true,
+      explanation: 'È vero: pur essendo evolutivamente lontanissimi, i polpastrelli dei koala presentano creste quasi identiche a quelle umane.',
+    },
+    {
+      id: 'fb_bf4',
+      cardMode: 'bufala',
+      category: 'Spazio',
+      statement: 'La Grande Muraglia Cinese è chiaramente visibile a occhio nudo perfino dalla Luna.',
+      isTrue: false,
+      explanation: 'È una bufala: la muraglia è lunga ma larga pochi metri; dalla Luna non è distinguibile senza potenti telescopi.',
+    },
+    {
+      id: 'fb_bf5',
+      cardMode: 'bufala',
+      category: 'Cibo',
+      statement: 'Il miele naturale sigillato in un barattolo può mantenersi commestibile per migliaia di anni.',
+      isTrue: true,
+      explanation: 'È vero: pochissima umidità, alta acidità e presenza naturale di perossido impediscono ai batteri di proliferare.',
+    },
+    {
+      id: 'fb_bf6',
+      cardMode: 'bufala',
+      category: 'Animali',
+      statement: 'Tutti i pipistrelli sono completamente ciechi e si muovono solo grazie alle orecchie.',
+      isTrue: false,
+      explanation: 'È una bufala: i pipistrelli ci vedono benissimo (soprattutto al crepuscolo) oltre a usare l’ecolocalizzazione.',
+    },
+    {
+      id: 'fb_bf7',
+      cardMode: 'bufala',
+      category: 'Spazio',
+      statement: 'Sul pianeta Venere una singola rotazione su se stesso dura più di un intero anno attorno al Sole.',
+      isTrue: true,
+      explanation: 'È vero: Venere impiega 243 giorni terrestri a ruotare sul proprio asse e circa 225 a completare l’orbita.',
+    },
+    {
+      id: 'fb_bf8',
+      cardMode: 'bufala',
+      category: 'Salute',
+      statement: 'Svegliare bruscamente un sonnambulo gli provoca sempre un arresto cardiaco o danni cerebrali permanenti.',
+      isTrue: false,
+      explanation: 'È una bufala: può spaventarsi e risultare disorientato, ma non comporta infarti istantanei.',
+    },
+    {
+      id: 'fb_bf9',
+      cardMode: 'bufala',
+      category: 'Natura',
+      statement: 'Il cuore di una balenottera azzurra può pesare quasi quanto una piccola automobile utilitaria (circa 180 kg).',
+      isTrue: true,
+      explanation: 'È vero: è il cuore più grande del mondo animale, grande all’incirca quanto una golf cart.',
+    },
+    {
+      id: 'fb_bf10',
+      cardMode: 'bufala',
+      category: 'Storia',
+      statement: 'Napoleone Bonaparte era bassissimo per la sua epoca (attorno al metro e cinquanta).',
+      isTrue: false,
+      explanation: 'È una bufala nata dalla confusione tra piedi francesi e inglesi: era alto circa 1,68–1,69 m, perfettamente nella media dell’epoca.',
+    },
+    {
+      id: 'fb_bf11',
+      cardMode: 'bufala',
+      category: 'Botanica',
+      statement: 'Dal punto di vista botanico la banana è una bacca, mentre la fragola non lo è.',
+      isTrue: true,
+      explanation: 'È vero: le fragole sono tecnicamente falsi frutti con acheni esterni, mentre banane e avocado sono bacche.',
+    },
+    {
+      id: 'fb_bf12',
+      cardMode: 'bufala',
+      category: 'Scienza',
+      statement: 'Un essere umano normale utilizza soltanto il 10% del proprio cervello.',
+      isTrue: false,
+      explanation: 'È un mito cinematografico: le scansioni cerebrali mostrano attività diffusa in quasi tutte le aree anche mentre dormiamo.',
+    },
+  ],
+  intesa: [
+    {
+      id: 'fb_in1',
+      cardMode: 'intesa',
+      category: 'Cucina',
+      word: 'CARBONARA',
+      forbidden: ['UOVA', 'GUANCIALE', 'PECORINO', 'PASTA'],
+    },
+    {
+      id: 'fb_in2',
+      cardMode: 'intesa',
+      category: 'Oggetti',
+      word: 'OMBRELLO',
+      forbidden: ['PIOGGIA', 'BAGNATO', 'APRIRE', 'ACQUA'],
+    },
+    {
+      id: 'fb_in3',
+      cardMode: 'intesa',
+      category: 'Tempo libero',
+      word: 'CINEMA',
+      forbidden: ['FILM', 'POPCORN', 'SCHERMO', 'SALA'],
+    },
+    {
+      id: 'fb_in4',
+      cardMode: 'intesa',
+      category: 'Viaggi',
+      word: 'PASSAPORTO',
+      forbidden: ['AEROPORTO', 'FRONTIERA', 'DOCUMENTO', 'VISTO'],
+    },
+    {
+      id: 'fb_in5',
+      cardMode: 'intesa',
+      category: 'Sport',
+      word: 'RIGORE',
+      forbidden: ['CALCIO', 'PORTIERE', 'DISCHETTO', 'GOL'],
+    },
+    {
+      id: 'fb_in6',
+      cardMode: 'intesa',
+      category: 'Tecnologia',
+      word: 'BATTERIA',
+      forbidden: ['CARICA', 'CELLULARE', 'ENERGIA', 'SCARICO'],
+    },
+    {
+      id: 'fb_in7',
+      cardMode: 'intesa',
+      category: 'Estate',
+      word: 'CREMA SOLARE',
+      forbidden: ['SPIAGGIA', 'SOLE', 'SCOTTATURA', 'MARE'],
+    },
+    {
+      id: 'fb_in8',
+      cardMode: 'intesa',
+      category: 'Vita quotidiana',
+      word: 'SVEGLIA',
+      forbidden: ['MATTINA', 'SUONARE', 'DORMIRE', 'OROLOGIO'],
+    },
+    {
+      id: 'fb_in9',
+      cardMode: 'intesa',
+      category: 'Musica',
+      word: 'CHITARRA',
+      forbidden: ['CORDE', 'SUONARE', 'ROCK', 'PLETTRO'],
+    },
+    {
+      id: 'fb_in10',
+      cardMode: 'intesa',
+      category: 'Casa',
+      word: 'ASPIRAPOLVERE',
+      forbidden: ['PULIRE', 'PAVIMENTO', 'SPORCO', 'FOLLETTO'],
+    },
+    {
+      id: 'fb_in11',
+      cardMode: 'intesa',
+      category: 'Città',
+      word: 'SEMAFORO',
+      forbidden: ['ROSSO', 'VERDE', 'INCROCIO', 'AUTO'],
+    },
+    {
+      id: 'fb_in12',
+      cardMode: 'intesa',
+      category: 'Festa',
+      word: 'CORIANDOLI',
+      forbidden: ['CARNEVALE', 'CARTA', 'COLORATI', 'LANCIARE'],
+    },
+  ],
+};
+
+/** Offline-safe weird, peculiar, personal 2-choice decks exclusively for Solo (1-player) mode. */
+export const SOLO_FALLBACK_DECKS: {
+  flash: PassFlashCard[];
+  classico: PassFlashCard[];
+  preferiresti: PassPreferirestiCard[];
+  assurdo: PassAssurdoCard[];
+  percorso: PassFlashCard[];
+} = {
+  flash: [
+    {
+      id: 'solo_fb_fl1',
+      cardMode: 'flash',
+      text: 'Puoi far dimenticare a tutti una tua figuraccia epica oppure scoprire chi ti ha pensato di più oggi.',
+      optionA: 'Cancello la figuraccia',
+      optionB: 'Scopro chi mi ha pensato',
+      spuntiA: ['Togliere un ricordo imbarazzante libera spazio mentale.', 'Senza curiosità dormi più sereno.'],
+      spuntiB: ['La curiosità vince sempre sulla prudenza.', 'Potresti restare sorpreso da un nome inatteso.'],
+    },
+    {
+      id: 'solo_fb_fl2',
+      cardMode: 'flash',
+      text: 'Una scatola nera registra tutti i pensieri che hai fatto sotto la doccia: la ascolti adesso o la distruggi subito?',
+      optionA: 'La ascolto subito',
+      optionB: 'La distruggo chiusa',
+      spuntiA: ['Lì dentro ci sono le tue intuizioni più sincere.', 'Capire cosa pensi a mente libera cambia tutto.'],
+      spuntiB: ['Certe discussioni immaginarie restano bene nel vapore.', 'Non tutto va rianalizzato.'],
+    },
+    {
+      id: 'solo_fb_fl3',
+      cardMode: 'flash',
+      text: 'Ogni volta che menti sul tuo umore dicendo «tutto bene», le tue scarpe cambiano colore davanti a chi hai di fronte.',
+      optionA: 'Accetto scarpe sincere',
+      optionB: 'Tengo il mio segreto',
+      spuntiA: ['Smetti di mettere maschere automatiche quando sei scarico.', 'Chi ti guarda capirebbe al volo.'],
+      spuntiB: ['A volte non hai voglia di spiegare tutto al primo ciao.', 'La privacy emotiva va protetta.'],
+    },
+    {
+      id: 'solo_fb_fl4',
+      cardMode: 'flash',
+      text: 'Trovi una lettera che avevi scritto a te stesso dieci anni fa: la apri oggi o la sigilli per altri dieci?',
+      optionA: 'La apro adesso',
+      optionB: 'La rimando di 10 anni',
+      spuntiA: ['Scopri subito quali promesse hai tenuto.', 'Rimette in prospettiva i problemi di oggi.'],
+      spuntiB: ['Tra dieci anni peserà il doppio.', 'Forse oggi non vuoi quel confronto.'],
+    },
+    {
+      id: 'solo_fb_fl5',
+      cardMode: 'flash',
+      text: 'Puoi capire istintivamente ogni tuo sogno notturno oppure scegliere tu la trama di un sogno a settimana.',
+      optionA: 'Capire ogni sogno',
+      optionB: 'Scegliere la trama',
+      spuntiA: ['È come aprire la porta sul tuo inconscio.', 'Scopri subito ciò che eviti di giorno.'],
+      spuntiB: ['Un film privato gratuito ogni settimana.', 'Dormire diventa puro divertimento.'],
+    },
+    {
+      id: 'solo_fb_fl6',
+      cardMode: 'flash',
+      text: 'Un piccolo uccello ti segue tutto il giorno e commenta ogni tua spesa superflua: lo tieni o lo mandi via?',
+      optionA: 'Lo tengo per risparmiare',
+      optionB: 'Via subito, spendo in pace',
+      spuntiA: ['Addio acquisti impulsivi notturni.', 'Risparmio garantito a costo zero.'],
+      spuntiB: ['Un caffè o uno sfizio non meritano un giudice piumato.', 'La leggerezza si compra anche così.'],
+    },
+    {
+      id: 'solo_fb_fl7',
+      cardMode: 'flash',
+      text: 'Puoi sapere esattamente quante persone si sono prese una cotta segreta per te in vita tua, senza sapere i nomi.',
+      optionA: 'Voglio il numero',
+      optionB: 'Meglio non saperlo',
+      spuntiA: ['Anche un solo numero in più strappa un sorriso.', 'Pura curiosità innocua.'],
+      spuntiB: ['Il numero senza volti farebbe impazzire di ipotesi.', 'Guarda avanti senza conti.'],
+    },
+    {
+      id: 'solo_fb_fl8',
+      cardMode: 'flash',
+      text: 'Preferisci una memoria fotografica su tutto ciò che leggi o poter cancellare all’istante qualsiasi spoiler?',
+      optionA: 'Memoria fotografica',
+      optionB: 'Cancella-spoiler',
+      spuntiA: ['Impari qualsiasi materia in un decimo del tempo.', 'Superpotere pratico incredibile.'],
+      spuntiB: ['Rivedi i tuoi finali preferiti come fosse la prima volta.', 'Zero rabbia da social.'],
+    },
+    {
+      id: 'solo_fb_fl9',
+      cardMode: 'flash',
+      text: 'Ogni volta che compri qualcosa di inutile, una pianta in salotto sospira rumorosamente.',
+      optionA: 'Accetto la pianta giudice',
+      optionB: 'Pianta muta',
+      spuntiA: ['Un sospiro verde prima del click salva il portafoglio.', 'Casa viva e onesta.'],
+      spuntiB: ['Non voglio sensi di colpa dal basilico.', 'Ogni sfizio è sacro.'],
+    },
+    {
+      id: 'solo_fb_fl10',
+      cardMode: 'flash',
+      text: 'Puoi eliminare per sempre dalla tua testa una sola emozione scomoda: togli l’invidia o il rimpianto?',
+      optionA: 'Elimino l’invidia',
+      optionB: 'Elimino il rimpianto',
+      spuntiA: ['Gioia piena senza confronti continui.', 'Leggerezza mentale immediata.'],
+      spuntiB: ['Guardi solo avanti senza ripensamenti notturni.', 'Sbagli e riparti subito.'],
+    },
+  ],
+  classico: [
+    {
+      id: 'solo_fb_cl1',
+      cardMode: 'classico',
+      text: 'Ogni sbadiglio ti teletrasporta di 3 metri in avanti, oppure ogni starnuto ti riporta indietro di 10 secondi.',
+      optionA: 'Sbadiglio teletrasporto',
+      optionB: 'Starnuto rewind',
+      spuntiA: ['Attraversi code e porte chiuse con un colpo di sonno.', 'Attento però a non sbadigliare su un balcone.'],
+      spuntiB: ['Correggi qualsiasi frase detta male tenendo del pepe in tasca.', 'Rischieresti però loop infiniti col raffreddore.'],
+      domandaRilancio: 'Usi più energie per correre avanti o per correggere ciò che hai appena detto?',
+      lezioneReale: 'Controllare i riflessi quotidiani vale più di qualunque superpotere.',
+    },
+    {
+      id: 'solo_fb_cl2',
+      cardMode: 'classico',
+      text: 'Puoi leggere un libro con tutto ciò che hanno detto di te alle tue spalle, oppure uno con le occasioni mancate per un soffio.',
+      optionA: 'Cosa dicono di me',
+      optionB: 'Occasioni mancate',
+      spuntiA: ['Scopri subito chi è autentico intorno a te.', 'Ma ogni parola letta resta incisa per sempre.'],
+      spuntiB: ['Impari quali segnali ti sfuggono dal vivo.', 'Vedere treni persi per 30 secondi può diventare ossessione.'],
+      domandaRilancio: 'Ti pesa di più il giudizio degli altri o il dubbio di ciò che non hai provato?',
+      lezioneReale: 'La curiosità sul passato serve solo se orienta la prossima mossa.',
+    },
+    {
+      id: 'solo_fb_cl3',
+      cardMode: 'classico',
+      text: 'Trovi in casa una stanza dove il tempo fuori si ferma, oppure una porta che ti porta per 20 minuti in una città casuale.',
+      optionA: 'Stanza senza tempo',
+      optionB: 'Porta sulle città',
+      spuntiA: ['Silenzio totale per riposare senza perdere minuti fuori.', 'Tornare alla corsa reale può diventare difficile.'],
+      spuntiB: ['Ogni giorno venti minuti davanti a un mare nuovo.', 'Ti innamori di posti da cui devi ripartire subito.'],
+      domandaRilancio: 'In questo periodo hai più bisogno di quiete ferma o di sorpresa?',
+      lezioneReale: 'Tra rifugio e scoperta scegliamo sempre ciò che manca alle nostre giornate.',
+    },
+    {
+      id: 'solo_fb_cl4',
+      cardMode: 'classico',
+      text: 'Puoi cancellare il ricordo più imbarazzante della tua vita, ma perderesti anche la lezione pratica che ti ha insegnato.',
+      optionA: 'Cancello il ricordo',
+      optionB: 'Tengo la lezione',
+      spuntiA: ['Niente più flash improvvisi alle 3 di notte.', 'Senza quella cicatrice potresti rifare lo stesso errore.'],
+      spuntiB: ['Quel disagio è il tuo anticorpo migliore.', 'A volte però resta solo un peso inutile.'],
+      domandaRilancio: 'Quale tua figuraccia ti ha reso segretamente più sveglio?',
+      lezioneReale: 'Rimuovere la memoria di un errore espone al rischio di ripeterlo.',
+    },
+    {
+      id: 'solo_fb_cl5',
+      cardMode: 'classico',
+      text: 'Hai uno specchio che mostra come ti vedono gli estranei al primo sguardo, oppure chi sarai tra vent’anni continuando così.',
+      optionA: 'Sguardo degli estranei',
+      optionB: 'Me stesso tra 20 anni',
+      spuntiA: ['Capisci che impressione dai davvero in tre secondi.', 'Rischi di vivere guardandoti da fuori.'],
+      spuntiB: ['Vedi l’effetto reale delle tue abitudini silenziose.', 'Guardare troppo avanti può spaventare.'],
+      domandaRilancio: 'Se vedessi il tuo futuro tra vent’anni continuando così, cosa cambieresti domani?',
+      lezioneReale: 'Il futuro non arriva di colpo: lo costruiscono le piccole ripetizioni di oggi.',
+    },
+    {
+      id: 'solo_fb_cl6',
+      cardMode: 'classico',
+      text: 'Puoi eliminare per sempre la noia, ma in cambio sparisce anche ogni forma di nostalgia.',
+      optionA: 'Zero noia e zero nostalgia',
+      optionB: 'Tengo entrambe',
+      spuntiA: ['Presenza mentale pura senza incastrarti nel passato.', 'Perderesti però il filo caldo coi ricordi.'],
+      spuntiB: ['La noia fa nascere idee nuove e la nostalgia custodisce ciò che ami.', 'Accetti però sere vuote e malinconie improvvise.'],
+      domandaRilancio: 'Le tue idee più vere sono nate nella fretta o in un momento vuoto?',
+      lezioneReale: 'La noia è lo spazio libero in cui tornano a galla i desideri reali.',
+    },
+    {
+      id: 'solo_fb_cl7',
+      cardMode: 'classico',
+      text: 'Puoi creare un solo salvataggio reale della tua vita da ricaricare una volta, oppure avere tre anteprime da 24 ore su bivi diversi.',
+      optionA: 'Un solo checkpoint',
+      optionB: 'Tre anteprime da 24 ore',
+      spuntiA: ['Provi il salto più folle con rete di sicurezza.', 'Aspetteresti tutta la vita il momento perfetto per salvare.'],
+      spuntiB: ['Assaggi tre strade diverse prima di decidere.', 'Un giorno solo mostra l’adrenalina, non la routine.'],
+      domandaRilancio: 'Quale bivio rimandi perché sembra definitivo anche se forse non lo è?',
+      lezioneReale: 'Quasi nessuna porta nella vita è davvero chiusa a chiave per sempre.',
+    },
+    {
+      id: 'solo_fb_cl8',
+      cardMode: 'classico',
+      text: 'Puoi vivere senza avere mai più paura di fare brutta figura, oppure senza avere mai più paura di restare solo.',
+      optionA: 'Zero paura figuracce',
+      optionB: 'Zero paura solitudine',
+      spuntiA: ['Osi, chiedi, sbagli e riparti senza alcun blocco sociale.', 'Resta però la fatica di stare bene a porta chiusa.'],
+      spuntiB: ['Non accetti più legami sbagliati per puro bisogno.', 'Gli sguardi esterni possono comunque frenarti.'],
+      domandaRilancio: 'Quale delle due paure ha deciso più spesso al posto tuo?',
+      lezioneReale: 'Quasi ogni maschera che mettiamo serve a evitare il ridicolo o il vuoto.',
+    },
+    {
+      id: 'solo_fb_cl9',
+      cardMode: 'classico',
+      text: 'Ogni notte puoi visitare nei sogni una versione di te di un’altra scelta di vita, ma al risveglio il caffè sa di cenere per un’ora.',
+      optionA: 'Visito vite parallele',
+      optionB: 'Dormo nel mio mondo',
+      spuntiA: ['Scopri che anche la strada scartata aveva i suoi problemi.', 'Rischi di svegliarti sempre con l’amaro in bocca.'],
+      spuntiB: ['Tutta la tua presenza resta dentro la vita che hai scelto.', 'Rinunci però a soddisfare la curiosità sui «se».'],
+      domandaRilancio: 'Quale bivio passato visiti ancora col pensiero quando non dormi?',
+      lezioneReale: 'Idealizzare ciò che non hai vissuto toglie energia a ciò che hai tra le mani.',
+    },
+    {
+      id: 'solo_fb_cl10',
+      cardMode: 'classico',
+      text: 'Alla fine della vita puoi rivedere solo i momenti in cui eri felice senza saperlo, oppure ogni volta che hai migliorato il giorno di uno sconosciuto.',
+      optionA: 'Quando ero felice senza saperlo',
+      optionB: 'Quando ho aiutato uno sconosciuto',
+      spuntiA: ['Riconosci la magia nascosta delle giornate normali.', 'Scopri quante cose davi per scontate.'],
+      spuntiB: ['Vedi la traccia silenziosa dei tuoi gesti gentili.', 'Resta il mistero sui tuoi giorni migliori.'],
+      domandaRilancio: 'Quale momento ordinario di questa settimana ricorderai con affetto tra cinque anni?',
+      lezioneReale: 'Quasi sempre chiamiamo «bei tempi» le giornate normali mentre scorrono via.',
+    },
+  ],
+  preferiresti: [
+    {
+      id: 'solo_fb_pr1',
+      cardMode: 'preferiresti',
+      prompt: 'Preferiresti che per il resto della vita...',
+      options: [
+        'Ogni tua bugia facesse partire una tromba da stadio alle tue spalle',
+        'Il tuo orologio segnasse i minuti alla tua prossima figuraccia',
+      ],
+    },
+    {
+      id: 'solo_fb_pr2',
+      cardMode: 'preferiresti',
+      prompt: 'Preferiresti svegliarti domani e scoprire che...',
+      options: [
+        'Tutti i tuoi sogni dell’ultimo anno sono salvati in video sul telefono',
+        'Capisci gli animali ma scopri che ti giudicano tutto il giorno',
+      ],
+    },
+    {
+      id: 'solo_fb_pr3',
+      cardMode: 'preferiresti',
+      prompt: 'Preferiresti vivere in una casa dove...',
+      options: [
+        'Ogni specchio ti mostra con quindici anni in più',
+        'La porta di ingresso porta ogni mattina in un quartiere diverso',
+      ],
+    },
+    {
+      id: 'solo_fb_pr4',
+      cardMode: 'preferiresti',
+      prompt: 'Per ottenere un superpotere strano, preferiresti...',
+      options: [
+        'Riavvolgere qualsiasi dialogo di 30 secondi una volta al giorno',
+        'Vedere un’aura verde intorno alle scelte che ti faranno stare bene',
+      ],
+    },
+    {
+      id: 'solo_fb_pr5',
+      cardMode: 'preferiresti',
+      prompt: 'Preferiresti scoprire in soffitta...',
+      options: [
+        'Un diario scritto da te a 80 anni pieno di consigli precisi',
+        'Un biglietto che prova che il tuo peggior errore era necessario',
+      ],
+    },
+    {
+      id: 'solo_fb_pr6',
+      cardMode: 'preferiresti',
+      prompt: 'Preferiresti trascorrere un weekend intero...',
+      options: [
+        'Senza poter pronunciare neppure una parola, solo gesti',
+        'Senza poter usare né soldi né telefono, solo scambi',
+      ],
+    },
+    {
+      id: 'solo_fb_pr7',
+      cardMode: 'preferiresti',
+      prompt: 'Preferiresti che il tuo corpo...',
+      options: [
+        'Facesse un bip leggero quando ti fidi della persona sbagliata',
+        'Si illuminasse quando trovi un posto dove appartieni davvero',
+      ],
+    },
+    {
+      id: 'solo_fb_pr8',
+      cardMode: 'preferiresti',
+      prompt: 'Preferiresti poter cancellare subito...',
+      options: [
+        'Ogni tua traccia digitale prima dei 20 anni',
+        'La stanchezza mentale che torna ogni domenica sera',
+      ],
+    },
+    {
+      id: 'solo_fb_pr9',
+      cardMode: 'preferiresti',
+      prompt: 'Preferiresti avere sulla spalla un tasto fisico che...',
+      options: [
+        'Mette in pausa tutto il mondo per 10 minuti al giorno',
+        'Riporta subito il tuo umore dopo una bella risata',
+      ],
+    },
+    {
+      id: 'solo_fb_pr10',
+      cardMode: 'preferiresti',
+      prompt: 'Preferiresti che una voce calma ogni sera...',
+      options: [
+        'Ti dicesse se oggi sei stato fedele a te stesso',
+        'Ti avvisasse 10 minuti prima quando stai sprecando il pomeriggio',
+      ],
+    },
+  ],
+  assurdo: [
+    {
+      id: 'solo_fb_as1',
+      cardMode: 'assurdo',
+      cardType: 'dignita',
+      prompt: 'Per 500€ subito, accetti di farti leggere ad alta voce in un bar pieno le ultime dieci ricerche fatte su Google?',
+      optionA: 'Accetto i 500€',
+      optionB: 'Tengo la mia privacy',
+      sentenza: 'La soglia tra mistero e cinquecento euro è sottilissima.',
+    },
+    {
+      id: 'solo_fb_as2',
+      cardMode: 'assurdo',
+      cardType: 'dignita',
+      prompt: 'Ricevi 1.000€ netti adesso, ma per un mese ogni tua telefonata inizia con tre secondi di ululato convinto.',
+      optionA: 'Ululo per 1.000€',
+      optionB: 'Mai nella vita',
+      sentenza: 'Con mille euro persino un ululato sembra carattere.',
+    },
+    {
+      id: 'solo_fb_as3',
+      cardMode: 'assurdo',
+      cardType: 'dignita',
+      prompt: 'Ti pagano 400€ subito per uscire tutto il pomeriggio con due scarpe diverse e calzini spaiati.',
+      optionA: 'Moda asimmetrica subito',
+      optionB: 'Scarpe abbinate sempre',
+      sentenza: 'Chi ti fissa le scarpe ha avuto un pomeriggio più interessante.',
+    },
+    {
+      id: 'solo_fb_as4',
+      cardMode: 'assurdo',
+      cardType: 'dignita',
+      prompt: 'Ti danno 2.500€ subito, ma per sette giorni il tuo telefono risponde a qualsiasi chiamata in vivavoce al massimo.',
+      optionA: 'Vivavoce ovunque',
+      optionB: 'Segreti protetti',
+      sentenza: 'Sette giorni di prudenza telefonica si pagano benissimo.',
+    },
+    {
+      id: 'solo_fb_as5',
+      cardMode: 'assurdo',
+      cardType: 'dignita',
+      prompt: 'Per 800€ adesso mangi una pasta al pesto con tre cucchiai di marmellata di fragole davanti a un cuoco serio?',
+      optionA: 'Mangio e incasso',
+      optionB: 'Onore salvo',
+      sentenza: 'Le papille si riprendono prima del conto corrente.',
+    },
+    {
+      id: 'solo_fb_as6',
+      cardMode: 'assurdo',
+      cardType: 'dignita',
+      prompt: 'Per 600€ devi salutare ogni vicino sulle scale per due settimane dicendo «La missione procede!» con sguardo serio.',
+      optionA: 'Agente segreto per 600€',
+      optionB: 'Normale ciao',
+      sentenza: 'Il condominio non dimenticherà mai quelle due settimane.',
+    },
+    {
+      id: 'solo_fb_as7',
+      cardMode: 'assurdo',
+      cardType: 'dignita',
+      prompt: 'Per 5.000€ lasci che un generatore casuale scelga ogni tuo vestito per i prossimi sei mesi?',
+      optionA: 'Stile casuale per sei mesi',
+      optionB: 'Decido io l’armadio',
+      sentenza: 'Uscire dagli schemi comincia anche dai colori improbabili.',
+    },
+    {
+      id: 'solo_fb_as8',
+      cardMode: 'assurdo',
+      cardType: 'dignita',
+      prompt: 'Ti offrono 700€ subito, ma per una settimana ordini tutto al bar mimando senza dire una parola.',
+      optionA: 'Mimo tutto per 700€',
+      optionB: 'Ordino parlando',
+      sentenza: 'Un macchiato mimato è pura arte urbana.',
+    },
+    {
+      id: 'solo_fb_as9',
+      cardMode: 'assurdo',
+      cardType: 'dignita',
+      prompt: 'Per 4.000€ sul conto non puoi guardare nessuno specchio né riflesso di te per novanta giorni consecutivi?',
+      optionA: 'Novanta giorni senza specchi',
+      optionB: 'Devo vedermi ogni tanto',
+      sentenza: 'Tre mesi senza specchi cambiano il rapporto con la propria immagine.',
+    },
+    {
+      id: 'solo_fb_as10',
+      cardMode: 'assurdo',
+      cardType: 'dignita',
+      prompt: 'Ti pagano 900€ per portare un piccolo ananas in borsa per un mese intero e presentarlo a chiunque te lo chieda.',
+      optionA: 'Ananas compagno di viaggio',
+      optionB: 'Zaino senza frutta',
+      sentenza: 'Un ananas in borsa rompe il ghiaccio più di qualsiasi battuta.',
+    },
+  ],
+  percorso: [
+    {
+      id: 'solo_fb_pe1',
+      cardMode: 'percorso',
+      tappa: 1,
+      tappaNome: 'Le Basi',
+      text: 'Ogni volta che rimandi un progetto che desideri, un oggetto in camera si rimpicciolisce di 2 cm: accetti il promemoria o lasci tutto intatto?',
+      optionA: 'Accetto la sveglia fisica',
+      optionB: 'Camera intatta, tempi miei',
+      spuntiA: ['Appena il divano rimpicciolisce ti muovi sul serio.', 'Zero scuse davanti ai fatti.'],
+      spuntiB: ['Ognuno ha ritmi diversi senza pressioni visive.', 'Anche i tempi morti maturano idee.'],
+      domandaRilancio: 'Quale cosa che rimandi da mesi avrebbe già rimpicciolito metà stanza?',
+      lezioneReale: 'Rimandare sembra gratuito solo perché non si vede subito il conto.',
+    },
+    {
+      id: 'solo_fb_pe2',
+      cardMode: 'percorso',
+      tappa: 1,
+      tappaNome: 'Le Basi',
+      text: 'Trovi nel corridoio di casa una stanza dove il tempo si ferma, oppure una porta che ti porta per 20 minuti in una città casuale.',
+      optionA: 'Stanza senza tempo',
+      optionB: 'Porta sulle città',
+      spuntiA: ['Spazio di quiete assoluto senza colpe.', 'Tornare fuori però può pesare.'],
+      spuntiB: ['Finestra giornaliera sull’ignoto.', 'Venti minuti lasciano sempre fame di più.'],
+      domandaRilancio: 'Oggi cerchi più silenzio fermo o aria nuova?',
+    },
+    {
+      id: 'solo_fb_pe3',
+      cardMode: 'percorso',
+      tappa: 2,
+      tappaNome: 'I Bivi',
+      text: 'Puoi avere un solo punto di salvataggio reale nella vita da ricaricare una volta, oppure tre anteprime da 24 ore su bivi diversi.',
+      optionA: 'Un solo checkpoint',
+      optionB: 'Tre anteprime da 24 ore',
+      spuntiA: ['Provi il salto grande con una rete reale.', 'Rischi di non usarlo mai aspettando.'],
+      spuntiB: ['Assaggi tre alternative prima di scegliere.', 'Ventiquattro ore non mostrano il terzo anno.'],
+      domandaRilancio: 'Cosa faresti oggi sapendo di avere un salvataggio in tasca?',
+    },
+    {
+      id: 'solo_fb_pe4',
+      cardMode: 'percorso',
+      tappa: 2,
+      tappaNome: 'I Bivi',
+      text: 'Un semaforo invisibile ti ferma per 30 secondi ogni volta che stai per dire «sì» solo per compiacere qualcuno.',
+      optionA: 'Attivo il semaforo',
+      optionB: 'Tengo l’armonia veloce',
+      spuntiA: ['Trenta secondi ti salvano da settimane scomode.', 'Impari a proteggere il tuo tempo.'],
+      spuntiB: ['Eviti micro-attriti quotidiani.', 'Accumuli però impegni che non senti tuoi.'],
+      domandaRilancio: 'Quanti dei tuoi ultimi sì erano in realtà dei no gentili mai detti?',
+    },
+    {
+      id: 'solo_fb_pe5',
+      cardMode: 'percorso',
+      tappa: 3,
+      tappaNome: 'I Legami',
+      text: 'Puoi rendere muto il giudice interiore con cui ti critichi allo specchio, ma non riceverai mai più nemmeno un complimento esterno.',
+      optionA: 'Silenzio totale dentro e fuori',
+      optionB: 'Tengo critiche e complimenti',
+      spuntiA: ['Pace mentale stabile senza ansia da voto.', 'Zero conferme calde dagli altri.'],
+      spuntiB: ['Impari a dialogare con le tue crepe.', 'Certi giorni però quella voce pesa tantissimo.'],
+      domandaRilancio: 'È più severo il mondo con te o la tua voce nei giorni storti?',
+    },
+    {
+      id: 'solo_fb_pe6',
+      cardMode: 'percorso',
+      tappa: 3,
+      tappaNome: 'I Legami',
+      text: 'Puoi viaggiare gratis ovunque per sempre, ma dovendo partire e dormire sempre da solo senza mai condividere l’esperienza sul momento.',
+      optionA: 'Mondo gratis in solitaria',
+      optionB: 'Meno viaggi ma condivisi',
+      spuntiA: ['Libertà pura di tempi e deviazioni.', 'Manca qualcuno cui dire «guarda lì».'],
+      spuntiB: ['La gioia condivisa pesa il doppio.', 'Dipendi però dagli incastri altrui.'],
+      domandaRilancio: 'Cosa conta di più in un ricordo: dove eri o con chi lo hai guardato?',
+    },
+    {
+      id: 'solo_fb_pe7',
+      cardMode: 'percorso',
+      tappa: 4,
+      tappaNome: 'I Bilanci',
+      text: 'Puoi eliminare per sempre la noia, ma perderesti anche ogni capacità di provare nostalgia.',
+      optionA: 'Zero noia e zero nostalgia',
+      optionB: 'Tengo entrambe',
+      spuntiA: ['Sempre leggero sul presente.', 'Si spegne il ponte emotivo col passato.'],
+      spuntiB: ['Entrambe danno profondità al tempo vissuto.', 'Prezzo: sere vuote e malinconie improvvise.'],
+      domandaRilancio: 'Cosa affiora quando resti venti minuti senza stimoli né telefono?',
+    },
+    {
+      id: 'solo_fb_pe8',
+      cardMode: 'percorso',
+      tappa: 4,
+      tappaNome: 'I Bilanci',
+      text: 'In un museo immaginario sulla tua vita c’è posto per una sola sala: esponi i successi riusciti o i tentativi falliti più coraggiosi?',
+      optionA: 'I miei successi',
+      optionB: 'I tentativi coraggiosi',
+      spuntiA: ['Celebri ciò che hai costruito e chiuso bene.', 'Nasconde però la parte più viva del rischio.'],
+      spuntiB: ['Raccontano quanto hai osato davvero.', 'Mostri ferite aperte senza lieto fine.'],
+      domandaRilancio: 'Di quale tuo tentativo andato male vai ancora segretamente fiero?',
     },
   ],
 };

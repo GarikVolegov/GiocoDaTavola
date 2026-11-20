@@ -25,6 +25,15 @@ describe('Cruciverba Show 2D grid invariants & turn engine', () => {
 
       for (const word of board.words) {
         expect(word.word).toMatch(/^[A-Z]{3,}$/);
+        expect(Array.isArray(word.choices), `Missing choices on ${board.id}.${word.id}`).toBe(true);
+        expect(word.choices).toHaveLength(4);
+        const upperChoices = word.choices!.map((c) => c.toUpperCase());
+        expect(new Set(upperChoices).size).toBe(4);
+        expect(upperChoices).toContain(word.word);
+        for (const ch of word.choices!) {
+          expect(ch).toMatch(/^[A-Z]+$/);
+          expect(ch.length).toBe(word.word.length);
+        }
         for (const c of getWordCells(word)) {
           expect(c.row).toBeGreaterThanOrEqual(0);
           expect(c.row).toBeLessThan(board.rows);
@@ -100,9 +109,11 @@ describe('Cruciverba Show 2D grid invariants & turn engine', () => {
     expect(badTurn.ok).toBe(false);
     expect(badTurn.error).toBe('NOT_YOUR_TURN');
 
-    // Secret answers must NOT leak in serialized state before reveal
+    // Secret answers must NOT leak in serialized state before reveal and indizi omits choices
     const publicBefore = serializeCruciverbaState(state, (id) => id, false);
+    expect(publicBefore.mode).toBe('indizi');
     expect(publicBefore.words.every((w) => w.answer === undefined)).toBe(true);
+    expect(publicBefore.words.every((w) => w.choices === undefined)).toBe(true);
 
     // Wrong guess does not advance turn and awards 0
     const wrong = submitCruciverbaAttempt(state, active1, 'SBAGLIATO');
@@ -131,5 +142,37 @@ describe('Cruciverba Show 2D grid invariants & turn engine', () => {
     revealRemainingCruciverbaWords(state);
     const publicFinal = serializeCruciverbaState(state, (id) => id, true);
     expect(publicFinal.words.every((w) => typeof w.answer === 'string')).toBe(true);
+  });
+
+  it('supports 4-choice (scelte) mode with anchor letter, hidden clue, no answer leak, and wrongChoices tracking', () => {
+    const board = CRUCIVERBA_BOARDS[0]; // SPRITZ / PIZZA / NOTTE / AMARO
+    const state = initCruciverbaRound(board, ['p1'], () => 0.25, 'scelte');
+    expect(state.mode).toBe('scelte');
+    expect(state.revealedCells.size).toBe(1);
+
+    const serializedBefore = serializeCruciverbaState(state, (id) => id, false);
+    expect(serializedBefore.mode).toBe('scelte');
+    for (const w of serializedBefore.words) {
+      expect(w.clue).toBe('');
+      expect(w.choices).toHaveLength(4);
+      expect(w.choices).toContain(board.words.find((bw) => bw.id === w.id)!.word);
+      expect(w.answer).toBeUndefined();
+      expect(w.wrongChoices).toEqual([]);
+    }
+
+    const wrongChoice = serializedBefore.words[0].choices!.find((c) => c !== board.words[0].word)!;
+    const wrongRes = submitCruciverbaAttempt(state, 'p1', wrongChoice, 'w1');
+    expect(wrongRes.ok).toBe(true);
+    expect(wrongRes.correct).toBe(false);
+    expect(wrongRes.boardSolved).toBe(false);
+    expect(wrongRes.roundEnded).toBe(false);
+
+    const serializedAfterWrong = serializeCruciverbaState(state, (id) => id, false);
+    expect(serializedAfterWrong.words[0].wrongChoices).toContain(wrongChoice);
+
+    const rightRes = submitCruciverbaAttempt(state, 'p1', board.words[0].word, 'w1');
+    expect(rightRes.ok).toBe(true);
+    expect(rightRes.correct).toBe(true);
+    expect(rightRes.pointsAwarded).toBeGreaterThan(0);
   });
 });

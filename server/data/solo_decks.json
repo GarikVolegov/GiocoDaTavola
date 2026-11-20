@@ -1,0 +1,1572 @@
+{
+  "dilemmi": [
+    {
+      "id": "sd01",
+      "text": "Ogni volta che sbadigli ti teletrasporti di 3 metri in avanti, oppure ogni starnuto ti riporta indietro di 10 secondi.",
+      "optionA": "Sbadiglio teletrasporto",
+      "optionB": "Starnuto rewind",
+      "register": "vita",
+      "tappa": 1,
+      "percorsoTappa": 1,
+      "complessita": "sorbetto",
+      "tono": "risate",
+      "spuntiA": [
+        "Passi attraverso porte chiuse e code infinite con un colpo di sonno.",
+        "Attenzione però a non sbadigliare vicino a un balcone o davanti a un tram."
+      ],
+      "spuntiB": [
+        "Puoi correggere qualsiasi frase imbarazzante tenendo un po' di pepe in tasca.",
+        "Rischieresti di rivivere lo stesso raffreddore in loop infinito."
+      ],
+      "domandaRilancio": "Nella vita reale usi più energie per andare avanti in fretta o per correggere ciò che hai appena detto?",
+      "lezioneReale": "Controllare i riflessi automatici conta più che avere superpoteri spettacolari.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd02",
+      "text": "Puoi aprire un libro che contiene solo ciò che gli altri hanno detto di te quando non c'eri, oppure un libro con tutte le occasioni mancate per un soffio.",
+      "optionA": "Cosa dicono di me",
+      "optionB": "Occasioni mancate",
+      "register": "vita",
+      "tappa": 2,
+      "percorsoTappa": 2,
+      "complessita": "max",
+      "tono": "direzione",
+      "spuntiA": [
+        "Scopri subito chi è autentico e quali maschere ti circondano.",
+        "Ma ogni complimento o critica letta fuori contesto non si può più disimparare."
+      ],
+      "spuntiB": [
+        "Capisci quali segnali non sai cogliere mentre accadono davvero.",
+        "Vedere treni persi per 30 secondi può trasformarsi in ossessione."
+      ],
+      "domandaRilancio": "Ti fa più paura scoprire cosa pensano di te o sapere cos'altro saresti potuto diventare?",
+      "lezioneReale": "La curiosità sul passato o sul giudizio altrui serve solo se cambia la prossima mossa.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd03",
+      "text": "Trovi nel corridoio di casa una stanza segreta dove il tempo fuori si ferma, oppure una porta che ti porta per 20 minuti in una città casuale.",
+      "optionA": "Stanza senza tempo",
+      "optionB": "Porta sulle città",
+      "register": "vita",
+      "tappa": 1,
+      "percorsoTappa": 1,
+      "complessita": "alto",
+      "tono": "direzione",
+      "spuntiA": [
+        "Silenzio assoluto per leggere, dormire o pensare senza che scorra un minuto.",
+        "Se ci resti troppo, il ritorno al rumore reale diventa durissimo."
+      ],
+      "spuntiB": [
+        "Ogni giorno puoi fare colazione davanti a un mare o vicolo diverso.",
+        "Venti minuti bastano appena per innamorarti di posti da cui devi scappare."
+      ],
+      "domandaRilancio": "In questo momento hai più bisogno di un rifugio fermo o di una finestra sull'ignoto?",
+      "lezioneReale": "Scegliamo tra quiete ed esplorazione in base a quanto siamo stanchi di fingere di correre.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd04",
+      "text": "Puoi cancellare per sempre il ricordo più imbarazzante della tua vita, ma perderesti anche la lezione pratica che ti ha lasciato.",
+      "optionA": "Cancello il ricordo",
+      "optionB": "Tengo la ferita",
+      "register": "vita",
+      "tappa": 2,
+      "percorsoTappa": 2,
+      "complessita": "max",
+      "tono": "serio",
+      "spuntiA": [
+        "Finalmente dormi alle 3 di notte senza quel flash improvviso nello stomaco.",
+        "Senza memoria di quella caduta potresti rifarla identica domani."
+      ],
+      "spuntiB": [
+        "Quel disagio è il vaccino che ti protegge da errori molto più grandi.",
+        "Resta però un peso inutile se finisce per bloccare ogni tuo tentativo nuovo."
+      ],
+      "domandaRilancio": "Quale tua figuraccia passata ti ha reso segretamente più lucido oggi?",
+      "lezioneReale": "Rimuovere il disagio senza integrarlo lascia scoperto il punto cieco che lo ha creato.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd05",
+      "text": "Sopra la tua testa compare una barra visibile della tua batteria sociale reale, oppure senti una colonna sonora privata che rivela il tuo vero umore.",
+      "optionA": "Barra batteria visibile",
+      "optionB": "Colonna sonora privata",
+      "register": "vita",
+      "tappa": 1,
+      "percorsoTappa": 1,
+      "complessita": "sorbetto",
+      "tono": "risate",
+      "spuntiA": [
+        "Nessuno ti trattiene quando sei al 4%: esci di scena con prova scientifica.",
+        "Non potresti più fingere entusiasmo quando sei scarico."
+      ],
+      "spuntiB": [
+        "Quando parte il violino drammatico mentre rispondi «tutto bene» capisci subito la verità.",
+        "Ti abitueresti a vivere con un commentatore emotivo senza tasto mute."
+      ],
+      "domandaRilancio": "Quanto spesso dici di avere energie quando in realtà sei già in riserva rossa?",
+      "lezioneReale": "Ascoltare i propri segnali prima di andare a zero evita scelte fatte per pura inerzia.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd06",
+      "text": "Scopri che gli oggetti di casa tua possono parlarti per un'ora a notte, oppure puoi capire cosa sognano gli uccelli sul balcone.",
+      "optionA": "Oggetti parlanti",
+      "optionB": "Sogni degli uccelli",
+      "register": "vita",
+      "tappa": 1,
+      "percorsoTappa": 1,
+      "complessita": "sorbetto",
+      "tono": "risate",
+      "spuntiA": [
+        "Il divano, il frigo e le chiavi ti svelano le tue abitudini peggiori senza filtri.",
+        "Il microonde probabilmente ti giudicherebbe ogni sera."
+      ],
+      "spuntiB": [
+        "Sarebbe pura poesia quotidiana fuori da ogni logica umana.",
+        "Alla lunga scopriresti che sognano soprattutto briciole e gatti."
+      ],
+      "domandaRilancio": "Quale oggetto in casa tua avrebbe i segreti più imbarazzanti sulle tue giornate?",
+      "lezioneReale": "Guardarsi dall'esterno, persino con ironia surreale, rivela le nostre vere routine.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd07",
+      "text": "Hai uno specchio che mostra esattamente come ti vedono gli sconosciuti al primo sguardo, oppure uno che mostra chi sarai tra vent'anni continuando così.",
+      "optionA": "Sguardo degli estranei",
+      "optionB": "Tra vent'anni",
+      "register": "vita",
+      "tappa": 3,
+      "percorsoTappa": 3,
+      "complessita": "max",
+      "tono": "serio",
+      "spuntiA": [
+        "Scopri subito quale distanza c'è tra quello che credi di trasmettere e quello che arriva.",
+        "Potresti finire a ossessionarti sull'immagine esterna."
+      ],
+      "spuntiB": [
+        "È l'unico allarme onesto sulle abitudini silenziose di oggi.",
+        "Guardare troppo avanti rischia di spaventarti invece di muoverti."
+      ],
+      "domandaRilancio": "Se vedessi il risultato delle tue abitudini tra vent'anni, cosa cambieresti già domani?",
+      "lezioneReale": "Il futuro raramente arriva di colpo: è la somma silenziosa di ciò che ripeti ogni giorno.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd08",
+      "text": "Puoi creare un solo punto di salvataggio reale nella vita da ricaricare una volta, oppure avere tre anteprime da 24 ore su bivi diversi.",
+      "optionA": "Un solo checkpoint",
+      "optionB": "Tre anteprime da 24 ore",
+      "register": "vita",
+      "tappa": 2,
+      "percorsoTappa": 2,
+      "complessita": "alto",
+      "tono": "direzione",
+      "spuntiA": [
+        "Puoi tentare il salto più folle sapendo di poter tornare esattamente a casa.",
+        "Finiresti però per aspettare tutta la vita il momento giusto per salvarlo."
+      ],
+      "spuntiB": [
+        "Provi tre scelte radicali senza bruciarti tutto subito.",
+        "Ventiquattro ore mostrano l'adrenalina iniziale, non il peso del terzo anno."
+      ],
+      "domandaRilancio": "Rimandi le scelte perché non puoi tornare indietro, o perché hai paura che funzionino?",
+      "lezioneReale": "Quasi nessuna scelta è davvero irreversibile come sembra prima di farla.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd09",
+      "text": "Puoi eliminare per sempre la noia dalla tua vita, ma in cambio sparisce anche ogni forma di nostalgia.",
+      "optionA": "Zero noia e zero nostalgia",
+      "optionB": "Tengo entrambe",
+      "register": "vita",
+      "tappa": 4,
+      "percorsoTappa": 4,
+      "complessita": "power",
+      "tono": "serio",
+      "spuntiA": [
+        "Sei presente al 100% senza mai restare incastrato in ciò che è finito.",
+        "Senza nostalgia perderesti però il filo affettivo con chi sei stato."
+      ],
+      "spuntiB": [
+        "La noia genera idee nuove e la nostalgia custodisce ciò che hai amato.",
+        "Accetti però intere serate vuote e malinconie improvvise."
+      ],
+      "domandaRilancio": "Le tue idee migliori sono nate da un momento pieno o da una giornata vuota?",
+      "lezioneReale": "La noia non è tempo perso: è lo spazio vuoto in cui tornano a galla i desideri veri.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd10",
+      "text": "Un bigliettino ti offre la risposta esatta a una sola domanda sull'universo, oppure una foto nitida della tua cucina tra dieci anni esatti.",
+      "optionA": "Segreto dell'universo",
+      "optionB": "La mia cucina tra 10 anni",
+      "register": "vita",
+      "tappa": 4,
+      "percorsoTappa": 4,
+      "complessita": "max",
+      "tono": "serio",
+      "spuntiA": [
+        "Soddisfi la domanda più grande mai pensata dall'umanità.",
+        "Domani dovrai comunque fare la spesa e pagare l'affitto con quella verità."
+      ],
+      "spuntiB": [
+        "Un solo dettaglio sul tavolo ti direbbe tutto sulla vita che stai costruendo.",
+        "Se vedessi due tazze invece di una — o il contrario — non smetteresti più di pensarci."
+      ],
+      "domandaRilancio": "Cerchi risposte grandi sul mondo per non guardare una risposta piccola nella tua vita?",
+      "lezioneReale": "I dettagli quotidiani raccontano il nostro percorso molto meglio delle grandi teorie.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd11",
+      "text": "Ogni notte puoi visitare nei sogni un tuo sé parallelo di un'altra scelta di vita, ma al risveglio il caffè sa di cenere per un'ora.",
+      "optionA": "Visito le vite parallele",
+      "optionB": "Dormo nel mio mondo",
+      "register": "vita",
+      "tappa": 3,
+      "percorsoTappa": 3,
+      "complessita": "alto",
+      "tono": "direzione",
+      "spuntiA": [
+        "Capisci se ciò che idealizzi sarebbe stato davvero migliore o solo diverso.",
+        "Rischi di svegliarti invidiando una versione inventata di te."
+      ],
+      "spuntiB": [
+        "Metti tutta la testa e la fame emotiva nella vita che hai tra le mani.",
+        "Rinunci a sapere cosa ci fosse dietro il bivio che non hai preso."
+      ],
+      "domandaRilancio": "Quale tua scelta passata visiti ancora col pensiero quando non riesci a dormire?",
+      "lezioneReale": "Idealizzare la strada non presa rende invisibili le opportunità già aperte su quella attuale.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd12",
+      "text": "Ricevi un orologio che non segna le ore, ma solo quanti giorni ti mancano a incontrare la prossima persona che cambierà la tua vita.",
+      "optionA": "Lo indosso subito",
+      "optionB": "Lo chiudo nel cassetto",
+      "register": "vita",
+      "tappa": 2,
+      "percorsoTappa": 2,
+      "complessita": "alto",
+      "tono": "direzione",
+      "spuntiA": [
+        "Nei mesi bui sai con certezza che qualcosa si sta avvicinando.",
+        "Potresti smettere di dare valore alle persone che hai davanti oggi."
+      ],
+      "spuntiB": [
+        "Ogni incontro resta una sorpresa autentica, senza aspettative truccate.",
+        "Ti privi però di una speranza concreta quando tutto sembra fermo."
+      ],
+      "domandaRilancio": "Quando incontri qualcuno di nuovo sei curioso davvero o stai aspettando qualcun altro?",
+      "lezioneReale": "Aspettare il colpo di scena perfetto impedisce spesso di accorgersi di chi è già lì.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd13",
+      "text": "Puoi rendere muti per sempre i commenti mentali con cui ti critichi allo specchio, ma non riceverai mai più nemmeno un complimento esterno.",
+      "optionA": "Silenzio interiore totale",
+      "optionB": "Tengo critiche e complimenti",
+      "register": "vita",
+      "tappa": 3,
+      "percorsoTappa": 3,
+      "complessita": "max",
+      "tono": "serio",
+      "spuntiA": [
+        "Pace mentale incrollabile, zero ansia da prestazione o confronto.",
+        "Senza mai una parola di conferma dagli altri ti sentiresti molto solo."
+      ],
+      "spuntiB": [
+        "Imparare a convivere col giudice interno ti rende più umano e ricettivo.",
+        "Certi giorni quella voce sa essere più cattiva di qualsiasi estraneo."
+      ],
+      "domandaRilancio": "Ti ferisce di più la critica di un estraneo o la frase che ti ripeti da solo?",
+      "lezioneReale": "La libertà vera non è spegnere i giudizi esterni, ma smettere di amplificarli dentro.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd14",
+      "text": "Ogni tua bugia detta a fin di bene fa apparire un minuscolo fiore sul davanzale; ogni verità brutale che dici ti regala un'ora di sonno profondo.",
+      "optionA": "Fiori sulle bugie gentili",
+      "optionB": "Sonno sulle verità dure",
+      "register": "vita",
+      "tappa": 2,
+      "percorsoTappa": 2,
+      "complessita": "alto",
+      "tono": "direzione",
+      "spuntiA": [
+        "Proteggi la quiete intorno a te e vivi in una serra profumata.",
+        "A forza di fiori gentili nessuno saprebbe più cosa pensi sul serio."
+      ],
+      "spuntiB": [
+        "Dormi con la coscienza leggerissima e rapporti zero ipocrisia.",
+        "Non tutto ciò che è vero ha bisogno di essere lanciato addosso senza cura."
+      ],
+      "domandaRilancio": "Dietro la tua ultima bugia bianca c'era davvero gentilezza o solo voglia di evitare rogne?",
+      "lezioneReale": "Sincerità e delicatezza non sono opposti: la seconda serve proprio a rendere digeribile la prima.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd15",
+      "text": "Puoi vivere senza avere mai più paura di fare brutta figura, oppure senza avere mai più paura di restare solo.",
+      "optionA": "Zero paura delle figuracce",
+      "optionB": "Zero paura della solitudine",
+      "register": "vita",
+      "tappa": 3,
+      "percorsoTappa": 3,
+      "complessita": "max",
+      "tono": "serio",
+      "spuntiA": [
+        "Chiedi, proponi, balli, sbagli e ricominci in un secondo senza freni.",
+        "Resta però la fatica di stare bene con te stesso a porta chiusa."
+      ],
+      "spuntiB": [
+        "Non accetti mai più compromessi tossici o compagnie sbagliate per bisogno.",
+        "Potresti comunque restare bloccato davanti agli sguardi degli altri."
+      ],
+      "domandaRilancio": "Quale delle due paure ha guidato più decisioni importanti nella tua vita finora?",
+      "lezioneReale": "Quasi tutte le gabbie che ci costruiamo servono a evitare o l'imbarazzo o il vuoto.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd16",
+      "text": "Un bottone dimezza istantaneamente il traffico e le code per tutta la vita, ma ogni tuo messaggio vocale parte automaticamente a velocità 0.5x.",
+      "optionA": "Zero code e voce lenta",
+      "optionB": "Tengo traffico e voce normale",
+      "register": "vita",
+      "tappa": 1,
+      "percorsoTappa": 1,
+      "complessita": "sorbetto",
+      "tono": "risate",
+      "spuntiA": [
+        "Guadagni settimane di vita pura e smetti finalmente di mandare vocali lunghi.",
+        "Anche un semplice «arrivo» sembrerebbe un messaggio misterioso alle 3 di notte."
+      ],
+      "spuntiB": [
+        "Difendi la tua dignità vocale e ascolti i podcast in fila in tangenziale.",
+        "Butti però ore intere a fissare targhe e sportelli fermi."
+      ],
+      "domandaRilancio": "Quale piccolo fastidio quotidiano ti ruba più buonumore di quanto meriti?",
+      "lezioneReale": "Spesso sopportiamo ore di attrito reale pur di non cambiare una piccola abitudine.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd17",
+      "text": "Puoi sapere sempre all'istante quando qualcuno sta mentendo, ma in cambio ogni volta che menti tu starnutisci tre volte di fila.",
+      "optionA": "Rivelatore umano",
+      "optionB": "Tengo i miei segreti",
+      "register": "vita",
+      "tappa": 2,
+      "percorsoTappa": 2,
+      "complessita": "alto",
+      "tono": "direzione",
+      "spuntiA": [
+        "Nessuno ti prende più in giro: sai esattamente dove metti i piedi.",
+        "Scopri però che quasi tutti mentono anche su sciocchezze affettuose."
+      ],
+      "spuntiB": [
+        "Mantieni il diritto a una bugia diplomatica senza sembrare allergico.",
+        "Continui a fidarti a intuito, sbagliando ogni tanto."
+      ],
+      "domandaRilancio": "Preferisci scoprire ogni piccola bugia o mantenere un po' di filtro sano?",
+      "lezioneReale": "La verità cruda su ogni micro-pensiero renderebbe invivibile quasi ogni relazione.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd18",
+      "text": "Ogni anno che vivi bene aggiungi un colore nuovo al mondo solo per i tuoi occhi, oppure puoi risentire perfettamente la voce di chiunque dal passato per 5 minuti.",
+      "optionA": "Colori nuovi ogni anno",
+      "optionB": "Cinque minuti di voci care",
+      "register": "vita",
+      "tappa": 4,
+      "percorsoTappa": 4,
+      "complessita": "power",
+      "tono": "serio",
+      "spuntiA": [
+        "La tua percezione si arricchisce invece di spegnersi col passare del tempo.",
+        "Non potresti descrivere a nessuno ciò che vedi in più."
+      ],
+      "spuntiB": [
+        "Risentire una risata o un consiglio perso vale più di qualsiasi meraviglia visiva.",
+        "Cinque minuti rischiano di riaprire la nostalgia ogni volta."
+      ],
+      "domandaRilancio": "Stai cercando più intensità nel presente o pace con ciò che hai già vissuto?",
+      "lezioneReale": "Crescere significa imparare a guardare meglio ciò che c'è già, senza restare prigionieri di ciò che manca.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd19",
+      "text": "Una voce dentro di te legge sempre la tua lista di priorità reale ad alta voce ogni lunedì alle 08:00, ma solo per le tue orecchie.",
+      "optionA": "Accetto la sveglia onesta",
+      "optionB": "Meglio improvvisare",
+      "register": "vita",
+      "tappa": 2,
+      "percorsoTappa": 2,
+      "complessita": "alto",
+      "tono": "direzione",
+      "spuntiA": [
+        "Impossibile raccontarti scuse su dove finiscono le tue settimane.",
+        "Ogni lunedì mattina diventerebbe un esame spietato."
+      ],
+      "spuntiB": [
+        "Lasci spazio all'istinto e alle deviazioni impreviste.",
+        "Passano mesi interi prima che ti accorga di aver rimandato l'essenziale."
+      ],
+      "domandaRilancio": "Se la tua agenda parlasse da sola lunedì mattina, che priorità ti mostrerebbe davvero?",
+      "lezioneReale": "Le tue vere priorità non sono scritte nei buoni propositi, ma nei posti dove metti le ore.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd20",
+      "text": "Puoi sapere con esattezza matematica quanti soldi guadagnerai in tutta la vita, ma non potrai mai superare né scendere sotto quella cifra.",
+      "optionA": "Certezza matematica",
+      "optionB": "Incertezza aperta",
+      "register": "vita",
+      "tappa": 2,
+      "percorsoTappa": 2,
+      "complessita": "alto",
+      "tono": "direzione",
+      "spuntiA": [
+        "Zero ansia da stipendio: puoi scegliere progetti e rischi senza paura di finire a zero.",
+        "Se la cifra fosse bassa o piatta, toglierebbe il gusto di provarci."
+      ],
+      "spuntiB": [
+        "Puoi sempre sorprendere te stesso e cambiare traiettoria.",
+        "Convivi però col dubbio costante se stai costruendo abbastanza."
+      ],
+      "domandaRilancio": "Se i soldi fossero già garantiti e fissi, faresti esattamente il lavoro di oggi?",
+      "lezioneReale": "La sicurezza assoluta toglie paura, ma a volte spegne anche la fame di sperimentare.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd21",
+      "text": "Ogni volta che rimandi qualcosa che desideri da mesi, l'oggetto più vicino a te diventa di 2 centimetri più piccolo.",
+      "optionA": "Accetto il promemoria fisico",
+      "optionB": "Tengo la stanza intatta",
+      "register": "vita",
+      "tappa": 1,
+      "percorsoTappa": 1,
+      "complessita": "sorbetto",
+      "tono": "risate",
+      "spuntiA": [
+        "Appena il divano diventa grande come una sedia da bambole ti dai una mossa.",
+        "Nel giro di un mese berresti il caffè in un ditale."
+      ],
+      "spuntiB": [
+        "I tuoi mobili restano della taglia giusta.",
+        "Continui però a rimandare comodamente senza che nulla ti avvisi."
+      ],
+      "domandaRilancio": "Quale cosa che rimandi da troppo tempo farebbe rimpicciolire metà della tua casa?",
+      "lezioneReale": "Rimandare sembra gratis solo perché il costo non si vede subito su nessun oggetto.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd22",
+      "text": "Puoi rendere ogni tua decisione definitiva e senza ripensamenti, oppure avere sempre una seconda possibilità ma perdere metà dell'entusiasmo iniziale.",
+      "optionA": "Decisioni nette senza ritorno",
+      "optionB": "Seconda chance più tiepida",
+      "register": "vita",
+      "tappa": 3,
+      "percorsoTappa": 3,
+      "complessita": "max",
+      "tono": "serio",
+      "spuntiA": [
+        "Non sprechi energie nei dubbi: quando chiudi una porta la chiudi davvero.",
+        "Un solo errore di valutazione ti costerebbe carissimo."
+      ],
+      "spuntiB": [
+        "Puoi correggere la rotta senza sentirti condannato dalla prima scelta.",
+        "Sapere di poter sempre cambiare riduce però la spinta a impegnarti a fondo."
+      ],
+      "domandaRilancio": "In quale scelta della tua vita stai tenendo una porta socchiusa per non decidere?",
+      "lezioneReale": "Tenere aperte tutte le vie di fuga consuma più energia che percorrere bene una strada sola.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd23",
+      "text": "Un biglietto magico ti consente di chiedere scusa a una persona del passato e sistemare tutto, oppure di perdonare davvero te stesso per un errore preciso.",
+      "optionA": "Sistemare con l'altra persona",
+      "optionB": "Perdonare me stesso",
+      "register": "vita",
+      "tappa": 4,
+      "percorsoTappa": 4,
+      "complessita": "power",
+      "tono": "serio",
+      "spuntiA": [
+        "Chiudi un conto rimasto aperto da anni e togli un peso a entrambi.",
+        "Anche dopo la pace esterna potresti continuare a punirti dentro."
+      ],
+      "spuntiB": [
+        "Ti liberi di una colpa che nessuno fuori ti sta più facendo pagare.",
+        "Resta però la domanda di cosa sarebbe successo scrivendo quel messaggio."
+      ],
+      "domandaRilancio": "È più difficile ricevere perdono da fuori o smettere di processarti da solo?",
+      "lezioneReale": "Portare avanti una colpa vecchia non ripara l'errore: ti impedisce solo di essere presente oggi.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd24",
+      "text": "Puoi ricordare ogni singolo sogno che fai di notte con precisione cinematografica, ma in cambio dimentichi sempre cosa hai mangiato il giorno prima.",
+      "optionA": "Ricordo tutti i sogni",
+      "optionB": "Ricordo la realtà di ieri",
+      "register": "vita",
+      "tappa": 1,
+      "percorsoTappa": 1,
+      "complessita": "sorbetto",
+      "tono": "risate",
+      "spuntiA": [
+        "Avresti materiale infinito di storie assurde e intuizioni del tuo inconscio.",
+        "Ordineresti la stessa pizza quattro sere di fila senza accorgertene."
+      ],
+      "spuntiB": [
+        "Resti lucido sulle cose concrete di tutti i giorni.",
+        "I sogni più belli continueranno a svanire dopo tre secondi dalla sveglia."
+      ],
+      "domandaRilancio": "Ti fidi di più delle tue intuizioni notturne o dei fatti concreti di ieri?",
+      "lezioneReale": "L'immaginazione arricchisce la vita solo se resta agganciata a qualcosa di reale.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd25",
+      "text": "Puoi trascorrere un anno intero in totale isolamento in una casa perfetta sul mare con tutto pagato, ma senza musica né libri né schermi.",
+      "optionA": "Un anno solo coi miei pensieri",
+      "optionB": "Rifiuto senza esitare",
+      "register": "vita",
+      "tappa": 3,
+      "percorsoTappa": 3,
+      "complessita": "max",
+      "tono": "serio",
+      "spuntiA": [
+        "Scopri chi sei davvero quando togli ogni distrazione e ogni confronto.",
+        "Dodici mesi di puro silenzio possono diventare un labirinto mentale."
+      ],
+      "spuntiB": [
+        "La mente umana ha bisogno di scambio, storie e movimento per restare viva.",
+        "Stai però forse evitando di restare anche solo mezz'ora in silenzio con te."
+      ],
+      "domandaRilancio": "Quanti minuti reggi davvero senza telefono né stimoli prima di cercare distrazione?",
+      "lezioneReale": "Chi non sopporta mai la propria compagnia finisce per riempire la vita di rumore.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd26",
+      "text": "Ogni parola scritta da te sul cellulare diventa subito pubblica sul tuo profilo, oppure puoi leggere solo il primo rigo di qualsiasi messaggio ti arrivi.",
+      "optionA": "Tutto ciò che scrivo è pubblico",
+      "optionB": "Leggo solo la prima riga",
+      "register": "vita",
+      "tappa": 1,
+      "percorsoTappa": 1,
+      "complessita": "sorbetto",
+      "tono": "risate",
+      "spuntiA": [
+        "Ti costringe a telefonare o parlare dal vivo per qualsiasi cosa vera.",
+        "Addio liste della spesa segrete, bozze di insulti e note notturne."
+      ],
+      "spuntiB": [
+        "Costringi tutti a dirti subito il punto nella prima frase, addio papiri.",
+        "Perderesti ogni spiegazione lunga e ogni post scriptum importante."
+      ],
+      "domandaRilancio": "Cosa scoprirebbe il mondo se leggesse soltanto le tue bozze cancellate prima di inviare?",
+      "lezioneReale": "Spesso la nostra parte più sincera è proprio nei messaggi che riscriviamo tre volte.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd27",
+      "text": "Puoi ricevere oggi tutta la saggezza che avrai a 75 anni, ma in cambio non proverai più nessuna sorpresa davanti alle cose nuove.",
+      "optionA": "Saggezza subito, zero stupore",
+      "optionB": "Imparo sbagliando e stupendomi",
+      "register": "vita",
+      "tappa": 4,
+      "percorsoTappa": 4,
+      "complessita": "power",
+      "tono": "serio",
+      "spuntiA": [
+        "Eviti anni di errori stupidi, relazioni tossiche e stress inutili.",
+        "Senza stupore la vita diventerebbe un film di cui conosci già il finale."
+      ],
+      "spuntiB": [
+        "La meraviglia e le cadute sono esattamente ciò che rende vivo ogni anno.",
+        "Pagherai di tasca tua ogni lezione che non hai ancora imparato."
+      ],
+      "domandaRilancio": "Quando è stata l'ultima volta che qualcosa ti ha stupito davvero come quando eri bambino?",
+      "lezioneReale": "La maturità migliore unisce esperienza lucida e capacità di restare curiosi.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd28",
+      "text": "Un semaforo invisibile ti blocca per 30 secondi ogni volta che stai per dire sì per compiacere qualcuno invece di dire quello che vuoi davvero.",
+      "optionA": "Attivo il semaforo anti-compiacenza",
+      "optionB": "Preferisco l'armonia veloce",
+      "register": "vita",
+      "tappa": 3,
+      "percorsoTappa": 3,
+      "complessita": "alto",
+      "tono": "direzione",
+      "spuntiA": [
+        "Trenta secondi di pausa ti salvano da settimane di impegni presi controvoglia.",
+        "All'inizio sembreresti stranissimo davanti a chi è abituato ai tuoi sì automatici."
+      ],
+      "spuntiB": [
+        "Mantieni scorrevolezza e poche tensioni quotidiane.",
+        "Accumuli però piccoli risentimenti silenziosi che poi esplodono altrove."
+      ],
+      "domandaRilancio": "Quanti dei tuoi ultimi tre «sì» erano in realtà dei «no» che non avevi voglia di spiegare?",
+      "lezioneReale": "Dire no con chiarezza all'inizio costa un secondo di imbarazzo e risparmia mesi di fatica.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd29",
+      "text": "Puoi viaggiare gratis per sempre in qualunque posto del mondo, ma devi dormire sempre da solo senza poter condividere la stanza con nessuno.",
+      "optionA": "Mondo gratis in solitaria",
+      "optionB": "Viaggio meno ma in compagnia",
+      "register": "vita",
+      "tappa": 3,
+      "percorsoTappa": 3,
+      "complessita": "alto",
+      "tono": "direzione",
+      "spuntiA": [
+        "Libertà totale di tempi, strade, incontri e scoperte senza compromessi.",
+        "Le viste più incredibili a un certo punto chiedono un «guarda qui» a qualcuno."
+      ],
+      "spuntiB": [
+        "La gioia raddoppia quando c'è qualcuno con cui commentare anche un imprevisto.",
+        "Viaggi molto meno spesso e dipendi sempre dagli incastri altrui."
+      ],
+      "domandaRilancio": "La tua felicità aumenta di più quando hai libertà totale o quando condividi il momento?",
+      "lezioneReale": "La libertà assoluta è leggera all'inizio, ma i ricordi più forti quasi sempre hanno due nomi.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd30",
+      "text": "Ogni giorno alle 18:00 puoi scegliere una singola abilità per 60 minuti al livello di un maestro assoluto, poi torna normale.",
+      "optionA": "Un'ora di genialità al giorno",
+      "optionB": "Preferisco migliorare davvero piano",
+      "register": "vita",
+      "tappa": 1,
+      "percorsoTappa": 1,
+      "complessita": "sorbetto",
+      "tono": "risate",
+      "spuntiA": [
+        "Lunedì suoni il piano, martedì cucini come uno chef, mercoledì parli giapponese.",
+        "Alle 19:01 rischieresti di sentirti sempre un po' sgonfio."
+      ],
+      "spuntiB": [
+        "Ciò che impari con fatica resta tuo a qualsiasi ora del giorno.",
+        "Ci vogliono anni anche solo per una competenza media."
+      ],
+      "domandaRilancio": "Cosa faresti oggi tra le 18:00 e le 19:00 se sapessi di non poter fallire?",
+      "lezioneReale": "La soddisfazione dura di più quando sai di aver costruito qualcosa con le tue mani.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd31",
+      "text": "Alla fine della tua vita puoi rivedere solo i momenti esatti in cui eri felice senza saperlo, oppure tutte le volte in cui hai cambiato la giornata di uno sconosciuto.",
+      "optionA": "Quando ero felice senza saperlo",
+      "optionB": "Quando ho aiutato uno sconosciuto",
+      "register": "vita",
+      "tappa": 4,
+      "percorsoTappa": 4,
+      "complessita": "power",
+      "tono": "serio",
+      "spuntiA": [
+        "Riconosci finalmente la bellezza delle giornate normali che davi per scontate.",
+        "Potresti dispiacerti di non essertene accorto mentre le vivevi."
+      ],
+      "spuntiB": [
+        "Scopri quanto peso abbiano avuto piccoli gesti gentili fatti per caso.",
+        "Resta la curiosità su quali siano stati i tuoi attimi migliori."
+      ],
+      "domandaRilancio": "Qual è un momento normale di questa settimana che tra cinque anni potresti rimpiangere con affetto?",
+      "lezioneReale": "Quasi sempre riconosciamo l'età dell'oro solo quando siamo già oltre.",
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sd32",
+      "text": "Se esistesse un museo dedicato a te con una sola sala visitabile, preferiresti che esponesse le tue creazioni e scelte riuscite o i tuoi tentativi falliti più coraggiosi?",
+      "optionA": "I miei successi migliori",
+      "optionB": "I miei tentativi più coraggiosi",
+      "register": "vita",
+      "tappa": 4,
+      "percorsoTappa": 4,
+      "complessita": "power",
+      "tono": "serio",
+      "spuntiA": [
+        "Mostri ciò che hai portato davvero a termine e l'impronta concreta lasciata.",
+        "Una bacheca troppo pulita nasconde però chi sei stato sotto pressione."
+      ],
+      "spuntiB": [
+        "I fallimenti coraggiosi raccontano molto di più su quanto hai osato amare e rischiare.",
+        "Richiede però di mostrare vulnerabilità senza alcuna vittoria finale."
+      ],
+      "domandaRilancio": "Di quale tuo tentativo andato male vai segretamente fiero lo stesso?",
+      "lezioneReale": "La misura di una vita non è l'assenza di errori, ma la qualità delle cose per cui hai rischiato.",
+      "familiarita": "tutti"
+    }
+  ],
+  "flash": [
+    {
+      "id": "sf01",
+      "text": "Puoi far dimenticare a tutti una tua figuraccia epica oppure scoprire chi ti ha pensato di più oggi.",
+      "optionA": "Cancello la figuraccia",
+      "optionB": "Scopro chi mi ha pensato",
+      "spuntiA": [
+        "Togliere una scena imbarazzante ti alleggerisce subito la testa.",
+        "Senza curiosità non resti appeso a cosa pensano gli altri."
+      ],
+      "spuntiB": [
+        "La curiosità vince sempre sulla prudenza.",
+        "Potresti però restare deluso scoprendo un nome inatteso."
+      ]
+    },
+    {
+      "id": "sf02",
+      "text": "Preferiresti sapere l'ora esatta in cui ti addormenterai per sempre o non sentire mai più la sveglia la mattina?",
+      "optionA": "Sapere l'ora esatta",
+      "optionB": "Niente più sveglia",
+      "spuntiA": [
+        "La certezza toglie l'ansia dell'ignoto.",
+        "Poter pianificare fino all'ultimo dettaglio cambia tutto."
+      ],
+      "spuntiB": [
+        "Svegliarsi riposati ogni giorno è lusso puro.",
+        "Vivere senza conto alla rovescia ti lascia respirare."
+      ]
+    },
+    {
+      "id": "sf03",
+      "text": "Una scatola nera registra tutti i pensieri che hai fatto sotto la doccia: la ascolti adesso o la distruggi subito?",
+      "optionA": "La ascolto subito",
+      "optionB": "La distruggo chiusa",
+      "spuntiA": [
+        "Lì dentro ci sono le tue idee migliori e le paure più vere.",
+        "Non puoi migliorare ciò che non hai coraggio di ascoltare."
+      ],
+      "spuntiB": [
+        "Certe discussioni immaginarie è meglio lasciarle nell'acqua calda.",
+        "Il passato mentale non va tutto riascoltato."
+      ]
+    },
+    {
+      "id": "sf04",
+      "text": "Per un mese puoi mangiare gratis solo cibi del tuo colore preferito, oppure avere sempre il tempo atmosferico che desideri intorno a te.",
+      "optionA": "Cibo monocolore gratis",
+      "optionB": "Meteo personale su misura",
+      "spuntiA": [
+        "Risparmi un sacco e scopri ricette stranissime.",
+        "Dopo dieci giorni potresti odiare quel colore."
+      ],
+      "spuntiB": [
+        "Niente più pioggia sulle scarpe nuove o afa assurda.",
+        "Paghi la spesa come sempre ma vivi in paradiso."
+      ]
+    },
+    {
+      "id": "sf05",
+      "text": "Trovi una vecchia lettera che avevi scritto a te stesso dieci anni fa: la leggi adesso o la tieni sigillata per altri dieci?",
+      "optionA": "La apro subito",
+      "optionB": "La rimando di 10 anni",
+      "spuntiA": [
+        "Vedere cos'è rimasto uguale ti rimette subito in prospettiva.",
+        "Se hai tradito qualche promessa meglio saperlo ora."
+      ],
+      "spuntiB": [
+        "Tra dieci anni avrà il doppio del peso emotivo.",
+        "Oggi potresti non essere pronto a quel confronto."
+      ]
+    },
+    {
+      "id": "sf06",
+      "text": "Puoi rendere muta una singola parola in tutte le lingue del mondo, oppure aggiungere una pausa di 5 secondi prima che qualunque tua parola venga udita.",
+      "optionA": "Cancello una parola",
+      "optionB": "Ritardo di 5 secondi",
+      "spuntiA": [
+        "Eliminare una parola tossica o abusata darebbe sollievo immediato.",
+        "Cinque secondi di ritardo renderebbero ogni dialogo surreale."
+      ],
+      "spuntiB": [
+        "Cinque secondi per fermarti prima che parta una risposta sbagliata sono oro.",
+        "Nessuno capirebbe mai se hai finito la frase."
+      ]
+    },
+    {
+      "id": "sf07",
+      "text": "Ogni volta che menti sul tuo stato d'animo dicendo «tutto bene», le tue scarpe cambiano colore.",
+      "optionA": "Accetto scarpe sincere",
+      "optionB": "Resto al sicuro",
+      "spuntiA": [
+        "Smetti di mettere maschere automatiche quando sei a terra.",
+        "Chi ti conosce davvero se ne accorgerebbe subito."
+      ],
+      "spuntiB": [
+        "A volte non hai voglia di spiegare tutto al primo saluto.",
+        "La privacy emotiva va protetta."
+      ]
+    },
+    {
+      "id": "sf08",
+      "text": "Puoi sapere in anticipo quali due persone nella tua rubrica non sentirai più tra tre anni.",
+      "optionA": "Voglio i due nomi",
+      "optionB": "Non voglio saperlo",
+      "spuntiA": [
+        "Capiresti subito se vale la pena investirci ancora o lasciar andare.",
+        "Magari sapendolo cambieresti proprio il finale."
+      ],
+      "spuntiB": [
+        "Saperlo ti farebbe diventare freddo già da domani.",
+        "Ogni legame ha diritto al proprio tempo naturale."
+      ]
+    },
+    {
+      "id": "sf09",
+      "text": "Puoi capire sempre il significato di ogni tuo sogno, oppure scegliere tu la trama di un sogno a settimana.",
+      "optionA": "Capire ogni sogno",
+      "optionB": "Scegliere la trama",
+      "spuntiA": [
+        "È come avere un accesso diretto al tuo subconscio.",
+        "Scopriresti subito cosa ti preoccupa davvero."
+      ],
+      "spuntiB": [
+        "Ogni domenica sera vivi un film su misura gratis.",
+        "Dormire diventerebbe la parte migliore della settimana."
+      ]
+    },
+    {
+      "id": "sf10",
+      "text": "Una fototessera del tuo futuro a 60 anni ti guarda sorridendo: preferisci che sembri ricchissima o serenissima?",
+      "optionA": "Che sembri serenissima",
+      "optionB": "Che sembri ricchissima",
+      "spuntiA": [
+        "Lo sguardo sereno vale più di qualsiasi orologio al polso.",
+        "Puoi avere tutto ma non dormire la notte."
+      ],
+      "spuntiB": [
+        "La stabilità economica toglie mille pensieri pratici.",
+        "Con le risorse giuste la serenità si costruisce meglio."
+      ]
+    },
+    {
+      "id": "sf11",
+      "text": "Preferisci avere sempre il posto migliore al cinema e sui treni, oppure trovare sempre un parcheggio vuoto sotto destinazione?",
+      "optionA": "Posto migliore sempre",
+      "optionB": "Parcheggio pronto sempre",
+      "spuntiA": [
+        "Comodità garantita nei viaggi lunghi e nelle sale piene.",
+        "Niente più ginocchia incastrate."
+      ],
+      "spuntiB": [
+        "Zero giri a vuoto sotto la pioggia: pura felicità adulta.",
+        "Risparmi venti minuti di nervoso ogni sera."
+      ]
+    },
+    {
+      "id": "sf12",
+      "text": "Un piccolo uccello ti segue tutto il giorno e commenta le tue scelte di spesa: lo tieni per risparmiare o lo mandi via?",
+      "optionA": "Lo tengo come revisore",
+      "optionB": "Via subito, spendo in pace",
+      "spuntiA": [
+        "Addio acquisti notturni inutili alle 00:40.",
+        "Avresti finalmente un conto in banca serio."
+      ],
+      "spuntiB": [
+        "Un caffè o un capriccio non devono avere un giudice piumato.",
+        "La leggerezza ogni tanto si compra."
+      ]
+    },
+    {
+      "id": "sf13",
+      "text": "Puoi parlare fluentemente una lingua morta per stupire tutti, oppure capire istintivamente quando un gatto ti sta insultando.",
+      "optionA": "Lingua antica fluente",
+      "optionB": "Traduttore di gatti",
+      "spuntiA": [
+        "Leggere iscrizioni e testi antichi dal vivo ha un fascino unico.",
+        "Effetto scenico garantito."
+      ],
+      "spuntiB": [
+        "Sapresti finalmente cosa passa dietro quello sguardo fisso sul divano.",
+        "Zero illusioni, solo verità felina."
+      ]
+    },
+    {
+      "id": "sf14",
+      "text": "Puoi rivivere un solo pomeriggio identico della tua infanzia senza poter cambiare nulla, oppure saltare direttamente a un anno di vacanza nel tuo futuro migliore.",
+      "optionA": "Pomeriggio d'infanzia",
+      "optionB": "Anno nel futuro migliore",
+      "spuntiA": [
+        "Risentire certi odori e voci ha un valore che nessun futuro sostituisce.",
+        "Ti ricorda da dove vieni davvero."
+      ],
+      "spuntiB": [
+        "Vedere che tutto andrà bene toglie anni di ansia oggi.",
+        "Il futuro va costruito, non solo ricordato."
+      ]
+    },
+    {
+      "id": "sf15",
+      "text": "Ogni tua notifica si trasforma in una leggera scossa al polso, oppure il telefono funziona solo quando cammini all'aperto.",
+      "optionA": "Scossa a ogni notifica",
+      "optionB": "Telefono solo camminando",
+      "spuntiA": [
+        "Disattivi il 99% delle chat inutili in dieci minuti netti.",
+        "Resta comunque usabile da casa."
+      ],
+      "spuntiB": [
+        "Smetti di scrollare sul divano e fai 10.000 passi senza accorgertene.",
+        "Però rispondere a un messaggio urgente al chiuso diventa impossibile."
+      ]
+    },
+    {
+      "id": "sf16",
+      "text": "Preferisci avere una memoria fotografica su tutto ciò che leggi, oppure dimenticare volontariamente qualsiasi spoiler di film o serie.",
+      "optionA": "Memoria fotografica",
+      "optionB": "Cancella-spoiler istantaneo",
+      "spuntiA": [
+        "Impari qualsiasi cosa in un decimo del tempo.",
+        "Attenzione però a ciò che leggi per sbaglio."
+      ],
+      "spuntiB": [
+        "Puoi rivedere il tuo film preferito come fosse la prima volta.",
+        "Piccolo potere ma gioia infinita."
+      ]
+    },
+    {
+      "id": "sf17",
+      "text": "Scopri un tasto per saltare tutte le chiacchiere di circostanza e andare dritto al punto con chiunque: lo premi o lo lasci spento?",
+      "optionA": "Vado dritto al punto",
+      "optionB": "Tengo le chiacchiere",
+      "spuntiA": [
+        "Risparmi ore di «come va / che caldo fa» finti.",
+        "Arrivi subito alle cose che contano."
+      ],
+      "spuntiB": [
+        "Le chiacchiere leggere servono a scaldare il terreno e capire chi hai davanti.",
+        "Partire subito a freddo spaventa metà delle persone."
+      ]
+    },
+    {
+      "id": "sf18",
+      "text": "Puoi rendere reali per un'ora tutti i disegni fatti sui margini dei tuoi quaderni, oppure ascoltare la playlist che descrive esattamente la tua vita vista da fuori.",
+      "optionA": "Scarabbocchi reali",
+      "optionB": "Playlist della mia vita",
+      "spuntiA": [
+        "Sarebbe un caos creativo totale ma irripetibile.",
+        "Occhio però se disegnavi mostri strani."
+      ],
+      "spuntiB": [
+        "Capiresti subito in che genere cinematografico sei finito.",
+        "Se parte musica malinconica corri ai ripari."
+      ]
+    },
+    {
+      "id": "sf19",
+      "text": "Ogni volta che compri qualcosa di cui non hai davvero bisogno, una pianta in salotto sospira rumorosamente.",
+      "optionA": "Accetto la pianta giudicante",
+      "optionB": "Pianta muta, compro in pace",
+      "spuntiA": [
+        "Un sospiro vegetale ti ferma prima di spese stupide.",
+        "Almeno la casa sembra viva."
+      ],
+      "spuntiB": [
+        "Non voglio sensi di colpa nemmeno dal basilico.",
+        "Ogni tanto si compra per puro sfizio."
+      ]
+    },
+    {
+      "id": "sf20",
+      "text": "Puoi sapere con esattezza quante persone si sono innamorate di te in silenzio senza dirtelo, ma mai i nomi.",
+      "optionA": "Voglio sapere il numero",
+      "optionB": "Preferisco non saperlo",
+      "spuntiA": [
+        "Anche un solo numero in più ti regalerebbe un sorriso segreto.",
+        "Ma se fosse zero?!"
+      ],
+      "spuntiB": [
+        "Sapere il numero senza i volti farebbe impazzire di congetture.",
+        "Meglio guardare avanti."
+      ]
+    },
+    {
+      "id": "sf21",
+      "text": "Preferisci non avere mai più bisogno di dormire, guadagnando 8 ore al giorno, oppure avere sogni così riposanti da svegliarti sempre al top.",
+      "optionA": "Zero sonno, 24h piene",
+      "optionB": "Sonno perfetto rigenerante",
+      "spuntiA": [
+        "Vivi letteralmente un terzo di vita cosciente in più.",
+        "Alle 3 di notte però può venire solitudine."
+      ],
+      "spuntiB": [
+        "Dormire bene è una delle sensazioni più belle del mondo.",
+        "Senza pause la testa fonde."
+      ]
+    },
+    {
+      "id": "sf22",
+      "text": "Puoi ricevere una recensione sincera da 1 a 5 stelle su come sei stato come persona quest'anno, scritta dall'universo.",
+      "optionA": "Leggo la recensione",
+      "optionB": "Passo oltre",
+      "spuntiA": [
+        "Un feedback oggettivo ti evita di raccontarti favole.",
+        "Se fosse 3 stelle sapresti su cosa lavorare."
+      ],
+      "spuntiB": [
+        "La vita non è un ristorante su Tripadvisor.",
+        "Un voto secco ridurrebbe troppe sfumature."
+      ]
+    },
+    {
+      "id": "sf23",
+      "text": "Ogni volta che dici una verità che tenevi dentro da mesi, il tuo conto corrente riceve 50 euro; ogni compromesso finto te ne toglie 50.",
+      "optionA": "Accetto il patto di sincerità",
+      "optionB": "Rifiuto il contatore",
+      "spuntiA": [
+        "Incentivo economico perfetto per smettere di ingoiare rospi.",
+        "Pulizia emotiva pagata."
+      ],
+      "spuntiB": [
+        "A volte la diplomazia ti salva il lavoro o la pace in casa.",
+        "Finirei in rosso alla prima cena di famiglia."
+      ]
+    },
+    {
+      "id": "sf24",
+      "text": "Se potessi togliere per sempre una sola emozione scomoda dalla tua testa: elimineresti l'invidia o il rimpianto?",
+      "optionA": "Elimino l'invidia",
+      "optionB": "Elimino il rimpianto",
+      "spuntiA": [
+        "Gioiresti sempre in pace senza confrontare la tua strada con nessuna.",
+        "Più leggerezza davanti ai successi altrui."
+      ],
+      "spuntiB": [
+        "Senza rimpianti guarderesti solo ciò che puoi ancora costruire.",
+        "Zero notti a pensare «e se invece...»."
+      ]
+    }
+  ],
+  "preferiresti": [
+    {
+      "id": "sp01",
+      "prompt": "Preferiresti che per il resto della vita...",
+      "options": [
+        "Ogni tua menzogna facesse partire una tromba da stadio alle tue spalle",
+        "Il tuo orologio mostrasse quanti minuti esatti mancano alla tua prossima gaffe"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp02",
+      "prompt": "Preferiresti svegliarti domani e scoprire che...",
+      "options": [
+        "Tutti i tuoi sogni dell'ultimo anno sono stati salvati in una cartella sul telefono",
+        "Puoi capire cosa pensano davvero gli animali, ma scopri che ti snobbano"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp03",
+      "prompt": "Preferiresti vivere in una casa dove...",
+      "options": [
+        "Ogni specchio ti mostra con 15 anni in più",
+        "La porta di ingresso porta ogni giorno in un quartiere diverso della città"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp04",
+      "prompt": "Per ottenere un superpotere strano, preferiresti...",
+      "options": [
+        "Poter riavvolgere qualsiasi conversazione di 30 secondi una volta al giorno",
+        "Vedere un'aura verde attorno alle scelte che ti faranno stare davvero bene"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp05",
+      "prompt": "Preferiresti che per un anno intero...",
+      "options": [
+        "Ogni tuo pensiero ad alta voce partisse in rima baciata",
+        "Dovessi camminare a passo di danza ogni volta che sei di fretta"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp06",
+      "prompt": "Preferiresti avere la certezza assoluta...",
+      "options": [
+        "Di quale lavoro ti renderebbe felice, anche se paga poco",
+        "Di quale scelta di oggi ti farà ridere di più tra dieci anni"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp07",
+      "prompt": "Preferiresti scoprire in soffitta...",
+      "options": [
+        "Un diario scritto da te a 80 anni pieno di consigli precisi",
+        "Un biglietto anonimo che ti garantisce che il tuo peggior errore era necessario"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp08",
+      "prompt": "Preferiresti che il tuo corpo...",
+      "options": [
+        "Emittesse un bip leggero quando stai per fidarti della persona sbagliata",
+        "Si illuminasse di blu ogni volta che trovi un posto in cui appartenere"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp09",
+      "prompt": "Preferiresti trascorrere un weekend intero...",
+      "options": [
+        "Senza poter pronunciare neppure una parola, solo gesti e sguardi",
+        "Senza poter usare né soldi né telefono, cavandotela a scambi e fortuna"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp10",
+      "prompt": "Preferiresti avere sempre ragione quando discuti di cose serie...",
+      "options": [
+        "Ma sbagliare sistematicamente strada ogni volta che usi il navigatore",
+        "Ma dimenticare sempre dove hai appoggiato le chiavi cinque secondi prima"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp11",
+      "prompt": "Preferiresti dover scegliere per sempre tra...",
+      "options": [
+        "Dire sempre quello che pensi al primo secondo senza filtro alcuno",
+        "Poter comunicare i tuoi veri bisogni solo scrivendoli su bigliettini"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp12",
+      "prompt": "Preferiresti poter cancellare...",
+      "options": [
+        "Ogni traccia digitale di te prima dei 20 anni",
+        "La stanchezza mentale che provi ogni domenica sera"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp13",
+      "prompt": "Preferiresti che ogni mattina appena sveglio...",
+      "options": [
+        "Trovassi sulla scrivania un indizio misterioso ma utile per la giornata",
+        "Potesse piovere solo sulle persone che ti hanno mancato di rispetto"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp14",
+      "prompt": "Preferiresti avere un tasto fisico sulla spalla che...",
+      "options": [
+        "Mette in pausa tutto il mondo attorno a te per 10 minuti al giorno",
+        "Fa tornare il tuo umore esattamente come dopo una risata enorme"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp15",
+      "prompt": "Preferiresti dover mangiare per sei mesi solo piatti preparati da...",
+      "options": [
+        "La tua versione di 12 anni che cucina a sentimento",
+        "Un'intelligenza artificiale che bilancia ogni grammo senza mai aggiungere sale"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp16",
+      "prompt": "Preferiresti perdere subito...",
+      "options": [
+        "Tutte le foto salvate sul telefono degli ultimi cinque anni",
+        "La capacità di riconoscere qualsiasi canzone ascoltata prima d'oggi"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp17",
+      "prompt": "Preferiresti che il tempo...",
+      "options": [
+        "Scorresse al doppio della velocità quando aspetti in fila",
+        "Rallentasse alla metà quando sei con chi ami davvero"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp18",
+      "prompt": "Preferiresti scoprire che ogni tua abitudine notturna...",
+      "options": [
+        "È stata osservata da una versione saggia del tuo bisnonno",
+        "Viene imitata pari pari da un alieno curioso che studia gli umani"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp19",
+      "prompt": "Preferiresti poter cambiare all'istante...",
+      "options": [
+        "La paura più grande che ti blocca oggi",
+        "L'abitudine quotidiana che ti ruba più energie"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp20",
+      "prompt": "Preferiresti che per tutta la vita...",
+      "options": [
+        "Ogni libro che finisci ti facesse dimenticare un brutto ricordo",
+        "Ogni chilometro che cammini ti regalasse un'idea geniale"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp21",
+      "prompt": "Preferiresti scoprire quale sarebbe stata...",
+      "options": [
+        "La tua vita se non avessi mai preso paura in quel momento preciso",
+        "La cosa migliore che hai evitato per pura fortuna senza accorgertene"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp22",
+      "prompt": "Preferiresti avere un talento assurdo ma inutile...",
+      "options": [
+        "Capire al millimetro quanti chicchi di riso ci sono in un piatto a colpo d'occhio",
+        "Riuscire a far addormentare qualunque zanzara fischiando una nota precisa"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp23",
+      "prompt": "Preferiresti che una voce calma ma implacabile...",
+      "options": [
+        "Ti dicesse ogni sera se oggi sei stato fedele a te stesso",
+        "Ti avvisasse 10 minuti prima ogni volta che stai per sprecare il pomeriggio"
+      ],
+      "familiarita": "tutti"
+    },
+    {
+      "id": "sp24",
+      "prompt": "Preferiresti poter vivere due volte...",
+      "options": [
+        "Lo stesso giorno perfetto cambiando solo i dettagli",
+        "La stessa età dei tuoi 20 anni ma con la testa serena di oggi"
+      ],
+      "familiarita": "tutti"
+    }
+  ],
+  "assurdo": [
+    {
+      "id": "sa01",
+      "cardType": "dignita",
+      "prompt": "Per 500€ subito, accetteresti di farti leggere ad alta voce in un bar silenzioso le ultime dieci ricerche fatte su Google?",
+      "optionA": "Accetto i 500€",
+      "optionB": "Tengo la mia privacy",
+      "sentenza": "La soglia tra mistero e cinquecento euro è molto più sottile del previsto."
+    },
+    {
+      "id": "sa02",
+      "cardType": "dignita",
+      "prompt": "Ricevi 1.000€ netti sul conto adesso, ma per trenta giorni interi ogni tua telefonata inizia con tre secondi di ululato convinto.",
+      "optionA": "Ululo per mille euro",
+      "optionB": "Mai, dignità salva",
+      "sentenza": "Con mille euro in tasca persino un ululato diventa stile personale."
+    },
+    {
+      "id": "sa03",
+      "cardType": "dignita",
+      "prompt": "Ti pagano 400€ subito, ma devi girare un intero pomeriggio al centro commerciale indossando due scarpe completamente diverse e calzini spaiati.",
+      "optionA": "Moda asimmetrica subito",
+      "optionB": "Scarpe abbinate a vita",
+      "sentenza": "Chi guarda le scarpe degli altri si merita comunque lo spettacolo."
+    },
+    {
+      "id": "sa04",
+      "cardType": "dignita",
+      "prompt": "Ti danno 2.500€ subito, ma per una settimana intera il tuo telefono risponde a qualunque chiamata in vivavoce al massimo volume.",
+      "optionA": "Vivavoce ovunque",
+      "optionB": "Segreti protetti, no",
+      "sentenza": "Sette giorni di pura prudenza telefonica si pagano benissimo."
+    },
+    {
+      "id": "sa05",
+      "cardType": "dignita",
+      "prompt": "Per 800€ adesso, accetti di mangiare un piatto di pasta al pesto con dentro tre cucchiai abbondanti di marmellata di fragole davanti a un cuoco serio?",
+      "optionA": "Mangio e incasso",
+      "optionB": "Onore culinario salvo",
+      "sentenza": "La cucina italiana ha visto di peggio, anche gratis."
+    },
+    {
+      "id": "sa06",
+      "cardType": "dignita",
+      "prompt": "Ricevi 3.000€ subito, ma per un mese intero non puoi pronunciare né scrivere la lettera «E» in nessun messaggio.",
+      "optionA": "Sfida accettata",
+      "optionB": "Impossibile parlare così",
+      "sentenza": "Senza una vocale si scopre quanto siano ripetitive le nostre scuse."
+    },
+    {
+      "id": "sa07",
+      "cardType": "dignita",
+      "prompt": "Per 600€ sul conto, devi salutare ogni vicino sulle scale per due settimane esclamando «La missione procede!» con sguardo serio.",
+      "optionA": "Agente segreto per 600€",
+      "optionB": "Preferisco un normale ciao",
+      "sentenza": "Due settimane di mistero condominiale gratis non le dimentica nessuno."
+    },
+    {
+      "id": "sa08",
+      "cardType": "dignita",
+      "prompt": "Accetti 1.200€ subito, ma per dieci giorni puoi ascoltare in cuffia solo una canzone da cartone animato in loop mentre lavori o studi?",
+      "optionA": "Loop infinito e incasso",
+      "optionB": "Salvo i timpani",
+      "sentenza": "Dopo il quarto giorno probabilmente inizieresti a cantarla anche nel sonno."
+    },
+    {
+      "id": "sa09",
+      "cardType": "dignita",
+      "prompt": "Per 5.000€ subito, lasci che un generatore casuale scelga ogni tua maglietta, giacca e pantalone per i prossimi sei mesi?",
+      "optionA": "Stile casuale per sei mesi",
+      "optionB": "Decido io l'armadio",
+      "sentenza": "A volte uscire dall'abitudine comoda parte proprio da una maglietta assurda."
+    },
+    {
+      "id": "sa10",
+      "cardType": "dignita",
+      "prompt": "Ti offrono 700€ subito, ma per una settimana devi ordinare qualunque cosa al bar mimandola completamente senza dire parole.",
+      "optionA": "Mimo tutto per 700€",
+      "optionB": "Ordino parlando normalmente",
+      "sentenza": "Un caffè macchiato mimato resta una scena teatrale degna di nota."
+    },
+    {
+      "id": "sa11",
+      "cardType": "dignita",
+      "prompt": "Per 4.000€ sul conto, accetteresti di non poter guardare nessuno specchio né riflesso di te per novanta giorni consecutivi?",
+      "optionA": "Novanta giorni senza specchi",
+      "optionB": "Devo vedermi almeno un po'",
+      "sentenza": "Tre mesi senza controllare l'aspetto cambiano radicalmente il dialogo interiore."
+    },
+    {
+      "id": "sa12",
+      "cardType": "dignita",
+      "prompt": "Ricevi 300€ subito, ma devi rispondere a un messaggio di lavoro o studio formale chiudendolo con «Con affetto galattico, il tuo umano».",
+      "optionA": "Invio subito!",
+      "optionB": "Troppo rischioso",
+      "sentenza": "A volte una riga fuori schema rivela chi ha ancora senso dell'umorismo."
+    },
+    {
+      "id": "sa13",
+      "cardType": "dignita",
+      "prompt": "Per 1.800€ adesso, per due settimane ogni tua sveglia suona alle 05:15 con l'audio registrato di te stesso che ti applaude sarcastico?",
+      "optionA": "Accetto la sveglia sarcastica",
+      "optionB": "Dormo fino a tardi",
+      "sentenza": "Farsi applaudire da sé stessi alle cinque del mattino è pura filosofia moderna."
+    },
+    {
+      "id": "sa14",
+      "cardType": "dignita",
+      "prompt": "Ti pagano 900€ subito, ma per un mese devi portare con te un piccolo ananas in borsa o nello zaino e presentarlo se te lo chiedono.",
+      "optionA": "Ananas compagno di viaggio",
+      "optionB": "Zaino leggero senza frutta",
+      "sentenza": "Un ananas in borsa rompe il ghiaccio molto meglio di mille scuse."
+    },
+    {
+      "id": "sa15",
+      "cardType": "dignita",
+      "prompt": "Per 2.200€ subito, per tre settimane puoi camminare dentro casa solo all'indietro ogni volta che attraversi un corridoio?",
+      "optionA": "Cammino all'indietro",
+      "optionB": "Troppi spigoli in giro",
+      "sentenza": "Ogni spigolo di casa ti ricorderebbe subito perché stai facendo quella scelta."
+    },
+    {
+      "id": "sa16",
+      "cardType": "dignita",
+      "prompt": "Ricevi 650€ adesso, ma devi scrivere a penna sul palmo della mano «NON FIDARTI DEL TUO ISTINTO» per tre giorni interi.",
+      "optionA": "Scrivo subito sulla mano",
+      "optionB": "Preferisco fidarmi di me",
+      "sentenza": "Leggere quella frase prima di prendere un caffè mette alla prova ogni scelta."
+    },
+    {
+      "id": "sa17",
+      "cardType": "dignita",
+      "prompt": "Per 10.000€ subito, accetteresti di non poter assaggiare alcun tipo di dolce né cioccolato per un anno intero senza sgarrare mai?",
+      "optionA": "Zero dolci per un anno",
+      "optionB": "Cioccolato batte tutto",
+      "sentenza": "Un anno senza zucchero mette alla prova la forza di volontà più della palestra."
+    },
+    {
+      "id": "sa18",
+      "cardType": "dignita",
+      "prompt": "Ti danno 550€ subito, ma al prossimo viaggio in treno devi leggere ad alta voce le istruzioni di sicurezza del sedile con tono epico da cinema?",
+      "optionA": "Tono epico in carrozza",
+      "optionB": "Silenzio in viaggio",
+      "sentenza": "Probabilmente qualcuno in carrozza applaudirebbe pure alla fine."
+    },
+    {
+      "id": "sa19",
+      "cardType": "dignita",
+      "prompt": "Per 1.500€ subito, per dieci giorni devi pagare qualunque acquisto sotto i 20 euro esclusivamente in monete da 10 e 20 centesimi?",
+      "optionA": "Sacco di monetine subito",
+      "optionB": "Carta tutta la vita",
+      "sentenza": "Impareresti esattamente quante cose compri per puro impulso."
+    },
+    {
+      "id": "sa20",
+      "cardType": "dignita",
+      "prompt": "Accetti 8.000€ subito, ma devi dormire per sessanta notti senza cuscino né coperta pesante, solo con un lenzuolo leggero e felpa?",
+      "optionA": "Dormo spartano per 8.000€",
+      "optionB": "Il mio letto non si tocca",
+      "sentenza": "Chi difende il cuscino conosce bene quanto vale il riposo vero."
+    }
+  ],
+  "questionari": [
+    {
+      "id": "sq01",
+      "prompt": "Nel tuo cervello alle 3 di notte vince quasi sempre…",
+      "optionA": "Scenari futuri assurdi",
+      "optionB": "Figuracce di 8 anni fa"
+    },
+    {
+      "id": "sq02",
+      "prompt": "Quando nessuno ti guarda davvero, la tua natura segreta è più…",
+      "optionA": "Super organizzata e precisa",
+      "optionB": "Caos puro creativo"
+    },
+    {
+      "id": "sq03",
+      "prompt": "Davanti a un messaggio lungo che non hai voglia di leggere…",
+      "optionA": "Rispondo subito per togliermelo",
+      "optionB": "Sparisco tre giorni per ansia"
+    },
+    {
+      "id": "sq04",
+      "prompt": "Se fossi il protagonista di un film, il tuo difetto principale sarebbe…",
+      "optionA": "Pensare troppo prima di agire",
+      "optionB": "Buttarmi senza leggere le istruzioni"
+    },
+    {
+      "id": "sq05",
+      "prompt": "La tua batteria sociale si ricarica sul serio soltanto quando…",
+      "optionA": "Chiudo la porta nel silenzio totale",
+      "optionB": "Esco e cambio aria tra la gente"
+    },
+    {
+      "id": "sq06",
+      "prompt": "Quando sbagli qualcosa di stupido da solo in cucina, di solito…",
+      "optionA": "Rido da solo e vado avanti",
+      "optionB": "Mi arrabbio come fosse una tragedia"
+    },
+    {
+      "id": "sq07",
+      "prompt": "Nelle tue decisioni importanti di quest'anno ha pesato di più…",
+      "optionA": "La paura di perdere ciò che ho",
+      "optionB": "La voglia di cambiare tutto"
+    },
+    {
+      "id": "sq08",
+      "prompt": "Se aprissimo la tua cronologia delle Note del telefono, troveremmo soprattutto…",
+      "optionA": "Liste, conti e cose pratiche",
+      "optionB": "Pensieri sparsi e frasi notturne"
+    },
+    {
+      "id": "sq09",
+      "prompt": "Quando trovi un bivio in città senza aprire la mappa, ti fidi più di…",
+      "optionA": "Intuito e strada più bella",
+      "optionB": "Logica e cartelli sicuri"
+    },
+    {
+      "id": "sq10",
+      "prompt": "Di fronte a un complimento inaspettato, la tua reazione istintiva è…",
+      "optionA": "Minimizzare subito con imbarazzo",
+      "optionB": "Prenderlo sul serio con sorriso"
+    },
+    {
+      "id": "sq11",
+      "prompt": "Se potessi resettare una sola cosa del tuo carattere domani mattina…",
+      "optionA": "La voglia di piacere a tutti",
+      "optionB": "La testardaggine silenziosa"
+    },
+    {
+      "id": "sq12",
+      "prompt": "Nel tuo portafoglio emotivo, in questo periodo sei più…",
+      "optionA": "Prudente e selettivo",
+      "optionB": "Curioso e aperto a rischiare"
+    },
+    {
+      "id": "sq13",
+      "prompt": "Una mattina senza impegni né sveglia finisce quasi sempre che tu…",
+      "optionA": "Fai mille cose rimandate",
+      "optionB": "Non fai letteralmente niente in pace"
+    },
+    {
+      "id": "sq14",
+      "prompt": "Quando qualcuno ti racconta un problema serio, di getto tendi a…",
+      "optionA": "Cercare subito soluzioni pratiche",
+      "optionB": "Ascoltare senza aggiustare niente"
+    },
+    {
+      "id": "sq15",
+      "prompt": "Il tuo rapporto col tempo libero negli ultimi mesi assomiglia di più a…",
+      "optionA": "Una ricarica vera di energie",
+      "optionB": "Una fuga veloce tra mille schede"
+    },
+    {
+      "id": "sq16",
+      "prompt": "Davanti a una porta chiusa con scritto «NON APRIRE», tu…",
+      "optionA": "Controlli almeno la maniglia",
+      "optionB": "Rispetti il cartello e passi oltre"
+    },
+    {
+      "id": "sq17",
+      "prompt": "Se un tuo segreto piccolo finisse scritto su un muro in centro, preferiresti fosse…",
+      "optionA": "Una tua fissa assurda quotidiana",
+      "optionB": "Un tuo sogno che non hai detto a nessuno"
+    },
+    {
+      "id": "sq18",
+      "prompt": "La cosa che ti fa perdere la pazienza in meno di tre secondi è…",
+      "optionA": "Chi gira intorno senza dire ciò che vuole",
+      "optionB": "Chi decide tutto in fretta senza ascoltare"
+    },
+    {
+      "id": "sq19",
+      "prompt": "Guardando gli ultimi dodici mesi, senti di essere cambiato soprattutto…",
+      "optionA": "Nel modo in cui proteggi i tuoi confini",
+      "optionB": "Nel coraggio di buttarti in cose nuove"
+    },
+    {
+      "id": "sq20",
+      "prompt": "Quando scegli un film o un ristorante da solo ci metti…",
+      "optionA": "Cinque secondi netti di pancia",
+      "optionB": "Venti minuti di recensioni e dubbi"
+    },
+    {
+      "id": "sq21",
+      "prompt": "La parte di te che ancora ti sorprende ogni tanto è…",
+      "optionA": "Quanto sai essere freddo sotto pressione",
+      "optionB": "Quanto ti emozioni per dettagli minuscoli"
+    },
+    {
+      "id": "sq22",
+      "prompt": "Se dovessi cambiare completamente città lunedì prossimo, la prima cosa che ti mancherebbe è…",
+      "optionA": "I posti e le abitudini di quartiere",
+      "optionB": "Le due o tre persone con cui parli davvero"
+    },
+    {
+      "id": "sq23",
+      "prompt": "Di solito impari una lezione importante nella vita…",
+      "optionA": "Al primo segnale piccolo",
+      "optionB": "Solo dopo averci sbattuto due volte"
+    },
+    {
+      "id": "sq24",
+      "prompt": "Stasera il tuo istinto ti chiede soprattutto…",
+      "optionA": "Leggerezza e zero pensieri",
+      "optionB": "Chiarezza su qualcosa che rimandi"
+    }
+  ]
+}

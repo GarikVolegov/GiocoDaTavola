@@ -58,6 +58,18 @@ export type GamePhase =
   // "Telepatia": everyone secretly writes one word trying to match teammates.
   | 'TELEPATHY'
   | 'TELEPATHY_REVEAL'
+  // "La Ghigliottina": 5 clues -> 1 connecting word (free text or 4 choices).
+  | 'GHIGLIOTTINA'
+  | 'GHIGLIOTTINA_REVEAL'
+  // "Quanto Vale?": real-world numeric slider estimation -> closest wins.
+  | 'STIMA_GUESS'
+  | 'STIMA_REVEAL'
+  // "Vero o Bufala?": unbelievable fact or urban myth -> True/False vote + explanation.
+  | 'BUFALA_VOTE'
+  | 'BUFALA_REVEAL'
+  // "Parola Vietata" (L'Intesa / Taboo): 1 speaker describes secret word without 4 forbidden words.
+  | 'INTESA_PLAY'
+  | 'INTESA_REVEAL'
   // "Percorso" mode: the chapter card shown entering a new tappa, and the
   // end-of-tappa recap/pause (handled by nextPercorsoPhase, not nextPhase).
   | 'TAPPA_INTRO'
@@ -163,6 +175,14 @@ export const PHASE_DURATIONS_MS: Record<GamePhase, number | null> = {
   TRIBUNALE_REVEAL: null,
   TELEPATHY: null,
   TELEPATHY_REVEAL: null,
+  GHIGLIOTTINA: null,
+  GHIGLIOTTINA_REVEAL: null,
+  STIMA_GUESS: null,
+  STIMA_REVEAL: null,
+  BUFALA_VOTE: null,
+  BUFALA_REVEAL: null,
+  INTESA_PLAY: null,
+  INTESA_REVEAL: null,
   TAPPA_INTRO: null,
   TAPPA_RECAP: null,
   STORY_INTRO: null,

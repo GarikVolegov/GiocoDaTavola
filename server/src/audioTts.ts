@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
+import { sanitizeTtsText } from './security';
 
 const CACHE_DIR = path.resolve(__dirname, '../../data/audio-cache');
 const VOICE = 'it-IT-DiegoNeural';
@@ -48,7 +49,7 @@ function pruneCacheIfNeeded(): void {
  * generating it via pure Node.js MsEdgeTTS (Diego voice) if it does not yet exist.
  */
 export async function getOrGenerateTts(text: string): Promise<string> {
-  const clean = text.trim();
+  const clean = sanitizeTtsText(text);
   if (!clean) throw new Error('Empty text');
   if (clean.length > MAX_TTS_TEXT_LENGTH) throw new Error('Text too long');
 

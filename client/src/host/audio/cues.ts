@@ -67,6 +67,7 @@ export function sfxForTransition(
     }
     case 'DUO_ARGUE':
     case 'TRIBUNALE_ARGUE':
+    case 'INTESA_PLAY':
       return 'clash';
     case 'SCENE_CONSEQUENCE':
     case 'STORY_EPILOGUE':
@@ -76,6 +77,10 @@ export function sfxForTransition(
     case 'CRUCIVERBA_REVEAL':
     case 'TRIBUNALE_REVEAL':
     case 'TELEPATHY_REVEAL':
+    case 'GHIGLIOTTINA_REVEAL':
+    case 'STIMA_REVEAL':
+    case 'BUFALA_REVEAL':
+    case 'INTESA_REVEAL':
       return 'insight';
     case 'FINAL_AWARDS':
     case 'DUO_PORTRAIT':

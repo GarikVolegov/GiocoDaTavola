@@ -6,6 +6,7 @@
 // cycle-free (mirrors knowRound.ts / predictions.ts).
 import type { Room, VoteChoice } from './rooms';
 import { pickByFamiliarita, type DilemmaFamiliarita, type Familiarita } from './deck';
+import { getSoloQuestionari } from './soloDecks';
 import { tally, isVoteChoice } from './voteCount';
 
 export interface GroupMindQuestion {
@@ -79,7 +80,14 @@ export function pickGroupMindQuestion(
   usedIds: Set<string>,
   rng: () => number,
   familiarita: Familiarita = 'misto',
+  isSolo = false,
 ): GroupMindQuestion | null {
+  if (isSolo) {
+    const soloPool = getSoloQuestionari().filter((q) => !usedIds.has(q.id));
+    if (soloPool.length > 0) {
+      return soloPool[Math.floor(rng() * soloPool.length)];
+    }
+  }
   const pool = GROUP_MIND_QUESTIONS.filter((q) => !usedIds.has(q.id));
   return pickByFamiliarita(pool, familiarita, rng);
 }
